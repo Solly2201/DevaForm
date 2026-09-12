@@ -10,11 +10,14 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import {
   createDefaultGaneshaConfiguration,
+  getPalette,
+  type ArmSlot,
   type AttachmentConfiguration,
   type BaseConfiguration,
   type CharacterConfiguration,
   type JointId,
   type MaterialZone,
+  type MudraId,
   type PartSlot,
   type Proportions,
   type SocketId,
@@ -38,9 +41,12 @@ export interface EditorState {
   clearJointOverride: (joint: JointId) => void;
   clearAllJointOverrides: () => void;
   setZoneMaterial: (zone: MaterialZone, material: Partial<ZoneMaterial>) => void;
+  applyPalette: (paletteId: string) => void;
   setBase: (base: BaseConfiguration) => void;
   setProportions: (proportions: Partial<Proportions>) => void;
   setMorph: (name: string, value: number) => void;
+  setMudra: (slot: ArmSlot, mudra: MudraId) => void;
+  setArmCount: (count: 2 | 4) => void;
 
   // -- character lifecycle --
   setCharacterName: (name: string) => void;
@@ -145,7 +151,29 @@ export const useEditorStore = create<EditorState>()(
           })),
         ),
 
+      applyPalette: (paletteId) =>
+        set((state) =>
+          mutateConfig(state, (config) => {
+            const palette = getPalette(paletteId);
+            if (!palette) return config;
+            return { ...config, materials: structuredClone(palette.materials) };
+          }),
+        ),
+
       setBase: (base) => set((state) => mutateConfig(state, (config) => ({ ...config, base }))),
+
+      setMudra: (slot, mudra) =>
+        set((state) =>
+          mutateConfig(state, (config) => ({
+            ...config,
+            hands: { ...config.hands, [slot]: { mudra } },
+          })),
+        ),
+
+      setArmCount: (count) =>
+        set((state) =>
+          mutateConfig(state, (config) => ({ ...config, arms: { count } })),
+        ),
 
       setProportions: (proportions) =>
         set((state) =>

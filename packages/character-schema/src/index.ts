@@ -2,5 +2,7 @@ export * from "./skeleton";
 export * from "./sockets";
 export * from "./configuration";
 export * from "./poses";
+export * from "./morphs";
+export * from "./palettes";
 export * from "./defaults";
 export * from "./serialization";

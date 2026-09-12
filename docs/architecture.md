@@ -83,6 +83,43 @@ as children, so they follow every parent joint rotation for free. Assets
 declare which sockets they accept plus a default transform; users can add an
 offset on top (schema supports it today, transform gizmo UI later).
 
+## Morphs: parametric today, blend shapes later
+
+Morph weights live in `configuration.morphs` (name → [-1, 1]). With the
+procedural prototype assets the engine applies them *parametrically*: the
+generators read the weights and regenerate geometry (a structure rebuild,
+same path as swapping a part). Production GLB assets will map the same
+morph names onto real blend shapes applied in place. The configuration is
+identical either way, so saves are stable across that transition. Canonical
+morph names live in `character-schema/src/morphs.ts`.
+
+## Hands & mudras
+
+Hands are a part slot (`hands`) whose generator builds palm + four fingers +
+thumb per rendered arm. Finger curl is a per-phalanx bend chain, so mudras
+(abhaya, varada, open, hold) are actual geometry driven by
+`configuration.hands[armSlot].mudra`. `configuration.arms.count` (2 | 4)
+controls which arm chains render; attachments on hidden back-hand sockets
+are retained in the document and simply not mounted.
+
+## GLB pipeline
+
+`engine/glbCache.ts` loads GLB files once via GLTFLoader and hands out
+clones. Materials named `zone:<zone>` (per the Asset Specification) are
+remapped to the live user-controlled zone materials; authored materials pass
+through. Loading is async against a sync rig build: missing assets are
+skipped and a cache subscription rebuilds the rig when they arrive. Cloned
+GLB geometry is shared with the cache (flagged `userData.glbShared`) and
+excluded from rig disposal. `apps/web/scripts/generate-prototype-glbs.mjs`
+generates the prototype Mushak GLB through three's GLTFExporter — the app
+consumes it exactly like an artist-delivered file.
+
+## Thumbnails
+
+`engine/thumbnails.ts` renders each asset's real geometry (procedural
+assembled on a rest-pose skeleton, or the loaded GLB) with the default
+palette into a shared offscreen WebGL canvas, cached as data URLs.
+
 ## Asset system
 
 `AssetDefinition` = id, version, kind (part slot | attachment sockets), deity

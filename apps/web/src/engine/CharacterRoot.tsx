@@ -4,12 +4,17 @@
  * CharacterRoot — bridges the CharacterConfiguration to the THREE scene.
  *
  * Lifecycle split for performance:
- * - structure (parts/attachments/base/proportions): rebuild rig via memo
+ * - structure (parts/attachments/base/proportions/morphs/hands/arms):
+ *   rebuild rig via memo
  * - pose: applied in place on joints (no rebuild)
  * - materials: mutated in place on shared zone materials (no rebuild)
+ *
+ * GLB assets load asynchronously; a cache subscription bumps a counter so
+ * the rig rebuilds once the mesh arrives.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditorStore } from "@/state/editorStore";
+import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 import { applyPose } from "./pose";
 import { buildRig, disposeRig, type CharacterRig } from "./rig";
@@ -19,8 +24,14 @@ export function CharacterRoot() {
   const attachments = useEditorStore((s) => s.config.attachments);
   const base = useEditorStore((s) => s.config.base);
   const proportions = useEditorStore((s) => s.config.proportions);
+  const morphs = useEditorStore((s) => s.config.morphs);
+  const hands = useEditorStore((s) => s.config.hands);
+  const arms = useEditorStore((s) => s.config.arms);
   const pose = useEditorStore((s) => s.config.pose);
   const materials = useEditorStore((s) => s.config.materials);
+
+  const [glbVersion, setGlbVersion] = useState(0);
+  useEffect(() => subscribeGlbCache(() => setGlbVersion((v) => v + 1)), []);
 
   const zoneMaterialsRef = useRef<ZoneMaterials | null>(null);
   if (zoneMaterialsRef.current === null) {
@@ -33,7 +44,7 @@ export function CharacterRoot() {
     const config = useEditorStore.getState().config;
     return buildRig(config, zoneMaterials);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parts, attachments, base, proportions, zoneMaterials]);
+  }, [parts, attachments, base, proportions, morphs, hands, arms, glbVersion, zoneMaterials]);
 
   // Dispose the previous rig's geometry when a new one replaces it.
   const previousRig = useRef<CharacterRig | null>(null);

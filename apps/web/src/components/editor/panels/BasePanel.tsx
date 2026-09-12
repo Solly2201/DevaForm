@@ -8,6 +8,7 @@ const STYLE_LABELS: Record<string, string> = {
   round: "Round Pedestal",
   square: "Square Plinth",
   lotus: "Lotus Seat",
+  peetam: "Peetam Tier",
 };
 
 export function BasePanel() {

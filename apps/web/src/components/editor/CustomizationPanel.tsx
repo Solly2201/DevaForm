@@ -3,19 +3,27 @@
 /**
  * Right-hand customization panel. Renders entirely from category metadata:
  * part categories get asset grids per slot, socket categories get asset
- * grids per socket, and pose/materials/base render dedicated panels.
+ * grids per socket, and hands/pose/materials/base render dedicated panels.
  */
 import {
   GANESHA_EDITOR_CATEGORIES,
   listAssets,
   type EditorCategory,
 } from "@devaform/asset-system";
-import { getSocket, type PartSlot, type SocketId } from "@devaform/character-schema";
+import {
+  FACE_MORPHS,
+  activeArmSlots,
+  getSocket,
+  type PartSlot,
+  type SocketId,
+} from "@devaform/character-schema";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
 import { AssetGrid } from "./AssetGrid";
+import { SegmentedControl } from "@/components/controls/SegmentedControl";
 import { SliderControl } from "@/components/controls/SliderControl";
 import { BasePanel } from "./panels/BasePanel";
+import { HandsPanel } from "./panels/HandsPanel";
 import { MaterialsPanel } from "./panels/MaterialsPanel";
 import { PosePanel } from "./panels/PosePanel";
 
@@ -27,12 +35,24 @@ const SLOT_LABELS: Record<PartSlot, string> = {
   trunk: "Trunk",
   tusks: "Tusks",
   hair: "Hair",
+  hands: "Hand Style",
   lowerGarment: "Dhoti",
   upperGarment: "Upper Garment",
+  earrings: "Earrings",
+  armlets: "Armlets",
+  bracelets: "Bracelets",
+  anklets: "Anklets",
 };
 
 /** Slots the user may intentionally leave empty. */
-const OPTIONAL_SLOTS: readonly PartSlot[] = ["upperGarment", "hair"];
+const OPTIONAL_SLOTS: readonly PartSlot[] = [
+  "upperGarment",
+  "hair",
+  "earrings",
+  "armlets",
+  "bracelets",
+  "anklets",
+];
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -108,6 +128,78 @@ function ProportionsSection() {
   );
 }
 
+function ArmCountSection() {
+  const arms = useEditorStore((s) => s.config.arms);
+  const setArmCount = useEditorStore((s) => s.setArmCount);
+  return (
+    <section>
+      <SectionHeading>Arms</SectionHeading>
+      <SegmentedControl<"2" | "4">
+        options={[
+          { value: "4", label: "Four Arms (Chaturbhuja)" },
+          { value: "2", label: "Two Arms" },
+        ]}
+        value={String(arms.count) as "2" | "4"}
+        onChange={(value) => setArmCount(Number(value) as 2 | 4)}
+      />
+      <p className="mt-2 text-[11px] text-stone-500">
+        Items held by hidden back hands are kept and reappear with four arms.
+      </p>
+    </section>
+  );
+}
+
+function FaceMorphSection() {
+  const morphs = useEditorStore((s) => s.config.morphs);
+  const setMorph = useEditorStore((s) => s.setMorph);
+  return (
+    <section>
+      <SectionHeading>Face Shaping</SectionHeading>
+      <div className="space-y-3">
+        {FACE_MORPHS.map((m) => (
+          <SliderControl
+            key={m.id}
+            label={m.label}
+            value={morphs[m.id] ?? 0}
+            min={-1}
+            max={1}
+            step={0.05}
+            onChange={(value) => setMorph(m.id, value)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Hand-item sockets on hidden arms are filtered from socket categories. */
+function useVisibleSockets(sockets: readonly SocketId[]): SocketId[] {
+  const arms = useEditorStore((s) => s.config.arms);
+  const active = activeArmSlots(arms);
+  return sockets.filter((socket) => {
+    const match = socket.match(/^arm\.(\w+)\.hand\.item$/);
+    if (!match) return true;
+    return (active as readonly string[]).includes(match[1] ?? "");
+  });
+}
+
+function SocketSections({
+  sockets,
+  allowNone,
+}: {
+  sockets: readonly SocketId[];
+  allowNone: boolean;
+}) {
+  const visible = useVisibleSockets(sockets);
+  return (
+    <>
+      {visible.map((socket) => (
+        <SocketSection key={socket} socket={socket} allowNone={allowNone} />
+      ))}
+    </>
+  );
+}
+
 function CategoryContent({ category }: { category: EditorCategory }) {
   switch (category.content.type) {
     case "parts":
@@ -116,29 +208,42 @@ function CategoryContent({ category }: { category: EditorCategory }) {
           {category.content.slots.map((slot) => (
             <PartSlotSection key={slot} slot={slot} />
           ))}
-          {category.id === "body" && <ProportionsSection />}
+          {category.id === "face" && <FaceMorphSection />}
+          {category.id === "body" && (
+            <>
+              <ArmCountSection />
+              <ProportionsSection />
+            </>
+          )}
         </>
       );
     case "sockets":
       return (
+        <SocketSections
+          sockets={category.content.sockets}
+          allowNone={category.content.allowNone}
+        />
+      );
+    case "mixed":
+      return (
         <>
-          {category.content.sockets.map((socket) => (
-            <SocketSection
-              key={socket}
-              socket={socket}
-              allowNone={category.content.type === "sockets" && category.content.allowNone}
-            />
+          <SocketSections
+            sockets={category.content.sockets}
+            allowNone={category.content.allowNone}
+          />
+          {category.content.slots.map((slot) => (
+            <PartSlotSection key={slot} slot={slot} />
           ))}
         </>
       );
+    case "hands":
+      return <HandsPanel />;
     case "pose":
       return <PosePanel />;
     case "materials":
       return <MaterialsPanel />;
     case "base":
       return <BasePanel />;
-    case "morphs":
-      return <p className="text-xs text-stone-500">Morph controls arrive with sculpted assets.</p>;
   }
 }
 

@@ -10,18 +10,21 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { CharacterRoot } from "@/engine/CharacterRoot";
+import { SceneEnvironment } from "@/engine/SceneEnvironment";
 import { getLightingPreset } from "@/engine/lighting";
 import { useUiStore, type CameraView } from "@/state/uiStore";
 
-const TARGET = new THREE.Vector3(0, 0.55, 0);
+const DEFAULT_TARGET = new THREE.Vector3(0, 0.62, 0);
+const FACE_TARGET = new THREE.Vector3(0, 1.1, 0.05);
 
-const VIEW_POSITIONS: Record<CameraView, [number, number, number]> = {
-  front: [0, 0.7, 2.4],
-  back: [0, 0.7, -2.4],
-  left: [2.4, 0.7, 0],
-  right: [-2.4, 0.7, 0],
-  threeQuarter: [1.6, 0.95, 1.9],
-  reset: [1.6, 0.95, 1.9],
+const VIEWS: Record<CameraView, { position: [number, number, number]; target: THREE.Vector3 }> = {
+  front: { position: [0, 0.78, 2.4], target: DEFAULT_TARGET },
+  back: { position: [0, 0.78, -2.4], target: DEFAULT_TARGET },
+  left: { position: [2.4, 0.78, 0], target: DEFAULT_TARGET },
+  right: { position: [-2.4, 0.78, 0], target: DEFAULT_TARGET },
+  threeQuarter: { position: [1.55, 1.0, 1.85], target: DEFAULT_TARGET },
+  face: { position: [0.28, 1.16, 0.85], target: FACE_TARGET },
+  reset: { position: [1.55, 1.0, 1.85], target: DEFAULT_TARGET },
 };
 
 function CameraCommands({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
@@ -29,14 +32,14 @@ function CameraCommands({ controlsRef }: { controlsRef: React.RefObject<OrbitCon
   const camera = useThree((s) => s.camera);
 
   useEffect(() => {
-    const position = VIEW_POSITIONS[command.view];
-    camera.position.set(...position);
+    const view = VIEWS[command.view];
+    camera.position.set(...view.position);
     const controls = controlsRef.current;
     if (controls) {
-      controls.target.copy(TARGET);
+      controls.target.copy(view.target);
       controls.update();
     } else {
-      camera.lookAt(TARGET);
+      camera.lookAt(view.target);
     }
   }, [command, camera, controlsRef]);
 
@@ -49,6 +52,7 @@ function Lights() {
   return (
     <>
       <color attach="background" args={[preset.background]} />
+      <SceneEnvironment intensity={preset.envIntensity} />
       <hemisphereLight
         color={preset.hemisphere.sky}
         groundColor={preset.hemisphere.ground}
@@ -81,22 +85,22 @@ export function EditorViewport() {
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: VIEW_POSITIONS.threeQuarter, fov: 38, near: 0.05, far: 50 }}
+      camera={{ position: VIEWS.threeQuarter.position, fov: 38, near: 0.05, far: 50 }}
       gl={{ antialias: true, preserveDrawingBuffer: true }}
       className="h-full w-full"
     >
       <Lights />
       <CameraCommands controlsRef={controlsRef} />
       <CharacterRoot />
-      <ContactShadows position={[0, -0.061, 0]} opacity={0.55} scale={3} blur={2.2} far={1.4} />
+      <ContactShadows position={[0, -0.002, 0]} opacity={0.6} scale={3.2} blur={2.4} far={1.6} />
       {/* Ground disc */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.065, 0]} receiveShadow>
-        <circleGeometry args={[2.2, 48]} />
-        <meshStandardMaterial color="#1b1713" roughness={0.95} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.006, 0]} receiveShadow>
+        <circleGeometry args={[2.4, 48]} />
+        <meshStandardMaterial color="#1a1512" roughness={0.95} />
       </mesh>
       <OrbitControls
         ref={controlsRef}
-        target={TARGET.toArray()}
+        target={DEFAULT_TARGET.toArray()}
         enablePan
         minDistance={0.5}
         maxDistance={6}

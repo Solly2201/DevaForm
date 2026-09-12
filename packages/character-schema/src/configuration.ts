@@ -11,7 +11,7 @@
  * print pipeline will eventually consume it.
  */
 import { z } from "zod";
-import { isJointId } from "./skeleton";
+import { ARM_SLOTS, isJointId, type ArmSlot } from "./skeleton";
 import { isSocketId } from "./sockets";
 
 export const SCHEMA_VERSION = 1;
@@ -31,8 +31,13 @@ export const PART_SLOTS = [
   "trunk",
   "tusks",
   "hair",
+  "hands",
   "lowerGarment",
   "upperGarment",
+  "earrings",
+  "armlets",
+  "bracelets",
+  "anklets",
 ] as const;
 export type PartSlot = (typeof PART_SLOTS)[number];
 
@@ -117,9 +122,52 @@ export const proportionsSchema = z.object({
 export type Proportions = z.infer<typeof proportionsSchema>;
 
 export const baseConfigurationSchema = z.object({
-  style: z.enum(["none", "round", "lotus", "square"]),
+  style: z.enum(["none", "round", "lotus", "square", "peetam"]),
 });
 export type BaseConfiguration = z.infer<typeof baseConfigurationSchema>;
+
+/**
+ * Mudras — hand poses. Each is real geometry in the hand generator/asset,
+ * not a texture or label. "hold" curls the fingers around the hand's item
+ * socket so held attributes read as gripped.
+ */
+export const MUDRAS = ["abhaya", "varada", "open", "hold"] as const;
+export type MudraId = (typeof MUDRAS)[number];
+
+const handConfigurationSchema = z.object({
+  mudra: z.enum(MUDRAS),
+});
+export type HandConfiguration = z.infer<typeof handConfigurationSchema>;
+
+/**
+ * Per-hand configuration. Defaults keep configurations saved before this
+ * field existed loadable (zod fills the default on parse).
+ */
+export const handsConfigurationSchema = z
+  .object(
+    Object.fromEntries(
+      ARM_SLOTS.map((slot) => [slot, handConfigurationSchema.default({ mudra: "open" })]),
+    ) as Record<ArmSlot, ReturnType<typeof handConfigurationSchema.default>>,
+  )
+  .default({});
+export type HandsConfiguration = z.infer<typeof handsConfigurationSchema>;
+
+/**
+ * Arm configuration: iconographically Ganesha appears with 2 or 4 (or more)
+ * arms. The skeleton always carries four chains; count controls which are
+ * rendered and which hand sockets are active.
+ */
+export const armsConfigurationSchema = z
+  .object({
+    count: z.union([z.literal(2), z.literal(4)]),
+  })
+  .default({ count: 4 });
+export type ArmsConfiguration = z.infer<typeof armsConfigurationSchema>;
+
+/** Arm slots active for a given arm count (front pair is always present). */
+export function activeArmSlots(arms: ArmsConfiguration): readonly ArmSlot[] {
+  return arms.count === 4 ? ARM_SLOTS : (["frontLeft", "frontRight"] as const);
+}
 
 export const characterConfigurationSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
@@ -136,6 +184,8 @@ export const characterConfigurationSchema = z.object({
   proportions: proportionsSchema,
   materials: materialsConfigurationSchema,
   base: baseConfigurationSchema,
+  hands: handsConfigurationSchema,
+  arms: armsConfigurationSchema,
 });
 
 export type CharacterConfiguration = z.infer<typeof characterConfigurationSchema>;

@@ -65,7 +65,7 @@ const armJoints = (slot: ArmSlot, side: "left" | "right", row: "front" | "back")
     {
       id: `arm.${slot}.upper`,
       parent: "chest",
-      position: [sideSign * 0.16, 0.1, z],
+      position: [sideSign * 0.175, 0.11, z],
       limits: { x: [-PI, PI * 0.6], y: [-PI * 0.5, PI * 0.5], z: [-PI * 0.7, PI * 0.7] },
       label: `${label} Upper Arm`,
     },

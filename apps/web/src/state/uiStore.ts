@@ -6,7 +6,7 @@ import { create } from "zustand";
 import type { JointId } from "@devaform/character-schema";
 import type { LightingPresetId } from "@/engine/lighting";
 
-export type CameraView = "front" | "back" | "left" | "right" | "threeQuarter" | "reset";
+export type CameraView = "front" | "back" | "left" | "right" | "threeQuarter" | "face" | "reset";
 
 interface UiState {
   activeCategoryId: string;

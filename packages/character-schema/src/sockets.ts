@@ -53,7 +53,7 @@ const handSockets: SocketDefinition[] = ARM_SLOTS.flatMap((slot) => [
 ]);
 
 export const SOCKETS: readonly SocketDefinition[] = [
-  { id: "head.crown", joint: "head", position: [0, 0.135, -0.01], rotation: [0, 0, 0], label: "Crown" },
+  { id: "head.crown", joint: "head", position: [0, 0.172, -0.005], rotation: [0, 0, 0], label: "Crown" },
   { id: "head.leftEar", joint: "head", position: [0.12, 0.03, 0], rotation: [0, 0, 0], label: "Left ear" },
   { id: "head.rightEar", joint: "head", position: [-0.12, 0.03, 0], rotation: [0, 0, 0], label: "Right ear" },
   { id: "head.forehead", joint: "head", position: [0, 0.07, 0.1], rotation: [0, 0, 0], label: "Forehead" },

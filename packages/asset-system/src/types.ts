@@ -92,8 +92,14 @@ export interface EditorCategory {
   content:
     | { type: "parts"; slots: readonly PartSlot[] }
     | { type: "sockets"; sockets: readonly SocketId[]; allowNone: boolean }
+    | {
+        type: "mixed";
+        slots: readonly PartSlot[];
+        sockets: readonly SocketId[];
+        allowNone: boolean;
+      }
+    | { type: "hands" }
     | { type: "pose" }
     | { type: "materials" }
-    | { type: "base" }
-    | { type: "morphs" };
+    | { type: "base" };
 }

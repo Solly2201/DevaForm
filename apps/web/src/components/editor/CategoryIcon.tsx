@@ -55,6 +55,23 @@ export function CategoryIcon({ icon, className = "h-5 w-5" }: { icon: string; cl
           <path d="M12 15v6" />
         </svg>
       );
+    case "hands":
+      return (
+        <svg {...common}>
+          <path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V10M10 10V4a1.5 1.5 0 0 1 3 0v6M13 10V5a1.5 1.5 0 0 1 3 0v6" />
+          <path d="M16 11l2-2c1-1 2.5.5 1.5 2L16 15c-1 3-3 6-6 6s-4-2-4-5v-5" />
+        </svg>
+      );
+    case "companion":
+      return (
+        <svg {...common}>
+          <ellipse cx="11" cy="15" rx="6" ry="4.5" />
+          <circle cx="16.5" cy="11" r="3" />
+          <circle cx="18" cy="8.5" r="1.5" />
+          <path d="M5 15c-1.5 1-2.5 3-1.5 5" />
+          <circle cx="17.3" cy="10.7" r="0.5" fill="currentColor" stroke="none" />
+        </svg>
+      );
     case "pose":
       return (
         <svg {...common}>
