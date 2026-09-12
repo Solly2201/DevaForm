@@ -1,0 +1,149 @@
+/**
+ * CharacterConfiguration — the single source of truth for a customized deity.
+ *
+ * Design goals:
+ * - serializable (plain JSON, no class instances)
+ * - versioned (schemaVersion + migrations in serialization.ts)
+ * - deterministic (config + asset versions => identical character)
+ * - deity-agnostic core, deity-specific slot/asset content
+ *
+ * The UI writes it, the 3D engine reads it, the backend persists it and the
+ * print pipeline will eventually consume it.
+ */
+import { z } from "zod";
+import { isJointId } from "./skeleton";
+import { isSocketId } from "./sockets";
+
+export const SCHEMA_VERSION = 1;
+
+export type DeityId = "ganesha"; // widened as deities are added
+
+/**
+ * Part slots — mesh regions of the character that are swapped as whole
+ * components. Deity definitions declare which slots they use; the engine
+ * renders whatever slots are present.
+ */
+export const PART_SLOTS = [
+  "body",
+  "head",
+  "eyes",
+  "ears",
+  "trunk",
+  "tusks",
+  "hair",
+  "lowerGarment",
+  "upperGarment",
+] as const;
+export type PartSlot = (typeof PART_SLOTS)[number];
+
+/** Reference to a registered asset at a specific published version. */
+export const assetRefSchema = z.object({
+  assetId: z.string().min(1),
+  version: z.number().int().positive(),
+});
+export type AssetRef = z.infer<typeof assetRefSchema>;
+
+const vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
+export type Vec3 = z.infer<typeof vec3Schema>;
+
+const jointIdSchema = z.string().refine(isJointId, { message: "unknown joint id" });
+const socketIdSchema = z.string().refine(isSocketId, { message: "unknown socket id" });
+
+/**
+ * Pose: an optional named preset plus per-joint euler overrides (radians).
+ * Overrides are applied on top of the preset, so a user can start from
+ * "blessing" and tweak one wrist. Unknown/missing joints fall back to rest.
+ */
+export const poseConfigurationSchema = z.object({
+  preset: z.string().nullable(),
+  jointOverrides: z.record(jointIdSchema, vec3Schema),
+});
+export type PoseConfiguration = z.infer<typeof poseConfigurationSchema>;
+
+/**
+ * Attachment: an asset placed on a socket, with an optional user transform
+ * (applied on top of the asset's own default socket transform).
+ */
+export const attachmentConfigurationSchema = z.object({
+  socket: socketIdSchema,
+  asset: assetRefSchema,
+  offset: z
+    .object({
+      position: vec3Schema.optional(),
+      rotation: vec3Schema.optional(),
+      scale: z.number().positive().optional(),
+    })
+    .optional(),
+});
+export type AttachmentConfiguration = z.infer<typeof attachmentConfigurationSchema>;
+
+/**
+ * Material zones — logical color/finish regions. Production materials will
+ * map zones to PBR material variants; for now each zone is a color + finish.
+ */
+export const MATERIAL_ZONES = ["skin", "skinSecondary", "garment", "garmentAccent", "metal", "gem", "base"] as const;
+export type MaterialZone = (typeof MATERIAL_ZONES)[number];
+
+export const materialFinishSchema = z.enum(["matte", "satin", "polished", "metallic"]);
+export type MaterialFinish = z.infer<typeof materialFinishSchema>;
+
+export const zoneMaterialSchema = z.object({
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  finish: materialFinishSchema,
+});
+export type ZoneMaterial = z.infer<typeof zoneMaterialSchema>;
+
+export const materialsConfigurationSchema = z.object(
+  Object.fromEntries(MATERIAL_ZONES.map((zone) => [zone, zoneMaterialSchema])) as Record<
+    MaterialZone,
+    typeof zoneMaterialSchema
+  >,
+);
+export type MaterialsConfiguration = z.infer<typeof materialsConfigurationSchema>;
+
+/**
+ * Morphs: named continuous deformation weights in [0, 1] (or [-1, 1] for
+ * bidirectional morphs). Keys are morph target names defined per-asset
+ * (e.g. "trunkLength", "earSize"). The engine applies any that the active
+ * meshes expose and ignores the rest — forward compatible by construction.
+ */
+export const morphsSchema = z.record(z.string(), z.number().min(-1).max(1));
+
+/** Whole-body proportion controls (uniform, non-morph scaling). */
+export const proportionsSchema = z.object({
+  height: z.number().min(0.8).max(1.2),
+  bulk: z.number().min(0.8).max(1.3),
+});
+export type Proportions = z.infer<typeof proportionsSchema>;
+
+export const baseConfigurationSchema = z.object({
+  style: z.enum(["none", "round", "lotus", "square"]),
+});
+export type BaseConfiguration = z.infer<typeof baseConfigurationSchema>;
+
+export const characterConfigurationSchema = z.object({
+  schemaVersion: z.literal(SCHEMA_VERSION),
+  deity: z.literal("ganesha"),
+  /**
+   * Mesh part selections. null = intentionally empty slot (e.g. no upper
+   * garment); absent = slot not used by this deity.
+   */
+  parts: z.record(z.enum(PART_SLOTS), assetRefSchema.nullable()),
+  /** Ornaments, crowns, held items… anything socket-attached. */
+  attachments: z.array(attachmentConfigurationSchema),
+  pose: poseConfigurationSchema,
+  morphs: morphsSchema,
+  proportions: proportionsSchema,
+  materials: materialsConfigurationSchema,
+  base: baseConfigurationSchema,
+});
+
+export type CharacterConfiguration = z.infer<typeof characterConfigurationSchema>;
+
+export function validateConfiguration(value: unknown): CharacterConfiguration {
+  return characterConfigurationSchema.parse(value);
+}
+
+export function safeValidateConfiguration(value: unknown) {
+  return characterConfigurationSchema.safeParse(value);
+}
