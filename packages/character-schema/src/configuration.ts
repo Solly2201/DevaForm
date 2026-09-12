@@ -128,10 +128,14 @@ export type BaseConfiguration = z.infer<typeof baseConfigurationSchema>;
 
 /**
  * Mudras — hand poses. Each is real geometry in the hand generator/asset,
- * not a texture or label. "hold" curls the fingers around the hand's item
- * socket so held attributes read as gripped.
+ * not a texture or label:
+ * - abhaya/varada/open: classic open-palm gestures
+ * - hold: palm-up cradle (modak and offerings)
+ * - pinch: thumb-and-finger stem hold (lotus)
+ * - grip: closed fist around a shaft (axe, noose, goad)
+ * Items declare a preferred grip mudra; attaching one auto-applies it.
  */
-export const MUDRAS = ["abhaya", "varada", "open", "hold"] as const;
+export const MUDRAS = ["abhaya", "varada", "open", "hold", "pinch", "grip"] as const;
 export type MudraId = (typeof MUDRAS)[number];
 
 const handConfigurationSchema = z.object({

@@ -70,8 +70,8 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       "leg.left.thigh": [0, 5 * D, 5 * D],
       "leg.right.thigh": [0, -5 * D, -5 * D],
       head: [4 * D, 0, 0],
-      trunkMid: [22 * D, 14 * D, 0],
-      trunkTip: [30 * D, 20 * D, 0],
+      trunkMid: [20 * D, 8 * D, 0],
+      trunkTip: [26 * D, 12 * D, 0],
     },
   },
   {

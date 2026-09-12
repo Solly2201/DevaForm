@@ -17,9 +17,10 @@ import {
   earringsKundala,
   necklaceHaram,
   necklaceMala,
+  tikkaChandra,
   waistKamarband,
 } from "./ornaments";
-import { itemAxe, itemLotus, itemModak, itemPasha } from "./items";
+import { itemAnkush, itemAxe, itemLotus, itemModak, itemPasha } from "./items";
 
 export type { AttachmentGenerator, GeneratorContext, JointedPart, PartGenerator } from "./types";
 export { makeHand } from "./body";
@@ -48,8 +49,10 @@ export const ATTACHMENT_GENERATORS: Record<string, AttachmentGenerator> = {
   "ornament.necklace": necklaceHaram,
   "ornament.mala": necklaceMala,
   "ornament.waistband": waistKamarband,
+  "ornament.tikka": tikkaChandra,
   "item.modak": itemModak,
   "item.lotus": itemLotus,
   "item.axe": itemAxe,
   "item.noose": itemPasha,
+  "item.ankush": itemAnkush,
 };

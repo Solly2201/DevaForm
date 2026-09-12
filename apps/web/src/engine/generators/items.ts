@@ -60,16 +60,16 @@ export const itemLotus: AttachmentGenerator = (ctx) => {
       accent,
     ),
   );
-  // Two rings of petals
+  // Two rings of petals — outer opened wide, inner cupped around the pod
   for (const [count, radius, tilt, size] of [
-    [8, 0.02, 0.85, 1],
-    [6, 0.01, 0.45, 0.8],
+    [8, 0.018, 0.7, 1],
+    [6, 0.009, 0.3, 0.78],
   ] as const) {
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2 + (count === 6 ? 0.4 : 0);
-      const petal = mesh(new THREE.SphereGeometry(0.016 * size, 12, 10), gem, {
-        position: [Math.cos(angle) * radius, 0.008, Math.sin(angle) * radius],
-        scale: [0.55, 1.6, 0.35],
+      const petal = mesh(new THREE.SphereGeometry(0.015 * size, 12, 10), gem, {
+        position: [Math.cos(angle) * radius, 0.012, Math.sin(angle) * radius],
+        scale: [0.6, 1.15, 0.32],
       });
       petal.rotation.set(Math.sin(angle) * tilt, -angle, -Math.cos(angle) * tilt);
       flower.add(petal);
@@ -125,6 +125,37 @@ export const itemAxe: AttachmentGenerator = (ctx) => {
   group.add(edge);
   // Pommel
   group.add(mesh(new THREE.SphereGeometry(0.009, 12, 10), metal, { position: [0, -0.078, 0] }));
+  return group;
+};
+
+export const itemAnkush: AttachmentGenerator = (ctx) => {
+  const metal = ctx.materials.get("metal");
+  const group = new THREE.Group();
+  // Shaft through the grip
+  const shaft: V3[] = [
+    [0, -0.07, 0],
+    [0, 0.02, 0],
+    [0, 0.1, 0],
+  ];
+  group.add(new THREE.Mesh(taperedTube(shaft, [0.007, 0.0058], 14, 10), metal));
+  // Spearhead tip
+  group.add(
+    mesh(new THREE.ConeGeometry(0.009, 0.03, 12), metal, { position: [0, 0.115, 0] }),
+  );
+  // Curved hook sweeping back down from below the tip
+  const hook: V3[] = [
+    [0, 0.095, 0],
+    [0.02, 0.088, 0],
+    [0.032, 0.07, 0],
+    [0.03, 0.05, 0],
+    [0.02, 0.042, 0],
+  ];
+  group.add(new THREE.Mesh(taperedTube(hook, [0.0052, 0.0028], 18, 8), metal));
+  // Collar + pommel
+  group.add(
+    mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.012, 12), metal, { position: [0, 0.09, 0] }),
+  );
+  group.add(mesh(new THREE.SphereGeometry(0.0085, 12, 10), metal, { position: [0, -0.073, 0] }));
   return group;
 };
 

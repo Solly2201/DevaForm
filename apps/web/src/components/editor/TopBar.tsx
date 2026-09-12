@@ -32,6 +32,7 @@ function IconButton({
 }
 
 export function TopBar() {
+  const deity = useEditorStore((s) => s.config.deity);
   const characterName = useEditorStore((s) => s.characterName);
   const setCharacterName = useEditorStore((s) => s.setCharacterName);
   const characterId = useEditorStore((s) => s.characterId);
@@ -102,10 +103,17 @@ export function TopBar() {
         <span className="font-display text-lg font-semibold tracking-wide text-saffron-500">
           DevaForm
         </span>
-        <span className="text-[10px] uppercase tracking-widest text-stone-600">Ganesha Studio</span>
+        <span className="text-[10px] uppercase tracking-widest text-stone-600">Divine Studio</span>
       </div>
 
       <div className="mx-4 h-6 w-px bg-surface-700" />
+
+      <span
+        className="rounded-full border border-surface-700 px-2.5 py-0.5 text-[11px] font-medium capitalize text-stone-400"
+        title="Deity being customized"
+      >
+        {deity}
+      </span>
 
       <input
         value={characterName}

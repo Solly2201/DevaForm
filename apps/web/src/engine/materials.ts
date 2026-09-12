@@ -27,8 +27,8 @@ interface FinishProps {
 }
 
 const FINISH_PROPS: Record<MaterialFinish, FinishProps> = {
-  matte: { roughness: 0.94, metalness: 0, clearcoat: 0, clearcoatRoughness: 1, envMapIntensity: 0.35, sheen: 0.12 },
-  satin: { roughness: 0.55, metalness: 0.02, clearcoat: 0.12, clearcoatRoughness: 0.5, envMapIntensity: 0.7, sheen: 0.08 },
+  matte: { roughness: 0.94, metalness: 0, clearcoat: 0, clearcoatRoughness: 1, envMapIntensity: 0.35, sheen: 0.3 },
+  satin: { roughness: 0.55, metalness: 0.02, clearcoat: 0.12, clearcoatRoughness: 0.5, envMapIntensity: 0.7, sheen: 0.22 },
   polished: { roughness: 0.22, metalness: 0.05, clearcoat: 0.7, clearcoatRoughness: 0.18, envMapIntensity: 1.1, sheen: 0 },
   metallic: { roughness: 0.28, metalness: 1, clearcoat: 0.25, clearcoatRoughness: 0.25, envMapIntensity: 1.35, sheen: 0 },
 };
@@ -89,7 +89,10 @@ export class ZoneMaterials {
       target.clearcoatRoughness = props.clearcoatRoughness;
       target.envMapIntensity = props.envMapIntensity;
       target.sheen = props.sheen;
-      if (props.sheen > 0) target.sheenColor.set(color);
+      if (props.sheen > 0) {
+        target.sheenColor.set(color);
+        target.sheenRoughness = 0.55;
+      }
     }
   }
 

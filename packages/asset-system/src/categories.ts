@@ -50,7 +50,7 @@ export const GANESHA_EDITOR_CATEGORIES: readonly EditorCategory[] = [
     content: {
       type: "mixed",
       slots: ["earrings", "armlets", "bracelets", "anklets"],
-      sockets: ["head.crown", "chest.necklace", "waist.ornament"],
+      sockets: ["head.crown", "head.forehead", "chest.necklace", "waist.ornament"],
       allowNone: true,
     },
   },

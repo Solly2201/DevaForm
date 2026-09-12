@@ -11,6 +11,7 @@
  */
 import * as THREE from "three";
 import {
+  SEATED_POSE_IDS,
   SKELETON,
   SOCKETS,
   activeArmSlots,
@@ -34,6 +35,8 @@ export interface CharacterRig {
   root: THREE.Group;
   joints: ReadonlyMap<JointId, THREE.Object3D>;
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
+  /** Attachments that must stay world-upright after every pose change. */
+  uprightAttachments: THREE.Object3D[];
   /** Assets that failed to resolve or are still loading (not fatal). */
   warnings: string[];
 }
@@ -105,6 +108,7 @@ function resolveRenderable(
 function applyAttachmentTransforms(
   object: THREE.Object3D,
   asset: AssetDefinition,
+  socketId: string,
   offset:
     | {
         position?: readonly [number, number, number];
@@ -113,7 +117,9 @@ function applyAttachmentTransforms(
       }
     | undefined,
 ): void {
-  const dt = asset.defaultTransform;
+  // Per-socket override wins over the default (a modak in the trunk needs
+  // a different transform than a modak in a palm).
+  const dt = asset.socketTransforms?.[socketId] ?? asset.defaultTransform;
   if (dt?.position) object.position.set(...dt.position);
   if (dt?.rotation) object.rotation.set(...dt.rotation);
   if (dt?.scale !== undefined) object.scale.setScalar(dt.scale);
@@ -132,6 +138,7 @@ function applyAttachmentTransforms(
 
 export function buildRig(config: CharacterConfiguration, materials: ZoneMaterials): CharacterRig {
   const warnings: string[] = [];
+  const uprightAttachments: THREE.Object3D[] = [];
   const root = new THREE.Group();
   root.name = "statueRoot";
   const { characterRoot, joints } = buildJointHierarchy();
@@ -144,6 +151,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     morphs: config.morphs,
     hands: config.hands,
     arms: config.arms,
+    seated: config.pose.preset !== null && SEATED_POSE_IDS.includes(config.pose.preset),
   };
   const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
     ...baseCtx,
@@ -200,8 +208,9 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
     if (!renderable || !(renderable instanceof THREE.Object3D)) continue;
     renderable.name = `attachment:${asset.id}`;
-    applyAttachmentTransforms(renderable, asset, attachment.offset);
+    applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
     socket.add(renderable);
+    if (asset.keepUpright) uprightAttachments.push(renderable);
   }
 
   // Base platform; the character stands on its top surface.
@@ -216,7 +225,24 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Whole-statue height proportion (uniform so nothing distorts).
   root.scale.setScalar(config.proportions.height);
 
-  return { root, joints, sockets, warnings };
+  return { root, joints, sockets, uprightAttachments, warnings };
+}
+
+const worldQuaternion = new THREE.Quaternion();
+
+/**
+ * Re-orient upright attachments after a pose change: the object's world
+ * rotation becomes identity (shaft vertical, as classical iconography
+ * depicts held attributes), whatever its parent joint chain does.
+ */
+export function alignUprightAttachments(rig: CharacterRig): void {
+  for (const object of rig.uprightAttachments) {
+    const parent = object.parent;
+    if (!parent) continue;
+    parent.updateWorldMatrix(true, false);
+    parent.getWorldQuaternion(worldQuaternion);
+    object.quaternion.copy(worldQuaternion.invert());
+  }
 }
 
 /**

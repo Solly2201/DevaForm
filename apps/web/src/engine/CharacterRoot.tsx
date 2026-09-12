@@ -17,7 +17,7 @@ import { useEditorStore } from "@/state/editorStore";
 import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 import { applyPose } from "./pose";
-import { buildRig, disposeRig, type CharacterRig } from "./rig";
+import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
 
 export function CharacterRoot() {
   const parts = useEditorStore((s) => s.config.parts);
@@ -28,6 +28,7 @@ export function CharacterRoot() {
   const hands = useEditorStore((s) => s.config.hands);
   const arms = useEditorStore((s) => s.config.arms);
   const pose = useEditorStore((s) => s.config.pose);
+  const posePreset = useEditorStore((s) => s.config.pose.preset);
   const materials = useEditorStore((s) => s.config.materials);
 
   const [glbVersion, setGlbVersion] = useState(0);
@@ -39,12 +40,13 @@ export function CharacterRoot() {
   }
   const zoneMaterials = zoneMaterialsRef.current;
 
-  // Rebuild rig only when structure changes.
+  // Rebuild rig only when structure changes. The pose preset participates
+  // because seated presets swap clothing to pose-compatible geometry.
   const rig: CharacterRig = useMemo(() => {
     const config = useEditorStore.getState().config;
     return buildRig(config, zoneMaterials);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parts, attachments, base, proportions, morphs, hands, arms, glbVersion, zoneMaterials]);
+  }, [parts, attachments, base, proportions, morphs, hands, arms, posePreset, glbVersion, zoneMaterials]);
 
   // Dispose the previous rig's geometry when a new one replaces it.
   const previousRig = useRef<CharacterRig | null>(null);
@@ -65,9 +67,10 @@ export function CharacterRoot() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pose: in-place joint rotation updates.
+  // Pose: in-place joint rotation updates, then re-verticalize held shafts.
   useEffect(() => {
     applyPose(rig.joints, pose);
+    alignUprightAttachments(rig);
   }, [rig, pose]);
 
   // Materials: in-place color/finish updates.

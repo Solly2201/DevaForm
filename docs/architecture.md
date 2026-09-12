@@ -93,14 +93,32 @@ morph names onto real blend shapes applied in place. The configuration is
 identical either way, so saves are stable across that transition. Canonical
 morph names live in `character-schema/src/morphs.ts`.
 
-## Hands & mudras
+## Hands, mudras & the item grip system
 
 Hands are a part slot (`hands`) whose generator builds palm + four fingers +
-thumb per rendered arm. Finger curl is a per-phalanx bend chain, so mudras
-(abhaya, varada, open, hold) are actual geometry driven by
-`configuration.hands[armSlot].mudra`. `configuration.arms.count` (2 | 4)
-controls which arm chains render; attachments on hidden back-hand sockets
-are retained in the document and simply not mounted.
+thumb per rendered arm. Finger curl is per-phalanx, so mudras (abhaya,
+varada, open, hold/cradle, pinch/stem-hold, grip/fist) are actual geometry
+driven by `configuration.hands[armSlot].mudra`. `configuration.arms.count`
+(2 | 4) controls which arm chains render; attachments on hidden back-hand
+sockets are retained in the document and simply not mounted.
+
+Hand-held items compose three pieces of asset metadata:
+
+- `grip: { mudra }` — attaching the item to a hand socket auto-applies the
+  matching mudra in the store, so defaults always look held.
+- `defaultTransform` / `socketTransforms` — per-socket placement (the grip
+  point of a fist differs from the trunk tip; keys are socket ids).
+- `keepUpright` — after every pose application the engine zeroes the item's
+  world rotation (`alignUprightAttachments`), keeping shafted attributes
+  (axe, noose, goad, lotus) vertical in any pose, as classical iconography
+  depicts them. Cradled items (modak) follow the palm instead.
+
+## Naming: DevaForm → Divine Studio → deity
+
+"Divine Studio" is the generic editor experience; the deity is data
+(`configuration.deity`), never part of the studio's identity. UI copy,
+titles and docs follow `DevaForm | Divine Studio`, with the current deity
+shown as a chip/label.
 
 ## GLB pipeline
 

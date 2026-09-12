@@ -24,14 +24,18 @@ const MUDRA_LABELS: Record<MudraId, string> = {
   abhaya: "Abhaya",
   varada: "Varada",
   open: "Open",
-  hold: "Hold",
+  hold: "Cradle",
+  pinch: "Stem Hold",
+  grip: "Weapon Grip",
 };
 
 const MUDRA_DESCRIPTIONS: Record<MudraId, string> = {
   abhaya: "Palm raised in blessing — fearlessness.",
   varada: "Palm offered downward — boon-giving.",
   open: "Relaxed open hand.",
-  hold: "Fingers closed around a held attribute.",
+  hold: "Palm-up cradle for offerings like the modak.",
+  pinch: "Thumb and finger hold a stem — for the lotus.",
+  grip: "Closed fist around a shaft — axe, noose, goad.",
 };
 
 const MUDRA_OPTIONS = MUDRAS.map((m) => ({ value: m, label: MUDRA_LABELS[m] }));

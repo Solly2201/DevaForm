@@ -16,6 +16,11 @@ export interface GeneratorContext {
   morphs: Record<string, number>;
   hands: HandsConfiguration;
   arms: ArmsConfiguration;
+  /**
+   * True when the active pose preset is seated. Clothing generators use
+   * pose-compatible geometry (a draped lap instead of a full skirt).
+   */
+  seated: boolean;
 }
 
 /** A part places objects onto one or more joints so posing articulates it. */

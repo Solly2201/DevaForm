@@ -37,6 +37,14 @@ export interface AssetTransform {
   scale?: number;
 }
 
+/**
+ * How a hand holds this item. Attaching the item to a hand socket
+ * auto-applies the mudra so the default grip always looks intentional.
+ */
+export interface GripMetadata {
+  mudra: "hold" | "pinch" | "grip";
+}
+
 export interface PrintabilityMetadata {
   /** Whether a print-resolution source exists for this version. */
   printSourceAvailable: boolean;
@@ -59,6 +67,21 @@ export interface AssetDefinition {
   source: AssetSource;
   /** Default transform applied when attached to its socket. */
   defaultTransform?: AssetTransform;
+  /**
+   * Per-socket transform overrides (matched by socket id, or by the suffix
+   * after the last dot for arm sockets — e.g. "item" matches every
+   * `arm.*.hand.item`). A lotus and an axe need different grips; a modak in
+   * the trunk needs a different scale than in a palm.
+   */
+  socketTransforms?: Readonly<Record<string, AssetTransform>>;
+  /** Hand-grip behavior for hand-held attachments. */
+  grip?: GripMetadata;
+  /**
+   * Keep the attachment world-upright regardless of joint rotation —
+   * classical iconography holds shafted attributes (axe, noose, goad,
+   * lotus) vertical in any pose. Cradled items (modak) follow the palm.
+   */
+  keepUpright?: boolean;
   /**
    * Material zones this asset participates in. The engine colors the asset's
    * meshes from the configuration's zone materials via mesh naming

@@ -123,6 +123,17 @@ describe("configuration serialization", () => {
     );
   });
 
+  it("round-trips grip mudras (pinch/grip) in hand configuration", () => {
+    const config = createDefaultGaneshaConfiguration();
+    const custom = {
+      ...config,
+      hands: { ...config.hands, backLeft: { mudra: "pinch" as const }, backRight: { mudra: "grip" as const } },
+    };
+    const restored = deserializeConfiguration(JSON.stringify(custom));
+    expect(restored.hands.backLeft.mudra).toBe("pinch");
+    expect(restored.hands.backRight.mudra).toBe("grip");
+  });
+
   it("fills hands/arms defaults for configurations saved before those fields", () => {
     const config = createDefaultGaneshaConfiguration();
     const legacy: Record<string, unknown> = { ...config };
