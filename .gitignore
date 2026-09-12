@@ -26,3 +26,8 @@ dist/
 # logs
 npm-debug.log*
 pnpm-debug.log*
+
+# local design references / scratch (not part of the product)
+/reference.png
+*.blend1
+*.blend2

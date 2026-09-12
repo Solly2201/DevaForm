@@ -7,6 +7,7 @@ import { useUiStore, type CameraView } from "@/state/uiStore";
 const VIEWS: ReadonlyArray<{ view: CameraView; label: string }> = [
   { view: "threeQuarter", label: "¾" },
   { view: "front", label: "Front" },
+  { view: "face", label: "Face" },
   { view: "back", label: "Back" },
   { view: "left", label: "Left" },
   { view: "right", label: "Right" },

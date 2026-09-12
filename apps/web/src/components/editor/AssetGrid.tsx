@@ -4,7 +4,9 @@
  * Reusable asset picker grid. Consumes registry metadata only — no
  * hardcoded asset knowledge. Used for both part slots and sockets.
  */
+import { useEffect, useState } from "react";
 import type { AssetDefinition } from "@devaform/asset-system";
+import { getAssetThumbnail } from "@/engine/thumbnails";
 
 interface AssetGridProps {
   assets: readonly AssetDefinition[];
@@ -12,6 +14,20 @@ interface AssetGridProps {
   /** Show a "None" tile allowing the slot/socket to be emptied. */
   allowNone?: boolean;
   onSelect: (assetId: string | null) => void;
+}
+
+function useAssetThumbnail(assetId: string): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void getAssetThumbnail(assetId).then((result) => {
+      if (!cancelled) setUrl(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assetId]);
+  return url;
 }
 
 function AssetCard({
@@ -23,6 +39,7 @@ function AssetCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const thumbnail = useAssetThumbnail(asset.id);
   return (
     <button
       type="button"
@@ -34,13 +51,13 @@ function AssetCard({
           : "border-surface-700 bg-surface-850 hover:border-stone-500"
       }`}
     >
-      <span className="flex h-14 items-center justify-center bg-surface-800 text-2xl">
-        <span
-          className={`inline-block h-7 w-7 rounded-md ${
-            selected ? "bg-saffron-500" : "bg-surface-700 group-hover:bg-surface-950"
-          }`}
-          aria-hidden
-        />
+      <span className="flex h-20 items-center justify-center bg-gradient-to-b from-surface-800 to-surface-900">
+        {thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element -- data URL thumbnail
+          <img src={thumbnail} alt="" className="h-full w-full object-contain p-1" />
+        ) : (
+          <span className="h-8 w-8 animate-pulse rounded-md bg-surface-700" aria-hidden />
+        )}
       </span>
       <span className="px-2 py-1.5">
         <span className="block truncate text-xs font-medium text-stone-200">{asset.name}</span>

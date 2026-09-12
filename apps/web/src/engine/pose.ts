@@ -22,6 +22,13 @@ export function applyPose(
 ): void {
   const preset = pose.preset ? getPosePreset(pose.preset) : undefined;
 
+  // Seated presets translate the root so the figure rests on the base.
+  const root = joints.get("root");
+  if (root) {
+    const offset = preset?.rootOffset ?? [0, 0, 0];
+    root.position.set(offset[0], offset[1], offset[2]);
+  }
+
   for (const def of SKELETON) {
     const joint = joints.get(def.id);
     if (!joint) continue;

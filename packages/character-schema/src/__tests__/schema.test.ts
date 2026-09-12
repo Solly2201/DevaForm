@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   ConfigurationParseError,
+  MATERIAL_PALETTES,
   SCHEMA_VERSION,
   SKELETON,
   SOCKETS,
+  activeArmSlots,
   createDefaultGaneshaConfiguration,
   deserializeConfiguration,
   getJoint,
   getPosePreset,
   isJointId,
+  materialsConfigurationSchema,
   POSE_PRESETS,
   serializeConfiguration,
 } from "../index";
@@ -64,6 +67,26 @@ describe("pose presets", () => {
   });
 });
 
+describe("arms", () => {
+  it("activates the front pair for two-arm forms and all four otherwise", () => {
+    expect(activeArmSlots({ count: 2 })).toEqual(["frontLeft", "frontRight"]);
+    expect(activeArmSlots({ count: 4 })).toHaveLength(4);
+  });
+});
+
+describe("material palettes", () => {
+  it("every palette is a complete, valid materials configuration", () => {
+    for (const palette of MATERIAL_PALETTES) {
+      const result = materialsConfigurationSchema.safeParse(palette.materials);
+      expect(result.success, palette.id).toBe(true);
+    }
+  });
+
+  it("has unique palette ids", () => {
+    expect(new Set(MATERIAL_PALETTES.map((p) => p.id)).size).toBe(MATERIAL_PALETTES.length);
+  });
+});
+
 describe("configuration serialization", () => {
   it("round-trips the default configuration deterministically", () => {
     const config = createDefaultGaneshaConfiguration();
@@ -98,6 +121,16 @@ describe("configuration serialization", () => {
     expect(() => deserializeConfiguration(JSON.stringify(tampered))).toThrow(
       ConfigurationParseError,
     );
+  });
+
+  it("fills hands/arms defaults for configurations saved before those fields", () => {
+    const config = createDefaultGaneshaConfiguration();
+    const legacy: Record<string, unknown> = { ...config };
+    delete legacy.hands;
+    delete legacy.arms;
+    const restored = deserializeConfiguration(JSON.stringify(legacy));
+    expect(restored.arms.count).toBe(4);
+    expect(restored.hands.frontLeft.mudra).toBe("open");
   });
 
   it("rejects invalid material colors", () => {

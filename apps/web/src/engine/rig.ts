@@ -5,35 +5,43 @@
  * the same articulation model a GLB skeleton maps onto), populates part
  * meshes onto joints, creates sockets and mounts attachments.
  *
- * The rig is rebuilt when structure changes (parts/attachments); pose and
- * materials are applied in place without rebuilding (see pose.ts /
- * materials.ts).
+ * The rig is rebuilt when structure changes (parts/attachments/morphs/
+ * hands/arms); pose and materials are applied in place without rebuilding
+ * (see pose.ts / materials.ts).
  */
 import * as THREE from "three";
 import {
   SKELETON,
   SOCKETS,
+  activeArmSlots,
   getSocket,
   type CharacterConfiguration,
   type JointId,
   type SocketId,
 } from "@devaform/character-schema";
 import { resolveAssetRef, type AssetDefinition } from "@devaform/asset-system";
-import { ATTACHMENT_GENERATORS, PART_GENERATORS, type GeneratorContext } from "./generators";
+import {
+  ATTACHMENT_GENERATORS,
+  BASE_BUILDERS,
+  BASE_TOP_HEIGHT,
+  PART_GENERATORS,
+  type GeneratorContext,
+} from "./generators";
+import { getGlb, instantiateGlb } from "./glbCache";
 import type { ZoneMaterials } from "./materials";
 
 export interface CharacterRig {
   root: THREE.Group;
   joints: ReadonlyMap<JointId, THREE.Object3D>;
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
-  /** Assets that failed to resolve or build (surfaced to the UI, not fatal). */
+  /** Assets that failed to resolve or are still loading (not fatal). */
   warnings: string[];
 }
 
-function buildJointHierarchy(): { root: THREE.Group; joints: Map<JointId, THREE.Object3D> } {
+function buildJointHierarchy(): { characterRoot: THREE.Group; joints: Map<JointId, THREE.Object3D> } {
   const joints = new Map<JointId, THREE.Object3D>();
-  const root = new THREE.Group();
-  root.name = "characterRoot";
+  const characterRoot = new THREE.Group();
+  characterRoot.name = "characterRoot";
 
   for (const def of SKELETON) {
     const joint = new THREE.Object3D();
@@ -41,14 +49,14 @@ function buildJointHierarchy(): { root: THREE.Group; joints: Map<JointId, THREE.
     joint.position.set(...def.position);
     joints.set(def.id, joint);
     if (def.parent === null) {
-      root.add(joint);
+      characterRoot.add(joint);
     } else {
       const parent = joints.get(def.parent);
       if (!parent) throw new Error(`Skeleton parent ${def.parent} not built before ${def.id}`);
       parent.add(joint);
     }
   }
-  return { root, joints };
+  return { characterRoot, joints };
 }
 
 function buildSockets(joints: Map<JointId, THREE.Object3D>): Map<SocketId, THREE.Object3D> {
@@ -66,60 +74,45 @@ function buildSockets(joints: Map<JointId, THREE.Object3D>): Map<SocketId, THREE
   return sockets;
 }
 
-function buildPart(
+/** Resolve an asset's renderable object, or null if unavailable (yet). */
+function resolveRenderable(
   asset: AssetDefinition,
   ctx: GeneratorContext,
-  joints: Map<JointId, THREE.Object3D>,
   warnings: string[],
-): void {
-  if (asset.source.kind !== "procedural") {
-    // GLB part loading lands with production assets; the rig contract
-    // (joint names) is already defined so this is purely additive.
-    warnings.push(`Asset ${asset.id}: GLB part loading not yet implemented`);
-    return;
+): THREE.Object3D | { jointed: ReturnType<(typeof PART_GENERATORS)[string]> } | null {
+  if (asset.source.kind === "glb") {
+    const entry = getGlb(asset.source.path);
+    if (entry.status === "loaded") return instantiateGlb(entry.scene, ctx.materials);
+    if (entry.status === "error") warnings.push(`Asset ${asset.id}: ${entry.message}`);
+    return null; // still loading — a cache subscriber rebuild will pick it up
   }
-  const generator = PART_GENERATORS[asset.source.generatorId];
-  if (!generator) {
-    warnings.push(`Asset ${asset.id}: unknown generator ${asset.source.generatorId}`);
-    return;
-  }
-  for (const { joint, object } of generator(ctx)) {
-    const target = joints.get(joint);
-    if (!target) {
-      warnings.push(`Asset ${asset.id}: unknown joint ${joint}`);
-      continue;
+  if (asset.kind.type === "part") {
+    const generator = PART_GENERATORS[asset.source.generatorId];
+    if (!generator) {
+      warnings.push(`Asset ${asset.id}: unknown generator ${asset.source.generatorId}`);
+      return null;
     }
-    object.name = object.name || `part:${asset.id}`;
-    target.add(object);
-  }
-}
-
-function buildAttachment(
-  asset: AssetDefinition,
-  socketId: SocketId,
-  offset: { position?: readonly [number, number, number]; rotation?: readonly [number, number, number]; scale?: number } | undefined,
-  ctx: GeneratorContext,
-  sockets: Map<SocketId, THREE.Object3D>,
-  warnings: string[],
-): void {
-  const socket = sockets.get(socketId);
-  if (!socket) {
-    warnings.push(`Attachment ${asset.id}: unknown socket ${socketId}`);
-    return;
-  }
-  if (asset.source.kind !== "procedural") {
-    warnings.push(`Asset ${asset.id}: GLB attachment loading not yet implemented`);
-    return;
+    return { jointed: generator(ctx) };
   }
   const generator = ATTACHMENT_GENERATORS[asset.source.generatorId];
   if (!generator) {
     warnings.push(`Asset ${asset.id}: unknown generator ${asset.source.generatorId}`);
-    return;
+    return null;
   }
-  const object = generator(ctx);
-  object.name = `attachment:${asset.id}`;
+  return generator(ctx);
+}
 
-  // Asset default transform, then user offset on top.
+function applyAttachmentTransforms(
+  object: THREE.Object3D,
+  asset: AssetDefinition,
+  offset:
+    | {
+        position?: readonly [number, number, number];
+        rotation?: readonly [number, number, number];
+        scale?: number;
+      }
+    | undefined,
+): void {
   const dt = asset.defaultTransform;
   if (dt?.position) object.position.set(...dt.position);
   if (dt?.rotation) object.rotation.set(...dt.rotation);
@@ -135,57 +128,29 @@ function buildAttachment(
     object.rotation.z += offset.rotation[2];
   }
   if (offset?.scale !== undefined) object.scale.multiplyScalar(offset.scale);
-
-  socket.add(object);
-}
-
-/** Statue base platform under the character. */
-function buildBase(config: CharacterConfiguration, ctx: GeneratorContext, root: THREE.Group): void {
-  if (config.base.style === "none") return;
-  const material = ctx.materials.get("base");
-  let geometry: THREE.BufferGeometry;
-  switch (config.base.style) {
-    case "round":
-      geometry = new THREE.CylinderGeometry(0.34, 0.38, 0.06, 36);
-      break;
-    case "square":
-      geometry = new THREE.BoxGeometry(0.62, 0.06, 0.62);
-      break;
-    case "lotus": {
-      const group = new THREE.Group();
-      group.name = "base:lotus";
-      const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 0.05, 32), material);
-      disk.position.y = -0.035;
-      disk.castShadow = disk.receiveShadow = true;
-      group.add(disk);
-      const petals = 14;
-      for (let i = 0; i < petals; i++) {
-        const angle = (i / petals) * Math.PI * 2;
-        const petal = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), material);
-        petal.position.set(Math.cos(angle) * 0.32, -0.02, Math.sin(angle) * 0.32);
-        petal.scale.set(1, 0.4, 0.55);
-        petal.rotation.y = -angle;
-        petal.castShadow = petal.receiveShadow = true;
-        group.add(petal);
-      }
-      root.add(group);
-      return;
-    }
-  }
-  const base = new THREE.Mesh(geometry, material);
-  base.name = `base:${config.base.style}`;
-  base.position.y = -0.03;
-  base.castShadow = base.receiveShadow = true;
-  root.add(base);
 }
 
 export function buildRig(config: CharacterConfiguration, materials: ZoneMaterials): CharacterRig {
   const warnings: string[] = [];
-  const { root, joints } = buildJointHierarchy();
+  const root = new THREE.Group();
+  root.name = "statueRoot";
+  const { characterRoot, joints } = buildJointHierarchy();
+  root.add(characterRoot);
   const sockets = buildSockets(joints);
 
-  const baseCtx = { materials, proportions: config.proportions };
+  const baseCtx: Omit<GeneratorContext, "params"> = {
+    materials,
+    proportions: config.proportions,
+    morphs: config.morphs,
+    hands: config.hands,
+    arms: config.arms,
+  };
+  const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
+    ...baseCtx,
+    params: asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {},
+  });
 
+  // Parts
   for (const ref of Object.values(config.parts)) {
     const asset = resolveAssetRef(ref);
     if (ref && !asset) {
@@ -193,28 +158,60 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       continue;
     }
     if (!asset) continue;
-    const params = asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {};
-    buildPart(asset, { ...baseCtx, params }, joints, warnings);
+    const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
+    if (!renderable) continue;
+    if (renderable instanceof THREE.Object3D) {
+      // GLB part: meshes are placed under the joints their names declare
+      // (JOINT_<id> grouping); otherwise parent to the character root.
+      characterRoot.add(renderable);
+      continue;
+    }
+    for (const { joint, object } of renderable.jointed) {
+      const target = joints.get(joint);
+      if (!target) {
+        warnings.push(`Asset ${asset.id}: unknown joint ${joint}`);
+        continue;
+      }
+      object.name = object.name || `part:${asset.id}`;
+      target.add(object);
+    }
   }
 
+  // Attachments — skip hand sockets on arms that are not rendered.
+  const activeSlots = activeArmSlots(config.arms);
+  const inactiveHandSockets = new Set(
+    (["frontLeft", "frontRight", "backLeft", "backRight"] as const)
+      .filter((slot) => !activeSlots.includes(slot))
+      .flatMap((slot) => [`arm.${slot}.hand.item`, `arm.${slot}.wrist`]),
+  );
+
   for (const attachment of config.attachments) {
+    if (inactiveHandSockets.has(attachment.socket)) continue;
     const asset = resolveAssetRef(attachment.asset);
     if (!asset) {
       warnings.push(`Unknown attachment asset: ${attachment.asset.assetId}`);
       continue;
     }
-    const params = asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {};
-    buildAttachment(
-      asset,
-      attachment.socket as SocketId,
-      attachment.offset,
-      { ...baseCtx, params },
-      sockets,
-      warnings,
-    );
+    const socket = sockets.get(attachment.socket as SocketId);
+    if (!socket) {
+      warnings.push(`Attachment ${asset.id}: unknown socket ${attachment.socket}`);
+      continue;
+    }
+    const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
+    if (!renderable || !(renderable instanceof THREE.Object3D)) continue;
+    renderable.name = `attachment:${asset.id}`;
+    applyAttachmentTransforms(renderable, asset, attachment.offset);
+    socket.add(renderable);
   }
 
-  buildBase(config, { ...baseCtx, params: {} }, root);
+  // Base platform; the character stands on its top surface.
+  const baseBuilder = BASE_BUILDERS[config.base.style];
+  if (baseBuilder) {
+    const base = baseBuilder({ ...baseCtx, params: {} });
+    base.name = `base:${config.base.style}`;
+    root.add(base);
+  }
+  characterRoot.position.y = BASE_TOP_HEIGHT[config.base.style] ?? 0;
 
   // Whole-statue height proportion (uniform so nothing distorts).
   root.scale.setScalar(config.proportions.height);
@@ -222,10 +219,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   return { root, joints, sockets, warnings };
 }
 
-/** Dispose all geometries owned by a rig. Materials are shared and survive. */
+/**
+ * Dispose geometries owned by a rig. Shared resources survive: zone/fixed
+ * materials, and GLB geometry (owned by the glbCache source scene, flagged
+ * via userData.glbShared).
+ */
 export function disposeRig(rig: CharacterRig): void {
   rig.root.traverse((object) => {
-    if (object instanceof THREE.Mesh) {
+    if (object instanceof THREE.Mesh && object.userData.glbShared !== true) {
       object.geometry.dispose();
     }
   });
