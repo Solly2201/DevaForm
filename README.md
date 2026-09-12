@@ -34,7 +34,8 @@ tools/
 | `/` | DevaForm landing |
 | `/deities` | Deity selection (Ganesha available; six deities coming soon) |
 | `/studio/[deity]` | Divine Studio for an available deity |
-| `/library` | Saved creations: open, rename, duplicate, delete |
+| `/library` | Your saved creations: open, rename, duplicate, delete |
+| `/account` | Sign in / sign up (guest creations are claimed on sign-up) |
 | `/share/[id]` | Public share view, rebuilt from the pinned configuration |
 | `/dev/assets` | Internal asset-registry view |
 
@@ -88,6 +89,9 @@ pnpm build          # production build
   8 curated palettes (Traditional, Temple Gold, Ivory, Terracotta, Saffron,
   Royal Blue, Marble, Black Stone) + per-zone fine-tuning
 - Real 3D asset thumbnails rendered from actual geometry
+- Accounts: first-party email/password auth (scrypt + cookie sessions),
+  guest sessions with creation claiming on sign-up, owned libraries and
+  ownership-gated mutation APIs
 - Save / load / rename / duplicate / delete creations (SQLite via Prisma,
   immutable version rows) with real viewport thumbnails and autosave
 - Public sharing: a share pins one immutable creation version and is

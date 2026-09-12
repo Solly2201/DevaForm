@@ -15,10 +15,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// First-party identity. Guests work without an account: every visitor
+// gets a Session; signing up claims the session's creations.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  // scrypt hash, "salt:derivedKey" hex (see src/lib/auth.ts)
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  sessions   Session[]
+  characters Character[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  characters Character[]
+}
+
 model Character {
   id        String   @id @default(cuid())
   name      String
   deity     String
+  // Ownership: a signed-in user, or the anonymous session that created it.
+  // Rows with neither are legacy dev data (visible to everyone locally).
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   // Small JPEG data URL captured from the viewport on save; used as the
   // library thumbnail. Full configuration lives in CharacterVersion.
   preview   String?
@@ -27,6 +57,9 @@ model Character {
 
   versions CharacterVersion[]
   shares   Share[]
+
+  @@index([userId])
+  @@index([sessionId])
 }
 
 // A public share points at one immutable CharacterVersion, so the shared

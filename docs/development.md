@@ -49,7 +49,7 @@ No other secrets exist. Never commit `.env`.
 
 - Swap SQLite → PostgreSQL (Prisma datasource + migration).
 - Put GLBs/static assets behind a CDN; `public/assets` is the contract.
-- Add authentication before exposing save/library/share mutation routes
-  publicly — the current API is unauthenticated by design for local
-  development and must not ship as-is (see architecture.md security notes).
+- Authentication is first-party (sessions + scrypt) and mutation routes
+  are ownership-gated; before public launch add auth rate limiting and a
+  password-reset flow (requires an email service) — see architecture.md.
 - `pnpm build` is the production build; no further build-time secrets.

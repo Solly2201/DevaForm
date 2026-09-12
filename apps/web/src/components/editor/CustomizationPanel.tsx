@@ -5,7 +5,8 @@
  * part categories get asset grids per slot, socket categories get asset
  * grids per socket, and hands/pose/materials/base render dedicated panels.
  */
-import { listAssets, type EditorCategory } from "@devaform/asset-system";
+import { useState } from "react";
+import { getAsset, listAssets, type EditorCategory } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
 import {
   FACE_MORPHS,
@@ -78,6 +79,109 @@ function PartSlotSection({ slot }: { slot: PartSlot }) {
   );
 }
 
+/**
+ * Fine placement controls for an attached item — position (cm), rotation
+ * and scale offsets layered over the asset's default transform. Upright
+ * items keep their world-vertical orientation, so rotation is hidden for
+ * them rather than pretending it works.
+ */
+function AttachmentAdjust({ socket }: { socket: SocketId }) {
+  const attachment = useEditorStore((s) =>
+    s.config.attachments.find((a) => a.socket === socket),
+  );
+  const setAttachmentOffset = useEditorStore((s) => s.setAttachmentOffset);
+  const [open, setOpen] = useState(false);
+  if (!attachment) return null;
+  const asset = getAsset(attachment.asset.assetId);
+  const upright = asset?.keepUpright === true;
+  const offset = attachment.offset ?? {};
+  const position = offset.position ?? [0, 0, 0];
+  const rotationY = offset.rotation?.[1] ?? 0;
+  const scale = offset.scale ?? 1;
+
+  const update = (
+    next: Partial<{ position: [number, number, number]; rotationY: number; scale: number }>,
+  ) => {
+    const p = next.position ?? (position as [number, number, number]);
+    const rY = next.rotationY ?? rotationY;
+    const s = next.scale ?? scale;
+    const isDefault =
+      p.every((v) => Math.abs(v) < 1e-4) && Math.abs(rY) < 1e-4 && Math.abs(s - 1) < 1e-4;
+    setAttachmentOffset(
+      socket,
+      isDefault
+        ? undefined
+        : {
+            position: p,
+            ...(upright ? {} : { rotation: [0, rY, 0] as [number, number, number] }),
+            scale: s,
+          },
+    );
+  };
+
+  const positionSlider = (axis: 0 | 1 | 2, label: string) => (
+    <SliderControl
+      label={label}
+      value={(position[axis] ?? 0) * 100}
+      min={-4}
+      max={4}
+      step={0.1}
+      format={(v) => `${v.toFixed(1)} cm`}
+      onChange={(cm) => {
+        const p = [...position] as [number, number, number];
+        p[axis] = cm / 100;
+        update({ position: p });
+      }}
+    />
+  );
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="text-[11px] text-stone-500 underline-offset-2 hover:text-saffron-400 hover:underline"
+      >
+        {open ? "Hide placement adjustments" : "Adjust placement"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2.5 rounded-lg border border-surface-800 bg-surface-850 p-3">
+          {positionSlider(0, "Left / Right")}
+          {positionSlider(1, "Down / Up")}
+          {positionSlider(2, "Back / Forward")}
+          {!upright && (
+            <SliderControl
+              label="Turn"
+              value={(rotationY * 180) / Math.PI}
+              min={-180}
+              max={180}
+              step={1}
+              format={(v) => `${Math.round(v)}°`}
+              onChange={(deg) => update({ rotationY: (deg * Math.PI) / 180 })}
+            />
+          )}
+          <SliderControl
+            label="Size"
+            value={scale}
+            min={0.7}
+            max={1.4}
+            step={0.01}
+            onChange={(s) => update({ scale: s })}
+          />
+          <button
+            type="button"
+            onClick={() => setAttachmentOffset(socket, undefined)}
+            className="w-full rounded-md border border-surface-700 py-1 text-[11px] text-stone-400 hover:border-stone-500"
+          >
+            Reset placement
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SocketSection({ socket, allowNone }: { socket: SocketId; allowNone: boolean }) {
   const deity = useEditorStore((s) => s.config.deity);
   const attachment = useEditorStore((s) =>
@@ -95,6 +199,7 @@ function SocketSection({ socket, allowNone }: { socket: SocketId; allowNone: boo
         allowNone={allowNone}
         onSelect={(assetId) => setAttachment(socket, assetId)}
       />
+      <AttachmentAdjust socket={socket} />
     </section>
   );
 }

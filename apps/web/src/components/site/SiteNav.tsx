@@ -26,6 +26,12 @@ export function SiteNav() {
           Library
         </Link>
         <Link
+          href="/account"
+          className="rounded-lg px-3 py-1.5 text-sm text-stone-400 transition-colors hover:text-stone-200"
+        >
+          Account
+        </Link>
+        <Link
           href="/studio/ganesha"
           className="rounded-lg bg-saffron-500 px-4 py-1.5 text-sm font-semibold text-surface-950 transition-colors hover:bg-saffron-400"
         >

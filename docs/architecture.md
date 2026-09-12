@@ -233,13 +233,28 @@ This runs in Python/Blender workers (see `tools/blender/`), consuming the
 same configuration JSON — which is why determinism and versioning live in the
 schema package, not the web app.
 
-## Security posture (current phase)
+## Identity, ownership & security
 
-- No secrets in the frontend; DB URL via env only.
-- All write endpoints validate payloads (zod + registry checks).
+First-party auth (`apps/web/src/lib/auth.ts`): scrypt-hashed passwords
+(node:crypto — no external identity provider required) and httpOnly
+cookie sessions. Every visitor gets an anonymous `Session`; creations
+are owned by that session until sign-up/sign-in **claims** them onto the
+`User`. Ownership checks (`ownsCharacter`/`ownershipWhere`) gate every
+character mutation and the library listing; unknown and foreign ids both
+return a uniform 404 so ids cannot be probed. Share creation requires
+ownership; share *reading* stays public by design (that is the sharing
+feature) and exposes only the shared creation. Logout rotates to a fresh
+anonymous session. Legacy pre-auth rows (null owner) remain visible in
+local development only.
+
+Other posture:
+- No secrets in the frontend; DB URL via env only. No secrets exist yet.
+- All write endpoints validate payloads (zod + registry checks); login
+  errors are uniform (no email-existence oracle).
 - No file paths or executable content accepted from clients.
-- Auth/accounts arrive in Phase F; save endpoints are currently open because
-  the app runs locally. Gate them before any public deployment.
+- Remaining before public deployment: rate limiting on auth endpoints,
+  password reset (needs email service), CSRF hardening if cookies move
+  beyond same-site usage.
 
 ## Roadmap pointers
 
