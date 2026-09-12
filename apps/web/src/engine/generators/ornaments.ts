@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { ARM_SLOTS, activeArmSlots, type JointId } from "@devaform/character-schema";
 import { lathe, mesh, radialRing } from "../geometry";
-import { num, type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
+import { type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
 
 function gemStud(ctx: GeneratorContext, r: number): THREE.Mesh {
   return mesh(new THREE.SphereGeometry(r, 12, 10), ctx.materials.get("gem"));

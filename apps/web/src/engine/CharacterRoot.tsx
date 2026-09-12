@@ -18,6 +18,7 @@ import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 import { applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
+import { activeRig } from "./rigHandle";
 
 export function CharacterRoot() {
   const parts = useEditorStore((s) => s.config.parts);
@@ -82,6 +83,10 @@ export function CharacterRoot() {
     if (rig.warnings.length > 0) {
       console.warn("Character rig warnings:", rig.warnings);
     }
+    activeRig.current = rig;
+    return () => {
+      if (activeRig.current === rig) activeRig.current = null;
+    };
   }, [rig]);
 
   return <primitive object={rig.root} />;

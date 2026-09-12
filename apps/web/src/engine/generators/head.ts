@@ -7,7 +7,7 @@
  */
 import * as THREE from "three";
 import { mesh, taperedTube, type V3 } from "../geometry";
-import { num, morph, type GeneratorContext, type PartGenerator } from "./types";
+import { num, morph, type PartGenerator } from "./types";
 
 // ---------------------------------------------------------------------------
 // HEAD

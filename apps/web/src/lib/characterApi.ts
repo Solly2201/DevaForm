@@ -13,6 +13,7 @@ export interface CharacterSummary {
   name: string;
   deity: string;
   updatedAt: string;
+  preview: string | null;
 }
 
 export interface LoadedCharacter {
@@ -43,10 +44,11 @@ export async function listCharacters(): Promise<CharacterSummary[]> {
 export async function createCharacter(
   name: string,
   config: CharacterConfiguration,
+  preview?: string,
 ): Promise<{ id: string }> {
   return request<{ id: string }>("/api/characters", {
     method: "POST",
-    body: JSON.stringify({ name, config }),
+    body: JSON.stringify({ name, config, preview }),
   });
 }
 
@@ -54,11 +56,42 @@ export async function saveCharacter(
   id: string,
   name: string,
   config: CharacterConfiguration,
+  preview?: string,
 ): Promise<{ id: string }> {
   return request<{ id: string }>(`/api/characters/${id}`, {
     method: "PUT",
-    body: JSON.stringify({ name, config }),
+    body: JSON.stringify({ name, config, preview }),
   });
+}
+
+export async function renameCharacter(id: string, name: string): Promise<void> {
+  await request<{ id: string }>(`/api/characters/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export interface SharedCreation {
+  id: string;
+  name: string;
+  deity: string;
+  preview: string | null;
+  createdAt: string;
+  config: CharacterConfiguration;
+}
+
+export async function createShare(characterId: string): Promise<{ id: string }> {
+  return request<{ id: string }>("/api/shares", {
+    method: "POST",
+    body: JSON.stringify({ characterId }),
+  });
+}
+
+export async function loadShare(id: string): Promise<SharedCreation> {
+  const data = await request<Omit<SharedCreation, "config"> & { config: unknown }>(
+    `/api/shares/${id}`,
+  );
+  return { ...data, config: deserializeConfiguration(data.config) };
 }
 
 export async function loadCharacter(id: string): Promise<LoadedCharacter> {

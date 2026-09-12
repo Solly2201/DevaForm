@@ -9,7 +9,6 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import {
-  createDefaultGaneshaConfiguration,
   getPalette,
   type ArmSlot,
   type AttachmentConfiguration,
@@ -24,7 +23,17 @@ import {
   type Vec3,
   type ZoneMaterial,
 } from "@devaform/character-schema";
-import { getAsset, latestRef } from "@devaform/asset-system";
+import { AVAILABLE_DEITIES, getAsset, latestRef } from "@devaform/asset-system";
+
+/** Bootstrap configuration: the first available deity's default. */
+function createBootstrapConfiguration(): CharacterConfiguration {
+  const deity = AVAILABLE_DEITIES[0];
+  if (!deity) throw new Error("No available deity registered");
+  return deity.createDefaultConfiguration();
+}
+
+const defaultName = (config: CharacterConfiguration) =>
+  `My ${config.deity.charAt(0).toUpperCase()}${config.deity.slice(1)}`;
 
 export interface EditorState {
   config: CharacterConfiguration;
@@ -54,7 +63,8 @@ export interface EditorState {
 
   // -- character lifecycle --
   setCharacterName: (name: string) => void;
-  newCharacter: () => void;
+  /** Reset to a fresh configuration (the active deity's default). */
+  newCharacter: (config?: CharacterConfiguration) => void;
   adoptLoadedCharacter: (input: {
     id: string;
     name: string;
@@ -73,9 +83,9 @@ function mutateConfig(
 export const useEditorStore = create<EditorState>()(
   temporal(
     (set) => ({
-      config: createDefaultGaneshaConfiguration(),
+      config: createBootstrapConfiguration(),
       characterId: null,
-      characterName: "My Ganesha",
+      characterName: defaultName(createBootstrapConfiguration()),
       dirty: false,
 
       setPart: (slot, assetId) =>
@@ -216,12 +226,15 @@ export const useEditorStore = create<EditorState>()(
 
       setCharacterName: (name) => set({ characterName: name, dirty: true }),
 
-      newCharacter: () =>
-        set({
-          config: createDefaultGaneshaConfiguration(),
-          characterId: null,
-          characterName: "My Ganesha",
-          dirty: false,
+      newCharacter: (config) =>
+        set(() => {
+          const next = config ?? createBootstrapConfiguration();
+          return {
+            config: next,
+            characterId: null,
+            characterName: defaultName(next),
+            dirty: false,
+          };
         }),
 
       adoptLoadedCharacter: ({ id, name, config }) =>

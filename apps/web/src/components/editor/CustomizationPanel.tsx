@@ -5,11 +5,8 @@
  * part categories get asset grids per slot, socket categories get asset
  * grids per socket, and hands/pose/materials/base render dedicated panels.
  */
-import {
-  GANESHA_EDITOR_CATEGORIES,
-  listAssets,
-  type EditorCategory,
-} from "@devaform/asset-system";
+import { listAssets, type EditorCategory } from "@devaform/asset-system";
+import { useDeity } from "@/state/deityContext";
 import {
   FACE_MORPHS,
   activeArmSlots,
@@ -128,17 +125,24 @@ function ProportionsSection() {
   );
 }
 
+const ARM_OPTION_LABELS: Record<number, string> = {
+  2: "Two Arms",
+  4: "Four Arms (Chaturbhuja)",
+};
+
 function ArmCountSection() {
+  const deity = useDeity();
   const arms = useEditorStore((s) => s.config.arms);
   const setArmCount = useEditorStore((s) => s.setArmCount);
+  if (deity.armOptions.length < 2) return null;
   return (
     <section>
       <SectionHeading>Arms</SectionHeading>
       <SegmentedControl<"2" | "4">
-        options={[
-          { value: "4", label: "Four Arms (Chaturbhuja)" },
-          { value: "2", label: "Two Arms" },
-        ]}
+        options={deity.armOptions.map((count) => ({
+          value: String(count) as "2" | "4",
+          label: ARM_OPTION_LABELS[count] ?? `${count} Arms`,
+        }))}
         value={String(arms.count) as "2" | "4"}
         onChange={(value) => setArmCount(Number(value) as 2 | 4)}
       />
@@ -294,10 +298,10 @@ function CategoryContent({ category }: { category: EditorCategory }) {
 }
 
 export function CustomizationPanel() {
+  const deity = useDeity();
   const activeCategoryId = useUiStore((s) => s.activeCategoryId);
   const category =
-    GANESHA_EDITOR_CATEGORIES.find((c) => c.id === activeCategoryId) ??
-    GANESHA_EDITOR_CATEGORIES[0];
+    deity.categories.find((c) => c.id === activeCategoryId) ?? deity.categories[0];
   if (!category) return null;
 
   return (

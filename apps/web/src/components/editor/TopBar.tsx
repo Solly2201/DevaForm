@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
-import { createCharacter, saveCharacter } from "@/lib/characterApi";
+import { captureViewport } from "@/engine/capture";
+import { createCharacter, createShare, saveCharacter } from "@/lib/characterApi";
+import { useDeity } from "@/state/deityContext";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
+
+const AUTOSAVE_DELAY_MS = 15_000;
 
 function IconButton({
   label,
@@ -32,7 +37,7 @@ function IconButton({
 }
 
 export function TopBar() {
-  const deity = useEditorStore((s) => s.config.deity);
+  const deity = useDeity();
   const characterName = useEditorStore((s) => s.characterName);
   const setCharacterName = useEditorStore((s) => s.setCharacterName);
   const characterId = useEditorStore((s) => s.characterId);
@@ -44,30 +49,86 @@ export function TopBar() {
   const canUndo = useStore(temporal, (s) => s.pastStates.length > 0);
   const canRedo = useStore(temporal, (s) => s.futureStates.length > 0);
 
-  const setSaveDialogOpen = useUiStore((s) => s.setSaveDialogOpen);
+  const setExportDialogOpen = useUiStore((s) => s.setExportDialogOpen);
   const showStatus = useUiStore((s) => s.showStatus);
   const statusMessage = useUiStore((s) => s.statusMessage);
   const clearStatus = useUiStore((s) => s.clearStatus);
 
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
-  const handleSave = useCallback(async () => {
-    if (saving) return;
-    setSaving(true);
+  const handleSave = useCallback(
+    async (options?: { silent?: boolean }): Promise<string | null> => {
+      if (saving) return null;
+      setSaving(true);
+      try {
+        const { config, characterId: id } = useEditorStore.getState();
+        const name = useEditorStore.getState().characterName.trim() || "Untitled";
+        const preview = captureViewport(320, "image/jpeg", 0.8) ?? undefined;
+        const result = id
+          ? await saveCharacter(id, name, config, preview)
+          : await createCharacter(name, config, preview);
+        markSaved(result.id);
+        setSaveFailed(false);
+        if (!options?.silent) showStatus("Saved");
+        return result.id;
+      } catch (error) {
+        setSaveFailed(true);
+        showStatus(error instanceof Error ? error.message : "Save failed", "error");
+        return null;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [markSaved, saving, showStatus],
+  );
+
+  // Autosave: once a creation exists, quietly persist changes after a pause.
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!dirty || !characterId || saving) return;
+    autosaveTimer.current = setTimeout(() => void handleSave({ silent: true }), AUTOSAVE_DELAY_MS);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [dirty, characterId, saving, handleSave]);
+
+  const handleShare = useCallback(async () => {
+    if (sharing) return;
+    setSharing(true);
     try {
-      const { config } = useEditorStore.getState();
-      const name = useEditorStore.getState().characterName.trim() || "Untitled";
-      const result = characterId
-        ? await saveCharacter(characterId, name, config)
-        : await createCharacter(name, config);
-      markSaved(result.id);
-      showStatus("Saved");
+      let id = useEditorStore.getState().characterId;
+      if (!id || useEditorStore.getState().dirty) {
+        id = await handleSave({ silent: true });
+      }
+      if (!id) return;
+      const share = await createShare(id);
+      const url = `${window.location.origin}/share/${share.id}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        showStatus("Share link copied to clipboard");
+      } catch {
+        showStatus(`Share link: ${url}`);
+      }
     } catch (error) {
-      showStatus(error instanceof Error ? error.message : "Save failed", "error");
+      showStatus(error instanceof Error ? error.message : "Sharing failed", "error");
     } finally {
-      setSaving(false);
+      setSharing(false);
     }
-  }, [characterId, markSaved, saving, showStatus]);
+  }, [handleSave, sharing, showStatus]);
+
+  const handleNew = useCallback(() => {
+    if (useEditorStore.getState().dirty) {
+      const proceed = window.confirm(
+        "You have unsaved changes. Start a new creation anyway?",
+      );
+      if (!proceed) return;
+    }
+    newCharacter(deity.createDefaultConfiguration());
+    temporal.getState().clear();
+    showStatus("New creation started");
+  }, [deity, newCharacter, showStatus, temporal]);
 
   // Keyboard shortcuts: Ctrl+Z / Ctrl+Y / Ctrl+S
   useEffect(() => {
@@ -97,37 +158,59 @@ export function TopBar() {
     return () => clearTimeout(timer);
   }, [statusMessage, clearStatus]);
 
+  const saveState = saving
+    ? "Saving…"
+    : saveFailed
+      ? "Save failed"
+      : dirty
+        ? "Unsaved changes"
+        : characterId
+          ? "Saved"
+          : "";
+
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-surface-800 bg-surface-900 px-4">
-      <div className="flex items-baseline gap-1.5">
+    <header className="flex h-14 items-center gap-3 border-b border-surface-800 bg-surface-900 px-4">
+      <Link href="/" className="flex items-baseline gap-1.5">
         <span className="font-display text-lg font-semibold tracking-wide text-saffron-500">
           DevaForm
         </span>
-        <span className="text-[10px] uppercase tracking-widest text-stone-600">Divine Studio</span>
-      </div>
+        <span className="hidden text-[10px] uppercase tracking-widest text-stone-600 lg:inline">
+          Divine Studio
+        </span>
+      </Link>
 
-      <div className="mx-4 h-6 w-px bg-surface-700" />
+      <div className="mx-2 h-6 w-px bg-surface-700" />
 
-      <span
-        className="rounded-full border border-surface-700 px-2.5 py-0.5 text-[11px] font-medium capitalize text-stone-400"
-        title="Deity being customized"
+      <Link
+        href="/deities"
+        className="rounded-full border border-surface-700 px-2.5 py-0.5 text-[11px] font-medium text-stone-400 transition-colors hover:border-saffron-600 hover:text-saffron-400"
+        title="Change deity"
       >
-        {deity}
-      </span>
+        {deity.name}
+      </Link>
 
       <input
         value={characterName}
         onChange={(e) => setCharacterName(e.target.value)}
-        aria-label="Character name"
-        className="w-56 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm text-stone-200 transition-colors hover:border-surface-700 focus:border-saffron-600 focus:outline-none"
+        aria-label="Creation name"
+        className="w-28 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm text-stone-200 transition-colors hover:border-surface-700 focus:border-saffron-600 focus:outline-none lg:w-48"
       />
-      {dirty && <span className="h-2 w-2 rounded-full bg-saffron-500" title="Unsaved changes" />}
+      <span
+        className={`hidden text-[11px] md:inline ${
+          saveFailed ? "text-red-400" : dirty || saving ? "text-stone-500" : "text-stone-600"
+        }`}
+        aria-live="polite"
+      >
+        {saveState}
+      </span>
 
       <div className="flex-1" />
 
       {statusMessage && (
         <span
-          className={`text-xs ${statusMessage.kind === "error" ? "text-red-400" : "text-stone-400"}`}
+          className={`hidden max-w-72 truncate text-xs md:inline ${
+            statusMessage.kind === "error" ? "text-red-400" : "text-stone-400"
+          }`}
         >
           {statusMessage.text}
         </span>
@@ -150,20 +233,31 @@ export function TopBar() {
 
       <button
         type="button"
-        onClick={() => {
-          newCharacter();
-          temporal.getState().clear();
-        }}
+        onClick={handleNew}
         className="rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-stone-300 hover:border-stone-500"
       >
         New
       </button>
-      <button
-        type="button"
-        onClick={() => setSaveDialogOpen(true)}
+      <Link
+        href="/library"
         className="rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-stone-300 hover:border-stone-500"
       >
         Library
+      </Link>
+      <button
+        type="button"
+        onClick={() => setExportDialogOpen(true)}
+        className="rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-stone-300 hover:border-stone-500"
+      >
+        Export
+      </button>
+      <button
+        type="button"
+        onClick={() => void handleShare()}
+        disabled={sharing}
+        className="rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-stone-300 hover:border-stone-500 disabled:opacity-50"
+      >
+        {sharing ? "Sharing…" : "Share"}
       </button>
       <button
         type="button"

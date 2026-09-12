@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const characters = await prisma.character.findMany({
       orderBy: { updatedAt: "desc" },
-      select: { id: true, name: true, deity: true, updatedAt: true },
+      select: { id: true, name: true, deity: true, updatedAt: true, preview: true },
     });
     return NextResponse.json({ characters });
   } catch (error) {
@@ -17,11 +17,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, config, assetVersions } = validateSave(await request.json());
+    const { name, config, assetVersions, preview } = validateSave(await request.json());
     const character = await prisma.character.create({
       data: {
         name,
         deity: config.deity,
+        preview: preview ?? null,
         versions: {
           create: {
             schemaVersion: config.schemaVersion,

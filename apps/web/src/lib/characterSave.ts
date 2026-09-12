@@ -10,6 +10,12 @@ import { resolveAssetRef } from "@devaform/asset-system";
 const savePayloadSchema = z.object({
   name: z.string().trim().min(1).max(120),
   config: z.unknown(),
+  /** Optional small viewport capture used as the library thumbnail. */
+  preview: z
+    .string()
+    .regex(/^data:image\/(jpeg|png);base64,/)
+    .max(400_000)
+    .optional(),
 });
 
 /**
@@ -21,6 +27,7 @@ export function validateSave(body: unknown): {
   name: string;
   config: CharacterConfiguration;
   assetVersions: Record<string, number>;
+  preview?: string;
 } {
   const payload = savePayloadSchema.parse(body);
   const config = deserializeConfiguration(payload.config);
@@ -37,7 +44,7 @@ export function validateSave(body: unknown): {
     }
     assetVersions[ref.assetId] = ref.version;
   }
-  return { name: payload.name, config, assetVersions };
+  return { name: payload.name, config, assetVersions, preview: payload.preview };
 }
 
 export function saveErrorResponse(error: unknown) {

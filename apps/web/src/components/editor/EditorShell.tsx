@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { CategorySidebar } from "./CategorySidebar";
 import { CustomizationPanel } from "./CustomizationPanel";
-import { SaveLoadDialog } from "./SaveLoadDialog";
+import { ExportDialog } from "./ExportDialog";
 import { TopBar } from "./TopBar";
 import { ViewportOverlay } from "./ViewportOverlay";
 
@@ -32,7 +32,7 @@ export function EditorShell() {
         </main>
         <CustomizationPanel />
       </div>
-      <SaveLoadDialog />
+      <ExportDialog />
     </div>
   );
 }
