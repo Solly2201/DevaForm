@@ -23,6 +23,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifestEntries, repoPaths } from "./lib/manifest.mjs";
+import { glbStats, parseGlbJson } from "./lib/glb.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { webRoot: ROOT, assetDir: ASSET_DIR, manifestDir: MANIFEST_DIR } = repoPaths(here);
@@ -38,53 +39,7 @@ const error = (msg) => { console.error(`  ERROR   ${msg}`); errors += 1; };
 const warn = (msg) => { console.warn(`  warning ${msg}`); warnings += 1; };
 const pass = (msg) => console.log(`  PASS    ${msg}`);
 
-// ---------------------------------------------------------------------------
-// GLB parsing
-// ---------------------------------------------------------------------------
-
-function parseGlb(buffer) {
-  if (buffer.length < 20) throw new Error("file too small to be a GLB");
-  if (buffer.toString("ascii", 0, 4) !== "glTF") throw new Error("bad magic (not a GLB)");
-  const version = buffer.readUInt32LE(4);
-  if (version !== 2) throw new Error(`unsupported glTF version ${version}`);
-  if (buffer.readUInt32LE(8) !== buffer.length) {
-    throw new Error(`declared length != file size`);
-  }
-  const jsonChunkLength = buffer.readUInt32LE(12);
-  if (buffer.readUInt32LE(16) !== 0x4e4f534a) throw new Error("first chunk is not JSON");
-  return JSON.parse(buffer.toString("utf8", 20, 20 + jsonChunkLength));
-}
-
-function glbStats(json) {
-  const accessors = json.accessors ?? [];
-  const min = [Infinity, Infinity, Infinity];
-  const max = [-Infinity, -Infinity, -Infinity];
-  let triangles = 0;
-  let boundsMissing = false;
-  for (const mesh of json.meshes ?? []) {
-    for (const primitive of mesh.primitives ?? []) {
-      const positionAccessor = accessors[primitive.attributes?.POSITION ?? -1];
-      if (!positionAccessor?.min || !positionAccessor?.max) {
-        boundsMissing = true;
-        continue;
-      }
-      for (let axis = 0; axis < 3; axis++) {
-        min[axis] = Math.min(min[axis], positionAccessor.min[axis]);
-        max[axis] = Math.max(max[axis], positionAccessor.max[axis]);
-      }
-      const indexAccessor = accessors[primitive.indices ?? -1];
-      triangles += Math.floor((indexAccessor?.count ?? positionAccessor.count) / 3);
-    }
-  }
-  return {
-    meshCount: (json.meshes ?? []).length,
-    triangles,
-    boundsMissing,
-    size: Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]),
-    materialNames: (json.materials ?? []).map((m) => m.name ?? ""),
-    nodeNames: (json.nodes ?? []).map((n) => n.name ?? ""),
-  };
-}
+const MAX_EMBEDDED_TEXTURE_BYTES = 4 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -117,7 +72,7 @@ for (const entry of glbEntries) {
   }
   let stats;
   try {
-    stats = glbStats(parseGlb(await readFile(file)));
+    stats = glbStats(parseGlbJson(await readFile(file)));
   } catch (e) {
     error(`${label}: ${e.message}`);
     continue;
@@ -137,6 +92,13 @@ for (const entry of glbEntries) {
   }
   if (entry.kindType === "part" && !stats.nodeNames.some((n) => n.startsWith("JOINT_"))) {
     problems.push("part GLB has no JOINT_<id> node groups (will not follow the skeleton)");
+  }
+  for (const texture of stats.textures) {
+    if (texture.external) {
+      problems.push(`texture "${texture.name}" references an external file — GLBs must be self-contained`);
+    } else if (texture.bytes > MAX_EMBEDDED_TEXTURE_BYTES) {
+      warn(`${label}: texture "${texture.name}" is ${(texture.bytes / 1e6).toFixed(1)} MB — consider downscaling`);
+    }
   }
 
   // Dataset sidecar: asset.json must exist next to the model and agree

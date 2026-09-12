@@ -67,7 +67,7 @@ export class ZoneMaterials {
       eyeDark: fixed("eyeDark", { color: "#141210", roughness: 0.18, clearcoat: 0.9 }),
       eyeWhite: fixed("eyeWhite", { color: "#f7f2e6", roughness: 0.28, clearcoat: 0.5 }),
       iris: fixed("iris", { color: "#4a2c17", roughness: 0.2, clearcoat: 0.8 }),
-      ivory: fixed("ivory", { color: "#f0e7d3", roughness: 0.4, clearcoat: 0.3, envMapIntensity: 0.8 }),
+      ivory: fixed("ivory", { color: "#f8f1e2", roughness: 0.3, clearcoat: 0.45, envMapIntensity: 1.05 }),
       tilak: fixed("tilak", { color: "#c22b21", roughness: 0.6 }),
       mouthDark: fixed("mouthDark", { color: "#3f241b", roughness: 0.75 }),
     };

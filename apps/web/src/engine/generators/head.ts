@@ -413,32 +413,44 @@ export const ganeshaTusks: PartGenerator = (ctx) => {
 
   for (const side of [1, -1]) {
     const isBroken = broken > 0.5 && side === -1;
-    // Roots sit outside the trunk and forward of the cheeks so tusks stay
-    // visible from front, 3/4 and profile.
+    // Roots emerge low on the muzzle and sweep wide before curving
+    // forward, keeping the whole shaft laterally clear of the trunk so
+    // tusks read plainly from front, 3/4 and profile.
     const fullPts: V3[] = [
-      [side * 0.056, -0.045, 0.068],
-      [side * 0.085, -0.075, 0.098],
-      [side * (0.092 - curve * 0.012), -0.105, 0.132],
-      [side * (0.074 - curve * 0.028), -0.126, 0.166 + curve * 0.012],
+      [side * 0.06, -0.052, 0.064],
+      [side * 0.096, -0.08, 0.09],
+      [side * (0.104 - curve * 0.012), -0.108, 0.126],
+      [side * (0.084 - curve * 0.03), -0.13, 0.166 + curve * 0.012],
     ];
     if (curve > 0.5) {
-      fullPts.push([side * 0.045, -0.132, 0.19]);
+      fullPts.push([side * 0.05, -0.136, 0.192]);
     }
     const pts = isBroken ? fullPts.slice(0, 2) : fullPts;
     const tusk = new THREE.Mesh(
-      taperedTube(pts, isBroken ? [0.017, 0.0135] : [0.017, 0.0045], 22, 12),
+      taperedTube(pts, isBroken ? [0.019, 0.016] : [0.019, 0.007], 22, 12),
       ivory,
     );
     tusk.scale.setScalar(scale);
     tusk.castShadow = true;
     tusk.receiveShadow = true;
     group.add(tusk);
+    // Rounded tip so the taper never vanishes to a sliver
+    if (!isBroken) {
+      const tip = fullPts[fullPts.length - 1];
+      if (tip) {
+        group.add(
+          mesh(new THREE.SphereGeometry(0.0072, 12, 10), ivory, {
+            position: [tip[0] * scale, tip[1] * scale, tip[2] * scale],
+          }),
+        );
+      }
+    }
     if (isBroken) {
       // Flat break cap, clearly protruding from the cheek
       group.add(
-        mesh(new THREE.SphereGeometry(0.0135, 12, 10), ivory, {
-          position: [side * 0.085 * scale, -0.075 * scale, 0.098 * scale],
-          scale: [1, 0.6, 1],
+        mesh(new THREE.SphereGeometry(0.016, 12, 10), ivory, {
+          position: [side * 0.096 * scale, -0.08 * scale, 0.09 * scale],
+          scale: [1, 0.65, 1],
         }),
       );
     }
