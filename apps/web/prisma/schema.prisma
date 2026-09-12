@@ -1,0 +1,42 @@
+// DevaForm persistence schema.
+//
+// Local development runs on SQLite (zero-setup). Production targets
+// PostgreSQL — the schema deliberately avoids SQLite-only features so the
+// switch is a provider + connection-string change plus a migration.
+// Commerce tables (Product, Order, Material, PrintSpecification) arrive in
+// Phase E; they are documented in docs/architecture.md, not stubbed here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Character {
+  id        String   @id @default(cuid())
+  name      String
+  deity     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions CharacterVersion[]
+}
+
+// Every save creates an immutable version — an order can pin a version and
+// the exact statue remains reproducible even if the character is edited later.
+model CharacterVersion {
+  id            String   @id @default(cuid())
+  characterId   String
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  schemaVersion Int
+  // Full CharacterConfiguration JSON (validated before insert).
+  config        String
+  // Snapshot of { assetId: version } used by this configuration.
+  assetVersions String
+  createdAt     DateTime @default(now())
+
+  @@index([characterId, createdAt])
+}

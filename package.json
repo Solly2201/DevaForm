@@ -1,0 +1,19 @@
+{
+  "name": "devaform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DevaForm — premium customizable Indian deity statue creation platform",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @devaform/web dev",
+    "build": "pnpm --filter @devaform/web build",
+    "start": "pnpm --filter @devaform/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:push": "pnpm --filter @devaform/web db:push"
+  }
+}
