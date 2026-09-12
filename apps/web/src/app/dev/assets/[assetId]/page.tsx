@@ -194,6 +194,21 @@ export default function AssetInspectorPage({
   }, [assetId]);
   const compareAsset = compareId ? (getAsset(compareId) ?? null) : null;
 
+  // Frame by the largest asset on screen so big sculpts aren't cropped and
+  // both compare panes share one scale.
+  const largestSpan = Math.max(
+    ...[asset, compareAsset]
+      .filter((a): a is AssetDefinition => Boolean(a))
+      .map((a) => Math.max(...(a.geometry?.boundsM ?? [0.32]))),
+    0.32,
+  );
+  const cameraScale = largestSpan / 0.32;
+  const cameraPosition: [number, number, number] = [
+    0.32 * cameraScale,
+    0.16 * cameraScale,
+    0.5 * cameraScale,
+  ];
+
   if (!asset) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-surface-950 text-stone-400">
@@ -237,7 +252,7 @@ export default function AssetInspectorPage({
                 {asset.id}@{asset.version}
               </span>
             )}
-            <Canvas camera={{ position: [0.32, 0.16, 0.5], fov: 40, near: 0.005, far: 20 }}>
+            <Canvas camera={{ position: cameraPosition, fov: 40, near: 0.005, far: 20 }}>
               <color attach="background" args={["#151210"]} />
               <hemisphereLight color="#efe9e2" groundColor="#403830" intensity={0.9} />
               <directionalLight position={[2, 3, 3]} intensity={2.2} color="#fff0da" />
@@ -272,7 +287,7 @@ export default function AssetInspectorPage({
               <span className="absolute right-3 top-3 z-10 rounded-full bg-surface-950/80 px-2.5 py-0.5 font-mono text-[10px] text-saffron-400">
                 {compareAsset.id}@{compareAsset.version}
               </span>
-              <Canvas camera={{ position: [0.32, 0.16, 0.5], fov: 40, near: 0.005, far: 20 }}>
+              <Canvas camera={{ position: cameraPosition, fov: 40, near: 0.005, far: 20 }}>
                 <color attach="background" args={["#151210"]} />
                 <hemisphereLight color="#efe9e2" groundColor="#403830" intensity={0.9} />
                 <directionalLight position={[2, 3, 3]} intensity={2.2} color="#fff0da" />

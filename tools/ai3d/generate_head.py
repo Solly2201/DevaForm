@@ -39,6 +39,23 @@ except ImportError:  # pragma: no cover
     sys.exit("gradio_client is not installed — run: pip install gradio_client")
 
 
+def read_stored_hf_token() -> str | None:
+    """Fall back to the token `hf auth login` stores (never committed)."""
+    for candidate in (
+        os.path.join(os.environ.get("HF_HOME", ""), "token"),
+        os.path.expanduser("~/.cache/huggingface/token"),
+        os.path.expanduser("~/.huggingface/token"),
+    ):
+        try:
+            with open(candidate, encoding="utf-8") as handle:
+                token = handle.read().strip()
+                if token:
+                    return token
+        except OSError:
+            continue
+    return None
+
+
 def save_outputs(result, out_dir: str, tag: str) -> list[str]:
     saved = []
     items = result if isinstance(result, (list, tuple)) else [result]
@@ -100,7 +117,8 @@ def generate_trellis2(client: Client, ref: str, args) -> list[str]:
         api_name="/image_to_3d",
     )
     print("generated — extracting GLB", flush=True)
-    result = client.predict(decimation_target=40000, texture_size=2048, api_name="/extract_glb")
+    result = client.predict(decimation_target=args.decimate, texture_size=args.texture_size,
+                            api_name="/extract_glb")
     return save_outputs(result, args.out, f"trellis2-seed{args.seed}")
 
 
@@ -120,10 +138,13 @@ def main() -> int:
     parser.add_argument("--resolution", choices=["512", "1024", "1536"], default="1024",
                         help="trellis2 voxel resolution")
     parser.add_argument("--foreground-ratio", type=float, default=0.85, help="triposr framing")
+    parser.add_argument("--decimate", type=int, default=100000,
+                        help="trellis2 GLB decimation target (space minimum: 100000)")
+    parser.add_argument("--texture-size", type=int, default=1024, help="trellis2 baked texture size")
     args = parser.parse_args()
 
     space, generate = PROVIDERS[args.provider]
-    token = os.environ.get("HF_TOKEN")
+    token = os.environ.get("HF_TOKEN") or read_stored_hf_token()
     os.makedirs(args.out, exist_ok=True)
     print(f"provider={args.provider} space={space} ref={args.ref} seed={args.seed} "
           f"({'authenticated' if token else 'anonymous'})", flush=True)
