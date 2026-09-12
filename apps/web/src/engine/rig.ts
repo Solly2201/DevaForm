@@ -159,14 +159,24 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     params: asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {},
   });
 
-  // Parts
+  // Features baked into complete sculpts (e.g. an AI/artist head with its
+  // own ears and crown) suppress the corresponding standalone parts and
+  // attachments — data-driven, from asset metadata.
+  const integratedFeatures = new Set<string>();
   for (const ref of Object.values(config.parts)) {
+    const asset = resolveAssetRef(ref);
+    for (const feature of asset?.integratedFeatures ?? []) integratedFeatures.add(feature);
+  }
+
+  // Parts
+  for (const [slot, ref] of Object.entries(config.parts)) {
     const asset = resolveAssetRef(ref);
     if (ref && !asset) {
       warnings.push(`Unknown part asset: ${ref.assetId}`);
       continue;
     }
     if (!asset) continue;
+    if (integratedFeatures.has(slot) && !asset.integratedFeatures?.includes(slot)) continue;
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
     if (!renderable) continue;
     if (renderable instanceof THREE.Object3D) {
@@ -216,6 +226,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
   for (const attachment of config.attachments) {
     if (inactiveHandSockets.has(attachment.socket)) continue;
+    const socketSuffix = attachment.socket.split(".").pop() ?? attachment.socket;
+    if (integratedFeatures.has(attachment.socket) || integratedFeatures.has(socketSuffix)) continue;
     const asset = resolveAssetRef(attachment.asset);
     if (!asset) {
       warnings.push(`Unknown attachment asset: ${attachment.asset.assetId}`);

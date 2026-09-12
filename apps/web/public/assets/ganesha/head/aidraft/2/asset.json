@@ -1,0 +1,36 @@
+{
+  "id": "ganesha.head.aidraft",
+  "version": 2,
+  "name": "Classic (AI)",
+  "deity": "ganesha",
+  "category": "head",
+  "kind": {
+    "type": "part",
+    "slot": "head"
+  },
+  "stage": "review",
+  "provenance": {
+    "type": "ai",
+    "provider": "trellis2",
+    "tool": "microsoft/TRELLIS.2 HF Space (authenticated free account)",
+    "notes": "TRELLIS.2 image-to-3D from tools/ai3d/refs/classic-head-bust.png (pnpm ai:generate-head, seed 12345, res 1024), cleaned + normalized by tools/ai3d/clean_mesh.py (backdrop sheets removed, normals computed, JOINT_head wrap). TRELLIS.2 model MIT (checked 2026-09-13); no provider output restriction found. Baked crown/eyes/tusks in texture - not zone-colorable; trunk truncated by the v1 reference crop, regenerate with refs/classic-head-bust-v2.png when ZeroGPU quota resets."
+  },
+  "model": "model.glb",
+  "thumbnail": "thumbnail.png",
+  "materialZones": [],
+  "geometry": {
+    "triangles": 64669,
+    "vertices": 45763,
+    "boundsM": [
+      0.4513,
+      0.41,
+      0.3258
+    ]
+  },
+  "units": "meters",
+  "upAxis": "+Y",
+  "forwardAxis": "+Z",
+  "printability": {
+    "printSourceAvailable": false
+  }
+}

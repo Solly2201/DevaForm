@@ -116,6 +116,15 @@ export interface AssetDefinition {
   /** Hand-grip behavior for hand-held attachments. */
   grip?: GripMetadata;
   /**
+   * Features already sculpted/baked into this part (complete sculpts, AI or
+   * artist). Entries are part slots ("eyes", "trunk", "tusks", "ears") or
+   * attachment-socket suffixes ("crown"). The engine skips rendering the
+   * corresponding standalone parts/attachments so a complete head doesn't
+   * double its ears or wear a second crown. Pure data — no renderer
+   * special-casing per asset.
+   */
+  integratedFeatures?: readonly string[];
+  /**
    * Keep the attachment world-upright regardless of joint rotation —
    * classical iconography holds shafted attributes (axe, noose, goad,
    * lotus) vertical in any pose. Cradled items (modak) follow the palm.
