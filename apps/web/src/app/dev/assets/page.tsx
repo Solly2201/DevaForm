@@ -54,7 +54,14 @@ export default function AssetRegistryPage() {
             <tbody className="divide-y divide-surface-800">
               {assets.map((asset) => (
                 <tr key={asset.id} className="bg-surface-950/50">
-                  <td className="px-3 py-1.5 font-mono text-stone-300">{asset.id}</td>
+                  <td className="px-3 py-1.5 font-mono text-stone-300">
+                    <Link
+                      href={`/dev/assets/${encodeURIComponent(asset.id)}`}
+                      className="hover:text-saffron-400 hover:underline"
+                    >
+                      {asset.id}
+                    </Link>
+                  </td>
                   <td className="px-3 py-1.5 text-stone-400">v{asset.version}</td>
                   <td className="px-3 py-1.5">
                     <span

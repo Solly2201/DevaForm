@@ -34,7 +34,7 @@ if (typeof globalThis.FileReader === "undefined") {
   };
 }
 
-const OUT_DIR = path.resolve("public/assets/prototype");
+const OUT_DIR = path.resolve("public/assets/ganesha/companion/mushak/1");
 
 function mesh(geometry, material, { position, rotation, scale } = {}) {
   const m = new THREE.Mesh(geometry, material);
@@ -115,4 +115,4 @@ async function exportGlb(object, filename) {
   console.log(`wrote ${file} (${buffer.byteLength} bytes)`);
 }
 
-await exportGlb(buildMushak(), "mushak.glb");
+await exportGlb(buildMushak(), "model.glb");

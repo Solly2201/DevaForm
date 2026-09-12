@@ -1,0 +1,39 @@
+{
+  "id": "ganesha.companion.kalash",
+  "version": 1,
+  "name": "Kalash (Sacred Vessel)",
+  "deity": "ganesha",
+  "category": "companion",
+  "kind": {
+    "type": "attachment",
+    "sockets": [
+      "base.platform"
+    ]
+  },
+  "stage": "integration",
+  "provenance": {
+    "type": "procedural",
+    "tool": "scripts/fixtures/make-kalash-obj.mjs (ingestion pipeline fixture)",
+    "notes": "Standing integration fixture proving OBJ ingestion; replace via the same id/version flow."
+  },
+  "model": "model.glb",
+  "thumbnail": "thumbnail.png",
+  "materialZones": [
+    "metal"
+  ],
+  "geometry": {
+    "triangles": 728,
+    "vertices": 2184,
+    "boundsM": [
+      0.1321,
+      0.13,
+      0.1321
+    ]
+  },
+  "units": "meters",
+  "upAxis": "+Y",
+  "forwardAxis": "+Z",
+  "printability": {
+    "printSourceAvailable": false
+  }
+}

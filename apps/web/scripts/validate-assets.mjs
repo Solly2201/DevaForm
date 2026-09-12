@@ -21,10 +21,11 @@
 import { readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { readManifestEntries, repoPaths } from "./lib/manifest.mjs";
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, "$1")), "..");
-const ASSET_DIR = path.join(ROOT, "public", "assets");
-const MANIFEST_DIR = path.join(ROOT, "..", "..", "packages", "asset-system", "src", "manifests");
+const here = path.dirname(fileURLToPath(import.meta.url));
+const { webRoot: ROOT, assetDir: ASSET_DIR, manifestDir: MANIFEST_DIR } = repoPaths(here);
 
 const KNOWN_ZONES = ["skin", "skinSecondary", "garment", "garmentAccent", "metal", "gem", "base"];
 const MIN_SIZE_M = 0.01;
@@ -36,34 +37,6 @@ let warnings = 0;
 const error = (msg) => { console.error(`  ERROR   ${msg}`); errors += 1; };
 const warn = (msg) => { console.warn(`  warning ${msg}`); warnings += 1; };
 const pass = (msg) => console.log(`  PASS    ${msg}`);
-
-// ---------------------------------------------------------------------------
-// Manifest extraction (regex-level; semantic checks live in vitest suites)
-// ---------------------------------------------------------------------------
-
-async function readManifestEntries() {
-  const entries = [];
-  if (!existsSync(MANIFEST_DIR)) return entries;
-  for (const file of await readdir(MANIFEST_DIR)) {
-    if (!file.endsWith(".ts")) continue;
-    const source = await readFile(path.join(MANIFEST_DIR, file), "utf8");
-    // Split into per-asset chunks at object boundaries that declare an id.
-    const chunks = source.split(/\n  \{\n(?=\s*id:)/).slice(1);
-    for (const chunk of chunks) {
-      const id = chunk.match(/id:\s*"([^"]+)"/)?.[1];
-      if (!id) continue;
-      entries.push({
-        id,
-        version: Number(chunk.match(/version:\s*(\d+)/)?.[1] ?? 0),
-        stage: chunk.match(/stage:\s*"([^"]+)"/)?.[1] ?? "unknown",
-        kindType: chunk.match(/kind:\s*\{\s*type:\s*"([^"]+)"/)?.[1] ?? "unknown",
-        glbPath: chunk.match(/kind:\s*"glb",\s*path:\s*"([^"]+)"/)?.[1] ?? null,
-        manifest: file,
-      });
-    }
-  }
-  return entries;
-}
 
 // ---------------------------------------------------------------------------
 // GLB parsing
@@ -129,7 +102,7 @@ async function collectGlbs(dir) {
 }
 
 console.log("DevaForm asset validation\n");
-const entries = await readManifestEntries();
+const entries = await readManifestEntries(MANIFEST_DIR);
 const glbEntries = entries.filter((e) => e.glbPath);
 console.log(`${entries.length} manifest entries (${glbEntries.length} GLB-sourced)\n`);
 
@@ -164,6 +137,27 @@ for (const entry of glbEntries) {
   }
   if (entry.kindType === "part" && !stats.nodeNames.some((n) => n.startsWith("JOINT_"))) {
     problems.push("part GLB has no JOINT_<id> node groups (will not follow the skeleton)");
+  }
+
+  // Dataset sidecar: asset.json must exist next to the model and agree
+  // on identity. Provenance is required for every dataset asset.
+  const sidecarPath = path.join(path.dirname(file), "asset.json");
+  if (!existsSync(sidecarPath)) {
+    problems.push("missing asset.json sidecar in dataset directory");
+  } else {
+    try {
+      const sidecar = JSON.parse(await readFile(sidecarPath, "utf8"));
+      if (sidecar.id !== entry.id) problems.push(`sidecar id "${sidecar.id}" != manifest id`);
+      if (sidecar.version !== entry.version) {
+        problems.push(`sidecar version ${sidecar.version} != manifest version ${entry.version}`);
+      }
+      if (!sidecar.provenance?.type) problems.push("sidecar has no provenance.type");
+    } catch (e) {
+      problems.push(`unreadable asset.json: ${e.message}`);
+    }
+  }
+  if (entry.thumbnail && !existsSync(path.join(ROOT, "public", entry.thumbnail.replace(/^\//, "")))) {
+    warn(`${label}: thumbnail not generated yet (${entry.thumbnail}) — run generate-thumbnails`);
   }
 
   if (problems.length === 0) {

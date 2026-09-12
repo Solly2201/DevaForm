@@ -1,0 +1,25 @@
+{
+  "id": "ganesha.head.sculpted",
+  "version": 1,
+  "name": "Classic (Sculpted)",
+  "description": "Continuous SDF-sculpted head — one blended surface with carved eye sockets, crown seat, trunk-root and tusk bosses. Scripted sculpt under evaluation; artist sculpt pending.",
+  "deity": "ganesha",
+  "category": "head",
+  "kind": { "type": "part", "slot": "head" },
+  "stage": "experimental",
+  "provenance": {
+    "type": "procedural",
+    "tool": "apps/web/scripts/generate-hero-head.mjs (SDF + marching cubes + Taubin smoothing)",
+    "references": ["reference.png", "6e77ce86-05a6-43a7-8d46-02858e01ca3b.png"],
+    "notes": "No AI 3D service or DCC tooling was available in the generation environment; this is a scripted sculpt, not an artist asset."
+  },
+  "model": "model.glb",
+  "thumbnail": "thumbnail.png",
+  "materialZones": ["skin"],
+  "geometry": { "triangles": 84138, "vertices": 42205, "boundsM": [0.27, 0.386, 0.269] },
+  "units": "meters",
+  "upAxis": "+Y",
+  "forwardAxis": "+Z",
+  "supersedes": "ganesha.head.classic",
+  "printability": { "printSourceAvailable": false }
+}
