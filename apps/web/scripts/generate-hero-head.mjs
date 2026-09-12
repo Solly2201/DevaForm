@@ -33,7 +33,7 @@ if (typeof globalThis.FileReader === "undefined") {
   };
 }
 
-const OUT_DIR = path.resolve("public/assets/ganesha");
+const OUT_DIR = path.resolve("public/assets/ganesha/head/classic-sculpt/1");
 // 120 keeps every sculpted feature (smallest: 5.5 mm mouth crease vs 3.2 mm
 // cells) while staying browser-friendly; final decimation to the 20k artist
 // budget belongs to the Blender pass (see docs/production-asset-pipeline.md).
@@ -298,7 +298,7 @@ const buffer = await new Promise((resolve, reject) => {
   exporter.parse(root, resolve, reject, { binary: true });
 });
 await mkdir(OUT_DIR, { recursive: true });
-const file = path.join(OUT_DIR, "head-classic-sculpt.glb");
+const file = path.join(OUT_DIR, "model.glb");
 await writeFile(file, Buffer.from(buffer));
 const triangles = headGeometry.getIndex().count / 3;
 console.log(`wrote ${file}`);

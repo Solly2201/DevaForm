@@ -10,11 +10,49 @@ import type { DeityId, MaterialZone, PartSlot, SocketId } from "@devaform/charac
 
 /** Lifecycle stage of an asset version. */
 export type AssetStage =
+  | "concept" // reference/idea only, no loadable geometry yet
   | "source" // raw sculpt/scan/AI output, not loadable by the web engine
   | "prototype" // placeholder or unoptimized, fine for development
-  | "experimental" // scripted/AI sculpt under evaluation — better than prototype, not artist-approved
+  | "experimental" // scripted/AI output under evaluation
+  | "integration" // ingested and technically conformant, awaiting visual QA
+  | "review" // in visual/cultural review for production promotion
   | "production" // artist-made or approved, cleaned, optimized
   | "deprecated"; // kept only so old saved characters still resolve
+
+/** Stages whose assets may appear in the customer-facing picker. */
+export const VISIBLE_STAGES: readonly AssetStage[] = [
+  "prototype",
+  "experimental",
+  "integration",
+  "review",
+  "production",
+];
+
+/**
+ * How an asset came to exist. Deliberately provider-agnostic: AI-generated,
+ * artist-made, procedural and manually-cleaned assets are all just DevaForm
+ * assets — provenance records the history without forking the pipeline.
+ */
+export interface AssetProvenance {
+  type: "ai" | "artist" | "procedural" | "manual" | "imported";
+  /** Service/provider for AI assets (e.g. "meshy", "tripo"). */
+  provider?: string;
+  /** Tool or script that produced/processed the asset. */
+  tool?: string;
+  /** Artist/creator credit for artist-made assets. */
+  creator?: string;
+  /** Reference images/boards the asset was produced against. */
+  references?: readonly string[];
+  notes?: string;
+}
+
+/** Measured geometry facts, captured at ingest/validation time. */
+export interface GeometryMetadata {
+  triangles?: number;
+  vertices?: number;
+  /** Axis-aligned bounds in metres [x, y, z]. */
+  boundsM?: readonly [number, number, number];
+}
 
 /**
  * How the engine obtains renderable geometry for this asset.
@@ -95,10 +133,26 @@ export interface AssetDefinition {
   excludes?: readonly string[];
   /** Categorization for the editor UI. */
   category: string;
-  /** Path to a thumbnail image, if one has been rendered. */
+  /** Path to a pre-rendered thumbnail image (public URL). */
   thumbnail?: string;
+  /** How this asset version was produced. Procedural assets may omit it —
+   *  see getProvenance(). */
+  provenance?: AssetProvenance;
+  /** Measured geometry facts (GLB assets; captured by ingest/validation). */
+  geometry?: GeometryMetadata;
+  /** Asset id this version supersedes/replaces (e.g. the prototype). */
+  supersedes?: string;
   printability: PrintabilityMetadata;
   tags?: readonly string[];
+}
+
+/** Provenance with a sensible default for procedural sources. */
+export function getProvenance(asset: AssetDefinition): AssetProvenance {
+  if (asset.provenance) return asset.provenance;
+  if (asset.source.kind === "procedural") {
+    return { type: "procedural", tool: `generator:${asset.source.generatorId}` };
+  }
+  return { type: "imported" };
 }
 
 /** An editor category as shown in the sidebar. Pure data, UI consumes it. */

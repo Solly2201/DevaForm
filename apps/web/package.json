@@ -11,6 +11,8 @@
     "db:push": "prisma db push",
     "validate-assets": "node scripts/validate-assets.mjs",
     "generate-glbs": "node scripts/generate-prototype-glbs.mjs",
+    "generate-thumbnails": "node scripts/generate-thumbnails.mjs",
+    "ingest-asset": "node scripts/ingest-asset.mjs",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate"
   },
@@ -39,6 +41,7 @@
     "eslint-config-next": "^15.1.6",
     "postcss": "^8.5.1",
     "prisma": "^6.2.1",
+    "puppeteer-core": "^23.11.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
   }

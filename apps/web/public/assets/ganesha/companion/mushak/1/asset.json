@@ -1,0 +1,23 @@
+{
+  "id": "ganesha.companion.mushak",
+  "version": 1,
+  "name": "Mushak",
+  "description": "Ganesha's mouse companion at the base.",
+  "deity": "ganesha",
+  "category": "companion",
+  "kind": { "type": "attachment", "sockets": ["base.platform"] },
+  "stage": "prototype",
+  "provenance": {
+    "type": "procedural",
+    "tool": "apps/web/scripts/generate-prototype-glbs.mjs",
+    "notes": "Prototype companion proving the GLB pipeline; artist replacement expected."
+  },
+  "model": "model.glb",
+  "thumbnail": "thumbnail.png",
+  "materialZones": ["metal"],
+  "geometry": { "triangles": 5840 },
+  "units": "meters",
+  "upAxis": "+Y",
+  "forwardAxis": "+Z",
+  "printability": { "printSourceAvailable": false }
+}

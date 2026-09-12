@@ -16,8 +16,11 @@ pnpm dev            # http://localhost:3000
 | `pnpm typecheck` | Strict TS across all packages |
 | `pnpm lint` | ESLint (Next.js config) |
 | `pnpm test` | Vitest suites in character-schema and asset-system |
-| `pnpm validate-assets` | GLB + manifest validation |
+| `pnpm validate-assets` | GLB + manifest + dataset sidecar validation |
+| `pnpm --filter @devaform/web ingest-asset …` | Ingest a GLB/GLTF/OBJ into the asset dataset |
+| `pnpm --filter @devaform/web generate-thumbnails` | Deterministic asset thumbnails (dev server running) |
 | `pnpm --filter @devaform/web generate-glbs` | Regenerate prototype GLBs |
+| `pnpm --filter @devaform/character-schema export-canonical` | Regenerate tools/blender/canonical-rig.json |
 
 ## Environment
 

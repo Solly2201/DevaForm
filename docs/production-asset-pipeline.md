@@ -1,9 +1,72 @@
 # DevaForm Production Asset Pipeline
 
 How an asset travels from concept to Divine Studio, and eventually to
-manufacturing. This is the operating manual for the pipeline built in
-Phase B; the Asset Bible (asset-specification.md) holds the detailed
-authoring rules.
+manufacturing. This is the operating manual for the pipeline; the Asset
+Bible (asset-specification.md) holds detailed authoring rules and
+artist-handoff.md is the standalone artist delivery contract.
+
+## Asset dataset layout
+
+Every GLB asset is a versioned dataset directory (source-controlled):
+
+```
+apps/web/public/assets/<deity>/<category>/<name>/<version>/
+  model.glb            the web runtime asset
+  asset.json           machine-readable sidecar (schema: asset-system/src/dataset.ts)
+  thumbnail.png        deterministic studio thumbnail (generated)
+  manifest-entry.ts.txt  ready-to-commit registry snippet (ingest output)
+```
+
+`asset.json` records identity, kind, stage, **provenance** (ai / artist /
+procedural / manual / imported — with provider/tool/creator), measured
+geometry, units/axes and printability. The TypeScript manifest remains
+the curated registry the app ships; ingestion emits the entry but a human
+commits it — experimental/AI assets can never silently reach customers.
+
+## Ingestion (AI-first, artist-identical)
+
+```
+pnpm ingest-asset <input.(glb|gltf|obj)> --id ganesha.head.classic \
+    --name "Classic Head" --joint head --slot head \
+    --source ai --provider meshy \
+    --zone-map "Skin=skin,Gold=metal" --target-height 0.35 \
+    --recenter base --z-up
+```
+
+Normalization (baked into geometry): Z-up→Y-up, uniform scale to a target
+height, recentering (base/origin), material→zone renaming, mesh renaming,
+`JOINT_<id>` wrapping for parts, triangle/vertex/bounds measurement. The
+tool writes the dataset directory, sidecar and manifest snippet, then the
+flow is: commit entry → `pnpm validate-assets` → `pnpm
+generate-thumbnails` (dev server running) → inspect at
+`/dev/assets/<assetId>` → Divine Studio QA.
+
+Textured GLBs can't be decoded in Node (no DOM image decoding): ingest
+them with `--copy-only` after normalizing in Blender, or via the Blender
+scripts. FBX is not supported (no converter available) — export GLB/OBJ
+from the DCC instead.
+
+An OBJ fixture (`scripts/fixtures/make-kalash-obj.mjs` — deliberately
+Z-up, millimetre-scale, off-center) exercises this pipeline end-to-end
+and ships as `ganesha.companion.kalash@1` at stage `integration`.
+
+## Provenance & replacement
+
+Provenance is provider-agnostic metadata, not a parallel architecture:
+an AI head and an artist head are both `AssetDefinition`s. Replacement is
+purely data: publish `<id>@<version+1>` with new provenance; saved
+creations keep resolving their pinned version. This is covered by the
+"artist replacement (architecture proof)" test in
+`asset-system/src/__tests__/dataset.test.ts`.
+
+## AI generation status (honest)
+
+No AI 3D service (Meshy/Tripo), Blender install, or conversion CLI exists
+in the current development environment — verified, not assumed. The
+pipeline is therefore built to receive generated files by drop-in: the
+moment a Meshy/Tripo GLB exists, `pnpm ingest-asset` takes it to a
+registered, validated, thumbnailed, inspectable Divine Studio asset in
+minutes.
 
 ## The pipeline
 

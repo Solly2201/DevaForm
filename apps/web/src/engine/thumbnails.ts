@@ -64,10 +64,17 @@ function buildRestSkeleton(): Map<JointId, THREE.Object3D> {
   return joints;
 }
 
-async function buildThumbnailObject(assetId: string): Promise<THREE.Object3D | null> {
+/**
+ * Build a standalone renderable for one asset (procedural parts are
+ * assembled on a rest-pose skeleton; GLBs are loaded fresh). Shared by the
+ * thumbnail renderer and the /dev/assets inspector.
+ */
+export async function buildAssetObject(
+  assetId: string,
+  materials: ZoneMaterials,
+): Promise<THREE.Object3D | null> {
   const asset = getAsset(assetId);
   if (!asset) return null;
-  const { materials } = getShared();
   const config = thumbnailBaseConfig();
   const ctx: GeneratorContext = {
     params: asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {},
@@ -137,7 +144,7 @@ export function getAssetThumbnail(assetId: string): Promise<string | null> {
   const promise = (async () => {
     if (typeof window === "undefined") return null;
     try {
-      const object = await buildThumbnailObject(assetId);
+      const object = await buildAssetObject(assetId, getShared().materials);
       if (!object) return null;
       return frameAndRender(object);
     } catch (error) {
