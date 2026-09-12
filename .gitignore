@@ -27,6 +27,9 @@ dist/
 npm-debug.log*
 pnpm-debug.log*
 
+# AI generation outputs (ingested copies live in public/assets)
+tools/ai3d/out/
+
 # local design references / scratch (not part of the product)
 /*.png
 *.blend1

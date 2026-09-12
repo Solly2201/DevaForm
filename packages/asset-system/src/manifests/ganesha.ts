@@ -141,6 +141,30 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     printability: proto,
   },
 
+  {
+    id: "ganesha.head.aidraft",
+    version: 1,
+    name: "Classic (AI Draft)",
+    description:
+      "First genuinely AI-generated head — TripoSR image-to-3D from the classic reference bust. Draft quality, kept for pipeline proof and comparison; not a candidate for promotion.",
+    kind: { type: "part", slot: "head" },
+    deityCompatibility: ["ganesha"],
+    stage: "review",
+    source: { kind: "glb", path: "/assets/ganesha/head/aidraft/1/model.glb" },
+    thumbnail: "/assets/ganesha/head/aidraft/1/thumbnail.png",
+    provenance: {
+      type: "ai",
+      provider: "triposr",
+      tool: "stabilityai/TripoSR HF Space (free, anonymous)",
+      notes:
+        "Generated with `pnpm ai:generate-head` from tools/ai3d/refs/classic-head-bust.png. TripoSR code + weights are MIT (checked 2026-09-12); no provider restriction on outputs found. Visually below ganesha.head.sculpted@1 — ganesha.head.classic@4 stays reserved for a promotion-worthy head.",
+    },
+    geometry: { triangles: 125270, vertices: 62738, boundsM: [0.3688, 0.385, 0.2203] },
+    materialZones: ["skin"],
+    category: "head",
+    printability: proto,
+  },
+
   // ---- EARS -------------------------------------------------------------
   {
     id: "ganesha.ears.large",

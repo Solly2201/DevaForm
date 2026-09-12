@@ -61,14 +61,56 @@ creations keep resolving their pinned version. This is covered by the
 
 ## AI generation status (honest)
 
-No AI 3D service (Meshy/Tripo API keys), Blender install, conversion CLI
-or authenticated browser session exists in the current development
-environment — re-verified each phase, not assumed. The pipeline is
-therefore built to receive generated files by drop-in.
+No paid AI 3D service (Meshy/Tripo API keys), Blender install, conversion
+CLI or authenticated browser session exists in the current development
+environment — re-verified each phase, not assumed. What DOES work, verified
+2026-09-12, is free generation through public Hugging Face Space APIs — see
+the next section. The pipeline also still receives generated files by
+drop-in.
+
+## Free AI generation routes (verified, with licenses)
+
+`pnpm ai:generate-head` (tools/ai3d/generate_head.py, needs Python +
+`pip install gradio_client`) calls a provider's public HF Space and writes
+GLBs to `tools/ai3d/out/` (git-ignored). Provider truth table, tested from
+this machine:
+
+| Provider | Space | Model license | Free access | Quality |
+|---|---|---|---|---|
+| `triposr` | stabilityai/TripoSR | MIT (code + weights) | dedicated hardware, anonymous, no quota, ~40 s | coarse draft — silhouettes only |
+| `triposg` | VAST-AI/TripoSG | MIT | ZeroGPU: anonymous quota ~3 min/day/IP; free HF token lifts it | good sculptural geometry |
+| `trellis2` | microsoft/TRELLIS.2 | MIT | ZeroGPU: jobs request ≥120 s GPU — effectively needs a free HF token | best: sharp geometry + PBR textures |
+
+Hosted commercial free tiers were investigated and rejected: Tripo's free
+plan publishes outputs under CC BY 4.0 **non-commercial** (unusable for
+DevaForm); Meshy's free tier has comparable export/licensing restrictions.
+Local inference was audited too: this machine (RTX 2050, 4 GB VRAM, 8 GB
+RAM, CPU-only torch) cannot run TRELLIS (~16 GB VRAM) or Hunyuan3D-2
+(~5 GB+ shape model); TripoSR could run locally but its HF Space gives the
+same model without setup.
+
+`HF_TOKEN` is read from the environment only — never commit it. Outputs
+from all three providers are MIT-model outputs with no provider usage
+restriction found (checked 2026-09-12); record the check date in
+provenance notes when ingesting.
+
+The first real AI asset produced this way is `ganesha.head.aidraft@1`
+(TripoSR, stage `review`): honest draft quality, below the SDF sculpt —
+kept as pipeline proof and comparison baseline at
+`/dev/assets/ganesha.head.aidraft?compare=ganesha.head.sculpted`.
+AI meshes often ship without normals and with baked vertex colors — the
+ingest normalizer now computes missing normals and drops vertex colors on
+zone-mapped meshes (a normal-less mesh renders black under PBR zone
+materials), and `--offset "x,y,z"` seats a head part so the joint origin
+lands inside the neck (the sculpted head spans y −0.157…+0.229 around
+JOINT_head).
 
 ## Runbook: the first real AI Classic Head
 
-When a Meshy/Tripo account exists, this is the entire integration:
+The zero-cost path: create a free Hugging Face account, put its token in
+`HF_TOKEN`, then `pnpm ai:generate-head -- --provider trellis2` — the
+output GLB enters step 2 below. With a paid Meshy/Tripo account the
+integration is the same from step 1:
 
 1. Generate with front + 3/4 + side reference views of a premium
    devotional Ganesha head (see the repository reference boards). Aim
