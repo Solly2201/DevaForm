@@ -5,10 +5,10 @@
  * served from the database/asset service without changing consumers.
  */
 import type { AssetRef, DeityId, PartSlot, SocketId } from "@devaform/character-schema";
-import { GANESHA_ASSETS } from "./manifests/ganesha";
+import { AVAILABLE_DEITIES } from "./deities";
 import type { AssetDefinition } from "./types";
 
-const ALL_ASSETS: readonly AssetDefinition[] = [...GANESHA_ASSETS];
+const ALL_ASSETS: readonly AssetDefinition[] = AVAILABLE_DEITIES.flatMap((d) => d.assets);
 
 const byId = new Map<string, AssetDefinition>();
 for (const asset of ALL_ASSETS) {

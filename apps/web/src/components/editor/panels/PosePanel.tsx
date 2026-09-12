@@ -5,14 +5,10 @@
  * Joint sliders write real euler rotations (clamped to joint limits) into
  * pose.jointOverrides — the engine applies them to actual THREE joints.
  */
-import {
-  POSE_PRESETS,
-  SKELETON,
-  getJoint,
-  type JointId,
-} from "@devaform/character-schema";
+import { SKELETON, getJoint, type JointId } from "@devaform/character-schema";
 import { effectiveJointRotation } from "@/engine/pose";
 import { SliderControl } from "@/components/controls/SliderControl";
+import { useDeity } from "@/state/deityContext";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
 
@@ -28,6 +24,7 @@ const AXES = [
 const POSEABLE_JOINTS = SKELETON.filter((j) => j.id !== "root");
 
 export function PosePanel() {
+  const deity = useDeity();
   const pose = useEditorStore((s) => s.config.pose);
   const setPosePreset = useEditorStore((s) => s.setPosePreset);
   const setJointOverride = useEditorStore((s) => s.setJointOverride);
@@ -50,7 +47,7 @@ export function PosePanel() {
           Pose Presets
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {POSE_PRESETS.map((preset) => (
+          {deity.posePresets.map((preset) => (
             <button
               key={preset.id}
               type="button"

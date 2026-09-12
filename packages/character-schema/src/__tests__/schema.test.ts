@@ -87,6 +87,16 @@ describe("material palettes", () => {
   });
 });
 
+describe("commerce constants", () => {
+  it("statue sizes and materials have unique ids", async () => {
+    const { STATUE_SIZES, MANUFACTURING_MATERIALS } = await import("../commerce");
+    expect(new Set(STATUE_SIZES.map((s) => s.id)).size).toBe(STATUE_SIZES.length);
+    expect(new Set(MANUFACTURING_MATERIALS.map((m) => m.id)).size).toBe(
+      MANUFACTURING_MATERIALS.length,
+    );
+  });
+});
+
 describe("configuration serialization", () => {
   it("round-trips the default configuration deterministically", () => {
     const config = createDefaultGaneshaConfiguration();

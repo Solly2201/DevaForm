@@ -113,6 +113,35 @@ Hand-held items compose three pieces of asset metadata:
   (axe, noose, goad, lotus) vertical in any pose, as classical iconography
   depicts them. Cradled items (modak) follow the palm instead.
 
+## Deity definitions
+
+`packages/asset-system/src/deities.ts` declares every deity as data:
+identity, availability, asset manifest, editor categories, pose presets,
+arm options and a default-configuration factory. The `/studio/[deity]`
+route resolves a definition and provides it via `DeityProvider`; editor
+components read `useDeity()` and never import a deity directly. The asset
+registry aggregates the manifests of available deities. Upcoming deities
+(Shiva, Durga, Krishna, Hanuman, Lakshmi, Saraswati) are declared
+`available: false` and render an honest "coming soon" page.
+
+## Preview, share & export
+
+- **Thumbnails**: saving captures a small JPEG from the viewport
+  (`engine/capture.ts`) stored on the Character row — the library shows
+  real creation previews.
+- **Share**: a `Share` row pins one immutable `CharacterVersion`;
+  `/share/[id]` rebuilds the creation in a standalone read-only viewer
+  (`engine/StaticCharacterView`) with no editor-state coupling, and can
+  open a copy in Divine Studio. Shares expose only the shared creation.
+- **Export** (`engine/printExport.ts` + ExportDialog): PNG render, JSON
+  configuration, posed binary STL, and a printability report that only
+  claims what it actually checks (see docs/printing.md).
+- **Commerce model** (`character-schema/src/commerce.ts`): sizes,
+  materials, variants, cart/order shapes built around `CreationSnapshot`
+  (configuration + pinned asset versions) for manufacturing
+  reproducibility. Checkout/payment integration is intentionally absent
+  until credentials exist.
+
 ## Naming: DevaForm → Divine Studio → deity
 
 "Divine Studio" is the generic editor experience; the deity is data

@@ -8,12 +8,15 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import {
-  SKELETON,
-  createDefaultGaneshaConfiguration,
-  type JointId,
-} from "@devaform/character-schema";
-import { getAsset } from "@devaform/asset-system";
+import { SKELETON, type JointId } from "@devaform/character-schema";
+import { AVAILABLE_DEITIES, getAsset } from "@devaform/asset-system";
+
+/** Default configuration used for thumbnail materials/context. */
+function thumbnailBaseConfig() {
+  const deity = AVAILABLE_DEITIES[0];
+  if (!deity) throw new Error("No available deity registered");
+  return deity.createDefaultConfiguration();
+}
 import { ATTACHMENT_GENERATORS, PART_GENERATORS, type GeneratorContext } from "./generators";
 import { ZoneMaterials } from "./materials";
 
@@ -44,7 +47,7 @@ function getShared() {
   scene.add(rim);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.001, 20);
   const materials = new ZoneMaterials();
-  materials.applyConfiguration(createDefaultGaneshaConfiguration().materials);
+  materials.applyConfiguration(thumbnailBaseConfig().materials);
   shared = { renderer, scene, camera, materials };
   return shared;
 }
@@ -65,7 +68,7 @@ async function buildThumbnailObject(assetId: string): Promise<THREE.Object3D | n
   const asset = getAsset(assetId);
   if (!asset) return null;
   const { materials } = getShared();
-  const config = createDefaultGaneshaConfiguration();
+  const config = thumbnailBaseConfig();
   const ctx: GeneratorContext = {
     params: asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {},
     materials,

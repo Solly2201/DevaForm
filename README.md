@@ -13,17 +13,30 @@ to follow on the same engine.
 
 ```
 apps/
-  web/                    Next.js editor application (UI + 3D engine + API)
+  web/                    Next.js application (site + Divine Studio + 3D engine + API)
 packages/
-  character-schema/       Versioned CharacterConfiguration, skeleton, sockets, poses
-  asset-system/           Asset metadata types, registry, deity manifests, categories
+  character-schema/       Versioned CharacterConfiguration, skeleton, sockets, poses, commerce model
+  asset-system/           Deity definitions, asset registry, deity manifests, categories
 docs/
   architecture.md         System architecture and design decisions
+  deity-system.md         How to add a deity
+  printing.md             Export & print pipeline status
   asset-specification.md  The Asset Bible — production rules for 3D artists
-  ai-asset-workflow.md    AI-assisted Ganesha asset production pipeline
+  ai-asset-workflow.md    AI-assisted asset production pipeline
 tools/
   blender/                Blender automation for asset validation/export
 ```
+
+## Routes
+
+| Route | Purpose |
+|---|---|
+| `/` | DevaForm landing |
+| `/deities` | Deity selection (Ganesha available; six deities coming soon) |
+| `/studio/[deity]` | Divine Studio for an available deity |
+| `/library` | Saved creations: open, rename, duplicate, delete |
+| `/share/[id]` | Public share view, rebuilt from the pinned configuration |
+| `/dev/assets` | Internal asset-registry view |
 
 ## Getting started
 
@@ -75,8 +88,18 @@ pnpm build          # production build
   8 curated palettes (Traditional, Temple Gold, Ivory, Terracotta, Saffron,
   Royal Blue, Marble, Black Stone) + per-zone fine-tuning
 - Real 3D asset thumbnails rendered from actual geometry
-- Save / load / delete characters (SQLite via Prisma, immutable version rows)
+- Save / load / rename / duplicate / delete creations (SQLite via Prisma,
+  immutable version rows) with real viewport thumbnails and autosave
+- Public sharing: a share pins one immutable creation version and is
+  rebuilt live in 3D at `/share/[id]`
+- Studio render (PNG), configuration (JSON) and posed STL exports, with an
+  honest printability report (dimensions, triangles, base contact;
+  watertight/thin-wall marked as pending the manufacturing pipeline)
+- Deity definition system: the studio consumes `DeityDefinition` data —
+  Ganesha is the first entry, six more deities are declared as coming soon
 - Undo/redo (zundo temporal store, Ctrl+Z / Ctrl+Y / Ctrl+S)
+- `pnpm validate-assets`: GLB container/bounds/material validation plus
+  manifest cross-checks
 
 All Ganesha geometry is procedural at stage `prototype` — deliberately
 statue-styled but not sculpted art. The engine, schema, sockets, registry and

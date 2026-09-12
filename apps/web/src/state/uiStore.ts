@@ -14,14 +14,14 @@ interface UiState {
   selectedJoint: JointId;
   /** Incremented with each camera command so the viewport can react. */
   cameraCommand: { view: CameraView; nonce: number };
-  saveDialogOpen: boolean;
+  exportDialogOpen: boolean;
   statusMessage: { text: string; kind: "info" | "error" } | null;
 
   setActiveCategory: (id: string) => void;
   setLightingPreset: (id: LightingPresetId) => void;
   setSelectedJoint: (id: JointId) => void;
   requestCameraView: (view: CameraView) => void;
-  setSaveDialogOpen: (open: boolean) => void;
+  setExportDialogOpen: (open: boolean) => void;
   showStatus: (text: string, kind?: "info" | "error") => void;
   clearStatus: () => void;
 }
@@ -31,7 +31,7 @@ export const useUiStore = create<UiState>()((set) => ({
   lightingPreset: "studio",
   selectedJoint: "arm.frontRight.upper",
   cameraCommand: { view: "threeQuarter", nonce: 0 },
-  saveDialogOpen: false,
+  exportDialogOpen: false,
   statusMessage: null,
 
   setActiveCategory: (id) => set({ activeCategoryId: id }),
@@ -39,7 +39,7 @@ export const useUiStore = create<UiState>()((set) => ({
   setSelectedJoint: (id) => set({ selectedJoint: id }),
   requestCameraView: (view) =>
     set((state) => ({ cameraCommand: { view, nonce: state.cameraCommand.nonce + 1 } })),
-  setSaveDialogOpen: (open) => set({ saveDialogOpen: open }),
+  setExportDialogOpen: (open) => set({ exportDialogOpen: open }),
   showStatus: (text, kind = "info") => set({ statusMessage: { text, kind } }),
   clearStatus: () => set({ statusMessage: null }),
 }));

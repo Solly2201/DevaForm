@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: Params) {
 export async function PUT(request: Request, { params }: Params) {
   try {
     const { id } = await params;
-    const { name, config, assetVersions } = validateSave(await request.json());
+    const { name, config, assetVersions, preview } = validateSave(await request.json());
     const existing = await prisma.character.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });
@@ -40,6 +40,7 @@ export async function PUT(request: Request, { params }: Params) {
       where: { id },
       data: {
         name,
+        ...(preview ? { preview } : {}),
         versions: {
           create: {
             schemaVersion: config.schemaVersion,
@@ -50,6 +51,26 @@ export async function PUT(request: Request, { params }: Params) {
       },
     });
     return NextResponse.json({ id });
+  } catch (error) {
+    return saveErrorResponse(error);
+  }
+}
+
+/** Rename only — no new version is created. */
+export async function PATCH(request: Request, { params }: Params) {
+  try {
+    const { id } = await params;
+    const body = (await request.json()) as { name?: unknown };
+    const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
+    if (!name) {
+      return NextResponse.json({ error: "A name is required" }, { status: 400 });
+    }
+    const existing = await prisma.character.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
+    }
+    await prisma.character.update({ where: { id }, data: { name } });
+    return NextResponse.json({ id, name });
   } catch (error) {
     return saveErrorResponse(error);
   }

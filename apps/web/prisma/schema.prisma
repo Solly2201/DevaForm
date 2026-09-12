@@ -19,10 +19,25 @@ model Character {
   id        String   @id @default(cuid())
   name      String
   deity     String
+  // Small JPEG data URL captured from the viewport on save; used as the
+  // library thumbnail. Full configuration lives in CharacterVersion.
+  preview   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   versions CharacterVersion[]
+  shares   Share[]
+}
+
+// A public share points at one immutable CharacterVersion, so the shared
+// creation stays reproducible even after the original is edited.
+model Share {
+  id          String           @id @default(cuid())
+  characterId String
+  character   Character        @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  versionId   String
+  version     CharacterVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
 }
 
 // Every save creates an immutable version — an order can pin a version and
@@ -37,6 +52,8 @@ model CharacterVersion {
   // Snapshot of { assetId: version } used by this configuration.
   assetVersions String
   createdAt     DateTime @default(now())
+
+  shares Share[]
 
   @@index([characterId, createdAt])
 }
