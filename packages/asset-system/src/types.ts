@@ -12,7 +12,8 @@ import type { DeityId, MaterialZone, PartSlot, SocketId } from "@devaform/charac
 export type AssetStage =
   | "source" // raw sculpt/scan/AI output, not loadable by the web engine
   | "prototype" // placeholder or unoptimized, fine for development
-  | "production" // cleaned, rigged, optimized, print-validated
+  | "experimental" // scripted/AI sculpt under evaluation — better than prototype, not artist-approved
+  | "production" // artist-made or approved, cleaned, optimized
   | "deprecated"; // kept only so old saved characters still resolve
 
 /**

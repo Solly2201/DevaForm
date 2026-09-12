@@ -1,0 +1,532 @@
+{
+  "units": "meters",
+  "orientation": {
+    "up": "+Y",
+    "forward": "+Z"
+  },
+  "canonicalHeightM": 1,
+  "skeleton": [
+    {
+      "id": "root",
+      "parent": null,
+      "position": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "pelvis",
+      "parent": "root",
+      "position": [
+        0,
+        0.52,
+        0
+      ]
+    },
+    {
+      "id": "spine",
+      "parent": "pelvis",
+      "position": [
+        0,
+        0.1,
+        0
+      ]
+    },
+    {
+      "id": "chest",
+      "parent": "spine",
+      "position": [
+        0,
+        0.16,
+        0
+      ]
+    },
+    {
+      "id": "neck",
+      "parent": "chest",
+      "position": [
+        0,
+        0.16,
+        0
+      ]
+    },
+    {
+      "id": "head",
+      "parent": "neck",
+      "position": [
+        0,
+        0.07,
+        0
+      ]
+    },
+    {
+      "id": "trunkBase",
+      "parent": "head",
+      "position": [
+        0,
+        0,
+        0.09
+      ]
+    },
+    {
+      "id": "trunkMid",
+      "parent": "trunkBase",
+      "position": [
+        0,
+        -0.085,
+        0.035
+      ]
+    },
+    {
+      "id": "trunkTip",
+      "parent": "trunkMid",
+      "position": [
+        0,
+        -0.08,
+        0.025
+      ]
+    },
+    {
+      "id": "arm.frontLeft.upper",
+      "parent": "chest",
+      "position": [
+        0.175,
+        0.11,
+        0.045
+      ]
+    },
+    {
+      "id": "arm.frontLeft.forearm",
+      "parent": "arm.frontLeft.upper",
+      "position": [
+        0.02,
+        -0.16,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand",
+      "parent": "arm.frontLeft.forearm",
+      "position": [
+        0,
+        -0.14,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.upper",
+      "parent": "chest",
+      "position": [
+        -0.175,
+        0.11,
+        0.045
+      ]
+    },
+    {
+      "id": "arm.frontRight.forearm",
+      "parent": "arm.frontRight.upper",
+      "position": [
+        -0.02,
+        -0.16,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand",
+      "parent": "arm.frontRight.forearm",
+      "position": [
+        0,
+        -0.14,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.upper",
+      "parent": "chest",
+      "position": [
+        0.175,
+        0.11,
+        -0.045
+      ]
+    },
+    {
+      "id": "arm.backLeft.forearm",
+      "parent": "arm.backLeft.upper",
+      "position": [
+        0.02,
+        -0.16,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand",
+      "parent": "arm.backLeft.forearm",
+      "position": [
+        0,
+        -0.14,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.upper",
+      "parent": "chest",
+      "position": [
+        -0.175,
+        0.11,
+        -0.045
+      ]
+    },
+    {
+      "id": "arm.backRight.forearm",
+      "parent": "arm.backRight.upper",
+      "position": [
+        -0.02,
+        -0.16,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand",
+      "parent": "arm.backRight.forearm",
+      "position": [
+        0,
+        -0.14,
+        0
+      ]
+    },
+    {
+      "id": "leg.left.thigh",
+      "parent": "pelvis",
+      "position": [
+        0.09,
+        -0.05,
+        0
+      ]
+    },
+    {
+      "id": "leg.left.shin",
+      "parent": "leg.left.thigh",
+      "position": [
+        0,
+        -0.2,
+        0
+      ]
+    },
+    {
+      "id": "leg.left.foot",
+      "parent": "leg.left.shin",
+      "position": [
+        0,
+        -0.19,
+        0
+      ]
+    },
+    {
+      "id": "leg.right.thigh",
+      "parent": "pelvis",
+      "position": [
+        -0.09,
+        -0.05,
+        0
+      ]
+    },
+    {
+      "id": "leg.right.shin",
+      "parent": "leg.right.thigh",
+      "position": [
+        0,
+        -0.2,
+        0
+      ]
+    },
+    {
+      "id": "leg.right.foot",
+      "parent": "leg.right.shin",
+      "position": [
+        0,
+        -0.19,
+        0
+      ]
+    }
+  ],
+  "sockets": [
+    {
+      "id": "head.crown",
+      "joint": "head",
+      "position": [
+        0,
+        0.172,
+        -0.005
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "head.leftEar",
+      "joint": "head",
+      "position": [
+        0.12,
+        0.03,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "head.rightEar",
+      "joint": "head",
+      "position": [
+        -0.12,
+        0.03,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "head.forehead",
+      "joint": "head",
+      "position": [
+        0,
+        0.07,
+        0.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "trunk.tip",
+      "joint": "trunkTip",
+      "position": [
+        0,
+        -0.04,
+        0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "chest.necklace",
+      "joint": "chest",
+      "position": [
+        0,
+        0.12,
+        0.01
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "waist.ornament",
+      "joint": "pelvis",
+      "position": [
+        0,
+        0.04,
+        0.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.item",
+      "joint": "arm.frontLeft.hand",
+      "position": [
+        0,
+        -0.05,
+        0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.wrist",
+      "joint": "arm.frontLeft.hand",
+      "position": [
+        0,
+        0.01,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.item",
+      "joint": "arm.frontRight.hand",
+      "position": [
+        0,
+        -0.05,
+        0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.wrist",
+      "joint": "arm.frontRight.hand",
+      "position": [
+        0,
+        0.01,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.item",
+      "joint": "arm.backLeft.hand",
+      "position": [
+        0,
+        -0.05,
+        0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.wrist",
+      "joint": "arm.backLeft.hand",
+      "position": [
+        0,
+        0.01,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.item",
+      "joint": "arm.backRight.hand",
+      "position": [
+        0,
+        -0.05,
+        0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.wrist",
+      "joint": "arm.backRight.hand",
+      "position": [
+        0,
+        0.01,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "leg.left.anklet",
+      "joint": "leg.left.foot",
+      "position": [
+        0,
+        0.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "leg.right.anklet",
+      "joint": "leg.right.foot",
+      "position": [
+        0,
+        0.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "base.platform",
+      "joint": "root",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "materialZones": [
+    "skin",
+    "skinSecondary",
+    "garment",
+    "garmentAccent",
+    "metal",
+    "gem",
+    "base"
+  ],
+  "partSlots": [
+    "body",
+    "head",
+    "eyes",
+    "ears",
+    "trunk",
+    "tusks",
+    "hair",
+    "hands",
+    "lowerGarment",
+    "upperGarment",
+    "earrings",
+    "armlets",
+    "bracelets",
+    "anklets"
+  ]
+}

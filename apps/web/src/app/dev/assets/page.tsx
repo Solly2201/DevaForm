@@ -61,9 +61,11 @@ export default function AssetRegistryPage() {
                       className={
                         asset.stage === "production"
                           ? "text-emerald-400"
-                          : asset.stage === "deprecated"
-                            ? "text-red-400"
-                            : "text-amber-400"
+                          : asset.stage === "experimental"
+                            ? "text-sky-400"
+                            : asset.stage === "deprecated"
+                              ? "text-red-400"
+                              : "text-amber-400"
                       }
                     >
                       {asset.stage}

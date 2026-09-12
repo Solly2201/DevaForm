@@ -33,6 +33,14 @@ All names are ASCII, camelCase segments, dot-separated namespaces.
   `fixed:<name>` for non-configurable materials. The engine remaps
   `zone:*` materials to live user-controlled materials at load.
 
+## 2b. Part GLB joint grouping
+
+Part meshes in a GLB must sit inside nodes named `JOINT_<jointId>` (e.g.
+`JOINT_head`, `JOINT_chest`). The engine re-parents these groups onto the
+live skeleton joints so parts articulate with poses; a part without them
+fails `pnpm validate-assets`. Attachment GLBs do not use `JOINT_` groups —
+they mount on schema sockets with their attachment point at the origin.
+
 ## 3. Pivots & placement
 
 - Part meshes are modeled in rest pose at their world location, skinned to

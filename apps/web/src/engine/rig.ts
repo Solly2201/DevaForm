@@ -16,6 +16,7 @@ import {
   SOCKETS,
   activeArmSlots,
   getSocket,
+  isJointId,
   type CharacterConfiguration,
   type JointId,
   type SocketId,
@@ -169,9 +170,29 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
     if (!renderable) continue;
     if (renderable instanceof THREE.Object3D) {
-      // GLB part: meshes are placed under the joints their names declare
-      // (JOINT_<id> grouping); otherwise parent to the character root.
-      characterRoot.add(renderable);
+      // GLB part contract: groups named JOINT_<jointId> (searched at any
+      // wrapper depth — exporters add scene/aux wrappers) are re-parented
+      // onto that joint, so the part articulates with the skeleton.
+      const jointGroups: THREE.Object3D[] = [];
+      renderable.traverse((node) => {
+        if (/^JOINT_(.+)$/.test(node.name)) jointGroups.push(node);
+      });
+      let mapped = 0;
+      for (const group of jointGroups) {
+        const jointId = group.name.slice("JOINT_".length);
+        if (isJointId(jointId)) {
+          joints.get(jointId as JointId)?.add(group);
+          mapped += 1;
+        } else {
+          warnings.push(`Asset ${asset.id}: unknown joint in group "${group.name}"`);
+        }
+      }
+      if (mapped === 0) {
+        warnings.push(
+          `Asset ${asset.id}: GLB part has no JOINT_<id> groups; attached to character root`,
+        );
+        characterRoot.add(renderable);
+      }
       continue;
     }
     for (const { joint, object } of renderable.jointed) {

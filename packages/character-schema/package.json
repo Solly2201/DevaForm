@@ -9,12 +9,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "echo \"(linted via app eslint)\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "export-canonical": "tsx scripts/export-canonical.ts"
   },
   "dependencies": {
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

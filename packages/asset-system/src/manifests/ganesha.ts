@@ -118,6 +118,21 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     printability: proto,
   },
 
+  {
+    id: "ganesha.head.sculpted",
+    version: 1,
+    name: "Classic (Sculpted)",
+    description:
+      "Continuous SDF-sculpted head — one blended surface with carved eye sockets. Scripted sculpt under evaluation; artist sculpt pending.",
+    kind: { type: "part", slot: "head" },
+    deityCompatibility: ["ganesha"],
+    stage: "experimental",
+    source: { kind: "glb", path: "/assets/ganesha/head-classic-sculpt.glb" },
+    materialZones: ["skin"],
+    category: "head",
+    printability: proto,
+  },
+
   // ---- EARS -------------------------------------------------------------
   {
     id: "ganesha.ears.large",

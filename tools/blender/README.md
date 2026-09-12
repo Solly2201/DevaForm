@@ -1,18 +1,30 @@
 # Blender tooling
 
-Automation for the asset pipeline (Blender ≥ 4.0, Python API).
+Production tooling for the DevaForm asset pipeline (Blender ≥ 4.0).
+Blender is not required for the web app — these scripts serve asset
+authors. All of them consume `canonical-rig.json`, generated from the
+schema with:
 
-Planned scripts (Phase B):
+```bash
+pnpm --filter @devaform/character-schema export-canonical
+```
 
-- `generate_canonical_rig.py` — builds `canonical_rig.blend` (armature with
-  bone names/positions generated from `packages/character-schema`'s skeleton
-  JSON export) so the rig can never drift from the schema.
-- `validate_asset.py` — CI gate for delivered GLBs: naming conventions,
-  unit scale, triangle budgets, manifold checks, socket presence, material
-  zone names, declared morph targets.
-- `export_editor_glb.py` — standardized editor-LOD export settings.
-- `bake_print_model.py` — Phase D: resolve a CharacterConfiguration JSON to
-  a posed, merged, watertight print mesh (STL/3MF).
+so the DCC rig can never drift from the engine's skeleton/sockets/zones.
 
-`validate_asset.py` currently performs schema-driven checks that don't need
-Blender-side data; it will grow with the first real asset deliveries.
+| Script | Purpose |
+|---|---|
+| `devaform_template.py` | Builds the canonical authoring scene: metric units, armature (bone names = joint ids), `SOCKET_*` empties, `zone:*` materials, look-dev camera/light. Save the result as `devaform_template.blend`. |
+| `devaform_validate.py` | In-Blender contract checks: applied transforms, triangle budget, non-manifold/loose geometry, zone naming, `JOINT_*` grouping, bounds. Exit 1 on errors. |
+| `devaform_export.py` | Canonical GLB export of the `DevaForm_Asset` collection (+Y up, applied modifiers, no cameras/lights/animation). |
+| `devaform_thumbnail.py` | 512×512 transparent thumbnail render with the template camera. |
+
+Artist workflow (see docs/production-asset-pipeline.md):
+
+```
+template → import/sculpt → clean → JOINT_/SOCKET_/zone naming →
+devaform_validate → devaform_export → pnpm validate-assets →
+manifest entry → Divine Studio QA
+```
+
+Phase D additions (planned): `bake_print_model.py` — resolve a
+CharacterConfiguration to a merged watertight print mesh.
