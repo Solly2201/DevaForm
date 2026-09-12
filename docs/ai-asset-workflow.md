@@ -33,6 +33,10 @@ AI-generated meshes are clean.
   file entering the same cleanup path as a manual sculpt.
 - Generate at highest available resolution; texture output optional (we
   often re-texture).
+- Status: no provider credentials exist in the development environment yet;
+  the pipeline (template → validate → export → validate-assets → manifest)
+  is fully built and tested with the scripted SDF hero head, so a generated
+  or sculpted mesh drops straight in (see production-asset-pipeline.md).
 
 ### 4. Blender cleanup
 - Remove floaters, close holes, fix non-manifold edges, correct scale to

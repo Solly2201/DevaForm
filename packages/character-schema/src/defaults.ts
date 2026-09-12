@@ -14,7 +14,7 @@ export function createDefaultGaneshaConfiguration(): CharacterConfiguration {
     deity: "ganesha",
     parts: {
       body: { assetId: "ganesha.body.classic", version: 2 },
-      head: { assetId: "ganesha.head.classic", version: 2 },
+      head: { assetId: "ganesha.head.sculpted", version: 1 },
       ears: { assetId: "ganesha.ears.large", version: 2 },
       trunk: { assetId: "ganesha.trunk.leftCurl", version: 2 },
       tusks: { assetId: "ganesha.tusks.single", version: 2 },
