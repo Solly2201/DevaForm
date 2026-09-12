@@ -17,21 +17,34 @@ export const ganeshaHead: PartGenerator = (ctx) => {
   const skin = ctx.materials.get("skin");
   const dome = num(ctx, "dome", 1);
   const cheek = num(ctx, "cheek", 1);
+  const width = num(ctx, "width", 1);
+  const browRidge = num(ctx, "browRidge", 0);
   const group = new THREE.Group();
+  group.scale.set(width, 1, 1);
 
-  // Main skull
+  // Main skull — dome raises/lowers the whole cranium profile
   group.add(
     mesh(new THREE.SphereGeometry(0.125, 40, 30), skin, {
-      position: [0, 0.075, 0],
-      scale: [1.04, 0.95 + 0.1 * dome, 1.0],
+      position: [0, 0.07 + 0.012 * dome, 0],
+      scale: [1.04, 0.88 + 0.17 * dome, 1.0],
     }),
   );
   // Twin cranial domes — subtle bumps blended into the skull top
   for (const side of [1, -1]) {
     group.add(
       mesh(new THREE.SphereGeometry(0.064, 26, 20), skin, {
-        position: [side * 0.044, 0.112 + 0.018 * dome, 0.03],
+        position: [side * 0.044, 0.104 + 0.026 * dome, 0.03],
         scale: [1, 0.88, 1],
+      }),
+    );
+  }
+  if (browRidge > 0) {
+    // Regal variant: pronounced brow bar proud of the brow plate
+    group.add(
+      mesh(new THREE.CapsuleGeometry(0.014, 0.115, 8, 14), skin, {
+        position: [0, 0.105, 0.118],
+        rotation: [0.5, 0, Math.PI / 2],
+        scale: [1, 1, 0.75],
       }),
     );
   }
@@ -103,6 +116,7 @@ export const ganeshaEyes: PartGenerator = (ctx) => {
   const shapeY = num(ctx, "shapeY", 1);
   const kohl = num(ctx, "kohl", 0);
   const gazeDown = num(ctx, "gazeDown", 0.25);
+  const irisScale = num(ctx, "iris", 1);
 
   const size = 1 + 0.28 * morph(ctx, "eyeSize");
   const spacing = 0.049 * (1 + 0.28 * morph(ctx, "eyeSpacing"));
@@ -122,30 +136,39 @@ export const ganeshaEyes: PartGenerator = (ctx) => {
     eye.scale.y *= shapeY;
 
     const r = 0.0195;
+    // Socket rim — seats the eye in the face instead of resting on it
+    eye.add(
+      mesh(new THREE.TorusGeometry(r * 1.05, 0.006, 10, 24), skin, {
+        position: [0, 0, -0.006],
+        scale: [1.05, 1.0, 0.65],
+      }),
+    );
     // Eyeball
     eye.add(mesh(new THREE.SphereGeometry(r, 24, 18), ctx.materials.fixed.eyeWhite));
     // Iris + pupil, tilted toward the devotee (slightly downward gaze)
     const irisGroup = new THREE.Group();
     irisGroup.rotation.x = gazeDown;
     irisGroup.add(
-      mesh(new THREE.SphereGeometry(0.0115, 18, 14), ctx.materials.fixed.iris, {
+      mesh(new THREE.SphereGeometry(0.0115 * irisScale, 18, 14), ctx.materials.fixed.iris, {
         position: [0, 0, r - 0.004],
         scale: [1, 1, 0.45],
       }),
     );
     irisGroup.add(
-      mesh(new THREE.SphereGeometry(0.0058, 14, 10), ctx.materials.fixed.eyeDark, {
+      mesh(new THREE.SphereGeometry(0.0058 * irisScale, 14, 10), ctx.materials.fixed.eyeDark, {
         position: [0, 0, r - 0.0005],
         scale: [1, 1, 0.4],
       }),
     );
     eye.add(irisGroup);
 
-    // Upper eyelid — a skin cap over the top of the eyeball
+    // Upper eyelid — a skin cap hooded over the top-front of the eyeball.
+    // Higher lidCover both extends the cap and tilts it further forward,
+    // so "serene" eyes read half-closed rather than wide open.
     const upperLid = mesh(
-      new THREE.SphereGeometry(r * 1.12, 24, 12, 0, Math.PI * 2, 0, lidCover),
+      new THREE.SphereGeometry(r * 1.14, 24, 12, 0, Math.PI * 2, 0, lidCover),
       skin,
-      { rotation: [-0.42, 0, 0] },
+      { rotation: [(lidCover - 1.4) * 0.9 - 0.05, 0, 0] },
     );
     eye.add(upperLid);
     // Lower lid
@@ -204,6 +227,7 @@ export const ganeshaEars: PartGenerator = (ctx) => {
   const inner = ctx.materials.get("skinSecondary");
   const style = num(ctx, "size", 1);
   const fold = num(ctx, "fold", 0);
+  const trim = num(ctx, "trim", 0);
 
   const size = style * (1 + 0.3 * morph(ctx, "earSize"));
   const angle = morph(ctx, "earAngle") * 0.35;
@@ -242,6 +266,15 @@ export const ganeshaEars: PartGenerator = (ctx) => {
         scale: [0.9, 1.15, 0.5],
       }),
     );
+    if (trim > 0) {
+      // Decorative variant: gold rim band following the ear edge
+      ear.add(
+        mesh(new THREE.TorusGeometry(0.096, 0.0055, 10, 34), ctx.materials.get("metal"), {
+          scale: [0.92, 1.16 - fold * 0.18, 0.7],
+          position: [0, 0, 0.012],
+        }),
+      );
+    }
     group.add(ear);
   }
   return [{ joint: "head", object: group }];
@@ -260,8 +293,10 @@ const wrinkled =
 export const ganeshaTrunk: PartGenerator = (ctx) => {
   const skin = ctx.materials.get("skin");
   const curl = num(ctx, "curl", 1); // 1 left, -1 right, 0 straight
-  const lengthScale = 1 + 0.18 * morph(ctx, "trunkLength");
-  const curlScale = curl * (1 + 0.5 * morph(ctx, "trunkCurl"));
+  const length = num(ctx, "length", 1); // asset variant length
+  const lift = num(ctx, "lift", 0); // 1 = tip sweeps upward
+  const lengthScale = length * (1 + 0.18 * morph(ctx, "trunkLength"));
+  const curlScale = (curl === 0 && lift > 0 ? 1 : curl) * (1 + 0.5 * morph(ctx, "trunkCurl"));
 
   const L = (y: number) => y * lengthScale;
 
@@ -311,30 +346,35 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
     ),
   );
 
-  // Segment 3 — long sweep draping over the belly, ending in the classic curl
-  const tipEndPos: [number, number, number] = [curlScale * 0.075, L(-0.14), 0.098];
-  const tip = new THREE.Group();
-  tip.add(
-    mesh(new THREE.SphereGeometry(0.033, 16, 12), skin, { position: [0, 0.005, 0.052] }),
-  );
-  tip.add(
-    new THREE.Mesh(
-      taperedTube(
-        [
+  // Segment 3 — long sweep draping over the belly, ending in the classic
+  // sideways curl (or lifting upward for the urdhva variant).
+  const tipEndPos: [number, number, number] =
+    lift > 0
+      ? [curlScale * 0.062, L(-0.1) + 0.035 * lift, 0.115]
+      : [curlScale * 0.075, L(-0.14), 0.098];
+  const tipPath: V3[] =
+    lift > 0
+      ? [
+          [0, 0.012, 0.05],
+          [curlScale * 0.004, L(-0.05), 0.078],
+          [curlScale * 0.016, L(-0.098), 0.096],
+          [curlScale * 0.04, L(-0.125), 0.108],
+          [curlScale * 0.058, L(-0.115), 0.115],
+          tipEndPos,
+        ]
+      : [
           [0, 0.012, 0.05],
           [curlScale * 0.004, L(-0.05), 0.075],
           [curlScale * 0.014, L(-0.1), 0.092],
           [curlScale * 0.042, L(-0.145), 0.09],
           [curlScale * 0.072, L(-0.155), 0.092],
           tipEndPos,
-        ],
-        wrinkled(0.033, 0.015, 5),
-        32,
-        14,
-      ),
-      skin,
-    ),
+        ];
+  const tip = new THREE.Group();
+  tip.add(
+    mesh(new THREE.SphereGeometry(0.033, 16, 12), skin, { position: [0, 0.005, 0.052] }),
   );
+  tip.add(new THREE.Mesh(taperedTube(tipPath, wrinkled(0.033, 0.015, 5), 32, 14), skin));
   // Trunk tip: nostril end + prehensile lip
   const tipEnd = new THREE.Group();
   tipEnd.position.set(...tipEndPos);
@@ -368,19 +408,25 @@ export const ganeshaTusks: PartGenerator = (ctx) => {
   const ivory = ctx.materials.fixed.ivory;
   const broken = num(ctx, "broken", 1);
   const scale = num(ctx, "scale", 1);
+  const curve = num(ctx, "curve", 0);
   const group = new THREE.Group();
 
   for (const side of [1, -1]) {
     const isBroken = broken > 0.5 && side === -1;
+    // Roots sit outside the trunk and forward of the cheeks so tusks stay
+    // visible from front, 3/4 and profile.
     const fullPts: V3[] = [
-      [side * 0.046, -0.03, 0.062],
-      [side * 0.068, -0.062, 0.095],
-      [side * 0.072, -0.092, 0.128],
-      [side * 0.06, -0.112, 0.158],
+      [side * 0.056, -0.045, 0.068],
+      [side * 0.085, -0.075, 0.098],
+      [side * (0.092 - curve * 0.012), -0.105, 0.132],
+      [side * (0.074 - curve * 0.028), -0.126, 0.166 + curve * 0.012],
     ];
+    if (curve > 0.5) {
+      fullPts.push([side * 0.045, -0.132, 0.19]);
+    }
     const pts = isBroken ? fullPts.slice(0, 2) : fullPts;
     const tusk = new THREE.Mesh(
-      taperedTube(pts, isBroken ? [0.0155, 0.0115] : [0.0155, 0.004], 20, 12),
+      taperedTube(pts, isBroken ? [0.017, 0.0135] : [0.017, 0.0045], 22, 12),
       ivory,
     );
     tusk.scale.setScalar(scale);
@@ -388,11 +434,11 @@ export const ganeshaTusks: PartGenerator = (ctx) => {
     tusk.receiveShadow = true;
     group.add(tusk);
     if (isBroken) {
-      // Flat break cap
+      // Flat break cap, clearly protruding from the cheek
       group.add(
-        mesh(new THREE.SphereGeometry(0.0115, 12, 10), ivory, {
-          position: [side * 0.068 * scale, -0.062 * scale, 0.095 * scale],
-          scale: [1, 0.55, 1],
+        mesh(new THREE.SphereGeometry(0.0135, 12, 10), ivory, {
+          position: [side * 0.085 * scale, -0.075 * scale, 0.098 * scale],
+          scale: [1, 0.6, 1],
         }),
       );
     }

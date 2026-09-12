@@ -2,10 +2,12 @@
 
 **A premium customizable Indian deity statue creation platform.**
 
-Customers design their own deity statue — beginning with Lord Ganesha — in a
+Customers design their own deity statue in **Divine Studio** — DevaForm's
 browser-based realtime 3D editor: pose, ornaments, held attributes, clothing,
 colors and materials. The finished configuration is manufactured as a premium
-3D-printed statue.
+3D-printed statue. Divine Studio is deity-generic; **Ganesha** is the first
+deity implemented (`deity = ganesha`), with Shiva, Durga, Krishna and others
+to follow on the same engine.
 
 ## Repository layout
 
@@ -46,10 +48,18 @@ pnpm build          # production build
 - Full editor shell: category sidebar, 3D viewport, customization panel, top bar
 - Real THREE.js joint hierarchy (25 joints incl. four arms and a 3-segment trunk)
 - A recognizable procedural Ganesha: sculpted eye assemblies (sclera, iris,
-  pupil, lids, liner, brows), twin-domed elephant head, fan ears, curve-based
-  trunk with left/right/straight variants, Ekadanta/double/short tusks, real
-  hands with fingers + thumb and four mudras per hand (abhaya/varada/open/hold)
+  pupil, hooded lids, liner, brows, socket rims), three genuinely distinct
+  heads (Classic / Bal / Regal), four ear styles incl. gold-trimmed, six
+  trunk variants (left/right/straight/upward/long/short), four tusk variants
+  (Ekadanta / double / short / curved), real hands with six mudras
+  (abhaya, varada, open, cradle, stem-hold, weapon-grip)
+- A real hand–item grip system: five attributes (modak, lotus, parashu,
+  pasha, ankush) with per-item grip metadata — attaching one auto-applies
+  the right mudra, per-socket transforms place it in the palm, and shafted
+  attributes stay world-upright through every pose
 - Two-arm / four-arm (Chaturbhuja) switching; hidden back-hand items persist
+- Seated poses swap the dhoti to pose-compatible lap drapery and lower the
+  figure onto its base; companion (Mushak GLB) placement left/front/right
 - Face shaping: parametric morphs (eye size/spacing/height, brow height,
   ear size/angle, trunk length/curl) as real sliders
 - Pose presets (standing / blessing / meditation / royal ease / dancing) with

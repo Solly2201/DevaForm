@@ -73,6 +73,7 @@ async function buildThumbnailObject(assetId: string): Promise<THREE.Object3D | n
     morphs: {},
     hands: config.hands,
     arms: config.arms,
+    seated: false,
   };
 
   if (asset.source.kind === "glb") {

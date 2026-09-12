@@ -36,6 +36,10 @@ export interface EditorState {
   // -- document mutations (undoable) --
   setPart: (slot: PartSlot, assetId: string | null) => void;
   setAttachment: (socket: SocketId, assetId: string | null) => void;
+  setAttachmentOffset: (
+    socket: SocketId,
+    offset: { position?: Vec3; rotation?: Vec3; scale?: number } | undefined,
+  ) => void;
   setPosePreset: (presetId: string | null) => void;
   setJointOverride: (joint: JointId, rotation: Vec3) => void;
   clearJointOverride: (joint: JointId) => void;
@@ -88,6 +92,7 @@ export const useEditorStore = create<EditorState>()(
             let attachments: AttachmentConfiguration[] = config.attachments.filter(
               (a) => a.socket !== socket,
             );
+            let hands = config.hands;
             if (assetId) {
               const asset = getAsset(assetId);
               // Enforce exclusion rules (e.g. only one crown style at a time).
@@ -97,9 +102,27 @@ export const useEditorStore = create<EditorState>()(
                 );
               }
               attachments = [...attachments, { socket, asset: latestRef(assetId) }];
+              // Items declare how a hand should hold them — auto-apply the
+              // grip mudra so the default always looks intentional.
+              const handSlot = socket.match(/^arm\.(\w+)\.hand\.item$/)?.[1] as
+                | ArmSlot
+                | undefined;
+              if (handSlot && asset?.grip) {
+                hands = { ...hands, [handSlot]: { mudra: asset.grip.mudra } };
+              }
             }
-            return { ...config, attachments };
+            return { ...config, attachments, hands };
           }),
+        ),
+
+      setAttachmentOffset: (socket, offset) =>
+        set((state) =>
+          mutateConfig(state, (config) => ({
+            ...config,
+            attachments: config.attachments.map((a) =>
+              a.socket === socket ? { ...a, offset } : a,
+            ),
+          })),
         ),
 
       setPosePreset: (presetId) =>

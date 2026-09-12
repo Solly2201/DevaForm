@@ -210,6 +210,31 @@ export const necklaceMala: AttachmentGenerator = (ctx) => {
   return group;
 };
 
+export const tikkaChandra: AttachmentGenerator = (ctx) => {
+  const metal = ctx.materials.get("metal");
+  const group = new THREE.Group();
+  // Crescent above the tilak area
+  group.add(
+    mesh(new THREE.TorusGeometry(0.024, 0.0045, 10, 24, Math.PI), metal, {
+      position: [0, 0.052, 0.022],
+      rotation: [0.35, 0, 0],
+    }),
+  );
+  // Hanging chain of small beads down the brow
+  for (let i = 0; i < 3; i++) {
+    group.add(
+      mesh(new THREE.SphereGeometry(0.0038, 8, 6), metal, {
+        position: [0, 0.042 - i * 0.011, 0.028 + i * 0.003],
+      }),
+    );
+  }
+  const drop = gemStud(ctx, 0.0075);
+  drop.position.set(0, 0.006, 0.038);
+  drop.scale.z = 0.6;
+  group.add(drop);
+  return group;
+};
+
 export const waistKamarband: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const bulk = ctx.proportions.bulk;

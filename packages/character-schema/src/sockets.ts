@@ -11,6 +11,7 @@
 import type { ArmSlot, JointId } from "./skeleton";
 import { ARM_SLOTS } from "./skeleton";
 
+
 export type SocketId =
   | "head.crown"
   | "head.leftEar"
@@ -35,20 +36,27 @@ export interface SocketDefinition {
   label: string;
 }
 
+const ARM_SLOT_LABELS: Record<ArmSlot, string> = {
+  frontLeft: "Front Left",
+  frontRight: "Front Right",
+  backLeft: "Back Left",
+  backRight: "Back Right",
+};
+
 const handSockets: SocketDefinition[] = ARM_SLOTS.flatMap((slot) => [
   {
     id: `arm.${slot}.hand.item` as SocketId,
     joint: `arm.${slot}.hand` as JointId,
     position: [0, -0.05, 0.02] as const,
     rotation: [0, 0, 0] as const,
-    label: `${slot} hand item`,
+    label: `${ARM_SLOT_LABELS[slot]} Hand`,
   },
   {
     id: `arm.${slot}.wrist` as SocketId,
     joint: `arm.${slot}.hand` as JointId,
     position: [0, 0.01, 0] as const,
     rotation: [0, 0, 0] as const,
-    label: `${slot} wrist`,
+    label: `${ARM_SLOT_LABELS[slot]} Wrist`,
   },
 ]);
 

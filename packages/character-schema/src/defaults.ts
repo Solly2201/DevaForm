@@ -57,8 +57,8 @@ export function createDefaultGaneshaConfiguration(): CharacterConfiguration {
     hands: {
       frontLeft: { mudra: "hold" },
       frontRight: { mudra: "abhaya" },
-      backLeft: { mudra: "hold" },
-      backRight: { mudra: "hold" },
+      backLeft: { mudra: "pinch" },
+      backRight: { mudra: "grip" },
     },
     arms: { count: 4 },
   };

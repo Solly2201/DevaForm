@@ -107,7 +107,18 @@ All names are ASCII, camelCase segments, dot-separated namespaces.
 - No floating geometry; every shell must connect or be declared as a
   separate assembly part.
 
-## 10. Versioning & lifecycle
+## 10. Hand-held attribute (item) authoring rules
+
+- Model with the **grip point at the origin**; shaft along +Y, business end
+  (blade, flower, loop) toward +Y.
+- Declare `grip.mudra` in the manifest (`hold` cradle, `pinch` stem,
+  `grip` fist) — the studio auto-applies it on attach.
+- Provide `defaultTransform` for the in-fist position and
+  `socketTransforms` overrides for non-hand sockets (e.g. `trunk.tip`).
+- Shafted items should set `keepUpright: true`; the engine keeps them
+  world-vertical through every pose. Cradled items must not.
+
+## 11. Versioning & lifecycle
 
 - Asset versions are integers, bumped on any geometry/material/socket
   change. Old versions are never mutated — saved characters and orders pin
@@ -116,7 +127,7 @@ All names are ASCII, camelCase segments, dot-separated namespaces.
   Only `production` assets are sellable; `deprecated` assets stay loadable
   for old saves.
 
-## 11. Delivery checklist (per asset)
+## 12. Delivery checklist (per asset)
 
 1. GLB passes `tools/blender/validate_asset.py` (naming, scale, budget,
    manifold, socket presence).

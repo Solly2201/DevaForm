@@ -14,6 +14,47 @@ export const ganeshaDhoti: PartGenerator = (ctx) => {
   const group = new THREE.Group();
 
   const topR = 0.158 * bulk;
+
+  if (ctx.seated) {
+    // Seated poses: drape a lap cloth over the folded legs instead of a
+    // full standing skirt that would clip through them.
+    group.add(
+      mesh(pleatedCylinder(topR, topR * 1.18, 0.1, 18, 0.006), garment, {
+        position: [0, 0.005, 0],
+      }),
+    );
+    // Lap drape — wide, flattened cushion of cloth over the crossed legs
+    group.add(
+      mesh(new THREE.SphereGeometry(0.19 * bulk, 32, 22), garment, {
+        position: [0, -0.075, 0.05],
+        scale: [1.15, 0.42, 0.95],
+      }),
+    );
+    // Hem falling over the front edge of the lap
+    group.add(
+      mesh(new THREE.TorusGeometry(0.185 * bulk, 0.012, 10, 40, Math.PI), accent, {
+        position: [0, -0.09, 0.055],
+        rotation: [0.25, 0, 0],
+        scale: [1.05, 0.9, 0.85],
+      }),
+    );
+    // Waist wrap band
+    group.add(
+      mesh(new THREE.TorusGeometry(topR * 0.99, 0.016, 12, 48), garment, {
+        position: [0, 0.06, 0],
+        rotation: [Math.PI / 2, 0, 0],
+      }),
+    );
+    // Center pleat fan spilling onto the lap
+    group.add(
+      mesh(new THREE.BoxGeometry(0.05, 0.13, 0.006), accent, {
+        position: [0, -0.06, 0.155 * bulk],
+        rotation: [0.55, 0, 0],
+      }),
+    );
+    return [{ joint: "pelvis", object: group }];
+  }
+
   const skirtLength = 0.2 + 0.17 * length;
   const hemY = 0.055 - skirtLength;
 

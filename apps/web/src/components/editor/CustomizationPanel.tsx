@@ -200,6 +200,49 @@ function SocketSections({
   );
 }
 
+/**
+ * Companion placement around the base. Offsets are applied on top of the
+ * asset's default transform, so "Right" (the default) is a zero offset.
+ */
+const COMPANION_SPOTS: ReadonlyArray<{
+  id: "right" | "front" | "left";
+  label: string;
+  offset: { position: [number, number, number] } | undefined;
+}> = [
+  { id: "right", label: "Right", offset: undefined },
+  { id: "front", label: "Front", offset: { position: [-0.2, 0, 0.1] } },
+  { id: "left", label: "Left", offset: { position: [-0.48, 0, -0.15] } },
+];
+
+function CompanionPlacementSection() {
+  const attachment = useEditorStore((s) =>
+    s.config.attachments.find((a) => a.socket === "base.platform"),
+  );
+  const setAttachmentOffset = useEditorStore((s) => s.setAttachmentOffset);
+  if (!attachment) return null;
+  const activeId =
+    COMPANION_SPOTS.find(
+      (spot) =>
+        JSON.stringify(spot.offset?.position ?? null) ===
+        JSON.stringify(attachment.offset?.position ?? null),
+    )?.id ?? "right";
+  return (
+    <section>
+      <SectionHeading>Placement</SectionHeading>
+      <SegmentedControl<"right" | "front" | "left">
+        options={COMPANION_SPOTS.map((s) => ({ value: s.id, label: s.label }))}
+        value={activeId}
+        onChange={(id) =>
+          setAttachmentOffset(
+            "base.platform",
+            COMPANION_SPOTS.find((s) => s.id === id)?.offset,
+          )
+        }
+      />
+    </section>
+  );
+}
+
 function CategoryContent({ category }: { category: EditorCategory }) {
   switch (category.content.type) {
     case "parts":
@@ -219,10 +262,13 @@ function CategoryContent({ category }: { category: EditorCategory }) {
       );
     case "sockets":
       return (
-        <SocketSections
-          sockets={category.content.sockets}
-          allowNone={category.content.allowNone}
-        />
+        <>
+          <SocketSections
+            sockets={category.content.sockets}
+            allowNone={category.content.allowNone}
+          />
+          {category.id === "companion" && <CompanionPlacementSection />}
+        </>
       );
     case "mixed":
       return (
