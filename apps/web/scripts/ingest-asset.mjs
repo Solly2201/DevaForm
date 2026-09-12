@@ -30,6 +30,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
+import { glbStats, parseGlbJson } from "./lib/glb.mjs";
 
 if (typeof globalThis.FileReader === "undefined") {
   globalThis.FileReader = class FileReader {
@@ -262,7 +263,40 @@ await mkdir(outDir, { recursive: true });
 let geometryMeta = {};
 if (has("copy-only")) {
   await copyFile(inputPath, modelOut);
-  console.log(`copied ${inputPath} → ${modelOut} (no processing)`);
+  console.log(`copied ${inputPath} → ${modelOut} (no geometry processing)`);
+  // Even without processing, probe the container so the sidecar carries
+  // real measured metadata — this is the path textured AI GLBs take.
+  try {
+    const probe = glbStats(parseGlbJson(await readFile(modelOut)));
+    geometryMeta = {
+      triangles: probe.triangles,
+      vertices: probe.vertices,
+      boundsM: probe.bounds.map((b) => Number(b.toFixed(4))),
+    };
+    console.log(
+      `  • probed: ${probe.triangles.toLocaleString()} triangles, ${probe.vertices.toLocaleString()} vertices, bounds ${geometryMeta.boundsM.join(" × ")} m (accessor-space)`,
+    );
+    console.log(`  • materials: ${probe.materialNames.join(", ") || "(none named)"}`);
+    if (probe.textures.length) {
+      for (const texture of probe.textures) {
+        console.log(
+          `  • texture: ${texture.name} (${texture.mimeType}, ${(texture.bytes / 1e6).toFixed(2)} MB${texture.external ? ", EXTERNAL — must be embedded" : ""})`,
+        );
+      }
+    }
+    if (isPart && !probe.nodeNames.some((n) => n.startsWith("JOINT_"))) {
+      console.warn(
+        `  ! part GLB has no JOINT_${joint} group — add it in a DCC or re-run without --copy-only`,
+      );
+    }
+    if (probe.size < 0.01 || probe.size > 2.0) {
+      console.warn(
+        `  ! bounds ${probe.size.toFixed(3)} m look wrong for the canonical metre scale — normalize before shipping`,
+      );
+    }
+  } catch (e) {
+    console.warn(`  ! could not probe container: ${e.message}`);
+  }
 } else {
   const loaded = await loadInput(inputPath);
   const { object, report } = normalize(loaded);

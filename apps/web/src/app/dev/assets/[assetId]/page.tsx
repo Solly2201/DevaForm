@@ -10,7 +10,7 @@ import { use, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { getAsset, getProvenance } from "@devaform/asset-system";
+import { getAsset, getProvenance, listAssets, type AssetDefinition } from "@devaform/asset-system";
 import { buildAssetObject } from "@/engine/thumbnails";
 import { ZoneMaterials } from "@/engine/materials";
 import { AVAILABLE_DEITIES } from "@devaform/asset-system";
@@ -124,6 +124,58 @@ function PreviewObject({
   return object ? <primitive object={object} /> : null;
 }
 
+/** Assets interchangeable with this one (same part slot / shared socket). */
+function interchangeableAssets(asset: AssetDefinition): AssetDefinition[] {
+  const candidates =
+    asset.kind.type === "part"
+      ? listAssets({ slot: asset.kind.slot })
+      : listAssets().filter(
+          (other) =>
+            other.kind.type === "attachment" &&
+            asset.kind.type === "attachment" &&
+            other.kind.sockets.some((s) => asset.kind.type === "attachment" && asset.kind.sockets.includes(s)),
+        );
+  return candidates.filter((other) => other.id !== asset.id);
+}
+
+function CompareLinks({
+  asset,
+  activeCompareId,
+}: {
+  asset: AssetDefinition;
+  activeCompareId: string | null;
+}) {
+  const others = interchangeableAssets(asset);
+  if (others.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+      <span className="text-stone-600">Compare with:</span>
+      {/* Hard links: search-param-only navigation must remount this dev page */}
+      {activeCompareId && (
+        <a
+          href={`/dev/assets/${encodeURIComponent(asset.id)}`}
+          className="rounded-full border border-saffron-600 px-2 py-0.5 text-saffron-400"
+        >
+          ✕ stop comparing
+        </a>
+      )}
+      {others.map((other) => (
+        <a
+          key={other.id}
+          href={`/dev/assets/${encodeURIComponent(asset.id)}?compare=${encodeURIComponent(other.id)}`}
+          className={`rounded-full border px-2 py-0.5 ${
+            activeCompareId === other.id
+              ? "border-saffron-500 text-saffron-400"
+              : "border-surface-700 text-stone-400 hover:border-stone-500"
+          }`}
+        >
+          {other.name}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export default function AssetInspectorPage({
   params,
 }: {
@@ -134,6 +186,13 @@ export default function AssetInspectorPage({
   const [wireframe, setWireframe] = useState(false);
   const [zoneView, setZoneView] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [compareId, setCompareId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get("compare");
+    setCompareId(value);
+  }, [assetId]);
+  const compareAsset = compareId ? (getAsset(compareId) ?? null) : null;
 
   if (!asset) {
     return (
@@ -168,37 +227,66 @@ export default function AssetInspectorPage({
         </Link>
       </div>
 
+      <CompareLinks asset={asset} activeCompareId={compareId} />
+
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_22rem]">
-        <div className="relative h-[65vh] overflow-hidden rounded-2xl border border-surface-800 bg-surface-900">
-          <Canvas camera={{ position: [0.25, 0.12, 0.35], fov: 40, near: 0.005, far: 20 }}>
-            <color attach="background" args={["#151210"]} />
-            <hemisphereLight color="#efe9e2" groundColor="#403830" intensity={0.9} />
-            <directionalLight position={[2, 3, 3]} intensity={2.2} color="#fff0da" />
-            <directionalLight position={[-1, 2, -3]} intensity={1.2} color="#ffe4b0" />
-            <PreviewObject
-              assetId={asset.id}
-              wireframe={wireframe}
-              zoneView={zoneView}
-              onStats={setStats}
-            />
-            <OrbitControls enablePan={false} minDistance={0.05} maxDistance={3} />
-          </Canvas>
-          <div className="absolute left-3 top-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setWireframe((v) => !v)}
-              className={`rounded-lg border px-2.5 py-1 text-xs ${wireframe ? "border-saffron-500 text-saffron-400" : "border-surface-700 text-stone-400"}`}
-            >
-              Wireframe
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoneView((v) => !v)}
-              className={`rounded-lg border px-2.5 py-1 text-xs ${zoneView ? "border-saffron-500 text-saffron-400" : "border-surface-700 text-stone-400"}`}
-            >
-              Zones
-            </button>
+        <div className={compareAsset ? "grid gap-3 md:grid-cols-2" : undefined}>
+          <div className="relative h-[65vh] overflow-hidden rounded-2xl border border-surface-800 bg-surface-900">
+            {compareAsset && (
+              <span className="absolute right-3 top-3 z-10 rounded-full bg-surface-950/80 px-2.5 py-0.5 font-mono text-[10px] text-stone-400">
+                {asset.id}@{asset.version}
+              </span>
+            )}
+            <Canvas camera={{ position: [0.32, 0.16, 0.5], fov: 40, near: 0.005, far: 20 }}>
+              <color attach="background" args={["#151210"]} />
+              <hemisphereLight color="#efe9e2" groundColor="#403830" intensity={0.9} />
+              <directionalLight position={[2, 3, 3]} intensity={2.2} color="#fff0da" />
+              <directionalLight position={[-1, 2, -3]} intensity={1.2} color="#ffe4b0" />
+              <PreviewObject
+                assetId={asset.id}
+                wireframe={wireframe}
+                zoneView={zoneView}
+                onStats={setStats}
+              />
+              <OrbitControls enablePan={false} minDistance={0.05} maxDistance={3} />
+            </Canvas>
+            <div className="absolute left-3 top-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setWireframe((v) => !v)}
+                className={`rounded-lg border px-2.5 py-1 text-xs ${wireframe ? "border-saffron-500 text-saffron-400" : "border-surface-700 text-stone-400"}`}
+              >
+                Wireframe
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoneView((v) => !v)}
+                className={`rounded-lg border px-2.5 py-1 text-xs ${zoneView ? "border-saffron-500 text-saffron-400" : "border-surface-700 text-stone-400"}`}
+              >
+                Zones
+              </button>
+            </div>
           </div>
+          {compareAsset && (
+            <div className="relative h-[65vh] overflow-hidden rounded-2xl border border-saffron-800/60 bg-surface-900">
+              <span className="absolute right-3 top-3 z-10 rounded-full bg-surface-950/80 px-2.5 py-0.5 font-mono text-[10px] text-saffron-400">
+                {compareAsset.id}@{compareAsset.version}
+              </span>
+              <Canvas camera={{ position: [0.32, 0.16, 0.5], fov: 40, near: 0.005, far: 20 }}>
+                <color attach="background" args={["#151210"]} />
+                <hemisphereLight color="#efe9e2" groundColor="#403830" intensity={0.9} />
+                <directionalLight position={[2, 3, 3]} intensity={2.2} color="#fff0da" />
+                <directionalLight position={[-1, 2, -3]} intensity={1.2} color="#ffe4b0" />
+                <PreviewObject
+                  assetId={compareAsset.id}
+                  wireframe={wireframe}
+                  zoneView={zoneView}
+                  onStats={() => undefined}
+                />
+                <OrbitControls enablePan={false} minDistance={0.05} maxDistance={3} />
+              </Canvas>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 text-xs">

@@ -61,12 +61,47 @@ creations keep resolving their pinned version. This is covered by the
 
 ## AI generation status (honest)
 
-No AI 3D service (Meshy/Tripo), Blender install, or conversion CLI exists
-in the current development environment — verified, not assumed. The
-pipeline is therefore built to receive generated files by drop-in: the
-moment a Meshy/Tripo GLB exists, `pnpm ingest-asset` takes it to a
-registered, validated, thumbnailed, inspectable Divine Studio asset in
-minutes.
+No AI 3D service (Meshy/Tripo API keys), Blender install, conversion CLI
+or authenticated browser session exists in the current development
+environment — re-verified each phase, not assumed. The pipeline is
+therefore built to receive generated files by drop-in.
+
+## Runbook: the first real AI Classic Head
+
+When a Meshy/Tripo account exists, this is the entire integration:
+
+1. Generate with front + 3/4 + side reference views of a premium
+   devotional Ganesha head (see the repository reference boards). Aim
+   for: serene expression, integrated trunk root, clearly visible tusks,
+   large natural ears, clean facial planes. Download as GLB.
+2. Ingest. Textured GLBs use the probe-only path (Node cannot decode
+   images); normalize in Blender first if scale/axes are off:
+
+   ```
+   pnpm ingest-asset head.glb --id ganesha.head.classic --version 4 \
+       --name "Classic Head" --joint head --slot head \
+       --source ai --provider meshy --copy-only
+   ```
+
+   Copy-only still measures triangles/vertices/bounds, lists materials
+   and embedded texture sizes, and flags missing JOINT_head groups or
+   non-metric scale. Untextured GLBs can drop `--copy-only` to get full
+   normalization (axis, scale, recentering, zone mapping, JOINT wrap).
+3. Commit the emitted manifest entry (stage `integration`), run
+   `pnpm validate-assets` (checks container, bounds, budgets, zones,
+   JOINT contract, sidecar, oversized/external textures).
+4. `pnpm generate-thumbnails` with the dev server running.
+5. Judge it: `/dev/assets/ganesha.head.classic?compare=ganesha.head.sculpted`
+   renders the candidate side-by-side with the current SDF hero
+   (wireframe + zone toggles available). Promote to the default head in
+   `character-schema/src/defaults.ts` only if it visually wins; the SDF
+   head stays as the experimental fallback either way.
+6. Full Divine Studio QA: ears/trunk/tusk/eye variants, crown seating,
+   palettes, poses, 2/4 arms, save/reload, share, render, STL.
+
+The version convention: `ganesha.head.classic@4` (AI) can later be
+superseded by `@5` (artist) with only a manifest/dataset change — the
+replacement-architecture test in asset-system guards this.
 
 ## The pipeline
 
