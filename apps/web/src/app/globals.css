@@ -12,6 +12,13 @@ body {
   overscroll-behavior: none;
 }
 
+/* Keyboard navigation: a consistent, visible focus indicator everywhere */
+:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Slim, dark scrollbars for the editor panels */
 * {
   scrollbar-width: thin;
