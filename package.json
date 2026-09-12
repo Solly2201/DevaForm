@@ -15,6 +15,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "db:push": "pnpm --filter @devaform/web db:push",
-    "validate-assets": "pnpm --filter @devaform/web validate-assets"
+    "validate-assets": "pnpm --filter @devaform/web validate-assets",
+    "ai:generate-head": "python tools/ai3d/generate_head.py"
   }
 }

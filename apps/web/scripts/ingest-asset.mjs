@@ -74,6 +74,8 @@ Options:
   --zone-map "A=skin,B=metal"
   --target-height N    metres
   --recenter base|origin|none   (default: base for attachments, none for parts)
+  --offset "x,y,z"     translate after recenter/scale (metres) — e.g. seat a
+                       head part so the joint origin lands inside the neck
   --z-up               input is Z-up
   --copy-only          skip processing, copy the file as-is
 `;
@@ -113,6 +115,13 @@ const zoneMap = Object.fromEntries(
     .filter((pair) => pair.length === 2 && pair[0] && pair[1]),
 );
 const targetHeight = flag("target-height") ? Number(flag("target-height")) : undefined;
+const offsetFlag = flag("offset")
+  ?.split(",")
+  .map((component) => Number(component.trim()));
+if (offsetFlag && (offsetFlag.length !== 3 || offsetFlag.some(Number.isNaN))) {
+  console.error(`--offset must be "x,y,z" in metres, got "${flag("offset")}"`);
+  process.exit(1);
+}
 const recenter = flag("recenter") ?? (isPart ? "none" : "base");
 const sourceType = flag("source") ?? "imported";
 
@@ -213,6 +222,30 @@ function normalize(root) {
     work = bakeTransforms(work);
     report.push(`recentered (${recenter})`);
   }
+  if (offsetFlag) {
+    work.position.set(offsetFlag[0], offsetFlag[1], offsetFlag[2]);
+    work = bakeTransforms(work);
+    report.push(`offset by [${offsetFlag.join(", ")}] m`);
+  }
+
+  // Geometry attribute hygiene: AI/photogrammetry meshes often ship without
+  // normals (renders black under PBR zone materials) and with baked vertex
+  // colors that the zone system supersedes.
+  let computedNormals = 0;
+  let droppedColors = 0;
+  work.traverse((node) => {
+    if (!node.isMesh) return;
+    if (!node.geometry.getAttribute("normal")) {
+      node.geometry.computeVertexNormals();
+      computedNormals += 1;
+    }
+    if ((Object.keys(zoneMap).length || defaultZone) && node.geometry.getAttribute("color")) {
+      node.geometry.deleteAttribute("color");
+      droppedColors += 1;
+    }
+  });
+  if (computedNormals) report.push(`computed vertex normals for ${computedNormals} mesh(es)`);
+  if (droppedColors) report.push(`dropped baked vertex colors on ${droppedColors} mesh(es) (zones own color)`);
 
   // Material zone mapping
   const materialCache = new Map();
