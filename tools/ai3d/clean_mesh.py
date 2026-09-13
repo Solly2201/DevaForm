@@ -7,9 +7,16 @@ floaters), normalize scale/orientation/position, and wrap the result in a
 ``pnpm ingest-asset <file> --copy-only``.
 
     python tools/ai3d/clean_mesh.py in.glb out.glb --joint head \
-        --target-height 0.385 --seat-y -0.157 [--keep-ratio 0.25] [--yaw 180]
+        --target-height 0.385 --seat-y -0.157 [--keep-ratio 0.25] [--yaw 180] \
+        [--decimate-faces 30000]
 
-Requires: pip install trimesh
+--decimate-faces reduces the triangle budget with quadric decimation. It is
+geometry-only: a baked UV texture will not survive it, so use it on untextured
+base heads (or before re-texturing), not on a mesh whose look depends on baked
+UVs. The tool refuses to silently wreck a texture — it warns and drops the UV
+visual so the decimated mesh renders with a plain zone material instead.
+
+Requires: pip install trimesh (and fast-simplification for --decimate-faces)
 """
 from __future__ import annotations
 
@@ -31,6 +38,8 @@ def main() -> int:
     parser.add_argument("--keep-ratio", type=float, default=0.25,
                         help="drop components with fewer faces than ratio × largest component")
     parser.add_argument("--yaw", type=float, default=0.0, help="rotate about +Y in degrees")
+    parser.add_argument("--decimate-faces", type=int, default=None,
+                        help="quadric-decimate to this many faces (geometry-only; drops baked UV texture)")
     args = parser.parse_args()
 
     loaded = trimesh.load(args.input, force="scene")
@@ -100,6 +109,18 @@ def main() -> int:
     merged.update_faces(mask)
     merged.remove_unreferenced_vertices()
     mesh = merged
+
+    if args.decimate_faces and len(mesh.faces) > args.decimate_faces:
+        had_texture = isinstance(getattr(mesh, "visual", None), trimesh.visual.TextureVisuals)
+        before = len(mesh.faces)
+        try:
+            mesh = mesh.simplify_quadric_decimation(face_count=args.decimate_faces)
+        except Exception as error:  # missing fast-simplification, etc.
+            print(f"decimation unavailable ({str(error)[:80]}); keeping full geometry", file=sys.stderr)
+        else:
+            print(f"decimated {before:,} → {len(mesh.faces):,} faces")
+            if had_texture:
+                print("  ! baked UV texture dropped by decimation — mesh will use a zone material")
 
     if args.yaw:
         mesh.apply_transform(trimesh.transformations.rotation_matrix(

@@ -7,6 +7,15 @@ deliberately decoupled from the renderer: its only output is a GLB file that
 
     pnpm ai:generate-head -- --provider triposr --ref tools/ai3d/refs/classic-head-bust.png
 
+Generate several candidates in one run so they can be compared (the model is
+seed-sensitive, so different seeds give genuinely different heads):
+
+    pnpm ai:generate-head -- --provider trellis2 \
+        --ref tools/ai3d/refs/classic-head-bust-v2.png --seeds 12345,777,2024
+
+The run stops as soon as the ZeroGPU quota is exhausted, keeping whatever
+candidates it already produced — it never hammers the service.
+
 Requirements: Python 3.10+ and ``pip install gradio_client``.
 
 Providers (all called through their public Hugging Face Space APIs; verified
@@ -37,6 +46,10 @@ try:
     from gradio_client import Client, handle_file
 except ImportError:  # pragma: no cover
     sys.exit("gradio_client is not installed — run: pip install gradio_client")
+
+
+class QuotaExhausted(RuntimeError):
+    """ZeroGPU daily quota spent — stop the batch, keep prior candidates."""
 
 
 def read_stored_hf_token() -> str | None:
@@ -134,6 +147,8 @@ def main() -> int:
     parser.add_argument("--provider", choices=sorted(PROVIDERS), default="triposr")
     parser.add_argument("--ref", default="tools/ai3d/refs/classic-head-bust.png")
     parser.add_argument("--seed", type=int, default=12345)
+    parser.add_argument("--seeds", default=None,
+                        help="comma-separated seeds to generate in one run (overrides --seed)")
     parser.add_argument("--out", default="tools/ai3d/out")
     parser.add_argument("--resolution", choices=["512", "1024", "1536"], default="1024",
                         help="trellis2 voxel resolution")
@@ -146,26 +161,40 @@ def main() -> int:
     space, generate = PROVIDERS[args.provider]
     token = os.environ.get("HF_TOKEN") or read_stored_hf_token()
     os.makedirs(args.out, exist_ok=True)
-    print(f"provider={args.provider} space={space} ref={args.ref} seed={args.seed} "
+
+    seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()] if args.seeds else [args.seed]
+    print(f"provider={args.provider} space={space} ref={args.ref} seeds={seeds} "
           f"({'authenticated' if token else 'anonymous'})", flush=True)
 
     started = time.time()
     client = Client(space, token=token, verbose=False)
-    try:
-        saved = generate(client, args.ref, args)
-    except Exception as error:  # surface quota errors honestly, no retry magic
-        message = str(error)
-        if "ZeroGPU quota" in message:
-            print("GPU quota exhausted for anonymous access. Set HF_TOKEN "
-                  "(free Hugging Face account) or retry after the daily reset.", file=sys.stderr)
-        print(f"generation failed: {message[:300]}", file=sys.stderr)
+    all_saved: list[str] = []
+    for seed in seeds:
+        args.seed = seed
+        print(f"\n--- seed {seed} ---", flush=True)
+        try:
+            all_saved.extend(generate(client, args.ref, args))
+        except Exception as error:
+            message = str(error)
+            if "ZeroGPU quota" in message:
+                # Stop the batch cleanly; keep whatever we already produced.
+                print("ZeroGPU quota exhausted — stopping the batch (no retry). "
+                      "Retry after the daily reset with a free Hugging Face token.",
+                      file=sys.stderr)
+                break
+            print(f"seed {seed} failed: {message[:300]}", file=sys.stderr)
+
+    if not all_saved:
+        print("no candidates produced", file=sys.stderr)
         return 1
-    if not saved:
-        print("provider returned no mesh files", file=sys.stderr)
-        return 1
-    print(f"done in {time.time() - started:.0f}s — next:\n"
-          f"  pnpm ingest-asset {saved[0]} --id ganesha.head.classic --version <next> "
-          f"--name \"Classic Head\" --joint head --slot head --source ai --provider {args.provider}")
+    print(f"\ndone in {time.time() - started:.0f}s — {len(all_saved)} candidate file(s):", flush=True)
+    for path in all_saved:
+        print(f"  {path}")
+    print("next: clean + ingest, e.g.\n"
+          f"  python tools/ai3d/clean_mesh.py {all_saved[0]} tools/ai3d/out/clean.glb --joint head "
+          f"--target-height 0.41 --seat-y -0.145\n"
+          "  pnpm ingest-asset tools/ai3d/out/clean.glb --id ganesha.head.aidraft --version <next> "
+          f"--name \"Classic (AI)\" --joint head --slot head --copy-only --source ai --provider {args.provider}")
     return 0
 
 
