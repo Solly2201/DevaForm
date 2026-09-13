@@ -1,7 +1,7 @@
 /**
- * Default Ganesha configuration. Asset ids here reference the placeholder
- * manifest in @devaform/asset-system; when production assets land only the
- * manifest and these ids change — the schema stays identical.
+ * Default deity configurations. Asset ids here reference the placeholder
+ * manifests in @devaform/asset-system; when production assets land only the
+ * manifests and these ids change — the schema stays identical.
  */
 import type { CharacterConfiguration } from "./configuration";
 import { SCHEMA_VERSION } from "./configuration";
@@ -47,6 +47,7 @@ export function createDefaultGaneshaConfiguration(): CharacterConfiguration {
       : {
           skin: { color: "#d99a63", finish: "satin" },
           skinSecondary: { color: "#b97946", finish: "satin" },
+          hair: { color: "#31241a", finish: "matte" },
           garment: { color: "#9c1c20", finish: "satin" },
           garmentAccent: { color: "#d99b26", finish: "satin" },
           metal: { color: "#e8ae32", finish: "metallic" },
@@ -61,5 +62,59 @@ export function createDefaultGaneshaConfiguration(): CharacterConfiguration {
       backRight: { mudra: "grip" },
     },
     arms: { count: 4 },
+  };
+}
+
+export function createDefaultShivaConfiguration(): CharacterConfiguration {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    deity: "shiva",
+    parts: {
+      body: { assetId: "shiva.body.classic", version: 1 },
+      head: { assetId: "shiva.head.classic", version: 1 },
+      eyes: { assetId: "shiva.eyes.serene", version: 1 },
+      hair: { assetId: "shiva.jata.crown", version: 1 },
+      hands: { assetId: "shiva.hands.classic", version: 1 },
+      lowerGarment: { assetId: "shiva.garment.dhoti", version: 1 },
+      // Bare-chested ascetic by default — the rudraksha and serpent read
+      // against skin, as in classical iconography.
+      upperGarment: null,
+      armlets: { assetId: "ganesha.armlets.vanki", version: 1 },
+      bracelets: { assetId: "ganesha.bracelets.kada", version: 1 },
+      anklets: { assetId: "ganesha.anklets.payal", version: 1 },
+    },
+    attachments: [
+      { socket: "head.moon", asset: { assetId: "shiva.crescent.chandra", version: 1 } },
+      { socket: "head.forehead", asset: { assetId: "shiva.thirdeye.trinetra", version: 1 } },
+      { socket: "chest.necklace", asset: { assetId: "shiva.mala.rudraksha", version: 1 } },
+      { socket: "arm.frontRight.hand.item", asset: { assetId: "shiva.attribute.trishul", version: 1 } },
+      { socket: "arm.frontLeft.hand.item", asset: { assetId: "shiva.attribute.damaru", version: 1 } },
+    ],
+    pose: {
+      preset: "shiva.standing",
+      jointOverrides: {},
+    },
+    morphs: {},
+    proportions: { height: 1, bulk: 1 },
+    // Shiva's own default palette: fair ash-toned skin, matted brown jata,
+    // ochre garment, antique gold — distinct from Ganesha's warm default.
+    materials: {
+      skin: { color: "#c8cfdb", finish: "satin" },
+      skinSecondary: { color: "#a4adbd", finish: "satin" },
+      hair: { color: "#4d3421", finish: "matte" },
+      garment: { color: "#c9862e", finish: "satin" },
+      garmentAccent: { color: "#8a5a1e", finish: "satin" },
+      metal: { color: "#d8a636", finish: "metallic" },
+      gem: { color: "#20643f", finish: "polished" },
+      base: { color: "#5d5347", finish: "satin" },
+    },
+    base: { style: "round" },
+    hands: {
+      frontLeft: { mudra: "grip" },
+      frontRight: { mudra: "grip" },
+      backLeft: { mudra: "open" },
+      backRight: { mudra: "open" },
+    },
+    arms: { count: 2 },
   };
 }

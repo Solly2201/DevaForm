@@ -1,0 +1,179 @@
+/**
+ * Shiva rig regression tests — the engine-level deity-agnostic proof:
+ *
+ * 1. The rig is built from Shiva's HUMANOID skeleton (no trunk joints or
+ *    trunk sockets exist on it) purely from configuration data.
+ * 2. Semantic attachments resolve: trishul/damaru mount inside hand item
+ *    sockets, the crescent seats on the jata-refined head.moon socket, the
+ *    third eye on the head-refined forehead socket.
+ * 3. Grip coherence: switching a hand to a mudra that cannot perform the
+ *    held attribute's grip releases the attribute (shared store logic).
+ * 4. Ganesha regression: his default rig still builds with the trunk.
+ */
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("three/examples/jsm/loaders/GLTFLoader.js", () => ({
+  GLTFLoader: class {
+    load(): void {
+      /* never resolves in tests */
+    }
+  },
+}));
+import * as THREE from "three";
+import {
+  HUMANOID_SKELETON,
+  createDefaultGaneshaConfiguration,
+  createDefaultShivaConfiguration,
+  getPosePreset,
+} from "@devaform/character-schema";
+import { alignUprightAttachments, assertRigIntegrity, buildRig } from "../rig";
+import { applyPose } from "../pose";
+import { ZoneMaterials } from "../materials";
+import { useEditorStore } from "@/state/editorStore";
+
+function buildShivaRig(mutate?: (config: ReturnType<typeof createDefaultShivaConfiguration>) => void) {
+  const config = createDefaultShivaConfiguration();
+  mutate?.(config);
+  const materials = new ZoneMaterials();
+  const rig = buildRig(config, materials);
+  applyPose(rig.joints, config.pose);
+  alignUprightAttachments(rig);
+  rig.root.updateWorldMatrix(true, true);
+  return { rig, config };
+}
+
+describe("shiva rig construction", () => {
+  it("builds from the humanoid skeleton with no warnings", () => {
+    const { rig } = buildShivaRig();
+    expect(rig.warnings).toEqual([]);
+    expect(rig.skeleton.id).toBe("humanoid");
+    assertRigIntegrity(rig);
+  });
+
+  it("has no trunk joints or trunk sockets", () => {
+    const { rig } = buildShivaRig();
+    expect(rig.joints.has("trunkBase")).toBe(false);
+    expect(rig.joints.has("trunkTip")).toBe(false);
+    expect(rig.sockets.has("trunk.tip")).toBe(false);
+    // Ganesha regression: his rig keeps the trunk chain.
+    const ganesha = createDefaultGaneshaConfiguration();
+    ganesha.parts.head = { assetId: "ganesha.head.classic", version: 3 };
+    ganesha.attachments = ganesha.attachments.filter((a) => a.socket !== "base.platform");
+    const gRig = buildRig(ganesha, new ZoneMaterials());
+    expect(gRig.joints.has("trunkTip")).toBe(true);
+    expect(gRig.sockets.has("trunk.tip")).toBe(true);
+    assertRigIntegrity(gRig);
+  });
+
+  it("renders real geometry for head, jata, and body", () => {
+    const { rig } = buildShivaRig();
+    for (const prefix of ["part:shiva.head", "part:shiva.jata", "part:shiva.body"]) {
+      const box = new THREE.Box3();
+      let found = false;
+      rig.root.traverse((o) => {
+        if (o.name.startsWith(prefix)) {
+          found = true;
+          box.expandByObject(o);
+        }
+      });
+      expect(found, prefix).toBe(true);
+      expect(box.isEmpty(), prefix).toBe(false);
+    }
+  });
+});
+
+describe("shiva semantic attachments", () => {
+  it("mounts trishul and damaru inside their hand item sockets", () => {
+    const { rig } = buildShivaRig();
+    for (const [socketId, assetId] of [
+      ["arm.frontRight.hand.item", "shiva.attribute.trishul"],
+      ["arm.frontLeft.hand.item", "shiva.attribute.damaru"],
+    ] as const) {
+      const socket = rig.sockets.get(socketId);
+      expect(socket, socketId).toBeDefined();
+      const mounted = socket?.children.find((c) => c.name === `attachment:${assetId}`);
+      expect(mounted, `${assetId} in ${socketId}`).toBeDefined();
+    }
+  });
+
+  it("keeps the trishul world-upright in every pose", () => {
+    for (const presetId of ["shiva.standing", "shiva.tandava", "shiva.blessing"]) {
+      expect(getPosePreset(presetId), presetId).toBeDefined();
+      const { rig } = buildShivaRig((config) => {
+        config.pose = { preset: presetId, jointOverrides: {} };
+      });
+      let trishul: THREE.Object3D | null = null;
+      rig.root.traverse((o) => {
+        if (o.name === "attachment:shiva.attribute.trishul") trishul = o;
+      });
+      expect(trishul, presetId).not.toBeNull();
+      const worldQuat = new THREE.Quaternion();
+      (trishul as unknown as THREE.Object3D).getWorldQuaternion(worldQuat);
+      // Shaft (+Y) must still point straight up in world space.
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(worldQuat);
+      expect(up.y, presetId).toBeGreaterThan(0.999);
+    }
+  });
+
+  it("seats the crescent on the jata-refined moon socket", () => {
+    const { rig } = buildShivaRig();
+    const moon = rig.sockets.get("head.moon");
+    expect(moon).toBeDefined();
+    // The jata part refines the socket away from its schema default.
+    const schemaDefault = HUMANOID_SKELETON.sockets.find((s) => s.id === "head.moon")!;
+    expect(moon!.position.toArray()).not.toEqual([...schemaDefault.position]);
+    const crescent = moon?.children.find(
+      (c) => c.name === "attachment:shiva.crescent.chandra",
+    );
+    expect(crescent).toBeDefined();
+  });
+
+  it("seats the third eye on the head-refined forehead socket", () => {
+    const { rig } = buildShivaRig();
+    const forehead = rig.sockets.get("head.forehead");
+    const schemaDefault = HUMANOID_SKELETON.sockets.find((s) => s.id === "head.forehead")!;
+    expect(forehead!.position.toArray()).not.toEqual([...schemaDefault.position]);
+    const eye = forehead?.children.find(
+      (c) => c.name === "attachment:shiva.thirdeye.trinetra",
+    );
+    expect(eye).toBeDefined();
+  });
+
+  it("drapes the rudraksha mala in front of the measured chest", () => {
+    const { rig } = buildShivaRig();
+    let mala: THREE.Object3D | null = null;
+    rig.root.traverse((o) => {
+      if (o.name === "attachment:shiva.mala.rudraksha") mala = o;
+    });
+    expect(mala).not.toBeNull();
+    const box = new THREE.Box3().setFromObject(mala as unknown as THREE.Object3D);
+    expect(box.isEmpty()).toBe(false);
+    // The strands must reach forward of the chest center (draped ON the
+    // torso, not buried inside it).
+    expect(box.max.z).toBeGreaterThan(0.05);
+  });
+});
+
+describe("shiva grip coherence (store)", () => {
+  it("releases the trishul when the hand can no longer grip", () => {
+    const store = useEditorStore.getState();
+    store.newCharacter(createDefaultShivaConfiguration());
+
+    const held = () =>
+      useEditorStore
+        .getState()
+        .config.attachments.find((a) => a.socket === "arm.frontRight.hand.item")?.asset.assetId;
+
+    expect(held()).toBe("shiva.attribute.trishul");
+    expect(useEditorStore.getState().config.hands.frontRight.mudra).toBe("grip");
+
+    // A mudra that cannot perform the trishul's declared grip releases it.
+    useEditorStore.getState().setMudra("frontRight", "abhaya");
+    expect(held()).toBeUndefined();
+
+    // Re-attaching auto-applies the declared grip mudra.
+    useEditorStore.getState().setAttachment("arm.frontRight.hand.item", "shiva.attribute.trishul");
+    expect(held()).toBe("shiva.attribute.trishul");
+    expect(useEditorStore.getState().config.hands.frontRight.mudra).toBe("grip");
+  });
+});

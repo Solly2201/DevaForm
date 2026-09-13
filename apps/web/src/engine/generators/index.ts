@@ -4,9 +4,9 @@
  * entirely (see glbCache.ts).
  */
 import type { AttachmentGenerator, PartGenerator } from "./types";
-import { ganeshaBody, ganeshaHands } from "./body";
-import { ganeshaEars, ganeshaEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
-import { ganeshaDhoti, ganeshaShawl } from "./clothing";
+import { humanoidBody, humanoidHands } from "./body";
+import { ganeshaEars, classicEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
+import { humanoidDhoti, humanoidShawl } from "./clothing";
 import {
   ankletsPayal,
   armletsVanki,
@@ -21,6 +21,16 @@ import {
   waistKamarband,
 } from "./ornaments";
 import { itemAnkush, itemAxe, itemLotus, itemModak, itemPasha } from "./items";
+import {
+  itemDamaru,
+  itemTrishul,
+  ornamentCrescent,
+  ornamentNaga,
+  ornamentRudraksha,
+  ornamentThirdEye,
+  shivaHead,
+  shivaJata,
+} from "./shiva";
 
 export type { AttachmentGenerator, GeneratorContext, JointedPart, PartGenerator } from "./types";
 export { deriveBodyProfile, type BodyProfile } from "./bodyProfile";
@@ -28,15 +38,22 @@ export { makeHand } from "./body";
 export { BASE_BUILDERS, BASE_TOP_HEIGHT } from "./bases";
 
 export const PART_GENERATORS: Record<string, PartGenerator> = {
-  "ganesha.body": ganeshaBody,
+  // Shared humanoid generators — parameterized by manifest data, used by
+  // any deity whose anatomy they fit.
+  "humanoid.body": humanoidBody,
+  "humanoid.hands": humanoidHands,
+  "humanoid.dhoti": humanoidDhoti,
+  "humanoid.shawl": humanoidShawl,
+  "humanoid.eyes": classicEyes,
+  // Ganesha anatomy
   "ganesha.head": ganeshaHead,
-  "ganesha.eyes": ganeshaEyes,
   "ganesha.ears": ganeshaEars,
   "ganesha.trunk": ganeshaTrunk,
   "ganesha.tusks": ganeshaTusks,
-  "ganesha.hands": ganeshaHands,
-  "ganesha.dhoti": ganeshaDhoti,
-  "ganesha.shawl": ganeshaShawl,
+  // Shiva anatomy
+  "shiva.head": shivaHead,
+  "shiva.jata": shivaJata,
+  // Shared ornament sets
   "ornament.earrings": earringsKundala,
   "ornament.armlets": armletsVanki,
   "ornament.bracelets": braceletsKada,
@@ -51,9 +68,15 @@ export const ATTACHMENT_GENERATORS: Record<string, AttachmentGenerator> = {
   "ornament.mala": necklaceMala,
   "ornament.waistband": waistKamarband,
   "ornament.tikka": tikkaChandra,
+  "ornament.crescent": ornamentCrescent,
+  "ornament.thirdeye": ornamentThirdEye,
+  "ornament.rudraksha": ornamentRudraksha,
+  "ornament.naga": ornamentNaga,
   "item.modak": itemModak,
   "item.lotus": itemLotus,
   "item.axe": itemAxe,
   "item.noose": itemPasha,
   "item.ankush": itemAnkush,
+  "item.trishul": itemTrishul,
+  "item.damaru": itemDamaru,
 };

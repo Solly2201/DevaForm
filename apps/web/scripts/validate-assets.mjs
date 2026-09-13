@@ -28,7 +28,7 @@ import { glbStats, parseGlbJson } from "./lib/glb.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { webRoot: ROOT, assetDir: ASSET_DIR, manifestDir: MANIFEST_DIR } = repoPaths(here);
 
-const KNOWN_ZONES = ["skin", "skinSecondary", "garment", "garmentAccent", "metal", "gem", "base"];
+const KNOWN_ZONES = ["skin", "skinSecondary", "hair", "garment", "garmentAccent", "metal", "gem", "base"];
 const MIN_SIZE_M = 0.01;
 const MAX_SIZE_M = 2.0;
 const TRIANGLE_BUDGET = { production: 150_000, other: 300_000 };

@@ -32,13 +32,32 @@ function useBakedParts(): string[] {
 
 const ZONE_LABELS: Record<MaterialZone, string> = {
   skin: "Skin",
-  skinSecondary: "Inner Ear / Accent Skin",
+  skinSecondary: "Accent Skin",
+  hair: "Hair",
   garment: "Garment",
   garmentAccent: "Garment Accent",
   metal: "Metal / Jewellery",
   gem: "Gems",
   base: "Base",
 };
+
+/**
+ * Zones the current configuration can actually color: the union of zones
+ * declared by every selected part/attachment, plus the base (built by the
+ * rig). Derived from asset metadata — a deity without hair never shows a
+ * hair zone, with no deity conditionals anywhere.
+ */
+function useActiveZones(): MaterialZone[] {
+  const parts = useEditorStore((s) => s.config.parts);
+  const attachments = useEditorStore((s) => s.config.attachments);
+  const used = new Set<MaterialZone>(["base"]);
+  for (const ref of [...Object.values(parts), ...attachments.map((a) => a.asset)]) {
+    for (const zone of resolveAssetRef(ref ?? undefined)?.materialZones ?? []) {
+      used.add(zone);
+    }
+  }
+  return MATERIAL_ZONES.filter((zone) => used.has(zone));
+}
 
 const FINISH_OPTIONS = materialFinishSchema.options.map((value) => ({
   value,
@@ -68,6 +87,7 @@ export function MaterialsPanel() {
   const setZoneMaterial = useEditorStore((s) => s.setZoneMaterial);
   const applyPalette = useEditorStore((s) => s.applyPalette);
   const bakedParts = useBakedParts();
+  const activeZones = useActiveZones();
 
   return (
     <div className="space-y-5">
@@ -99,7 +119,7 @@ export function MaterialsPanel() {
       <h3 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
         Fine-tune Zones
       </h3>
-      {MATERIAL_ZONES.map((zone) => (
+      {activeZones.map((zone) => (
         <section key={zone} className="rounded-lg border border-surface-800 bg-surface-850 p-3">
           <ColorControl
             label={ZONE_LABELS[zone]}

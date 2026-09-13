@@ -8,7 +8,7 @@
  * generators size/drape themselves against these surfaces plus a small
  * clearance.
  *
- * IMPORTANT: the belly/chest formulas mirror ganeshaBody (body.ts). If the
+ * IMPORTANT: the belly/chest formulas mirror humanoidBody (body.ts). If the
  * body generator's volumes change, update the profile with them — the
  * rig regression tests cover the relationship.
  *

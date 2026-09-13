@@ -196,7 +196,7 @@ export default function LibraryPage() {
             <p className="mt-1 text-sm text-stone-400">Every divine form you have created.</p>
           </div>
           <Link
-            href="/studio/ganesha"
+            href="/deities"
             className="rounded-xl bg-saffron-500 px-5 py-2.5 text-sm font-semibold text-surface-950 hover:bg-saffron-400"
           >
             New Creation

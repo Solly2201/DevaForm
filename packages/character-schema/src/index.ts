@@ -1,4 +1,5 @@
 export * from "./skeleton";
+export * from "./skeletons";
 export * from "./sockets";
 export * from "./configuration";
 export * from "./poses";

@@ -5,7 +5,7 @@
  */
 import type * as THREE from "three";
 import {
-  SKELETON,
+  getJoint,
   getPosePreset,
   isJointId,
   type JointId,
@@ -29,12 +29,12 @@ export function applyPose(
     root.position.set(offset[0], offset[1], offset[2]);
   }
 
-  for (const def of SKELETON) {
-    const joint = joints.get(def.id);
-    if (!joint) continue;
-
-    const presetRotation = preset?.joints[def.id];
-    const override = pose.jointOverrides[def.id];
+  // Drive exactly the joints the rig was built with (the active deity's
+  // skeleton); presets/overrides for joints this rig lacks are ignored.
+  for (const [id, joint] of joints) {
+    const def = getJoint(id);
+    const presetRotation = preset?.joints[id];
+    const override = pose.jointOverrides[id];
     const rotation: Vec3 = override ?? presetRotation ?? [0, 0, 0];
 
     joint.rotation.set(

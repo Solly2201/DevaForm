@@ -48,7 +48,8 @@ export type FixedMaterialKey =
   | "iris"
   | "ivory"
   | "tilak"
-  | "mouthDark";
+  | "mouthDark"
+  | "rudraksha";
 
 export class ZoneMaterials {
   readonly zones: Record<MaterialZone, THREE.MeshPhysicalMaterial>;
@@ -70,6 +71,9 @@ export class ZoneMaterials {
       ivory: fixed("ivory", { color: "#f8f1e2", roughness: 0.3, clearcoat: 0.45, envMapIntensity: 1.05 }),
       tilak: fixed("tilak", { color: "#c22b21", roughness: 0.6 }),
       mouthDark: fixed("mouthDark", { color: "#3f241b", roughness: 0.75 }),
+      // Rudraksha seeds keep their natural color — declared texture-fixed
+      // in the manifest rather than pretending to recolor.
+      rudraksha: fixed("rudraksha", { color: "#6b4423", roughness: 0.85 }),
     };
   }
 

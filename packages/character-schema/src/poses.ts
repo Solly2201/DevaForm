@@ -20,6 +20,12 @@ export interface PosePreset {
    * character onto the base instead of folding the legs in mid-air.
    */
   rootOffset?: Vec3;
+  /**
+   * Seated poses place the figure on the ground/base: clothing generators
+   * swap to lap drapes and the base keeps its own anchoring. A property of
+   * the pose itself, so every deity's presets carry their own truth.
+   */
+  seated?: boolean;
 }
 
 const D = Math.PI / 180;
@@ -85,6 +91,7 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     // Levitation: legs fold into padmasana and the whole figure hovers
     // with clear daylight between the folded legs and the base.
     rootOffset: [0, -0.2, 0],
+    seated: true,
     joints: {
       // Padmasana solved by forward kinematics: knees swing wide and
       // forward, shins fold under, feet tuck inward with soles turned up.
@@ -113,6 +120,7 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     label: "Royal Ease",
     description: "Lalitasana — one leg folded, one pendant, easeful bearing.",
     rootOffset: [0, -0.18, 0],
+    seated: true,
     joints: {
       // Lalitasana: left leg folded flat, right leg pendant with a strong
       // knee bend so the hanging foot reaches down toward the base.
@@ -171,11 +179,142 @@ export const POSE_PRESETS: readonly PosePreset[] = [
   },
 ] as const;
 
-const presetMap = new Map(POSE_PRESETS.map((p) => [p.id, p]));
+/**
+ * Shiva pose presets. Ids are namespaced ("shiva.*") because preset ids are
+ * persisted in configurations and resolved through one global registry —
+ * two deities may both have a "standing" concept but each owns its values.
+ * No trunk joints: these presets are authored for the humanoid skeleton.
+ */
+export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
+  {
+    id: "shiva.standing",
+    label: "Standing",
+    description: "Samabhanga — even, frontal standing pose.",
+    joints: {
+      "arm.frontLeft.upper": [8 * D, 0, 58 * D],
+      "arm.frontRight.upper": [8 * D, 0, -58 * D],
+      "arm.frontLeft.forearm": [-28 * D, 0, 0],
+      "arm.frontRight.forearm": [-28 * D, 0, 0],
+      "arm.frontLeft.hand": [-12 * D, 0, 6 * D],
+      "arm.frontRight.hand": [-12 * D, 0, -6 * D],
+      "arm.backLeft.upper": [-18 * D, -10 * D, 48 * D],
+      "arm.backRight.upper": [-18 * D, 10 * D, -48 * D],
+      "arm.backLeft.forearm": [-52 * D, 0, 0],
+      "arm.backRight.forearm": [-52 * D, 0, 0],
+      "arm.backLeft.hand": [-20 * D, 0, 0],
+      "arm.backRight.hand": [-20 * D, 0, 0],
+      "leg.left.thigh": [0, 4 * D, 2 * D],
+      "leg.right.thigh": [0, -4 * D, -2 * D],
+    },
+  },
+  {
+    id: "shiva.meditation",
+    label: "Meditation",
+    description: "The great yogi in padmasana, front hands in dhyana.",
+    rootOffset: [0, -0.2, 0],
+    seated: true,
+    joints: {
+      "leg.left.thigh": [-126 * D, 54 * D, 64 * D],
+      "leg.left.shin": [106 * D, 0, 0],
+      "leg.left.foot": [54 * D, -17 * D, 0],
+      "leg.right.thigh": [-126 * D, -54 * D, -69 * D],
+      "leg.right.shin": [110 * D, 0, 0],
+      "leg.right.foot": [54 * D, 17 * D, 0],
+      "arm.frontLeft.upper": [24 * D, 0, 46 * D],
+      "arm.frontLeft.forearm": [-84 * D, 26 * D, 0],
+      "arm.frontLeft.hand": [-58 * D, 0, 0],
+      "arm.frontRight.upper": [24 * D, 0, -46 * D],
+      "arm.frontRight.forearm": [-84 * D, -26 * D, 0],
+      "arm.frontRight.hand": [-58 * D, 0, 0],
+      "arm.backLeft.upper": [-30 * D, -10 * D, 48 * D],
+      "arm.backLeft.forearm": [-62 * D, 0, 0],
+      "arm.backRight.upper": [-30 * D, 10 * D, -48 * D],
+      "arm.backRight.forearm": [-62 * D, 0, 0],
+      spine: [4 * D, 0, 0],
+      head: [8 * D, 0, 0],
+    },
+  },
+  {
+    id: "shiva.blessing",
+    label: "Blessing",
+    description: "Front right hand raised in abhaya, front left lowered in varada.",
+    joints: {
+      spine: [0, 0, 2 * D],
+      // Abhaya: elbow tucked, forearm folded high, open palm to the devotee.
+      "arm.frontRight.upper": [-10 * D, 6 * D, -24 * D],
+      "arm.frontRight.forearm": [-118 * D, 0, 0],
+      "arm.frontRight.hand": [30 * D, 4 * D, -4 * D],
+      // Varada: arm lowered, palm turned outward/down in giving.
+      "arm.frontLeft.upper": [14 * D, -4 * D, 40 * D],
+      "arm.frontLeft.forearm": [-30 * D, 0, 0],
+      "arm.frontLeft.hand": [-40 * D, 0, 10 * D],
+      // Back arms raised holding attributes
+      "arm.backLeft.upper": [-38 * D, -14 * D, 52 * D],
+      "arm.backRight.upper": [-38 * D, 14 * D, -52 * D],
+      "arm.backLeft.forearm": [-68 * D, 0, 0],
+      "arm.backRight.forearm": [-68 * D, 0, 0],
+      "arm.backLeft.hand": [-14 * D, 0, 0],
+      "arm.backRight.hand": [-14 * D, 0, 0],
+      "leg.left.thigh": [0, 5 * D, 2 * D],
+      "leg.right.thigh": [0, -5 * D, -2 * D],
+      head: [3 * D, 0, 0],
+    },
+  },
+  {
+    id: "shiva.tandava",
+    label: "Dancing",
+    description:
+      "Nataraja-inspired tandava direction — lifted left leg, abhaya and gajahasta. A coherent supported pose, not a full production Nataraja.",
+    joints: {
+      pelvis: [0, 14 * D, 8 * D],
+      spine: [0, -10 * D, -6 * D],
+      chest: [0, -5 * D, -3 * D],
+      // Lifted left leg sweeps across the body (bhujangatrasita direction).
+      "leg.left.thigh": [-85 * D, 30 * D, 20 * D],
+      "leg.left.shin": [100 * D, 0, 0],
+      "leg.left.foot": [-5 * D, -15 * D, 0],
+      // Standing right leg planted with a strong demi-plié bend.
+      "leg.right.thigh": [-12 * D, -12 * D, -4 * D],
+      "leg.right.shin": [22 * D, 0, 0],
+      "leg.right.foot": [-14 * D, 14 * D, 0],
+      // Front right: abhaya raised toward the devotee.
+      "arm.frontRight.upper": [-10 * D, 6 * D, -24 * D],
+      "arm.frontRight.forearm": [-116 * D, 0, 0],
+      "arm.frontRight.hand": [30 * D, 4 * D, -4 * D],
+      // Front left: gajahasta — arm swept across the chest toward the
+      // lifted foot.
+      "arm.frontLeft.upper": [32 * D, -22 * D, 12 * D],
+      "arm.frontLeft.forearm": [-38 * D, 0, 0],
+      "arm.frontLeft.hand": [-18 * D, 0, 0],
+      // Back arms raised wide (damaru / attribute hands).
+      "arm.backLeft.upper": [-58 * D, -18 * D, 66 * D],
+      "arm.backRight.upper": [-58 * D, 18 * D, -66 * D],
+      "arm.backLeft.forearm": [-50 * D, 0, 0],
+      "arm.backRight.forearm": [-50 * D, 0, 0],
+      "arm.backLeft.hand": [-15 * D, 0, 0],
+      "arm.backRight.hand": [-15 * D, 0, 0],
+      head: [0, 8 * D, 4 * D],
+    },
+  },
+] as const;
+
+/**
+ * Global preset registry: every deity's presets, keyed by their persisted
+ * id. Duplicate ids across sets are a data error caught at module load.
+ */
+const ALL_POSE_PRESETS: readonly PosePreset[] = [...POSE_PRESETS, ...SHIVA_POSE_PRESETS];
+
+const presetMap = new Map<string, PosePreset>();
+for (const preset of ALL_POSE_PRESETS) {
+  if (presetMap.has(preset.id)) throw new Error(`Duplicate pose preset id: ${preset.id}`);
+  presetMap.set(preset.id, preset);
+}
 
 export function getPosePreset(id: string): PosePreset | undefined {
   return presetMap.get(id);
 }
 
-/** Poses that place the character on the ground (affects base/platform later). */
-export const SEATED_POSE_IDS: readonly string[] = ["meditation", "royal"];
+/** Poses that place the character on the ground — derived from preset data. */
+export const SEATED_POSE_IDS: readonly string[] = ALL_POSE_PRESETS.filter((p) => p.seated).map(
+  (p) => p.id,
+);
