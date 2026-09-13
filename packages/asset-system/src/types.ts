@@ -82,6 +82,24 @@ export interface AssetTransform {
  */
 export interface GripMetadata {
   mudra: "hold" | "pinch" | "grip";
+  /**
+   * Grip frame — how the asset meets the hand's grip socket. Lets an
+   * artist deliver a mesh in any local orientation and declare how it is
+   * held; the engine aligns the frame to the socket relationally.
+   *
+   * origin: asset-local point that lands exactly on the grip socket
+   *         (default: the asset origin — DevaForm's authoring convention).
+   * axis:   asset-local direction that runs along the grip channel — up
+   *         the shaft/stem (default [0, 1, 0]).
+   * roll:   rotation around the grip channel after alignment, radians
+   *         (default 0).
+   *
+   * Note: keepUpright items are re-verticalized in world space after
+   * posing, which supersedes the frame's world orientation by design.
+   */
+  origin?: readonly [number, number, number];
+  axis?: readonly [number, number, number];
+  roll?: number;
 }
 
 export interface PrintabilityMetadata {

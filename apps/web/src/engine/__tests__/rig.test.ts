@@ -34,7 +34,7 @@ import {
   type JointId,
 } from "@devaform/character-schema";
 import { taperedTube } from "../geometry";
-import { buildRig } from "../rig";
+import { buildRig, gripFrameTransform } from "../rig";
 import { applyPose } from "../pose";
 import { ZoneMaterials } from "../materials";
 import { deriveBodyProfile } from "../generators";
@@ -358,6 +358,23 @@ describe("relational attachment invariants", () => {
     expect(onForearm).toBeGreaterThan(0);
     expect(onHand).toBe(0);
     materials.dispose();
+  });
+
+  it("grip frame puts a declared grip origin on the socket with the grip axis up the channel", () => {
+    // Artist delivers a shaft along +X with the grip 10cm along it.
+    const frame = gripFrameTransform({ origin: [0.1, 0, 0], axis: [1, 0, 0] });
+    // The declared grip point lands exactly on the socket origin…
+    const gripWorld = new THREE.Vector3(0.1, 0, 0)
+      .applyQuaternion(frame.quaternion)
+      .add(frame.position);
+    expect(gripWorld.length()).toBeLessThan(1e-6);
+    // …and the declared axis runs up the socket's grip channel (+Y).
+    const axisWorld = new THREE.Vector3(1, 0, 0).applyQuaternion(frame.quaternion);
+    expect(axisWorld.distanceTo(new THREE.Vector3(0, 1, 0))).toBeLessThan(1e-6);
+    // Default convention resolves to identity.
+    const identity = gripFrameTransform({});
+    expect(identity.position.length()).toBeLessThan(1e-9);
+    expect(identity.quaternion.angleTo(new THREE.Quaternion())).toBeLessThan(1e-9);
   });
 
   it("keeps engine placement code free of asset-id conditionals", async () => {

@@ -118,6 +118,32 @@ function resolveRenderable(
   return generator(ctx);
 }
 
+/**
+ * Resolve an asset's declared grip frame into the local transform that
+ * puts its grip origin on the socket with its grip axis running up the
+ * socket's grip channel (+Y). Identity for assets using the default
+ * authoring convention (origin at grip, shaft along +Y).
+ */
+export function gripFrameTransform(grip: {
+  origin?: readonly [number, number, number];
+  axis?: readonly [number, number, number];
+  roll?: number;
+}): { position: THREE.Vector3; quaternion: THREE.Quaternion } {
+  const axis = new THREE.Vector3(...(grip.axis ?? [0, 1, 0])).normalize();
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(
+    axis,
+    new THREE.Vector3(0, 1, 0),
+  );
+  if (grip.roll) {
+    quaternion.premultiply(
+      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), grip.roll),
+    );
+  }
+  const origin = new THREE.Vector3(...(grip.origin ?? [0, 0, 0]));
+  const position = origin.clone().applyQuaternion(quaternion).negate();
+  return { position, quaternion };
+}
+
 function applyAttachmentTransforms(
   object: THREE.Object3D,
   asset: AssetDefinition,
@@ -130,11 +156,28 @@ function applyAttachmentTransforms(
       }
     | undefined,
 ): void {
-  // Per-socket override wins over the default (a modak in the trunk needs
-  // a different transform than a modak in a palm).
+  // Grip frame first: align the asset's declared grip origin/axis with
+  // the socket's grip channel. Identity for assets authored in DevaForm's
+  // default convention, so this only reorients assets that declare it.
+  if (asset.grip && (asset.grip.origin || asset.grip.axis || asset.grip.roll)) {
+    const frame = gripFrameTransform(asset.grip);
+    object.quaternion.copy(frame.quaternion);
+    object.position.copy(frame.position);
+  }
+  // Per-socket calibration wins over the default (a modak in the trunk
+  // needs a different transform than a modak in a palm). Calibration is
+  // ADDITIVE on top of the grip frame.
   const dt = asset.socketTransforms?.[socketId] ?? asset.defaultTransform;
-  if (dt?.position) object.position.set(...dt.position);
-  if (dt?.rotation) object.rotation.set(...dt.rotation);
+  if (dt?.position) {
+    object.position.x += dt.position[0];
+    object.position.y += dt.position[1];
+    object.position.z += dt.position[2];
+  }
+  if (dt?.rotation) {
+    object.rotation.x += dt.rotation[0];
+    object.rotation.y += dt.rotation[1];
+    object.rotation.z += dt.rotation[2];
+  }
   if (dt?.scale !== undefined) object.scale.setScalar(dt.scale);
   if (offset?.position) {
     object.position.x += offset.position[0];
