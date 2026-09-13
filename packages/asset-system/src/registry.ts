@@ -6,9 +6,16 @@
  */
 import type { AssetRef, DeityId, PartSlot, SocketId } from "@devaform/character-schema";
 import { AVAILABLE_DEITIES } from "./deities";
+import { SHARED_ASSETS } from "./manifests/shared";
 import type { AssetDefinition } from "./types";
 
-const ALL_ASSETS: readonly AssetDefinition[] = AVAILABLE_DEITIES.flatMap((d) => d.assets);
+// Deity manifests plus assets shared across deities (a human body is not
+// anyone's private property). Compatibility still decides who is offered
+// what — see listAssets/isAssetCompatible.
+const ALL_ASSETS: readonly AssetDefinition[] = [
+  ...AVAILABLE_DEITIES.flatMap((d) => d.assets),
+  ...SHARED_ASSETS,
+];
 
 const byId = new Map<string, AssetDefinition>();
 for (const asset of ALL_ASSETS) {

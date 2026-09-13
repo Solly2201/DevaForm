@@ -26,6 +26,7 @@ import {
   BASE_TOP_HEIGHT,
   PART_GENERATORS,
   deriveBodyProfile,
+  type BodyProfile,
   type GeneratorContext,
 } from "./generators";
 import { getGlb, instantiateGlb } from "./glbCache";
@@ -45,6 +46,11 @@ export interface CharacterRig {
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
   /** Attachments that must stay world-upright after every pose change. */
   uprightAttachments: THREE.Object3D[];
+  /**
+   * Torso surfaces this rig's body-fitted geometry was built against —
+   * measured from a mesh body, or derived from a procedural one.
+   */
+  body: BodyProfile;
   /** Assets that failed to resolve or are still loading (not fatal). */
   warnings: string[];
 }
@@ -217,13 +223,20 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   root.add(characterRoot);
   const sockets = buildSockets(skeleton, joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
 
-  // Body-fit: measured torso surfaces derived from the configured body
-  // asset's params (pure data — no asset-id conditionals). GLB bodies
-  // without params fall back to the canonical classic measurements.
+  // Body-fit: torso surfaces for the configured body asset (pure data — no
+  // asset-id conditionals). A mesh body ships measurements of itself and
+  // those are used directly; a procedural body's are derived from its
+  // params; a body declaring neither falls back to the classic ones.
   const bodyAsset = resolveAssetRef(config.parts.body);
   const bodyParams =
     bodyAsset?.source.kind === "procedural" ? (bodyAsset.source.params ?? {}) : {};
-  const bodyProfile = deriveBodyProfile(bodyParams, config.proportions);
+  const bodyProfile = deriveBodyProfile(
+    bodyParams,
+    config.proportions,
+    bodyAsset?.bodyProfile
+      ? { profile: bodyAsset.bodyProfile, morphs: config.morphs }
+      : undefined,
+  );
 
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,
@@ -402,7 +415,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Procedural generators consumed the same weights parametrically above.
   applyMorphInfluences(root, config.morphs);
 
-  return { root, skeleton, joints, sockets, uprightAttachments, warnings };
+  return { root, skeleton, joints, sockets, uprightAttachments, body: bodyProfile, warnings };
 }
 
 const worldQuaternion = new THREE.Quaternion();

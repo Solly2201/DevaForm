@@ -17,6 +17,7 @@
  * same attachments without renderer special cases.
  */
 import type { Proportions } from "@devaform/character-schema";
+import type { MeasuredBodyProfile, MeasuredBodySurfaces } from "@devaform/asset-system";
 
 export interface BodyProfile {
   /** Raw drivers from the body asset's params. */
@@ -93,7 +94,14 @@ function ellipseSliceZ(
 export function deriveBodyProfile(
   params: Record<string, number | string>,
   proportions: Proportions,
+  /**
+   * Measured surfaces shipped by a mesh body, with the morph influences
+   * currently applied to it. When present they win: a measurement of the
+   * mesh beats any formula guessing at it.
+   */
+  measured?: { profile: MeasuredBodyProfile; morphs: Readonly<Record<string, number>> },
 ): BodyProfile {
+  if (measured) return deriveMeasuredProfile(measured.profile, measured.morphs);
   // The athletic (masculine human) body declares itself via its params —
   // pure data, so the engine never asks WHICH deity wears it.
   if (params.form === "athletic") return deriveAthleticProfile(params, proportions);
@@ -154,6 +162,91 @@ export function deriveBodyProfile(
     bellyFrontZ: bellyCenterZ + bellyRadiusZ,
     // Mirrors body.ts pelvis mass: sphere r=0.125 scaled x by 1.22*bulk.
     pelvisHalfWidth: 0.125 * 1.22 * bulk,
+    chestCenterY,
+    chestCenterZ,
+    chestRadiusX,
+    chestRadiusY,
+    chestRadiusZ,
+    bellyHalfWidthAt,
+    bellySurfaceZAt,
+    chestSurfaceZAt,
+    torsoSurfaceZAt,
+    torsoBackZAt,
+  };
+}
+
+/**
+ * Measured profile — a mesh body's own surfaces, blended by the morph
+ * influences currently applied to that mesh.
+ *
+ * The procedural profiles mirror the formulas their generator uses. A mesh
+ * body has no such formulas, so its build script measures the geometry and
+ * ships the numbers; here they are only blended, never invented.
+ *
+ * Note bulk is deliberately absent: it scales procedural primitives, and a
+ * skinned mesh does not respond to it. Reporting a bulk-scaled surface for
+ * a body that never changed would push ornaments off the skin. Girth on a
+ * mesh body travels through its morph targets, which is exactly what the
+ * deltas below describe.
+ */
+function deriveMeasuredProfile(
+  measured: MeasuredBodyProfile,
+  morphs: Readonly<Record<string, number>>,
+): BodyProfile {
+  const value = (key: keyof MeasuredBodySurfaces): number => {
+    let total = measured.base[key];
+    for (const [morph, influence] of Object.entries(morphs)) {
+      if (!influence) continue;
+      total += (measured.morphs?.[morph]?.[key] ?? 0) * influence;
+    }
+    return total;
+  };
+
+  const spineToChestY = value("spineToChestY");
+  const bellyCenterY = value("bellyCenterY");
+  const bellyCenterZ = value("bellyCenterZ");
+  const bellyRadiusX = value("bellyRadiusX");
+  const bellyRadiusY = value("bellyRadiusY");
+  const bellyRadiusZ = value("bellyRadiusZ");
+  const chestCenterY = value("chestCenterY");
+  const chestCenterZ = value("chestCenterZ");
+  const chestRadiusX = value("chestRadiusX");
+  const chestRadiusY = value("chestRadiusY");
+  const chestRadiusZ = value("chestRadiusZ");
+
+  const bellyHalfWidthAt = (y: number): number => {
+    const t = 1 - ((y - bellyCenterY) / bellyRadiusY) ** 2;
+    return t <= 0 ? 0 : bellyRadiusX * Math.sqrt(t);
+  };
+  const bellySurfaceZAt = (x: number, y: number): number =>
+    ellipseSliceZ(x, y, 0, bellyCenterY, bellyCenterZ, bellyRadiusX, bellyRadiusY, bellyRadiusZ);
+  const chestSurfaceZAt = (x: number, y: number): number =>
+    ellipseSliceZ(x, y, 0, chestCenterY, chestCenterZ, chestRadiusX, chestRadiusY, chestRadiusZ);
+  // This body's own spine->chest gap, not the stylised rig's.
+  const torsoSurfaceZAt = (x: number, y: number): number =>
+    Math.max(chestSurfaceZAt(x, y), bellySurfaceZAt(x, y + spineToChestY));
+  const torsoBackZAt = (x: number, y: number): number =>
+    Math.min(
+      2 * chestCenterZ - chestSurfaceZAt(x, y),
+      2 * bellyCenterZ - bellySurfaceZAt(x, y + spineToChestY),
+    );
+
+  return {
+    // Volume drivers belong to the procedural bodies; a measured body's
+    // volume is the mesh itself, so consumers see the neutral values.
+    belly: 1,
+    chest: 1,
+    bulk: 1,
+    neckRadius: value("neckRadius"),
+    neckBaseOffsetY: value("neckBaseOffsetY"),
+    dhotiRadius: value("dhotiRadius"),
+    bellyCenterY,
+    bellyCenterZ,
+    bellyRadiusX,
+    bellyRadiusY,
+    bellyRadiusZ,
+    bellyFrontZ: bellyCenterZ + bellyRadiusZ,
+    pelvisHalfWidth: value("pelvisHalfWidth"),
     chestCenterY,
     chestCenterZ,
     chestRadiusX,

@@ -110,6 +110,43 @@ export interface PrintabilityMetadata {
   notes?: string;
 }
 
+/**
+ * Torso/limb surfaces measured off a body asset's actual mesh, in the
+ * local spaces the engine's fitting code uses (belly relative to the spine
+ * joint, chest relative to the chest joint, collar seat relative to the
+ * necklace socket, all in canonical metres).
+ *
+ * Procedural bodies derive these from their params — the formulas mirror
+ * the generator. A mesh body has no formulas to mirror, so it ships the
+ * measurements instead, and ornaments fit the surface that actually
+ * exists. Produced by the asset's build script; never hand-tuned.
+ */
+export interface MeasuredBodySurfaces {
+  /** Distance from the spine joint up to the chest joint. */
+  spineToChestY: number;
+  neckRadius: number;
+  neckBaseOffsetY: number;
+  pelvisHalfWidth: number;
+  dhotiRadius: number;
+  bellyCenterY: number;
+  bellyCenterZ: number;
+  bellyRadiusX: number;
+  bellyRadiusY: number;
+  bellyRadiusZ: number;
+  chestCenterY: number;
+  chestCenterZ: number;
+  chestRadiusX: number;
+  chestRadiusY: number;
+  chestRadiusZ: number;
+}
+
+/** A body asset's measured surfaces, plus how each morph target moves them. */
+export interface MeasuredBodyProfile {
+  base: MeasuredBodySurfaces;
+  /** morph target name -> per-field delta at influence 1. */
+  morphs?: Readonly<Record<string, Partial<MeasuredBodySurfaces>>>;
+}
+
 export interface AssetDefinition {
   /** Stable id, dot-namespaced: `<deity|shared>.<category>.<name>` */
   id: string;
@@ -163,6 +200,13 @@ export interface AssetDefinition {
   materialZones: readonly MaterialZone[];
   /** Morph target names this asset's meshes expose (empty for rigid parts). */
   morphTargets?: readonly string[];
+  /**
+   * Body-slot assets only: measured attachment surfaces for this mesh.
+   * Present when the geometry was built rather than generated, so the
+   * engine can fit against real measurements instead of re-deriving them
+   * from params it does not have.
+   */
+  bodyProfile?: MeasuredBodyProfile;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
   /** Categorization for the editor UI. */
