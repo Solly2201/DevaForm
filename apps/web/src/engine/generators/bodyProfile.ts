@@ -52,12 +52,33 @@ export interface BodyProfile {
   bellyFrontZ: number;
   /** Pelvis/hip half-width — waistbands and skirts wrap this. */
   pelvisHalfWidth: number;
+  /** Pelvis-joint-local height of the natural waist — where a wrap ties. */
+  waistSeatY: number;
   /** Chest ellipsoid, chest-joint-local: center + radii. */
   chestCenterY: number;
   chestCenterZ: number;
   chestRadiusX: number;
   chestRadiusY: number;
   chestRadiusZ: number;
+  /**
+   * Band ornaments (armlet, bangle, anklet): where they seat on the limb,
+   * measured down from the owning joint, and the limb's radius there.
+   * Procedural bodies restate the constants their generator was drawn
+   * with; a mesh body reports what its limbs actually measure.
+   */
+  armBandOffsetY: number;
+  armBandRadius: number;
+  wristBandOffsetY: number;
+  wristBandRadius: number;
+  ankleBandOffsetY: number;
+  ankleBandRadius: number;
+  /**
+   * Cranium the hair and crown geometry must fit, head-joint-local.
+   * Measured on a mesh body; on a procedural one it is the skull that
+   * body's own head generator draws.
+   */
+  headCenterY: number;
+  headRadius: number;
   /** Belly half-width at a spine-local height (0 where the slice is empty). */
   bellyHalfWidthAt(spineLocalY: number): number;
   /** Belly surface z at a spine-local (x, y); falls back to center z. */
@@ -71,6 +92,18 @@ export interface BodyProfile {
   torsoSurfaceZAt(x: number, chestLocalY: number): number;
   /** Rear counterpart of torsoSurfaceZAt (most negative z of the torso). */
   torsoBackZAt(x: number, chestLocalY: number): number;
+}
+
+/**
+ * The skull the head-worn geometry (hair, crown, earrings, crescent) was
+ * drawn against. Dividing a body's measured cranium by this gives the
+ * factor those pieces need to sit on it.
+ */
+export const REFERENCE_SKULL = { radius: 0.067, centerY: 0.055 };
+
+/** How much bigger or smaller this body's skull is than the reference. */
+export function headFit(body: Pick<BodyProfile, "headRadius">): number {
+  return body.headRadius / REFERENCE_SKULL.radius;
 }
 
 /** spine joint sits this far below the chest joint (see skeleton.ts). */
@@ -167,6 +200,16 @@ export function deriveBodyProfile(
     chestRadiusX,
     chestRadiusY,
     chestRadiusZ,
+    // Where the classic wrap ties, and the bands it was drawn with.
+    waistSeatY: 0.055,
+    armBandOffsetY: -0.055,
+    armBandRadius: 0.043 * bulk,
+    wristBandOffsetY: -0.128,
+    wristBandRadius: 0.03 * bulk,
+    ankleBandOffsetY: 0.018,
+    ankleBandRadius: 0.043,
+    headCenterY: 0.063,
+    headRadius: 0.067,
     bellyHalfWidthAt,
     bellySurfaceZAt,
     chestSurfaceZAt,
@@ -252,6 +295,16 @@ function deriveMeasuredProfile(
     chestRadiusX,
     chestRadiusY,
     chestRadiusZ,
+    waistSeatY: value("waistSeatY"),
+    // Measured off this body's own limbs.
+    armBandOffsetY: value("armBandOffsetY"),
+    armBandRadius: value("armBandRadius"),
+    wristBandOffsetY: value("wristBandOffsetY"),
+    wristBandRadius: value("wristBandRadius"),
+    ankleBandOffsetY: value("ankleBandOffsetY"),
+    ankleBandRadius: value("ankleBandRadius"),
+    headCenterY: value("headCenterY"),
+    headRadius: value("headRadius"),
     bellyHalfWidthAt,
     bellySurfaceZAt,
     chestSurfaceZAt,
@@ -336,6 +389,16 @@ function deriveAthleticProfile(
     chestRadiusX,
     chestRadiusY,
     chestRadiusZ,
+    // Where the classic wrap ties, and the bands it was drawn with.
+    waistSeatY: 0.055,
+    armBandOffsetY: -0.055,
+    armBandRadius: 0.043 * bulk,
+    wristBandOffsetY: -0.128,
+    wristBandRadius: 0.03 * bulk,
+    ankleBandOffsetY: 0.018,
+    ankleBandRadius: 0.043,
+    headCenterY: 0.063,
+    headRadius: 0.067,
     bellyHalfWidthAt,
     bellySurfaceZAt,
     chestSurfaceZAt,

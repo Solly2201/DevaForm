@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { ARM_SLOTS, activeArmSlots, type JointId } from "@devaform/character-schema";
 import { lathe, mesh, radialRing, taperedTube, type V3 } from "../geometry";
+import { headFit } from "./bodyProfile";
 import { type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
 
 function gemStud(ctx: GeneratorContext, r: number): THREE.Mesh {
@@ -352,8 +353,12 @@ function bandRing(ctx: GeneratorContext, radius: number, tube: number, withGem =
  * no per-deity placement exists here.
  */
 export const earringsKundala: PartGenerator = (ctx) => {
+  // Hoops are drawn against the reference skull; a smaller head wears
+  // smaller kundala rather than the same rings sticking out sideways.
+  const fit = headFit(ctx.body);
   const earring = (side: 1 | -1): THREE.Object3D => {
     const g = new THREE.Group();
+    g.scale.setScalar(fit);
     g.add(
       mesh(new THREE.TorusGeometry(0.018, 0.005, 10, 22), ctx.materials.get("metal"), {
         position: [0, -0.014, 0.002],
@@ -372,19 +377,19 @@ export const earringsKundala: PartGenerator = (ctx) => {
 };
 
 export const armletsVanki: PartGenerator = (ctx) => {
-  const bulk = ctx.proportions.bulk;
   const parts: Array<{ joint: JointId; object: THREE.Object3D }> = [];
   for (const slot of ARM_SLOTS) {
     if (!activeArmSlots(ctx.arms).includes(slot)) continue;
-    const band = bandRing(ctx, 0.043 * bulk, 0.0065, true);
-    band.position.y = -0.055;
+    // Seat and girth come from the body being worn, not from this
+    // generator: the same vanki fits a heavy build and a lean human.
+    const band = bandRing(ctx, ctx.body.armBandRadius, 0.0065, true);
+    band.position.y = ctx.body.armBandOffsetY;
     parts.push({ joint: `arm.${slot}.upper`, object: band });
   }
   return parts;
 };
 
 export const braceletsKada: PartGenerator = (ctx) => {
-  const bulk = ctx.proportions.bulk;
   const parts: Array<{ joint: JointId; object: THREE.Object3D }> = [];
   for (const slot of ARM_SLOTS) {
     if (!activeArmSlots(ctx.arms).includes(slot)) continue;
@@ -392,8 +397,8 @@ export const braceletsKada: PartGenerator = (ctx) => {
     // wrist, or strong hand poses (dance gestures) drive it through the
     // palm. The forearm→hand joint offset is 0.14, so the band rests just
     // above the wrist line.
-    const band = bandRing(ctx, 0.03 * bulk, 0.0055);
-    band.position.y = -0.128;
+    const band = bandRing(ctx, ctx.body.wristBandRadius, 0.0055);
+    band.position.y = ctx.body.wristBandOffsetY;
     parts.push({ joint: `arm.${slot}.forearm`, object: band });
   }
   return parts;
@@ -402,14 +407,18 @@ export const braceletsKada: PartGenerator = (ctx) => {
 export const ankletsPayal: PartGenerator = (ctx) => {
   const parts: Array<{ joint: JointId; object: THREE.Object3D }> = [];
   for (const slot of ["left", "right"] as const) {
-    const band = bandRing(ctx, 0.043, 0.006);
-    band.position.y = 0.018;
+    const band = bandRing(ctx, ctx.body.ankleBandRadius, 0.006);
+    band.position.y = ctx.body.ankleBandOffsetY;
     // Tiny bells
     for (let i = 0; i < 6; i++) {
       const angle = (i / 6) * Math.PI * 2;
       band.add(
         mesh(new THREE.SphereGeometry(0.0045, 8, 6), ctx.materials.get("metal"), {
-          position: [Math.cos(angle) * 0.045, -0.008, Math.sin(angle) * 0.045],
+          position: [
+            Math.cos(angle) * (ctx.body.ankleBandRadius + 0.002),
+            -0.008,
+            Math.sin(angle) * (ctx.body.ankleBandRadius + 0.002),
+          ],
         }),
       );
     }

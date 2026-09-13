@@ -17,9 +17,12 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   // that this body's knee/shin masses stay inside it in standing poses,
   // and always outside the measured hips. Slimmer bodies get a slimmer
   // wrap instead of one deity's barrel.
-  // Fitted at the hips, flaring (A-line) to the leg-clearance radius.
+  // Tied at the waist, following the hips, flaring to the clearance the
+  // legs need. A wrap that leaves the waist as wide as the hem is a
+  // barrel, not a garment — the taper is what makes it read as cloth.
   const bottomR = Math.max(ctx.body.dhotiRadius, ctx.body.pelvisHalfWidth + 0.012);
-  const topR = Math.max(ctx.body.pelvisHalfWidth + 0.012, bottomR * 0.97);
+  const topR = ctx.body.pelvisHalfWidth + 0.012;
+  const waistY = ctx.body.waistSeatY;
   // Seated drape volumes are authored against the classic wrap; scale
   // them with the actual wrap so slim bodies get a proportionate lap.
   const lapScale = bottomR / (0.165 * bulk);
@@ -29,7 +32,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     // full standing skirt that would clip through them.
     group.add(
       mesh(pleatedCylinder(topR, topR * 1.18, 0.1, 18, 0.006), garment, {
-        position: [0, 0.005, 0],
+        position: [0, waistY - 0.05, 0],
       }),
     );
     // Lap drape — wide, flattened cushion of cloth over the crossed legs
@@ -50,7 +53,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     // Waist wrap band
     group.add(
       mesh(new THREE.TorusGeometry(topR * 0.99, 0.016, 12, 48), garment, {
-        position: [0, 0.06, 0],
+        position: [0, waistY + 0.005, 0],
         rotation: [Math.PI / 2, 0, 0],
       }),
     );
@@ -65,12 +68,12 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   }
 
   const skirtLength = 0.2 + 0.17 * length;
-  const hemY = 0.055 - skirtLength;
+  const hemY = waistY - skirtLength;
 
   // Main pleated skirt
   group.add(
     mesh(pleatedCylinder(topR, bottomR * 0.94, skirtLength, 16, 0.007), garment, {
-      position: [0, 0.055 - skirtLength / 2, 0],
+      position: [0, waistY - skirtLength / 2, 0],
     }),
   );
   // Hem band
@@ -84,14 +87,14 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     // Shorter over-layer
     group.add(
       mesh(pleatedCylinder(topR * 1.03, topR * 0.9, skirtLength * 0.55, 22, 0.006), accent, {
-        position: [0, 0.055 - (skirtLength * 0.55) / 2, 0],
+        position: [0, waistY - (skirtLength * 0.55) / 2, 0],
       }),
     );
   }
   // Waist wrap band
   group.add(
     mesh(new THREE.TorusGeometry(topR * 0.99, 0.016, 12, 48), garment, {
-      position: [0, 0.06, 0],
+      position: [0, waistY + 0.005, 0],
       rotation: [Math.PI / 2, 0, 0],
     }),
   );
@@ -102,7 +105,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     const stripLength = skirtLength * (0.88 - Math.abs(t) * 0.14);
     group.add(
       mesh(new THREE.BoxGeometry(0.032, stripLength, 0.005), accent, {
-        position: [t * 0.06, 0.05 - stripLength / 2, bottomR * 0.9 + 0.01],
+        position: [t * 0.06, waistY - 0.005 - stripLength / 2, bottomR * 0.9 + 0.01],
         rotation: [0.02, 0, t * 0.1],
       }),
     );

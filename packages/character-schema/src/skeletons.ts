@@ -79,42 +79,34 @@ export const GANESHA_SKELETON: SkeletonDefinition = defineSkeleton(
  * deforms the mesh wrongly however good the mesh is.
  */
 const HUMAN_JOINT_POSITIONS: Partial<Record<JointId, Vec3>> = {
-  pelvis: [0, 0.54991, 0.00198],
-  spine: [0, 0.08613, -0.01235],
-  chest: [0, 0.11414, -0.01722],
-  neck: [0, 0.11363, 0.03357],
-  head: [0, 0.05303, 0.01774],
-  "arm.frontLeft.upper": [0.10596, 0.05678, 0.03676],
-  "arm.frontLeft.forearm": [0.01863, -0.14903, 0],
-  "arm.frontLeft.hand": [0, -0.14644, 0],
-  "arm.frontRight.upper": [-0.10596, 0.05678, 0.03676],
-  "arm.frontRight.forearm": [-0.01863, -0.14903, 0],
-  "arm.frontRight.hand": [0, -0.14644, 0],
-  // The body mesh skins only the front pair; the back pair mirrors it
-  // behind the shoulder line so a four-armed form stays expressible.
-  "arm.backLeft.upper": [0.10596, 0.05678, -0.05324],
-  "arm.backLeft.forearm": [0.01863, -0.14903, 0],
-  "arm.backLeft.hand": [0, -0.14644, 0],
-  "arm.backRight.upper": [-0.10596, 0.05678, -0.05324],
-  "arm.backRight.forearm": [-0.01863, -0.14903, 0],
-  "arm.backRight.hand": [0, -0.14644, 0],
-  "leg.left.thigh": [0.06047, -0.00475, -0.0057],
-  "leg.left.shin": [0, -0.26286, 0],
-  "leg.left.foot": [0, -0.24158, 0],
-  "leg.right.thigh": [-0.06047, -0.00475, -0.0057],
-  "leg.right.shin": [0, -0.26286, 0],
-  "leg.right.foot": [0, -0.24158, 0],
+  "pelvis": [0, 0.55063, 0.00238],
+  "spine": [0, 0.086, -0.0123],
+  "chest": [0, 0.11426, -0.0172],
+  "neck": [0, 0.11356, 0.03347],
+  "head": [0, 0.05313, 0.01731],
+  "arm.frontLeft.upper": [0.10593, 0.05677, 0.03667],
+  "arm.frontLeft.forearm": [0.01861, -0.14892, 0],
+  "arm.frontLeft.hand": [0, -0.14786, 0],
+  "leg.left.thigh": [0.06049, -0.00479, -0.00568],
+  "leg.left.shin": [0, -0.26121, 0],
+  "leg.left.foot": [0, -0.2438, 0],
+  "arm.frontRight.upper": [-0.10593, 0.05677, 0.03667],
+  "arm.frontRight.forearm": [-0.01861, -0.14892, 0],
+  "arm.frontRight.hand": [0, -0.14786, 0],
+  "leg.right.thigh": [-0.06049, -0.00479, -0.00568],
+  "leg.right.shin": [0, -0.26121, 0],
+  "leg.right.foot": [0, -0.2438, 0],
 };
 
 /** Socket seats measured on the same mesh (the GLB refines them further). */
 const HUMAN_SOCKET_POSITIONS: Partial<Record<SocketId, Vec3>> = {
-  "head.crown": [0, 0.07115, -0.01548],
-  "head.forehead": [0, 0.085, 0.03091],
-  "head.leftEar": [0.04287, 0.022, 0.00403],
-  "head.rightEar": [-0.04287, 0.022, 0.00403],
-  "head.moon": [0.04, 0.05315, -0.01373],
-  "chest.necklace": [0, 0.10363, 0.03583],
-  "waist.ornament": [0, 0.09, 0.05537],
+  "head.crown": [0, 0.07043, -0.01479],
+  "head.forehead": [0, 0.03985, 0.0568],
+  "head.leftEar": [0.04212, 0.022, 0.00415],
+  "head.rightEar": [-0.04212, 0.022, 0.00415],
+  "head.moon": [0.04, 0.05243, -0.01367],
+  "chest.necklace": [0, 0.10356, 0.036],
+  "waist.ornament": [0, 0.089, 0.04794],
   "leg.left.anklet": [0, 0.03, 0.005],
   "leg.right.anklet": [0, 0.03, 0.005],
 };
@@ -133,3 +125,19 @@ export const HUMAN_SKELETON: SkeletonDefinition = defineSkeleton(
   withPosition(HUMANOID_CORE_JOINTS, HUMAN_JOINT_POSITIONS),
   withPosition(HUMANOID_CORE_SOCKETS, HUMAN_SOCKET_POSITIONS),
 );
+
+/**
+ * Every skeleton the engine can build, by id. A body asset names the
+ * anatomy it was authored for; the deity supplies the default for bodies
+ * that are generated rather than measured.
+ */
+const SKELETONS: Record<string, SkeletonDefinition> = Object.fromEntries(
+  [HUMANOID_SKELETON, GANESHA_SKELETON, HUMAN_SKELETON].map((skeleton) => [
+    skeleton.id,
+    skeleton,
+  ]),
+);
+
+export function getSkeleton(id: string): SkeletonDefinition | undefined {
+  return SKELETONS[id];
+}
