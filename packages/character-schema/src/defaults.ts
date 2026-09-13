@@ -79,6 +79,7 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
       // Bare-chested ascetic by default — the rudraksha and serpent read
       // against skin, as in classical iconography.
       upperGarment: null,
+      earrings: { assetId: "ganesha.earrings.kundala", version: 1 },
       armlets: { assetId: "ganesha.armlets.vanki", version: 1 },
       bracelets: { assetId: "ganesha.bracelets.kada", version: 1 },
       anklets: { assetId: "ganesha.anklets.payal", version: 1 },

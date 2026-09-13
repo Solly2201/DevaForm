@@ -243,7 +243,10 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     for (const feature of asset?.integratedFeatures ?? []) integratedFeatures.add(feature);
   }
 
-  // Parts
+  // Parts. Socket-mounted part entries (ear jewellery etc.) are deferred
+  // until every joint entry has landed, so owner parts have already
+  // refined the sockets they terminate on.
+  const socketMounts: Array<{ assetId: string; socket: SocketId; object: THREE.Object3D }> = [];
   for (const [slot, ref] of Object.entries(config.parts)) {
     const asset = resolveAssetRef(ref);
     if (ref && !asset) {
@@ -297,20 +300,33 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       }
       continue;
     }
-    for (const { joint, object, socketRefinements } of renderable.jointed) {
-      const target = joints.get(joint);
-      if (!target) {
-        warnings.push(`Asset ${asset.id}: unknown joint ${joint}`);
-        continue;
+    for (const entry of renderable.jointed) {
+      entry.object.name = entry.object.name || `part:${asset.id}`;
+      if (entry.socket !== undefined) {
+        socketMounts.push({ assetId: asset.id, socket: entry.socket, object: entry.object });
+      } else {
+        const target = joints.get(entry.joint);
+        if (!target) {
+          warnings.push(`Asset ${asset.id}: unknown joint ${entry.joint}`);
+          continue;
+        }
+        target.add(entry.object);
       }
-      object.name = object.name || `part:${asset.id}`;
-      target.add(object);
       // The part owns the surface its sockets terminate on (e.g. the
       // trunk's tip) — move those sockets onto the generated geometry.
-      for (const refinement of socketRefinements ?? []) {
+      for (const refinement of entry.socketRefinements ?? []) {
         sockets.get(refinement.id)?.position.set(...refinement.position);
       }
     }
+  }
+
+  for (const mount of socketMounts) {
+    const socket = sockets.get(mount.socket);
+    if (!socket) {
+      warnings.push(`Asset ${mount.assetId}: unknown socket ${mount.socket}`);
+      continue;
+    }
+    socket.add(mount.object);
   }
 
   // Attachments — skip hand sockets on arms that are not rendered.

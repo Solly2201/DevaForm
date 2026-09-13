@@ -7,8 +7,8 @@
  * facing +Z, so wrist rotations orient mudras (abhaya palm forward, varada
  * palm down, held items upright).
  */
-import type { JointId } from "./skeleton";
-import type { Vec3 } from "./configuration";
+import type { ArmSlot, JointId } from "./skeleton";
+import type { MudraId, Vec3 } from "./configuration";
 
 export interface PosePreset {
   id: string;
@@ -191,14 +191,16 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
     label: "Standing",
     description: "Samabhanga — even, frontal standing pose.",
     joints: {
-      "arm.frontLeft.upper": [8 * D, 0, 58 * D],
-      "arm.frontRight.upper": [8 * D, 0, -58 * D],
-      "arm.frontLeft.forearm": [-28 * D, 0, 0],
-      "arm.frontRight.forearm": [-28 * D, 0, 0],
+      // Arms nearer the body than Ganesha's broad stance — the athletic
+      // silhouette reads statuesque, not spread.
+      "arm.frontLeft.upper": [8 * D, 0, 30 * D],
+      "arm.frontRight.upper": [8 * D, 0, -30 * D],
+      "arm.frontLeft.forearm": [-24 * D, 0, 0],
+      "arm.frontRight.forearm": [-24 * D, 0, 0],
       "arm.frontLeft.hand": [-12 * D, 0, 6 * D],
       "arm.frontRight.hand": [-12 * D, 0, -6 * D],
-      "arm.backLeft.upper": [-18 * D, -10 * D, 48 * D],
-      "arm.backRight.upper": [-18 * D, 10 * D, -48 * D],
+      "arm.backLeft.upper": [-18 * D, -10 * D, 38 * D],
+      "arm.backRight.upper": [-18 * D, 10 * D, -38 * D],
       "arm.backLeft.forearm": [-52 * D, 0, 0],
       "arm.backRight.forearm": [-52 * D, 0, 0],
       "arm.backLeft.hand": [-20 * D, 0, 0],
@@ -318,3 +320,61 @@ export function getPosePreset(id: string): PosePreset | undefined {
 export const SEATED_POSE_IDS: readonly string[] = ALL_POSE_PRESETS.filter((p) => p.seated).map(
   (p) => p.id,
 );
+
+// ---------------------------------------------------------------------------
+// Gesture mudra arm semantics
+// ---------------------------------------------------------------------------
+
+export interface MudraArmPose {
+  upper: Vec3;
+  forearm: Vec3;
+  hand: Vec3;
+}
+
+const RIGHT = Math.PI / 180;
+
+/**
+ * Arm-chain articulation for GESTURE mudras, authored for a RIGHT arm and
+ * mirrored for left arms. A mudra is a whole-arm gesture, not just a palm
+ * shape: abhaya genuinely raises the blessing hand (elbow folded, palm to
+ * the devotee) while varada lowers the arm forward-down in giving. Grip
+ * mudras (hold/pinch/grip) carry no arm pose — held-item arms belong to
+ * the pose preset. Generic data: works for every deity's humanoid arms.
+ */
+export const GESTURE_MUDRA_ARM_POSES: Partial<Record<MudraId, MudraArmPose>> = {
+  abhaya: {
+    upper: [-12 * RIGHT, 6 * RIGHT, -22 * RIGHT],
+    forearm: [-115 * RIGHT, 0, 0],
+    hand: [30 * RIGHT, 4 * RIGHT, -4 * RIGHT],
+  },
+  varada: {
+    upper: [16 * RIGHT, 0, -12 * RIGHT],
+    forearm: [-22 * RIGHT, 0, 0],
+    hand: [-46 * RIGHT, 0, -8 * RIGHT],
+  },
+};
+
+const mirror = (v: Vec3): Vec3 => [v[0], -v[1], -v[2]];
+
+/** The three joints of one arm chain, proximal to distal. */
+export function armChainJoints(slot: ArmSlot): readonly JointId[] {
+  return [`arm.${slot}.upper`, `arm.${slot}.forearm`, `arm.${slot}.hand`];
+}
+
+/**
+ * Joint rotations a gesture mudra imposes on its arm chain (mirrored for
+ * left arms), or null for mudras without arm semantics.
+ */
+export function mudraArmRotations(
+  mudra: MudraId,
+  slot: ArmSlot,
+): Partial<Record<JointId, Vec3>> | null {
+  const pose = GESTURE_MUDRA_ARM_POSES[mudra];
+  if (!pose) return null;
+  const left = slot.endsWith("Left");
+  return {
+    [`arm.${slot}.upper`]: left ? mirror(pose.upper) : pose.upper,
+    [`arm.${slot}.forearm`]: left ? mirror(pose.forearm) : pose.forearm,
+    [`arm.${slot}.hand`]: left ? mirror(pose.hand) : pose.hand,
+  };
+}

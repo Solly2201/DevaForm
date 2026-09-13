@@ -5,6 +5,7 @@
  */
 import type { AttachmentGenerator, PartGenerator } from "./types";
 import { humanoidBody, humanoidHands } from "./body";
+import { athleticBody } from "./bodyAthletic";
 import { ganeshaEars, classicEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
 import { humanoidDhoti, humanoidShawl } from "./clothing";
 import {
@@ -41,6 +42,7 @@ export const PART_GENERATORS: Record<string, PartGenerator> = {
   // Shared humanoid generators — parameterized by manifest data, used by
   // any deity whose anatomy they fit.
   "humanoid.body": humanoidBody,
+  "humanoid.athletic": athleticBody,
   "humanoid.hands": humanoidHands,
   "humanoid.dhoti": humanoidDhoti,
   "humanoid.shawl": humanoidShawl,

@@ -8,7 +8,7 @@
  * at the local origin so the hand's item socket closes around them.
  */
 import * as THREE from "three";
-import { lathe, mesh, taperedTube, type V3 } from "../geometry";
+import { lathe, loft, mesh, taperedTube, type V3 } from "../geometry";
 import { num, type AttachmentGenerator, type PartGenerator } from "./types";
 import { chestZAtSocket } from "./ornaments";
 
@@ -20,56 +20,84 @@ export const shivaHead: PartGenerator = (ctx) => {
   const skin = ctx.materials.get("skin");
   const inner = ctx.materials.get("skinSecondary");
   const group = new THREE.Group();
-  // The humanoid head joint sits high (shared skeleton); seat the human
-  // head lower on it so the chin-to-shoulder gap reads as a real neck.
-  group.position.y = -0.03;
+  // Seated on the head joint; the athletic body's neck loft rises to meet
+  // the jaw from below, so the head connects rather than floats.
+  const SEAT = 0.008;
+  group.position.y = SEAT;
 
-  // Cranium
+  // Skull — ONE lofted volume whose sections carve the male silhouette:
+  // narrow chin/jaw base, widening jaw, cheekbone line, temple/forehead,
+  // rounded cranium. No ball cheeks, no cylinder face.
   group.add(
-    mesh(new THREE.SphereGeometry(0.082, 36, 28), skin, {
-      position: [0, 0.075, -0.005],
-      scale: [0.95, 1.05, 0.98],
+    mesh(
+      loft(
+        [
+          { y: -0.048, rx: 0.026, rz: 0.032, z: 0.014 },
+          { y: -0.028, rx: 0.04, rz: 0.048, z: 0.012 },
+          { y: -0.004, rx: 0.052, rz: 0.06, z: 0.007 },
+          { y: 0.024, rx: 0.059, rz: 0.066, z: 0.002 },
+          { y: 0.052, rx: 0.06, rz: 0.068, z: -0.002 },
+          { y: 0.082, rx: 0.053, rz: 0.061, z: -0.005 },
+          { y: 0.106, rx: 0.036, rz: 0.044, z: -0.006 },
+          { y: 0.12, rx: 0.012, rz: 0.016, z: -0.006 },
+        ],
+        30,
+      ),
+      skin,
+    ),
+  );
+  // Chin — small definite boss at the jaw apex
+  group.add(
+    mesh(new THREE.SphereGeometry(0.014, 16, 12), skin, {
+      position: [0, -0.051, 0.034],
+      scale: [1.0, 0.78, 0.8],
     }),
   );
-  // Brow/face plate — the surface the eyes and third eye seat against
-  group.add(
-    mesh(new THREE.SphereGeometry(0.07, 32, 24), skin, {
-      position: [0, 0.045, 0.03],
-      scale: [0.98, 0.9, 0.75],
-    }),
-  );
-  // Cheeks
+  // Mandible edges — the jawline silhouette from below the ears to the chin
   for (const side of [1, -1]) {
     group.add(
-      mesh(new THREE.SphereGeometry(0.028, 24, 18), skin, {
-        position: [side * 0.034, 0.003, 0.038],
-        scale: [1, 1.15, 0.72],
+      new THREE.Mesh(
+        taperedTube(
+          [
+            [side * 0.047, -0.014, 0.013],
+            [side * 0.03, -0.038, 0.028],
+            [side * 0.013, -0.049, 0.034],
+          ],
+          [0.0072, 0.0042],
+          16,
+          8,
+        ),
+        skin,
+      ),
+    );
+  }
+  // Cheekbone planes — flat, high
+  for (const side of [1, -1]) {
+    group.add(
+      mesh(new THREE.SphereGeometry(0.026, 22, 16), skin, {
+        position: [side * 0.036, 0.02, 0.038],
+        scale: [0.85, 0.55, 0.5],
       }),
     );
   }
-  // Jaw and chin
+  // Brow ridge — restrained masculine bar over the eye line
   group.add(
-    mesh(new THREE.SphereGeometry(0.05, 26, 20), skin, {
-      position: [0, -0.028, 0.018],
-      scale: [0.84, 0.95, 0.8],
+    mesh(new THREE.CapsuleGeometry(0.0062, 0.05, 8, 12), skin, {
+      position: [0, 0.038, 0.058],
+      rotation: [0.3, 0, Math.PI / 2],
+      scale: [1, 1, 0.5],
     }),
   );
-  group.add(
-    mesh(new THREE.SphereGeometry(0.02, 16, 12), skin, {
-      position: [0, -0.06, 0.042],
-      scale: [1.05, 0.9, 0.9],
-    }),
-  );
-  // Nose — bridge tube with nostril wings
+  // Nose — narrow bridge with subtle wings
   group.add(
     new THREE.Mesh(
       taperedTube(
         [
-          [0, 0.05, 0.072],
-          [0, 0.022, 0.086],
-          [0, 0.004, 0.093],
+          [0, 0.036, 0.057],
+          [0, 0.012, 0.073],
+          [0, -0.003, 0.079],
         ],
-        [0.0115, 0.008],
+        [0.0088, 0.0062],
         16,
         10,
       ),
@@ -78,59 +106,55 @@ export const shivaHead: PartGenerator = (ctx) => {
   );
   for (const side of [1, -1]) {
     group.add(
-      mesh(new THREE.SphereGeometry(0.0075, 12, 10), skin, {
-        position: [side * 0.011, 0.002, 0.083],
+      mesh(new THREE.SphereGeometry(0.0058, 12, 10), skin, {
+        position: [side * 0.0088, -0.005, 0.069],
         scale: [1, 0.85, 0.9],
       }),
     );
   }
-  // Lips — gentle serene mouth
+  // Restrained lips
   group.add(
-    mesh(new THREE.CapsuleGeometry(0.0048, 0.02, 6, 10), inner, {
-      position: [0, -0.02, 0.077],
+    mesh(new THREE.CapsuleGeometry(0.0036, 0.015, 6, 10), inner, {
+      position: [0, -0.021, 0.0595],
       rotation: [0.12, 0, Math.PI / 2],
+      scale: [1, 1, 0.65],
+    }),
+  );
+  group.add(
+    mesh(new THREE.CapsuleGeometry(0.0042, 0.01, 6, 10), inner, {
+      position: [0, -0.029, 0.0575],
+      rotation: [-0.1, 0, Math.PI / 2],
       scale: [1, 1, 0.7],
     }),
   );
-  group.add(
-    mesh(new THREE.CapsuleGeometry(0.0055, 0.014, 6, 10), inner, {
-      position: [0, -0.031, 0.0755],
-      rotation: [-0.1, 0, Math.PI / 2],
-      scale: [1, 1, 0.75],
-    }),
-  );
-  // Human ears with lobes
+  // Ears with lobes, on the skull's side plane
   for (const side of [1, -1]) {
     group.add(
-      mesh(new THREE.SphereGeometry(0.02, 16, 12), skin, {
-        position: [side * 0.074, 0.025, 0.002],
-        scale: [0.35, 1.25, 0.7],
+      mesh(new THREE.SphereGeometry(0.016, 16, 12), skin, {
+        position: [side * 0.056, 0.012, 0.002],
+        scale: [0.3, 1.1, 0.55],
       }),
     );
     group.add(
-      mesh(new THREE.SphereGeometry(0.009, 12, 10), skin, {
-        position: [side * 0.072, -0.002, 0.006],
+      mesh(new THREE.SphereGeometry(0.007, 12, 10), skin, {
+        position: [side * 0.054, -0.012, 0.007],
         scale: [0.5, 1, 0.7],
       }),
     );
   }
-  // Neck blend into the body's neck cylinder
-  group.add(
-    mesh(new THREE.SphereGeometry(0.05, 20, 14), skin, {
-      position: [0, -0.066, -0.006],
-      scale: [1.15, 0.95, 0.95],
-    }),
-  );
 
   return [
     {
       joint: "head",
       object: group,
-      // The head owns its brow and skull-top surfaces: seat the forehead
-      // (third eye / tikka) and crown sockets on the generated geometry.
+      // The head owns its brow, skull-top and earlobe surfaces: seat the
+      // forehead (third eye / tikka), crown and ear sockets on the actual
+      // generated geometry so ornaments originate from real anatomy.
       socketRefinements: [
-        { id: "head.forehead", position: [0, 0.045, 0.077] },
-        { id: "head.crown", position: [0, 0.128, -0.005] },
+        { id: "head.forehead", position: [0, 0.068, 0.062] },
+        { id: "head.crown", position: [0, 0.126, -0.006] },
+        { id: "head.leftEar", position: [0.056, -0.011, 0.008] },
+        { id: "head.rightEar", position: [-0.056, -0.011, 0.008] },
       ],
     },
   ];
@@ -144,59 +168,82 @@ export const shivaJata: PartGenerator = (ctx) => {
   const hair = ctx.materials.get("hair");
   const flowing = num(ctx, "flowing", 0);
   const group = new THREE.Group();
-  // Seat the jata on the lowered head (see shivaHead).
-  group.position.y = -0.03;
+  // Same seat as shivaHead so the hair hugs the generated skull.
+  group.position.y = 0.008;
 
-  // Hair cap over the cranium
+  // Scalp cap following the cranium
   group.add(
-    mesh(new THREE.SphereGeometry(0.086, 32, 24), hair, {
-      position: [0, 0.088, -0.01],
-      scale: [0.97, 0.82, 0.99],
+    mesh(new THREE.SphereGeometry(0.067, 28, 20), hair, {
+      position: [0, 0.055, -0.007],
+      scale: [1.08, 1.02, 1.1],
     }),
   );
-  // Hairline rim framing the brow
+  // Hairline edge framing the forehead
   group.add(
-    mesh(new THREE.TorusGeometry(0.072, 0.013, 10, 32), hair, {
-      position: [0, 0.112, -0.004],
-      rotation: [Math.PI / 2 - 0.18, 0, 0],
-      scale: [1, 0.92, 1],
+    mesh(new THREE.TorusGeometry(0.05, 0.01, 10, 30), hair, {
+      position: [0, 0.052, -0.004],
+      rotation: [Math.PI / 2 - 0.32, 0, 0],
+      scale: [1.1, 1.0, 1.08],
     }),
   );
-  // Coiled bun — stacked tori tapering to a topknot
-  const coils: ReadonlyArray<readonly [number, number]> = [
-    [0.052, 0.152],
-    [0.043, 0.178],
-    [0.033, 0.201],
-    [0.021, 0.221],
-  ];
-  for (const [r, y] of coils) {
-    group.add(
-      mesh(new THREE.TorusGeometry(r, 0.015, 10, 28), hair, {
-        position: [0, y, -0.002],
-        rotation: [Math.PI / 2, 0, 0],
-      }),
-    );
-  }
-  group.add(
-    mesh(new THREE.SphereGeometry(0.016, 14, 10), hair, { position: [0, 0.238, -0.002] }),
-  );
-  // Vertical matted strands ribbing the bun
-  for (let i = 0; i < 7; i++) {
-    const angle = (i / 7) * Math.PI * 2 + 0.3;
-    const x = Math.cos(angle);
-    const z = Math.sin(angle);
+
+  // Gathered matted strands — irregular tapered locks swept from the
+  // hairline up into the gather point (golden-angle spacing, alternating
+  // thickness, jittered heights: organic hair, not stacked rings).
+  const gatherY = 0.152;
+  for (let i = 0; i < 15; i++) {
+    const angle = i * 2.61799 + 0.4;
+    const cx = Math.cos(angle);
+    const cz = Math.sin(angle);
+    const r0 = 0.052 + 0.006 * Math.sin(i * 1.7);
+    const y0 = 0.055 + 0.008 * Math.cos(i * 2.3);
+    const thick = i % 2 === 0 ? 0.011 : 0.0085;
     group.add(
       new THREE.Mesh(
         taperedTube(
           [
-            [x * 0.062, 0.125, z * 0.062 - 0.004],
-            [x * 0.05, 0.17, z * 0.05 - 0.003],
-            [x * 0.026, 0.212, z * 0.026 - 0.002],
-            [x * 0.008, 0.235, z * 0.008 - 0.002],
+            [cx * r0, y0, cz * r0 - 0.006],
+            [cx * (r0 * 0.72), y0 + 0.045, cz * (r0 * 0.72) - 0.006],
+            [cx * 0.022, 0.128, cz * 0.024 - 0.005],
+            [cx * 0.01, gatherY, cz * 0.011 - 0.004],
           ],
-          [0.0075, 0.003],
-          14,
+          [thick, 0.005],
+          18,
           8,
+        ),
+        hair,
+      ),
+    );
+  }
+  // Tie band at the gather
+  group.add(
+    mesh(new THREE.TorusGeometry(0.019, 0.005, 10, 22), hair, {
+      position: [0, 0.156, -0.004],
+      rotation: [Math.PI / 2, 0, 0],
+    }),
+  );
+  // Compact topknot with looping locks over it
+  group.add(
+    mesh(new THREE.SphereGeometry(0.023, 18, 14), hair, {
+      position: [0, 0.18, -0.004],
+      scale: [1, 1.15, 1],
+    }),
+  );
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2 + 0.6;
+    const cx = Math.cos(angle);
+    const cz = Math.sin(angle);
+    group.add(
+      new THREE.Mesh(
+        taperedTube(
+          [
+            [cx * 0.014, 0.162, cz * 0.015 - 0.004],
+            [cx * 0.024, 0.185, cz * 0.025 - 0.004],
+            [cx * 0.008, 0.203, cz * 0.009 - 0.004],
+          ],
+          [0.006, 0.003],
+          12,
+          7,
         ),
         hair,
       ),
@@ -204,22 +251,22 @@ export const shivaJata: PartGenerator = (ctx) => {
   }
 
   if (flowing > 0) {
-    // Matted strands falling behind the ears to the shoulders
+    // Matted locks falling behind the ears to the shoulders
     for (const side of [1, -1]) {
-      for (const [dx, dz, len] of [
-        [0.07, -0.02, 0.2],
-        [0.05, -0.045, 0.17],
-        [0.082, 0.005, 0.16],
+      for (const [dx, dz, len, sway] of [
+        [0.048, -0.022, 0.19, 0.018],
+        [0.034, -0.042, 0.16, 0.008],
+        [0.058, -0.002, 0.15, 0.026],
       ] as const) {
         group.add(
           new THREE.Mesh(
             taperedTube(
               [
-                [side * dx, 0.09, dz],
-                [side * (dx + 0.02), 0.0, dz - 0.008],
-                [side * (dx + 0.026), 0.09 - len, dz],
+                [side * dx, 0.07, dz],
+                [side * (dx + sway), -0.01, dz - 0.01],
+                [side * (dx + sway + 0.006), 0.07 - len, dz + 0.004],
               ],
-              [0.011, 0.005],
+              [0.0095, 0.0045],
               14,
               8,
             ),
@@ -234,9 +281,9 @@ export const shivaJata: PartGenerator = (ctx) => {
     {
       joint: "head",
       object: group,
-      // The jata owns the crescent's seat: park the moon socket on the
-      // right face of the coiled bun.
-      socketRefinements: [{ id: "head.moon", position: [0.046, 0.158, 0.028] }],
+      // The jata owns the crescent's seat: tuck the moon socket beside the
+      // gather, against the coiled locks.
+      socketRefinements: [{ id: "head.moon", position: [0.034, 0.166, 0.012] }],
     },
   ];
 };
@@ -252,15 +299,15 @@ export const ornamentCrescent: AttachmentGenerator = (ctx) => {
   // rotated so its gap sits at the top; tips are capped with spheres.
   const arc = Math.PI * 1.2;
   const phi = Math.PI / 2 - arc / 2 + Math.PI;
-  const crescent = mesh(new THREE.TorusGeometry(0.032, 0.0062, 10, 30, arc), metal, {
+  const crescent = mesh(new THREE.TorusGeometry(0.017, 0.0038, 10, 30, arc), metal, {
     rotation: [0, 0, phi],
   });
   crescent.scale.z = 0.55;
   group.add(crescent);
   for (const end of [0, arc]) {
     group.add(
-      mesh(new THREE.SphereGeometry(0.0045, 10, 8), metal, {
-        position: [Math.cos(end + phi) * 0.032, Math.sin(end + phi) * 0.032, 0],
+      mesh(new THREE.SphereGeometry(0.0028, 10, 8), metal, {
+        position: [Math.cos(end + phi) * 0.017, Math.sin(end + phi) * 0.017, 0],
       }),
     );
   }
@@ -274,31 +321,44 @@ export const ornamentCrescent: AttachmentGenerator = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const ornamentThirdEye: AttachmentGenerator = (ctx) => {
+  const skin = ctx.materials.get("skin");
   const group = new THREE.Group();
-  // Vertical almond: white of the eye
+  // Embedded in the brow: the socket is refined onto the forehead surface
+  // by the head part; the eye itself is a shallow, lidded vertical almond
+  // that follows the forehead plane (total relief under 5mm), not a jewel
+  // resting on it.
+  group.rotation.x = -0.18; // match the forehead's upward-facing tilt
+
+  // Skin lids — vertical almond rims that blend into the brow
+  for (const side of [1, -1] as const) {
+    group.add(
+      mesh(new THREE.CapsuleGeometry(0.0028, 0.02, 6, 10), skin, {
+        position: [side * 0.0038, 0, 0.0012],
+        rotation: [0, 0, side * 0.16],
+        scale: [1, 1, 0.55],
+      }),
+    );
+  }
+  // Sliver of eye-white between the lids
   group.add(
-    mesh(new THREE.SphereGeometry(0.012, 18, 14), ctx.materials.fixed.eyeWhite, {
-      scale: [0.42, 1.25, 0.35],
+    mesh(new THREE.SphereGeometry(0.0085, 16, 12), ctx.materials.fixed.eyeWhite, {
+      position: [0, 0, 0.0004],
+      scale: [0.34, 1.05, 0.16],
     }),
   );
-  // Iris + pupil
+  // Iris and pupil
   group.add(
-    mesh(new THREE.SphereGeometry(0.0055, 12, 10), ctx.materials.fixed.iris, {
-      position: [0, 0, 0.0035],
+    mesh(new THREE.SphereGeometry(0.0034, 12, 10), ctx.materials.fixed.iris, {
+      position: [0, 0, 0.0022],
       scale: [0.75, 1, 0.4],
     }),
   );
   group.add(
-    mesh(new THREE.SphereGeometry(0.0028, 10, 8), ctx.materials.fixed.eyeDark, {
-      position: [0, 0, 0.0052],
+    mesh(new THREE.SphereGeometry(0.0017, 10, 8), ctx.materials.fixed.eyeDark, {
+      position: [0, 0, 0.0032],
       scale: [0.8, 1, 0.4],
     }),
   );
-  // Vermilion rim framing the almond
-  const rim = mesh(new THREE.TorusGeometry(0.0115, 0.0018, 8, 22), ctx.materials.fixed.tilak, {
-    scale: [0.48, 1.3, 0.6],
-  });
-  group.add(rim);
   return group;
 };
 
@@ -310,7 +370,9 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const bead = ctx.materials.fixed.rudraksha;
   const group = new THREE.Group();
-  const neckR = 0.077;
+  // Strand collar wraps the measured neck; the front drapes onto the chest.
+  const neckR = ctx.body.neckRadius + 0.005;
+  const collarY = ctx.body.neckBaseOffsetY;
   for (const [drop, spread, size] of [
     [0.055, 0.01, 0.008],
     [0.095, 0.02, 0.009],
@@ -319,7 +381,7 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
       const angle = (i / 26) * Math.PI * 2;
       const frontness = Math.max(0, Math.sin(angle));
       const x = Math.cos(angle) * (neckR + frontness * spread);
-      const y = 0.008 - frontness * drop;
+      const y = collarY + 0.008 - frontness * (drop + collarY);
       const zNeck = Math.sin(angle) * neckR * 0.7;
       const z =
         frontness > 0.05
@@ -352,52 +414,60 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
-  const neckR = 0.073;
-  // Coil: closed loop hugging the neck, front lifted onto the chest surface
+  // The torque's owner surface is the neck column: wrap the MEASURED neck
+  // radius with a declared clearance, whatever body wears it. The front
+  // half additionally lifts onto the chest surface where the coil dips.
+  const neckR = ctx.body.neckRadius + 0.005;
+  const collarY = ctx.body.neckBaseOffsetY;
+  // The necklace socket sits slightly forward of the neck axis; pull the
+  // coil back onto it.
+  const zBias = -0.008;
   const coil: V3[] = [];
   const samples = 30;
   for (let i = 0; i <= samples; i++) {
     const angle = (i / samples) * Math.PI * 2;
     const frontness = Math.max(0, Math.sin(angle));
-    const x = Math.cos(angle) * (neckR + frontness * 0.012);
-    const y = 0.002 - frontness * 0.03 - (i / samples) * 0.012; // gentle spiral
-    const zNeck = Math.sin(angle) * neckR * 0.68;
-    const z = frontness > 0.05 ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.006)) : zNeck;
+    const x = Math.cos(angle) * (neckR + frontness * 0.006);
+    const y = collarY + 0.006 - frontness * 0.022 - (i / samples) * 0.01; // gentle spiral
+    const zNeck = Math.sin(angle) * neckR + zBias;
+    const z =
+      frontness > 0.05 ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.005)) : zNeck;
     coil.push([x, y, z]);
   }
-  group.add(new THREE.Mesh(taperedTube(coil, [0.0085, 0.0105], 60, 12), metal));
+  group.add(new THREE.Mesh(taperedTube(coil, [0.008, 0.0095], 60, 12), metal));
   // Tail tapering down the chest from the coil's end
   const tail: V3[] = [
     coil[coil.length - 1] as V3,
-    [-0.035, -0.055, chestZAtSocket(ctx, -0.035, -0.055, 0.007)],
-    [-0.05, -0.085, chestZAtSocket(ctx, -0.05, -0.085, 0.007)],
+    [-0.03, -0.05, chestZAtSocket(ctx, -0.03, -0.05, 0.006)],
+    [-0.044, -0.078, chestZAtSocket(ctx, -0.044, -0.078, 0.006)],
   ];
-  group.add(new THREE.Mesh(taperedTube(tail, [0.0085, 0.0025], 18, 8), metal));
-  // Neck rising to the raised hood at the right shoulder
+  group.add(new THREE.Mesh(taperedTube(tail, [0.008, 0.0025], 18, 8), metal));
+  // Neck rising to the raised hood beside the head, tracking the coil
+  const hoodX = neckR + 0.032;
   const rise: V3[] = [
     coil[0] as V3,
-    [0.078, 0.045, 0.028],
-    [0.072, 0.095, 0.036],
+    [hoodX - 0.006, collarY + 0.03, zBias + 0.012],
+    [hoodX, collarY + 0.062, zBias + 0.02],
   ];
-  group.add(new THREE.Mesh(taperedTube(rise, [0.0105, 0.0075], 18, 10), metal));
-  // Hood — flattened oval behind the head
+  group.add(new THREE.Mesh(taperedTube(rise, [0.0095, 0.007], 18, 10), metal));
+  // Hood — flattened oval beside the head
   group.add(
-    mesh(new THREE.SphereGeometry(0.016, 18, 14), metal, {
-      position: [0.072, 0.104, 0.036],
+    mesh(new THREE.SphereGeometry(0.015, 18, 14), metal, {
+      position: [hoodX, collarY + 0.07, zBias + 0.02],
       scale: [1.5, 1.9, 0.5],
     }),
   );
   // Head nub + gem eyes facing forward
   group.add(
-    mesh(new THREE.SphereGeometry(0.0085, 12, 10), metal, {
-      position: [0.072, 0.108, 0.043],
+    mesh(new THREE.SphereGeometry(0.008, 12, 10), metal, {
+      position: [hoodX, collarY + 0.074, zBias + 0.027],
       scale: [1, 1.15, 0.8],
     }),
   );
   for (const side of [1, -1]) {
     group.add(
-      mesh(new THREE.SphereGeometry(0.0022, 8, 6), gem, {
-        position: [0.072 + side * 0.004, 0.112, 0.049],
+      mesh(new THREE.SphereGeometry(0.0021, 8, 6), gem, {
+        position: [hoodX + side * 0.004, collarY + 0.078, zBias + 0.032],
       }),
     );
   }

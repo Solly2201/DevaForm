@@ -36,16 +36,24 @@ export interface GeneratorContext {
  * A part that owns the geometry a socket terminates on (e.g. the trunk
  * owning trunk.tip) may refine that socket's joint-local position so
  * attachments land on the actual generated surface.
+ *
+ * A part entry may instead target a SOCKET: the object is mounted at the
+ * (possibly refined) socket, so parts like earrings originate exactly at
+ * the surface their owner part declared — ear jewellery hangs from the
+ * ear the head/ears asset actually built, on every deity. Socket-mounted
+ * entries are attached after all joint entries so owner refinements have
+ * already landed.
  */
-export type JointedPart = ReadonlyArray<{
-  joint: JointId;
-  object: THREE.Object3D;
-  socketRefinements?: ReadonlyArray<{
-    id: SocketId;
-    /** New socket position, local to the socket's parent joint. */
-    position: readonly [number, number, number];
-  }>;
-}>;
+export type JointedPart = ReadonlyArray<
+  {
+    object: THREE.Object3D;
+    socketRefinements?: ReadonlyArray<{
+      id: SocketId;
+      /** New socket position, local to the socket's parent joint. */
+      position: readonly [number, number, number];
+    }>;
+  } & ({ joint: JointId; socket?: never } | { socket: SocketId; joint?: never })
+>;
 
 export type PartGenerator = (ctx: GeneratorContext) => JointedPart;
 export type AttachmentGenerator = (ctx: GeneratorContext) => THREE.Object3D;

@@ -20,11 +20,11 @@ import {
 import { mesh, taperedTube, type V3 } from "../geometry";
 import { num, type GeneratorContext, type PartGenerator } from "./types";
 
-function jointOffset(child: JointId): V3 {
+export function jointOffset(child: JointId): V3 {
   return getJoint(child).position;
 }
 
-function limbTube(
+export function limbTube(
   material: THREE.Material,
   end: V3,
   r0: number,
@@ -169,7 +169,7 @@ export const humanoidBody: PartGenerator = (ctx) => {
   return parts;
 };
 
-function makeFoot(ctx: GeneratorContext): THREE.Group {
+export function makeFoot(ctx: GeneratorContext): THREE.Group {
   const skin = ctx.materials.get("skin");
   const g = new THREE.Group();
   // Ankle

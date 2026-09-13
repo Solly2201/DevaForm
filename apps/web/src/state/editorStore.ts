@@ -9,7 +9,9 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import {
+  armChainJoints,
   getPalette,
+  mudraArmRotations,
   type ArmSlot,
   type AttachmentConfiguration,
   type BaseConfiguration,
@@ -207,10 +209,18 @@ export const useEditorStore = create<EditorState>()(
               const grip = getAsset(a.asset.assetId)?.grip;
               return !grip || grip.mudra === mudra;
             });
+            // A gesture mudra is a whole-arm gesture: articulate this arm's
+            // chain via joint overrides (declared per-mudra in the schema,
+            // deity-agnostic). Non-gesture mudras return the arm to the
+            // pose preset. Overrides stay visible, undoable and persisted.
+            const jointOverrides = { ...config.pose.jointOverrides };
+            for (const joint of armChainJoints(slot)) delete jointOverrides[joint];
+            Object.assign(jointOverrides, mudraArmRotations(mudra, slot) ?? {});
             return {
               ...config,
               attachments,
               hands: { ...config.hands, [slot]: { mudra } },
+              pose: { ...config.pose, jointOverrides },
             };
           }),
         ),
