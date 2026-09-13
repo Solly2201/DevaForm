@@ -13,6 +13,7 @@ import * as THREE from "three";
 import {
   activeArmSlots,
   getPosePreset,
+  getSkeleton,
   isJointId,
   type CharacterConfiguration,
   type JointId,
@@ -40,7 +41,7 @@ import type { ZoneMaterials } from "./materials";
 
 export interface CharacterRig {
   root: THREE.Group;
-  /** The skeleton this rig was built from (the active deity's). */
+  /** The skeleton this rig was built from — the body's, or the deity's. */
   skeleton: SkeletonDefinition;
   joints: ReadonlyMap<JointId, THREE.Object3D>;
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
@@ -213,7 +214,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // skeleton. Pure data lookup — the engine never branches on WHICH deity.
   const deity = getAvailableDeity(config.deity);
   if (!deity) throw new Error(`No available deity definition for "${config.deity}"`);
-  const skeleton = deity.skeleton;
+
+  // The body IS the anatomy. A mesh body's bones sit where its own joints
+  // are, so it names the skeleton it was built for and the rig follows it;
+  // a procedural body is generated to whatever skeleton the deity brings.
+  // Pure data either way — the engine never asks which deity or which mesh.
+  const bodyAsset = resolveAssetRef(config.parts.body);
+  const bodySkeleton = bodyAsset?.skeleton ? getSkeleton(bodyAsset.skeleton) : undefined;
+  const skeleton = bodySkeleton ?? deity.skeleton;
 
   const warnings: string[] = [];
   const uprightAttachments: THREE.Object3D[] = [];
@@ -227,7 +235,6 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // asset-id conditionals). A mesh body ships measurements of itself and
   // those are used directly; a procedural body's are derived from its
   // params; a body declaring neither falls back to the classic ones.
-  const bodyAsset = resolveAssetRef(config.parts.body);
   const bodyParams =
     bodyAsset?.source.kind === "procedural" ? (bodyAsset.source.params ?? {}) : {};
   const bodyProfile = deriveBodyProfile(

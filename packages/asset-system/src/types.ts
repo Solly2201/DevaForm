@@ -127,6 +127,8 @@ export interface MeasuredBodySurfaces {
   neckRadius: number;
   neckBaseOffsetY: number;
   pelvisHalfWidth: number;
+  /** Pelvis-joint-local height of the natural waist — where a wrap ties. */
+  waistSeatY: number;
   dhotiRadius: number;
   bellyCenterY: number;
   bellyCenterZ: number;
@@ -138,6 +140,20 @@ export interface MeasuredBodySurfaces {
   chestRadiusX: number;
   chestRadiusY: number;
   chestRadiusZ: number;
+  /**
+   * Where a band ornament seats on each limb and how wide the limb is
+   * there: armlet on the upper arm, bangle above the wrist, anklet above
+   * the foot. Offsets are measured down from the owning joint.
+   */
+  armBandOffsetY: number;
+  armBandRadius: number;
+  wristBandOffsetY: number;
+  wristBandRadius: number;
+  ankleBandOffsetY: number;
+  ankleBandRadius: number;
+  /** Cranium the hair and crown must fit, head-joint-local. */
+  headCenterY: number;
+  headRadius: number;
 }
 
 /** A body asset's measured surfaces, plus how each morph target moves them. */
@@ -198,6 +214,14 @@ export interface AssetDefinition {
    * conventions (see docs/asset-specification.md).
    */
   materialZones: readonly MaterialZone[];
+  /**
+   * Body-slot assets only: the skeleton this body's geometry was built
+   * for, by id. A mesh body IS the anatomy — its bones sit where its
+   * joints actually are — so the rig follows the body rather than the
+   * deity's default. Omit for procedural bodies, which are generated to
+   * whatever skeleton the deity brings.
+   */
+  skeleton?: string;
   /** Morph target names this asset's meshes expose (empty for rigid parts). */
   morphTargets?: readonly string[];
   /**

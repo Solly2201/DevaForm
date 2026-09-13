@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { lathe, loft, mesh, taperedTube, type V3 } from "../geometry";
 import { num, type AttachmentGenerator, type PartGenerator } from "./types";
 import { chestZAtSocket } from "./ornaments";
+import { REFERENCE_SKULL, headFit } from "./bodyProfile";
 
 // ---------------------------------------------------------------------------
 // HEAD — serene divine face with human ears
@@ -167,9 +168,15 @@ export const shivaHead: PartGenerator = (ctx) => {
 export const shivaJata: PartGenerator = (ctx) => {
   const hair = ctx.materials.get("hair");
   const flowing = num(ctx, "flowing", 0);
+  // The locks are drawn against a reference cranium; this body's own
+  // skull says how much bigger or smaller it actually is, so the same
+  // jata sits on a stylised head and on a measured human one.
+  const fit = headFit(ctx.body);
+  const seat = new THREE.Group();
+  seat.position.y = ctx.body.headCenterY - REFERENCE_SKULL.centerY * fit;
+  seat.scale.setScalar(fit);
   const group = new THREE.Group();
-  // Same seat as shivaHead so the hair hugs the generated skull.
-  group.position.y = 0.008;
+  seat.add(group);
 
   // Scalp cap following the cranium
   group.add(
@@ -280,10 +287,16 @@ export const shivaJata: PartGenerator = (ctx) => {
   return [
     {
       joint: "head",
-      object: group,
+      object: seat,
       // The jata owns the crescent's seat: tuck the moon socket beside the
       // gather, against the coiled locks.
-      socketRefinements: [{ id: "head.moon", position: [0.034, 0.166, 0.012] }],
+      // In the jata's own frame, scaled onto whatever skull it landed on.
+      socketRefinements: [
+        {
+          id: "head.moon",
+          position: [0.034 * fit, seat.position.y + 0.166 * fit, 0.012 * fit],
+        },
+      ],
     },
   ];
 };
@@ -293,6 +306,8 @@ export const shivaJata: PartGenerator = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const ornamentCrescent: AttachmentGenerator = (ctx) => {
+  // Drawn against the reference skull, worn on this one.
+  const fit = headFit(ctx.body);
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
   // Crescent arc with horns pointing upward, facing forward. The arc is
@@ -313,6 +328,7 @@ export const ornamentCrescent: AttachmentGenerator = (ctx) => {
   }
   // Angle the moon outward from the jata it seats on
   group.rotation.y = 0.25;
+  group.scale.setScalar(fit);
   return group;
 };
 
@@ -377,16 +393,28 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
     [0.055, 0.01, 0.008],
     [0.095, 0.02, 0.009],
   ] as const) {
-    for (let i = 0; i < 26; i++) {
-      const angle = (i / 26) * Math.PI * 2;
+    // A bead is a real seed of a real size, so the strand carries as many
+    // as its own length holds — measured along the path it actually
+    // follows, which on a slim neck is mostly the drop, not the circle.
+    const at = (angle: number): [number, number, number] => {
       const frontness = Math.max(0, Math.sin(angle));
       const x = Math.cos(angle) * (neckR + frontness * spread);
       const y = collarY + 0.008 - frontness * (drop + collarY);
       const zNeck = Math.sin(angle) * neckR * 0.7;
-      const z =
-        frontness > 0.05
-          ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.007))
-          : zNeck;
+      const z = frontness > 0.05 ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.007)) : zNeck;
+      return [x, y, z];
+    };
+    let strand = 0;
+    let previous = at(0);
+    for (let step = 1; step <= 180; step += 1) {
+      const point = at((step / 180) * Math.PI * 2);
+      strand += Math.hypot(point[0] - previous[0], point[1] - previous[1], point[2] - previous[2]);
+      previous = point;
+    }
+    const count = Math.min(64, Math.max(16, Math.round(strand / (size * 1.9))));
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const [x, y, z] = at(angle);
       // Rudraksha seeds with occasional gold spacers
       group.add(
         mesh(new THREE.SphereGeometry(size, 10, 8), i % 9 === 0 ? metal : bead, {

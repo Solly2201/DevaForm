@@ -718,6 +718,34 @@ const REGIONS = {
   ]),
 };
 
+/**
+ * The girth of one limb where a band ornament sits, measured as the mean
+ * distance from the limb's axis. The axis is the segment between its two
+ * joints, so this works whatever direction the limb hangs in.
+ */
+function limbBand(positions, group, fromJoint, toJoint, along) {
+  const from = restFinal.get(fromJoint);
+  const to = restFinal.get(toJoint);
+  const axis = to.clone().sub(from);
+  const length = axis.length();
+  axis.normalize();
+  const centre = from.clone().addScaledVector(axis, length * along);
+  const band = length * 0.06;
+  const point = new THREE.Vector3();
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i < vertexCount; i += 1) {
+    if (dominantGroup[i] !== group) continue;
+    point.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]).sub(centre);
+    const alongAxis = point.dot(axis);
+    if (Math.abs(alongAxis) > band) continue;
+    total += point.addScaledVector(axis, -alongAxis).length();
+    count += 1;
+  }
+  if (!count) throw new Error(`no vertices for the ${group} band`);
+  return { offsetY: centre.y - from.y, radius: total / count };
+}
+
 /** Vertices of one body region whose y falls in [lo, hi]. */
 function slice(positions, lo, hi, region = "torso") {
   const allowed = REGIONS[region];
@@ -798,11 +826,15 @@ function measure(positions) {
   const chestX = extent(chestBand, 0);
   const chestZ = extent(chestBand, 2);
   let hips = { half: 0 };
+  let hipY = pelvisY;
   for (let y = pelvisY - 0.06; y < pelvisY + 0.06; y += 0.005) {
     const band = slice(positions, y - 0.005, y + 0.005);
     if (band.length < 20) continue;
     const x = extent(band, 0);
-    if (x.half > hips.half) hips = x;
+    if (x.half > hips.half) {
+      hips = x;
+      hipY = y;
+    }
   }
   // Skirt clearance: widest point from hips down to the knees.
   let legClearance = 0;
@@ -811,6 +843,22 @@ function measure(positions) {
     if (!band.length) continue;
     legClearance = Math.max(legClearance, extent(band, 0).hi, -extent(band, 0).lo);
   }
+
+  // Band seats: armlet high on the upper arm, bangle just above the
+  // wrist, anklet just above the foot.
+  // Cranium: the dome above the brow, which is what a hairpiece sits on.
+  const craniumPoints = slice(positions, headY + 0.06, headY + 0.2, "head");
+  const craniumX = extent(craniumPoints, 0);
+  const craniumY = extent(craniumPoints, 1);
+  const craniumZ = extent(craniumPoints, 2);
+  const cranium = {
+    centerY: (craniumY.lo + craniumY.hi) / 2 - headY,
+    radius: (craniumX.half + craniumZ.half) / 2,
+  };
+
+  const armBand = limbBand(positions, "arm.frontLeft.upper", "arm.frontLeft.upper", "arm.frontLeft.forearm", 0.34);
+  const wristBand = limbBand(positions, "arm.frontLeft.forearm", "arm.frontLeft.forearm", "arm.frontLeft.hand", 0.86);
+  const ankleBand = limbBand(positions, "leg.left.shin", "leg.left.shin", "leg.left.foot", 0.92);
 
   const torsoTop = chestY + 0.03;
   const torsoBottom = pelvisY - 0.02;
@@ -823,6 +871,10 @@ function measure(positions) {
   return {
     lowerTorso,
     upperTorso,
+    armBand,
+    wristBand,
+    ankleBand,
+    cranium,
     neckRadius,
     neckCentreZ: neckZ.mid,
     neckBaseY: neckY,
@@ -837,6 +889,7 @@ function measure(positions) {
     spineY,
     pelvisY,
     hipHalfWidth: hips.half,
+    hipY,
     legClearance,
     torsoTop,
     torsoBottom,
@@ -860,12 +913,22 @@ function socketPositions(positions, m) {
   const earX = extent(earBand, 0);
   const earZ = extent(earBand, 2);
   const earY = m.headY + 0.022;
-  // Forehead: front surface above the brow.
-  const browBand = slice(positions, m.headY + 0.075, m.headY + 0.095, "head");
-  const browZ = extent(browBand, 2);
+  // Forehead: found from the eyes rather than from an offset off the head
+  // joint. The joint sits at the base of the skull, so any fixed offset
+  // lands wherever this particular head happens to be tall — the third eye
+  // belongs above the eyes, which is a landmark, not a guess.
+  let eyeY = 0;
+  for (let i = 1; i < finalEyes.neutral.length; i += 3) eyeY += finalEyes.neutral[i];
+  eyeY /= finalEyes.neutral.length / 3;
+  const browY = eyeY + (headTop - eyeY) * 0.3;
+  const browBand = slice(positions, browY - 0.006, browY + 0.006, "head");
+  const browZ = extent(
+    browBand.filter((point) => Math.abs(point[0]) < 0.025),
+    2,
+  );
   return {
     "head.crown": localTo("head", new THREE.Vector3(0, headTop - 0.012, m.neckCentreZ)),
-    "head.forehead": localTo("head", new THREE.Vector3(0, m.headY + 0.085, browZ.hi - 0.004)),
+    "head.forehead": localTo("head", new THREE.Vector3(0, browY, browZ.hi - 0.004)),
     "head.leftEar": localTo("head", new THREE.Vector3(earX.hi - 0.006, earY, earZ.mid - 0.004)),
     "head.rightEar": localTo("head", new THREE.Vector3(earX.lo + 0.006, earY, earZ.mid - 0.004)),
     "head.moon": localTo("head", new THREE.Vector3(0.04, headTop - 0.03, 0.01)),
@@ -896,6 +959,9 @@ function profileBlock(m) {
     neckRadius: m.neckRadius,
     neckBaseOffsetY: m.neckBaseY - necklaceY,
     pelvisHalfWidth: m.hipHalfWidth,
+    // Where a dhoti ties: on the hips, below the natural waist, which is
+    // where a wrapped garment can actually hold itself up.
+    waistSeatY: m.hipY + (m.waistY - m.hipY) * 0.45 - restFinal.get("pelvis").y,
     // Skirts clear the widest standing leg, plus a little cloth thickness.
     dhotiRadius: m.legClearance + 0.012,
     // Lower torso, spine-local; upper torso, chest-local.
@@ -909,6 +975,17 @@ function profileBlock(m) {
     chestRadiusX: m.upperTorso.radiusX,
     chestRadiusY: m.upperTorso.radiusY,
     chestRadiusZ: m.upperTorso.radiusZ,
+    // Band ornaments, relative to the joint each one hangs from. The
+    // anklet's is measured on the shin but worn on the foot joint.
+    armBandOffsetY: m.armBand.offsetY,
+    armBandRadius: m.armBand.radius,
+    wristBandOffsetY: m.wristBand.offsetY,
+    wristBandRadius: m.wristBand.radius,
+    ankleBandOffsetY:
+      m.ankleBand.offsetY + (restFinal.get("leg.left.shin").y - restFinal.get("leg.left.foot").y),
+    ankleBandRadius: m.ankleBand.radius,
+    headCenterY: m.cranium.centerY,
+    headRadius: m.cranium.radius,
   };
 }
 
