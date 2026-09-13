@@ -165,6 +165,39 @@ describe("measured body profile", () => {
     expect(half.neckRadius).toBeCloseTo((neutral.neckRadius + powerful.neckRadius) / 2, 9);
   });
 
+  it("separates build from morphology", () => {
+    const at = (morphs: Record<string, number>) =>
+      deriveBodyProfile({}, NEUTRAL_PROPORTIONS, { profile, morphs });
+    const neutral = at({});
+    const taper = (p: { chestRadiusX: number; pelvisHalfWidth: number }) =>
+      p.chestRadiusX / p.pelvisHalfWidth;
+
+    // Heroic is a silhouette, not bulk: the shoulders take width and the
+    // hips give it back, so the V-taper rises.
+    const heroic = at({ bodyHeroic: 1 });
+    expect(heroic.chestRadiusX).toBeGreaterThan(neutral.chestRadiusX);
+    expect(heroic.pelvisHalfWidth).toBeLessThan(neutral.pelvisHalfWidth);
+    expect(taper(heroic)).toBeGreaterThan(taper(neutral));
+
+    // Powerful is bulk, not silhouette: everything grows, so the taper
+    // does not improve the way the heroic target's does.
+    const powerful = at({ bodyPowerful: 1 });
+    expect(powerful.pelvisHalfWidth).toBeGreaterThan(neutral.pelvisHalfWidth);
+    expect(taper(powerful)).toBeLessThan(taper(heroic));
+
+    // The ascetic loses depth and volume without losing the frame.
+    const ascetic = at({ bodyAscetic: 1 });
+    expect(ascetic.chestRadiusZ).toBeLessThan(neutral.chestRadiusZ);
+    expect(ascetic.dhotiRadius).toBeLessThan(neutral.dhotiRadius);
+
+    // They compose rather than cancel: a heroic ascetic keeps the frame
+    // and the taper, but carries less depth than the heroic build alone.
+    const both = at({ bodyHeroic: 1, bodyAscetic: 1 });
+    expect(taper(both)).toBeGreaterThan(taper(neutral));
+    expect(both.chestRadiusZ).toBeLessThan(heroic.chestRadiusZ);
+    expect(both.dhotiRadius).toBeLessThan(heroic.dhotiRadius);
+  });
+
   it("ignores bulk, which cannot deform a mesh body", () => {
     const slim = deriveBodyProfile({}, { height: 1, bulk: 0.8 }, { profile, morphs: {} });
     const wide = deriveBodyProfile({}, { height: 1, bulk: 1.3 }, { profile, morphs: {} });

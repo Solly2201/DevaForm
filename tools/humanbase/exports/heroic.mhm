@@ -1,0 +1,34 @@
+# Written by MakeHuman 1.2.0 final
+version v1.2.0
+name devaform-human-heroic
+camera 0.0 0.0 0.0 0.0 0.0 1.0
+modifier neck/neck-scale-horiz-decr|incr 0.350000
+modifier torso/torso-scale-horiz-decr|incr 0.300000
+modifier torso/torso-vshape-decr|incr 0.750000
+modifier torso/torso-muscle-dorsi-decr|incr 0.650000
+modifier torso/torso-muscle-pectoral-decr|incr 0.550000
+modifier hip/hip-scale-horiz-decr|incr -0.250000
+modifier stomach/stomach-tone-decr|incr 0.600000
+modifier buttocks/buttocks-volume-decr|incr 0.200000
+modifier armslegs/r-lowerarm-muscle-decr|incr 0.450000
+modifier armslegs/r-upperarm-shoulder-muscle-decr|incr 0.700000
+modifier armslegs/r-upperarm-muscle-decr|incr 0.550000
+modifier armslegs/l-lowerarm-muscle-decr|incr 0.450000
+modifier armslegs/l-upperarm-shoulder-muscle-decr|incr 0.700000
+modifier armslegs/l-upperarm-muscle-decr|incr 0.550000
+modifier armslegs/r-lowerleg-muscle-decr|incr 0.450000
+modifier armslegs/r-upperleg-muscle-decr|incr 0.500000
+modifier armslegs/l-lowerleg-muscle-decr|incr 0.450000
+modifier armslegs/l-upperleg-muscle-decr|incr 0.500000
+modifier breast/BreastSize 0.000000
+modifier breast/BreastFirmness 0.500000
+modifier macrodetails/Gender 1.000000
+modifier macrodetails/Age 0.550000
+modifier macrodetails/African 0.000000
+modifier macrodetails/Asian 0.350000
+modifier macrodetails/Caucasian 0.650000
+modifier macrodetails-universal/Muscle 0.620000
+modifier macrodetails-universal/Weight 0.480000
+modifier macrodetails-height/Height 0.680000
+modifier macrodetails-proportions/BodyProportions 0.620000
+subdivide False

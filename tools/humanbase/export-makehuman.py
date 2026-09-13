@@ -108,9 +108,13 @@ BASE = {
     "breast/BreastFirmness": 0.5,
 }
 
-# Morph sources vary GIRTH ONLY. Height and body proportions stay fixed so
-# every variant shares one skeleton: a morph that lengthened bones would
-# slide the skin off the joints it is bound to.
+# Morph sources vary GIRTH AND SURFACE SHAPE ONLY. Height, limb lengths and
+# body proportions stay fixed so every variant shares one skeleton: a morph
+# that lengthened bones would slide the skin off the joints it is bound to.
+#
+# Build (macro muscle/weight) and morphology (where that mass sits) are
+# deliberately separate targets, so a deity can ask for a heroic taper
+# without also asking for bulk.
 VARIANTS = {
     # The canonical rest shape every morph target is measured against.
     "neutral": {},
@@ -125,6 +129,46 @@ VARIANTS = {
     "powerful": {
         "macrodetails-universal/Muscle": 0.96,
         "macrodetails-universal/Weight": 0.66,
+    },
+    # Heroic: the classical divine male silhouette — shoulders and back
+    # carrying the width, waist taken in, chest and limbs developed.
+    "heroic": {
+        "torso/torso-vshape-decr|incr": 0.75,
+        "torso/torso-scale-horiz-decr|incr": 0.30,
+        "torso/torso-muscle-dorsi-decr|incr": 0.65,
+        "torso/torso-muscle-pectoral-decr|incr": 0.55,
+        "hip/hip-scale-horiz-decr|incr": -0.25,
+        "stomach/stomach-tone-decr|incr": 0.60,
+        "neck/neck-scale-horiz-decr|incr": 0.35,
+        "buttocks/buttocks-volume-decr|incr": 0.20,
+        "armslegs/l-upperarm-shoulder-muscle-decr|incr": 0.70,
+        "armslegs/r-upperarm-shoulder-muscle-decr|incr": 0.70,
+        "armslegs/l-upperarm-muscle-decr|incr": 0.55,
+        "armslegs/r-upperarm-muscle-decr|incr": 0.55,
+        "armslegs/l-lowerarm-muscle-decr|incr": 0.45,
+        "armslegs/r-lowerarm-muscle-decr|incr": 0.45,
+        "armslegs/l-upperleg-muscle-decr|incr": 0.50,
+        "armslegs/r-upperleg-muscle-decr|incr": 0.50,
+        "armslegs/l-lowerleg-muscle-decr|incr": 0.45,
+        "armslegs/r-lowerleg-muscle-decr|incr": 0.45,
+    },
+    # Ascetic: the tapasvin — spare, sinewy, no softness, the definition
+    # coming from the absence of fat rather than from bulk.
+    "ascetic": {
+        "macrodetails-universal/Muscle": 0.58,
+        "macrodetails-universal/Weight": 0.30,
+        "stomach/stomach-tone-decr|incr": 0.85,
+        "torso/torso-scale-depth-decr|incr": -0.25,
+        "torso/torso-muscle-pectoral-decr|incr": -0.30,
+        "torso/torso-muscle-dorsi-decr|incr": -0.20,
+        "armslegs/l-upperarm-fat-decr|incr": -0.60,
+        "armslegs/r-upperarm-fat-decr|incr": -0.60,
+        "armslegs/l-lowerarm-fat-decr|incr": -0.60,
+        "armslegs/r-lowerarm-fat-decr|incr": -0.60,
+        "armslegs/l-upperleg-fat-decr|incr": -0.50,
+        "armslegs/r-upperleg-fat-decr|incr": -0.50,
+        "armslegs/l-lowerleg-fat-decr|incr": -0.50,
+        "armslegs/r-lowerleg-fat-decr|incr": -0.50,
     },
 }
 
@@ -150,8 +194,16 @@ report = {
     "variants": {},
 }
 
+# Detail modifiers default to 0 and are NOT part of BASE, so each variant
+# must clear the previous one's — otherwise the shapes accumulate down the
+# list and every target after the first is measured against the wrong body.
+DETAIL_KEYS = sorted(
+    {key for overrides in VARIANTS.values() for key in overrides} - set(BASE)
+)
+
 for name, overrides in VARIANTS.items():
-    settings = dict(BASE)
+    settings = dict.fromkeys(DETAIL_KEYS, 0.0)
+    settings.update(BASE)
     settings.update(overrides)
     for modifier, value in settings.items():
         human.getModifier(modifier).setValue(value)
