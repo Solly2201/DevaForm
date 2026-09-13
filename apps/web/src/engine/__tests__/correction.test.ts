@@ -87,18 +87,18 @@ describe("gesture mudra arm semantics", () => {
     const hand = rig.joints.get("arm.frontRight.hand")!;
     const elbow = rig.joints.get("arm.frontRight.forearm")!;
     const shoulder = rig.joints.get("arm.frontRight.upper")!;
+    const pelvis = rig.joints.get("pelvis")!;
     const quaternion = hand.getWorldQuaternion(new THREE.Quaternion());
     return {
       applied,
       position: hand.getWorldPosition(new THREE.Vector3()),
       elbow: elbow.getWorldPosition(new THREE.Vector3()),
       shoulder: shoulder.getWorldPosition(new THREE.Vector3()),
+      pelvis: pelvis.getWorldPosition(new THREE.Vector3()),
       fingers: new THREE.Vector3(...HAND_FINGER_AXIS).applyQuaternion(quaternion),
       palm: new THREE.Vector3(...HAND_PALM_AXIS).applyQuaternion(quaternion),
     };
   };
-
-  const handHeight = (mudra: MudraId): number => gesture(mudra).position.y;
 
   it("abhaya shows the palm to the devotee with fingers up", () => {
     const a = gesture("abhaya");
@@ -119,12 +119,35 @@ describe("gesture mudra arm semantics", () => {
     expect(Math.abs(a.position.x)).toBeGreaterThan(0.24);
   });
 
-  it("varada shows the palm low, fingers down", () => {
+  it("varada offers the palm low, fingers down — not dangling at the hip", () => {
     const v = gesture("varada");
     expect(v.applied).toContain("arm.frontRight.hand");
     expect(v.palm.z).toBeGreaterThan(0.9);
     expect(v.fingers.y).toBeLessThan(-0.85);
-    expect(v.position.y).toBeLessThan(v.shoulder.y);
+    // Rig-relative so future proportions stay legal: the hand sits below
+    // the shoulder but well above the hip, held forward and clear of the
+    // torso, with the elbow bent rather than straight.
+    const pelvis = v.pelvis.y;
+    const shoulder = v.shoulder.y;
+    expect(v.position.y).toBeLessThan(shoulder);
+    expect(v.position.y).toBeGreaterThan(pelvis + (shoulder - pelvis) * 0.5);
+    expect(v.position.z).toBeGreaterThan(0.15);
+    expect(Math.abs(v.position.x)).toBeGreaterThan(0.24);
+    const upperArm = v.elbow.clone().sub(v.shoulder).normalize();
+    const forearm = v.position.clone().sub(v.elbow).normalize();
+    const elbowAngle = (Math.acos(upperArm.dot(forearm)) * 180) / Math.PI;
+    expect(elbowAngle).toBeGreaterThan(25);
+  });
+
+  it("keeps abhaya and varada clearly apart without exaggerating the gap", () => {
+    const a = gesture("abhaya");
+    const v = gesture("varada");
+    const gap = a.position.y - v.position.y;
+    const torso = a.shoulder.y - a.pelvis.y;
+    // Unmistakably different heights, but varada stays a raised gesture:
+    // between a fifth and two thirds of the shoulder-to-hip span.
+    expect(gap).toBeGreaterThan(torso * 0.2);
+    expect(gap).toBeLessThan(torso * 0.67);
   });
 
   it("selecting a gesture raises the arm even from a dancing pose", () => {
@@ -176,13 +199,13 @@ describe("gesture mudra arm semantics", () => {
   });
 
   it("abhaya raises the hand clearly above varada (Ganesha, standing)", () => {
-    const abhayaY = handHeight("abhaya");
-    const varadaY = handHeight("varada");
-    expect(abhayaY).toBeGreaterThan(varadaY + 0.12);
-    // Abhaya reaches shoulder/chest height (shoulder line ≈ 0.9 world).
-    expect(abhayaY).toBeGreaterThan(0.75);
-    // Varada stays low — a giving hand near hip/thigh height.
-    expect(varadaY).toBeLessThan(0.72);
+    const abhaya = gesture("abhaya");
+    const varada = gesture("varada");
+    // Landmark-relative, so a deity with different proportions still
+    // satisfies it: abhaya rises above the shoulder, varada stays below.
+    expect(abhaya.position.y).toBeGreaterThan(abhaya.shoulder.y);
+    expect(varada.position.y).toBeLessThan(varada.shoulder.y);
+    expect(abhaya.position.y).toBeGreaterThan(varada.position.y + 0.12);
   });
 
   it("the same semantics articulate Shiva's arms", () => {
