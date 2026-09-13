@@ -69,6 +69,9 @@ class _App:
     def addLogMessage(self, *args, **kwargs):
         pass
 
+    def addObject(self, *args, **kwargs):
+        pass
+
     def status(self, *args, **kwargs):
         pass
 
@@ -76,6 +79,7 @@ class _App:
 G.app = _App()
 
 import files3d  # noqa: E402
+import proxy  # noqa: E402
 import getpath  # noqa: E402
 import humanmodifier  # noqa: E402
 from human import Human  # noqa: E402
@@ -97,9 +101,13 @@ ObjConfig = _plugin.ObjConfig
 BASE = {
     "macrodetails/Gender": 1.0,
     "macrodetails/Age": 0.55,          # mature adult
-    "macrodetails/African": 0.0,
-    "macrodetails/Asian": 0.35,
-    "macrodetails/Caucasian": 0.65,
+    # South-Asian-leaning mix. MakeHuman offers only these three axes, and
+    # this blend is the usual approximation. It belongs in the base rather
+    # than in a deity's morph: every deity DevaForm makes is Indian, so a
+    # generically European base would be the wrong foundation to build on.
+    "macrodetails/African": 0.12,
+    "macrodetails/Asian": 0.30,
+    "macrodetails/Caucasian": 0.58,
     "macrodetails-height/Height": 0.68,
     "macrodetails-proportions/BodyProportions": 0.62,
     "macrodetails-universal/Muscle": 0.62,
@@ -152,6 +160,40 @@ VARIANTS = {
         "armslegs/l-lowerleg-muscle-decr|incr": 0.45,
         "armslegs/r-lowerleg-muscle-decr|incr": 0.45,
     },
+    # Divine face: the serene countenance of the icon — broad brow, long
+    # calm almond eyes, straight nose, composed full mouth, defined cheek
+    # and jaw, and the elongated lobes that iconography gives to gods and
+    # ascetics. Face only; the body is untouched.
+    "divine": {
+        # Kept small on purpose: a taller brow grows the skull, and every
+        # morph has to leave the statue exactly one canonical metre tall.
+        "forehead/forehead-scale-vert-decr|incr": 0.22,
+        "forehead/forehead-temple-decr|incr": 0.30,
+        "forehead/forehead-trans-backward|forward": 0.15,
+        "eyebrows/eyebrows-angle-down|up": 0.25,
+        "eyes/l-eye-scale-decr|incr": 0.30,
+        "eyes/r-eye-scale-decr|incr": 0.30,
+        "eyes/l-eye-height2-decr|incr": -0.35,
+        "eyes/r-eye-height2-decr|incr": -0.35,
+        "eyes/l-eye-corner2-down|up": 0.35,
+        "eyes/r-eye-corner2-down|up": 0.35,
+        "eyes/l-eye-eyefold-angle-down|up": 0.20,
+        "eyes/r-eye-eyefold-angle-down|up": 0.20,
+        "nose/nose-greek-decr|incr": 0.40,
+        "nose/nose-hump-decr|incr": -0.20,
+        "nose/nose-nostrils-width-decr|incr": -0.15,
+        "mouth/mouth-upperlip-volume-decr|incr": 0.35,
+        "mouth/mouth-lowerlip-volume-decr|incr": 0.35,
+        "mouth/mouth-angles-down|up": 0.30,
+        "mouth/mouth-cupidsbow-decr|incr": 0.30,
+        "mouth/mouth-scale-horiz-decr|incr": -0.10,
+        "chin/chin-bones-decr|incr": 0.30,
+        "chin/chin-prominent-decr|incr": 0.15,
+        "cheek/l-cheek-bones-decr|incr": 0.35,
+        "cheek/r-cheek-bones-decr|incr": 0.35,
+        "ears/l-ear-lobe-decr|incr": 0.60,
+        "ears/r-ear-lobe-decr|incr": 0.60,
+    },
     # Ascetic: the tapasvin — spare, sinewy, no softness, the definition
     # coming from the absence of fat rather than from bulk.
     "ascetic": {
@@ -184,6 +226,14 @@ modifiers = humanmodifier.loadModifiers(
 )
 print("modifiers available:", len(modifiers))
 
+# Eyes. The base mesh has eye sockets but no eyeballs — those are a proxy,
+# fitted to the face, so they follow every morph. Attaching it adds a second
+# object to the export and leaves the body's own geometry untouched.
+eyes_proxy = proxy.loadProxy(human, getpath.getSysDataPath("eyes/high-poly/high-poly.mhpxy"), type="Eyes")
+eyes_mesh, eyes_object = eyes_proxy.loadMeshAndObject(human)
+human.setEyesProxy(eyes_proxy)
+EYES_GROUP = eyes_mesh.name
+
 JOINT_NAMES = [name[len("joint-"):] for name in human.getJoints()]
 
 report = {
@@ -208,6 +258,10 @@ for name, overrides in VARIANTS.items():
     for modifier, value in settings.items():
         human.getModifier(modifier).setValue(value)
     human.applyAllTargets()
+    # Refit the eyes to the morphed face, exactly as the GUI's proxy
+    # chooser does after a change.
+    eyes_proxy.update(eyes_object.getSeedMesh(), False)
+    eyes_object.getSeedMesh().update()
 
     mhm_path = os.path.join(OUT_DIR, name + ".mhm")
     human.setName("devaform-human-" + name)
@@ -245,6 +299,43 @@ for name, overrides in VARIANTS.items():
         "faces": int(human.meshData.getFaceCount()),
     }
     print("exported %-9s verts=%d faces=%d" % (name, human.meshData.getVertexCount(), human.meshData.getFaceCount()))
+
+# The eye proxy is painted, not modelled: sclera, iris and pupil are one
+# surface distinguished only by its texture. DevaForm has no textures, so
+# record what colour the artist put on each face and let the builder turn
+# that into material zones — the mapping stays the artist's, not a guess.
+def eye_face_colours(mesh):
+    import image as mhimage  # MakeHuman's own image loader
+
+    texture = str(mesh.material.diffuseTexture)
+    pixels = mhimage.Image(texture)
+    width, height = pixels.width, pixels.height
+    data = pixels.data
+    colours = []
+    for face in range(len(mesh.fvert)):
+        total = [0.0, 0.0, 0.0]
+        corners = mesh.fuvs[face]
+        for corner in corners:
+            u, v = mesh.texco[corner]
+            x = min(width - 1, max(0, int(u * width)))
+            y = min(height - 1, max(0, int((1.0 - v) * height)))
+            pixel = data[y, x]
+            for channel in range(3):
+                total[channel] += float(pixel[channel])
+        colours.append([int(round(c / len(corners))) for c in total])
+    return os.path.basename(texture), colours
+
+
+eyes_seed = eyes_object.getSeedMesh()
+texture_name, face_colours = eye_face_colours(eyes_seed)
+report["eyes"] = {
+    "group": EYES_GROUP,
+    "proxy": "data/eyes/high-poly (MakeHuman system asset, CC0)",
+    "texture": texture_name,
+    "faces": len(face_colours),
+    "faceColours": face_colours,
+}
+print("eyes: %d faces sampled from %s" % (len(face_colours), texture_name))
 
 with open(os.path.join(OUT_DIR, "joints.json"), "w", encoding="utf8") as handle:
     json.dump(report, handle, indent=1)

@@ -6,9 +6,9 @@ modifier breast/BreastSize 0.000000
 modifier breast/BreastFirmness 0.500000
 modifier macrodetails/Gender 1.000000
 modifier macrodetails/Age 0.550000
-modifier macrodetails/African 0.000000
-modifier macrodetails/Asian 0.350000
-modifier macrodetails/Caucasian 0.650000
+modifier macrodetails/African 0.119989
+modifier macrodetails/Asian 0.300011
+modifier macrodetails/Caucasian 0.580000
 modifier macrodetails-universal/Muscle 0.960000
 modifier macrodetails-universal/Weight 0.660000
 modifier macrodetails-height/Height 0.680000

@@ -40,15 +40,27 @@ const NEUTRAL_PROPORTIONS = { height: 1, bulk: 1 };
 
 const asset = getAsset(ASSET_ID);
 
-/** Minimal GLB reader: the JSON chunk of a binary glTF. */
-function readGlbJson(path: string): {
-  nodes?: Array<{ name?: string; children?: number[] }>;
+interface GlbJson {
+  nodes?: Array<{ name?: string; children?: number[]; mesh?: number; skin?: number }>;
   skins?: Array<{ joints: number[] }>;
+  materials?: Array<{ name?: string }>;
+  accessors?: Array<{ min?: number[]; max?: number[] }>;
   meshes?: Array<{
-    primitives: Array<{ targets?: unknown[]; attributes: Record<string, number> }>;
+    primitives: Array<{
+      targets?: Array<Record<string, number>>;
+      attributes: Record<string, number>;
+      material?: number;
+    }>;
     extras?: { targetNames?: string[] };
   }>;
-} {
+}
+
+const isEyeMaterial = (gltf: GlbJson, material: number): boolean =>
+  (gltf.materials?.[material]?.name ?? "").startsWith("fixed:eye") ||
+  gltf.materials?.[material]?.name === "fixed:iris";
+
+/** Minimal GLB reader: the JSON chunk of a binary glTF. */
+function readGlbJson(path: string): GlbJson {
   const buffer = readFileSync(path);
   expect(buffer.toString("utf8", 0, 4)).toBe("glTF");
   const jsonLength = buffer.readUInt32LE(12);
@@ -98,12 +110,59 @@ describe("human base asset", () => {
       expect(socketIds.has(id!)).toBe(true);
     }
 
-    // One skinned mesh, one topology, the declared morph targets on it.
-    expect(gltf.skins?.length).toBe(1);
-    expect(gltf.skins![0]!.joints.length).toBe(expectedBones.length);
+    // Every skin in the file binds the same canonical joints — the
+    // exporter emits one per skinned mesh, but they are the same rig.
+    expect(gltf.skins?.length).toBeGreaterThan(0);
+    for (const skin of gltf.skins!) expect(skin.joints.length).toBe(expectedBones.length);
     const primitive = gltf.meshes![0]!.primitives[0]!;
     expect(primitive.targets?.length).toBe(asset!.morphTargets!.length);
     expect(gltf.meshes![0]!.extras?.targetNames).toEqual([...asset!.morphTargets!]);
+  });
+
+  it("ships eyes on the same skeleton, in the engine's fixed materials", () => {
+    const source = asset!.source;
+    if (source.kind !== "glb") throw new Error("expected a GLB source");
+    const gltf = readGlbJson(join(PUBLIC_DIR, source.path));
+
+    // Two skinned meshes — the body and the eyes it looks out of — sharing
+    // one skin, so the eyes ride the head through every pose.
+    const skinned = (gltf.nodes ?? []).filter((node) => node.mesh !== undefined);
+    expect(skinned.length).toBe(2);
+    const jointsOf = (node: { skin?: number }) =>
+      gltf.skins![node.skin!]!.joints.map((joint) => gltf.nodes![joint]!.name);
+    expect(jointsOf(skinned[0]!)).toEqual(jointsOf(skinned[1]!));
+
+    const eyeMesh = gltf.meshes!.find((mesh) =>
+      mesh.primitives.some((p) => p.material !== undefined && isEyeMaterial(gltf, p.material)),
+    );
+    expect(eyeMesh, "no mesh uses the fixed eye materials").toBeDefined();
+    // Sclera, iris and pupil, each its own primitive; the transparent
+    // cornea layer of the source proxy must not have survived.
+    const names = eyeMesh!.primitives.map((p) => gltf.materials![p.material!]!.name);
+    expect(new Set(names)).toEqual(new Set(["fixed:eyeWhite", "fixed:iris", "fixed:eyeDark"]));
+    // Every eye primitive carries the same morph targets as the body, so
+    // the eyes follow the face when it changes shape.
+    for (const primitive of eyeMesh!.primitives) {
+      expect(primitive.targets?.length).toBe(asset!.morphTargets!.length);
+    }
+  });
+
+  it("keeps every morph the same height as the body it deforms", () => {
+    // The canonical statue is exactly 1 m. A morph changes shape, not
+    // size: if one grew the skull, a customer's 200 mm statue would come
+    // out a different height depending on the build they chose.
+    const source = asset!.source;
+    if (source.kind !== "glb") throw new Error("expected a GLB source");
+    const gltf = readGlbJson(join(PUBLIC_DIR, source.path));
+    const body = gltf.meshes![0]!.primitives[0]!;
+    const position = gltf.accessors![body.attributes.POSITION!]!;
+    expect(position.min![1]).toBeCloseTo(0, 5);
+    expect(position.max![1]).toBeCloseTo(1, 5);
+    for (const [index, target] of (body.targets ?? []).entries()) {
+      const delta = gltf.accessors![target.POSITION!]!;
+      const worst = Math.max(Math.abs(delta.min![1]!), Math.abs(delta.max![1]!));
+      expect(worst, `${asset!.morphTargets![index]} moves the silhouette`).toBeLessThan(0.015);
+    }
   });
 
   it("keeps the human skeleton pose-compatible with the stylised one", () => {

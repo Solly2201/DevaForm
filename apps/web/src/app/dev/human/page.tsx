@@ -233,7 +233,23 @@ export default function HumanBasePage() {
         <Canvas shadows camera={{ position: [0, 0.62, 1.9], fov: 35, near: 0.01, far: 20 }}>
           <color attach="background" args={["#211d19"]} />
           <hemisphereLight color="#efe9e2" groundColor="#403830" intensity={0.85} />
-          <directionalLight position={[2, 3, 2.5]} intensity={2.1} color="#fff0da" castShadow />
+          {/* A body is one continuous self-shadowing surface: without a
+              normal bias the shadow map streaks acne across the skin. */}
+          <directionalLight
+            position={[2, 3, 2.5]}
+            intensity={2.1}
+            color="#fff0da"
+            castShadow
+            shadow-mapSize={[2048, 2048]}
+            shadow-bias={-0.0004}
+            shadow-normalBias={0.02}
+            shadow-camera-left={-1.2}
+            shadow-camera-right={1.2}
+            shadow-camera-top={1.6}
+            shadow-camera-bottom={-0.4}
+            shadow-camera-near={0.5}
+            shadow-camera-far={8}
+          />
           <directionalLight position={[-2, 2, -2]} intensity={0.85} color="#ffe4b0" />
           <HumanBody weights={weights} pose={pose} onReport={setReport} />
           <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>

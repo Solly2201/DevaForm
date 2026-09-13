@@ -51,6 +51,20 @@ export type FixedMaterialKey =
   | "mouthDark"
   | "rudraksha";
 
+const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
+  "eyeDark",
+  "eyeWhite",
+  "iris",
+  "ivory",
+  "tilak",
+  "mouthDark",
+  "rudraksha",
+];
+
+export function isFixedMaterialKey(value: string): value is FixedMaterialKey {
+  return (FIXED_MATERIAL_KEYS as readonly string[]).includes(value);
+}
+
 export class ZoneMaterials {
   readonly zones: Record<MaterialZone, THREE.MeshPhysicalMaterial>;
   readonly fixed: Record<FixedMaterialKey, THREE.MeshPhysicalMaterial>;
