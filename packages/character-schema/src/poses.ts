@@ -70,8 +70,9 @@ export interface MudraGesture {
  * orientation with a bent elbow needs forearm pronation — the same joint a
  * real arm uses — so the arm carries it and the engine solves the wrist.
  *
- * varada ("boon"): the same palm shown low, arm hanging forward-down with
- * the fingers pointing to the ground.
+ * varada ("boon"): the same palm shown lower — elbow bent and relaxed at
+ * the deity's side, forearm angled down and forward so the hand is
+ * OFFERED in front of the lower chest rather than dangling by the hip.
  *
  * Grip mudras (hold/pinch/grip) declare no gesture: their arms belong to
  * the pose and their wrists to the held item.
@@ -83,7 +84,7 @@ export const GESTURE_MUDRAS: Partial<Record<MudraId, MudraGesture>> = {
     palm: [0, 0.174, 0.985],
   },
   varada: {
-    arm: { upper: [0, -6 * D, 2 * D], forearm: [-24 * D, 6 * D, 0] },
+    arm: { upper: [-6 * D, 24 * D, -46 * D], forearm: [-44 * D, -45 * D, 0] },
     fingers: [0, -0.94, 0.342],
     palm: [0, -0.342, 0.94],
   },
