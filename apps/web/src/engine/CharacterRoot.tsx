@@ -17,7 +17,7 @@ import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
-import { applyPose } from "./pose";
+import { applyGestureOrientations, applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
 import { applyMorphInfluences } from "./skinning";
 import { activeRig } from "./rigHandle";
@@ -83,11 +83,13 @@ export function CharacterRoot() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pose: in-place joint rotation updates, then re-verticalize held shafts.
+  // Pose: in-place joint rotation updates, gesture hands oriented from
+  // their mudra's meaning, then held shafts re-verticalized.
   useEffect(() => {
     applyPose(rig.joints, pose);
+    applyGestureOrientations(rig.joints, hands);
     alignUprightAttachments(rig);
-  }, [rig, pose]);
+  }, [rig, pose, hands]);
 
   // Morphs: in-place GPU influence updates (no geometry rebuild).
   useEffect(() => {

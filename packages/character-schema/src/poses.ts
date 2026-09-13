@@ -3,9 +3,10 @@
  * Presets only specify the joints they care about; everything else stays
  * at rest. User overrides in PoseConfiguration are applied on top.
  *
- * Hand joints matter: the hand mesh grows fingers along -Y with the palm
- * facing +Z, so wrist rotations orient mudras (abhaya palm forward, varada
- * palm down, held items upright).
+ * Gesture mudras (abhaya, varada) are NOT wrist rotations: they declare
+ * where the palm and fingers must point in the world, and the engine
+ * solves the wrist for whatever arm the pose provides. See
+ * GESTURE_MUDRAS below.
  */
 import type { ArmSlot, JointId } from "./skeleton";
 import type { MudraId, Vec3 } from "./configuration";
@@ -29,6 +30,94 @@ export interface PosePreset {
 }
 
 const D = Math.PI / 180;
+
+// ---------------------------------------------------------------------------
+// Gesture mudras — semantic hand orientation, not baked wrist angles
+// ---------------------------------------------------------------------------
+
+/**
+ * Hand rig convention (all deities share the hand asset contract): the
+ * fingers grow along the hand's local -Y and the palm faces its local +Z.
+ * Gestures are expressed against these axes, so a gesture means the same
+ * thing on any hand built to the contract.
+ */
+export const HAND_FINGER_AXIS: Vec3 = [0, -1, 0];
+export const HAND_PALM_AXIS: Vec3 = [0, 0, 1];
+
+export interface MudraArmPose {
+  upper: Vec3;
+  forearm: Vec3;
+}
+
+export interface MudraGesture {
+  /**
+   * Arm chain that carries the gesture, authored for a RIGHT arm and
+   * mirrored for left arms. Applied when the user chooses the mudra; a
+   * pose preset may embed the same values so its arms agree.
+   */
+  arm: MudraArmPose;
+  /** World direction the fingers must point (character faces +Z). */
+  fingers: Vec3;
+  /** World direction the palm must face — toward the devotee. */
+  palm: Vec3;
+}
+
+/**
+ * The two blessing gestures, defined by what the devotee must SEE.
+ *
+ * abhaya ("fear not"): hand raised to shoulder/head height, elbow tucked
+ * and bent, fingers up, palm turned to the devotee. Reaching that palm
+ * orientation with a bent elbow needs forearm pronation — the same joint a
+ * real arm uses — so the arm carries it and the engine solves the wrist.
+ *
+ * varada ("boon"): the same palm shown low, arm hanging forward-down with
+ * the fingers pointing to the ground.
+ *
+ * Grip mudras (hold/pinch/grip) declare no gesture: their arms belong to
+ * the pose and their wrists to the held item.
+ */
+export const GESTURE_MUDRAS: Partial<Record<MudraId, MudraGesture>> = {
+  abhaya: {
+    arm: { upper: [-70 * D, -30 * D, -40 * D], forearm: [-120 * D, 68 * D, 0] },
+    fingers: [0, 0.985, -0.174],
+    palm: [0, 0.174, 0.985],
+  },
+  varada: {
+    arm: { upper: [0, -6 * D, 2 * D], forearm: [-24 * D, 6 * D, 0] },
+    fingers: [0, -0.94, 0.342],
+    palm: [0, -0.342, 0.94],
+  },
+};
+
+const mirror = (v: Vec3): Vec3 => [v[0], -v[1], -v[2]];
+
+/** The three joints of one arm chain, proximal to distal. */
+export function armChainJoints(slot: ArmSlot): readonly JointId[] {
+  return [`arm.${slot}.upper`, `arm.${slot}.forearm`, `arm.${slot}.hand`];
+}
+
+/**
+ * Joint rotations a gesture mudra imposes on its arm chain (mirrored for
+ * left arms), or null for mudras without arm semantics. The wrist is
+ * absent by design — it is solved from the gesture's palm/finger
+ * directions once the arm is posed.
+ */
+export function mudraArmRotations(
+  mudra: MudraId,
+  slot: ArmSlot,
+): Partial<Record<JointId, Vec3>> | null {
+  const gesture = GESTURE_MUDRAS[mudra];
+  if (!gesture) return null;
+  const left = slot.endsWith("Left");
+  return {
+    [`arm.${slot}.upper`]: left ? mirror(gesture.arm.upper) : gesture.arm.upper,
+    [`arm.${slot}.forearm`]: left ? mirror(gesture.arm.forearm) : gesture.arm.forearm,
+  };
+}
+
+/** Preset helper: pose an arm with a gesture's own arm chain. */
+const gestureArm = (mudra: MudraId, slot: ArmSlot): Partial<Record<JointId, Vec3>> =>
+  mudraArmRotations(mudra, slot) ?? {};
 
 export const POSE_PRESETS: readonly PosePreset[] = [
   {
@@ -58,12 +147,9 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     description: "Front right hand raised in abhaya, front left offering the modak.",
     joints: {
       spine: [0, 0, 2 * D],
-      // Abhaya: elbow tucked, forearm folded high so the open palm rises
-      // to shoulder/chin height facing the devotee — a raised blessing
-      // hand, not a lowered open hand.
-      "arm.frontRight.upper": [-10 * D, 6 * D, -24 * D],
-      "arm.frontRight.forearm": [-118 * D, 0, 0],
-      "arm.frontRight.hand": [30 * D, 4 * D, -4 * D],
+      // Abhaya arm comes from the gesture itself, so the preset and the
+      // mudra can never disagree; the engine solves the wrist.
+      ...gestureArm("abhaya", "frontRight"),
       // Offering: forearm forward, palm up under the modak
       "arm.frontLeft.upper": [18 * D, -6 * D, 42 * D],
       "arm.frontLeft.forearm": [-74 * D, 0, 0],
@@ -242,14 +328,9 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
     description: "Front right hand raised in abhaya, front left lowered in varada.",
     joints: {
       spine: [0, 0, 2 * D],
-      // Abhaya: elbow tucked, forearm folded high, open palm to the devotee.
-      "arm.frontRight.upper": [-10 * D, 6 * D, -24 * D],
-      "arm.frontRight.forearm": [-118 * D, 0, 0],
-      "arm.frontRight.hand": [30 * D, 4 * D, -4 * D],
-      // Varada: arm lowered, palm turned outward/down in giving.
-      "arm.frontLeft.upper": [14 * D, -4 * D, 40 * D],
-      "arm.frontLeft.forearm": [-30 * D, 0, 0],
-      "arm.frontLeft.hand": [-40 * D, 0, 10 * D],
+      // Both gesture arms come from the gestures themselves.
+      ...gestureArm("abhaya", "frontRight"),
+      ...gestureArm("varada", "frontLeft"),
       // Back arms raised holding attributes
       "arm.backLeft.upper": [-38 * D, -14 * D, 52 * D],
       "arm.backRight.upper": [-38 * D, 14 * D, -52 * D],
@@ -320,61 +401,3 @@ export function getPosePreset(id: string): PosePreset | undefined {
 export const SEATED_POSE_IDS: readonly string[] = ALL_POSE_PRESETS.filter((p) => p.seated).map(
   (p) => p.id,
 );
-
-// ---------------------------------------------------------------------------
-// Gesture mudra arm semantics
-// ---------------------------------------------------------------------------
-
-export interface MudraArmPose {
-  upper: Vec3;
-  forearm: Vec3;
-  hand: Vec3;
-}
-
-const RIGHT = Math.PI / 180;
-
-/**
- * Arm-chain articulation for GESTURE mudras, authored for a RIGHT arm and
- * mirrored for left arms. A mudra is a whole-arm gesture, not just a palm
- * shape: abhaya genuinely raises the blessing hand (elbow folded, palm to
- * the devotee) while varada lowers the arm forward-down in giving. Grip
- * mudras (hold/pinch/grip) carry no arm pose — held-item arms belong to
- * the pose preset. Generic data: works for every deity's humanoid arms.
- */
-export const GESTURE_MUDRA_ARM_POSES: Partial<Record<MudraId, MudraArmPose>> = {
-  abhaya: {
-    upper: [-12 * RIGHT, 6 * RIGHT, -22 * RIGHT],
-    forearm: [-115 * RIGHT, 0, 0],
-    hand: [30 * RIGHT, 4 * RIGHT, -4 * RIGHT],
-  },
-  varada: {
-    upper: [16 * RIGHT, 0, -12 * RIGHT],
-    forearm: [-22 * RIGHT, 0, 0],
-    hand: [-46 * RIGHT, 0, -8 * RIGHT],
-  },
-};
-
-const mirror = (v: Vec3): Vec3 => [v[0], -v[1], -v[2]];
-
-/** The three joints of one arm chain, proximal to distal. */
-export function armChainJoints(slot: ArmSlot): readonly JointId[] {
-  return [`arm.${slot}.upper`, `arm.${slot}.forearm`, `arm.${slot}.hand`];
-}
-
-/**
- * Joint rotations a gesture mudra imposes on its arm chain (mirrored for
- * left arms), or null for mudras without arm semantics.
- */
-export function mudraArmRotations(
-  mudra: MudraId,
-  slot: ArmSlot,
-): Partial<Record<JointId, Vec3>> | null {
-  const pose = GESTURE_MUDRA_ARM_POSES[mudra];
-  if (!pose) return null;
-  const left = slot.endsWith("Left");
-  return {
-    [`arm.${slot}.upper`]: left ? mirror(pose.upper) : pose.upper,
-    [`arm.${slot}.forearm`]: left ? mirror(pose.forearm) : pose.forearm,
-    [`arm.${slot}.hand`]: left ? mirror(pose.hand) : pose.hand,
-  };
-}

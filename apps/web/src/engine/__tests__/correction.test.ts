@@ -25,6 +25,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import {
+  HAND_FINGER_AXIS,
+  HAND_PALM_AXIS,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
   mudraArmRotations,
@@ -32,7 +34,7 @@ import {
   type MudraId,
 } from "@devaform/character-schema";
 import { buildRig } from "../rig";
-import { applyPose } from "../pose";
+import { applyGestureOrientations, applyPose } from "../pose";
 import { loft } from "../geometry";
 import { ZoneMaterials } from "../materials";
 import { deriveBodyProfile } from "../generators";
@@ -60,30 +62,111 @@ function bboxOf(config: CharacterConfiguration, name: string): THREE.Box3 | null
 }
 
 describe("gesture mudra arm semantics", () => {
-  const handHeight = (mudra: MudraId): number => {
+  /**
+   * Build Ganesha with one gesture selected and report what the devotee
+   * would actually see: where the hand is, which way the palm faces, and
+   * which way the fingers point — measured off the posed rig.
+   */
+  const gesture = (mudra: MudraId, preset = "standing", { presetLast = false } = {}) => {
     const store = useEditorStore.getState();
     store.newCharacter(createDefaultGaneshaConfiguration());
-    useEditorStore.getState().setPosePreset("standing");
-    useEditorStore.getState().setMudra("frontRight", mudra);
+    if (presetLast) {
+      // Choosing a pose clears joint overrides, so the arm comes from the
+      // preset while the mudra stays selected — the fallback path.
+      useEditorStore.getState().setMudra("frontRight", mudra);
+      useEditorStore.getState().setPosePreset(preset);
+    } else {
+      useEditorStore.getState().setPosePreset(preset);
+      useEditorStore.getState().setMudra("frontRight", mudra);
+    }
     const config = useEditorStore.getState().config;
-    const pos = worldOf(config, (rig) => rig.joints.get("arm.frontRight.hand"));
-    expect(pos).not.toBeNull();
-    return pos!.y;
+    const rig = buildRig(config, new ZoneMaterials());
+    applyPose(rig.joints, config.pose);
+    const applied = applyGestureOrientations(rig.joints, config.hands);
+    rig.root.updateMatrixWorld(true);
+    const hand = rig.joints.get("arm.frontRight.hand")!;
+    const elbow = rig.joints.get("arm.frontRight.forearm")!;
+    const shoulder = rig.joints.get("arm.frontRight.upper")!;
+    const quaternion = hand.getWorldQuaternion(new THREE.Quaternion());
+    return {
+      applied,
+      position: hand.getWorldPosition(new THREE.Vector3()),
+      elbow: elbow.getWorldPosition(new THREE.Vector3()),
+      shoulder: shoulder.getWorldPosition(new THREE.Vector3()),
+      fingers: new THREE.Vector3(...HAND_FINGER_AXIS).applyQuaternion(quaternion),
+      palm: new THREE.Vector3(...HAND_PALM_AXIS).applyQuaternion(quaternion),
+    };
   };
+
+  const handHeight = (mudra: MudraId): number => gesture(mudra).position.y;
+
+  it("abhaya shows the palm to the devotee with fingers up", () => {
+    const a = gesture("abhaya");
+    expect(a.applied).toContain("arm.frontRight.hand");
+    // Palm faces the viewer (+Z) and fingers point up (+Y).
+    expect(a.palm.z).toBeGreaterThan(0.9);
+    expect(a.fingers.y).toBeGreaterThan(0.9);
+    // Raised to shoulder height or above.
+    expect(a.position.y).toBeGreaterThan(a.shoulder.y);
+    // Elbow bent, and hanging below the wrist — a tucked blessing arm.
+    expect(a.elbow.y).toBeLessThan(a.position.y - 0.08);
+    const upperArm = a.elbow.clone().sub(a.shoulder).normalize();
+    const forearm = a.position.clone().sub(a.elbow).normalize();
+    const elbowAngle = (Math.acos(upperArm.dot(forearm)) * 180) / Math.PI;
+    expect(elbowAngle).toBeGreaterThan(60);
+    expect(elbowAngle).toBeLessThan(150);
+    // Clear of the torso: the classic body's half-width is ~0.20.
+    expect(Math.abs(a.position.x)).toBeGreaterThan(0.24);
+  });
+
+  it("varada shows the palm low, fingers down", () => {
+    const v = gesture("varada");
+    expect(v.applied).toContain("arm.frontRight.hand");
+    expect(v.palm.z).toBeGreaterThan(0.9);
+    expect(v.fingers.y).toBeLessThan(-0.85);
+    expect(v.position.y).toBeLessThan(v.shoulder.y);
+  });
+
+  it("selecting a gesture raises the arm even from a dancing pose", () => {
+    const danced = gesture("abhaya", "dance");
+    expect(danced.applied).toContain("arm.frontRight.hand");
+    expect(danced.palm.z).toBeGreaterThan(0.9);
+  });
+
+  it("leaves the pose's own wrist alone when an arm cannot present the gesture", () => {
+    // Dancing swings the right arm wide and clears the gesture's own arm
+    // overrides; a raised palm is unreachable there, so the gesture
+    // declines rather than snapping the wrist to a clamped angle.
+    const danced = gesture("abhaya", "dance", { presetLast: true });
+    expect(danced.applied).not.toContain("arm.frontRight.hand");
+  });
+
+  it("Ganesha's default blessing already presents a true abhaya", () => {
+    // No mudra selection, no overrides — straight from the saved default.
+    const config = createDefaultGaneshaConfiguration();
+    const rig = buildRig(config, new ZoneMaterials());
+    applyPose(rig.joints, config.pose);
+    const applied = applyGestureOrientations(rig.joints, config.hands);
+    rig.root.updateMatrixWorld(true);
+    expect(applied).toContain("arm.frontRight.hand");
+    const hand = rig.joints.get("arm.frontRight.hand")!;
+    const q = hand.getWorldQuaternion(new THREE.Quaternion());
+    expect(new THREE.Vector3(...HAND_PALM_AXIS).applyQuaternion(q).z).toBeGreaterThan(0.9);
+    expect(new THREE.Vector3(...HAND_FINGER_AXIS).applyQuaternion(q).y).toBeGreaterThan(0.9);
+  });
 
   it("abhaya and varada impose materially different arm chains", () => {
     const abhaya = mudraArmRotations("abhaya", "frontRight")!;
     const varada = mudraArmRotations("varada", "frontRight")!;
     expect(abhaya).toBeTruthy();
     expect(varada).toBeTruthy();
-    // Not just a palm rotation: upper arm AND forearm must differ too.
-    for (const joint of [
-      "arm.frontRight.upper",
-      "arm.frontRight.forearm",
-      "arm.frontRight.hand",
-    ] as const) {
+    // Not just a palm rotation: upper arm AND forearm must differ.
+    for (const joint of ["arm.frontRight.upper", "arm.frontRight.forearm"] as const) {
       expect(abhaya[joint], joint).not.toEqual(varada[joint]);
     }
+    // The wrist is never baked into the gesture — it is solved from the
+    // gesture's palm/finger directions against the posed arm.
+    expect(abhaya["arm.frontRight.hand"]).toBeUndefined();
     // Left arms mirror rather than copy.
     const left = mudraArmRotations("abhaya", "frontLeft")!;
     expect(left["arm.frontLeft.upper"]![1]).toBeCloseTo(-abhaya["arm.frontRight.upper"]![1]);
