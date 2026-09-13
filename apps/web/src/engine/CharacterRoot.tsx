@@ -44,15 +44,24 @@ export function CharacterRoot() {
   const zoneMaterials = zoneMaterialsRef.current;
 
   // Morph weights reach mesh assets as GPU morph-target influences, which
-  // never need a rebuild. Procedural generators instead consume the same
-  // weights parametrically, so a rebuild is still required while a chosen
-  // procedural asset declares morph targets — decided from asset metadata,
-  // never from asset ids.
+  // never need a rebuild. Two cases still do, both read from asset
+  // metadata rather than asset ids:
+  //   1. a procedural asset that consumes the weights parametrically;
+  //   2. a mesh body whose morphs move its measured surfaces, while some
+  //      procedural item is being fitted to those surfaces — the fit is
+  //      baked at build time, so it has to be rebuilt to stay on the skin.
   const proceduralMorphKey = useMemo(() => {
-    const rebuilds = [...Object.values(parts), ...attachments.map((a) => a.asset)].some((ref) => {
-      const asset = resolveAssetRef(ref);
-      return asset?.source.kind === "procedural" && (asset.morphTargets?.length ?? 0) > 0;
-    });
+    const refs = [...Object.values(parts), ...attachments.map((a) => a.asset)];
+    const assets = refs.map((ref) => resolveAssetRef(ref));
+    const parametric = assets.some(
+      (asset) => asset?.source.kind === "procedural" && (asset.morphTargets?.length ?? 0) > 0,
+    );
+    const body = resolveAssetRef(parts.body);
+    const bodyMorphsMoveSurfaces = Object.keys(body?.bodyProfile?.morphs ?? {}).length > 0;
+    const fittedItems = assets.some(
+      (asset) => asset !== undefined && asset !== body && asset.source.kind === "procedural",
+    );
+    const rebuilds = parametric || (bodyMorphsMoveSurfaces && fittedItems);
     return rebuilds ? JSON.stringify(morphs) : "";
   }, [parts, attachments, morphs]);
 
