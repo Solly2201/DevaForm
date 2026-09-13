@@ -23,6 +23,7 @@ import {
 import { itemAnkush, itemAxe, itemLotus, itemModak, itemPasha } from "./items";
 
 export type { AttachmentGenerator, GeneratorContext, JointedPart, PartGenerator } from "./types";
+export { deriveBodyProfile, type BodyProfile } from "./bodyProfile";
 export { makeHand } from "./body";
 export { BASE_BUILDERS, BASE_TOP_HEIGHT } from "./bases";
 

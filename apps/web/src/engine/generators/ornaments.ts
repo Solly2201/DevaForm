@@ -159,28 +159,56 @@ export const crownFan: AttachmentGenerator = (ctx) => {
 // NECKLACES / WAIST (attachments)
 // ---------------------------------------------------------------------------
 
+/**
+ * Necklaces attach at the chest.necklace socket (chest joint + [0, 0.12,
+ * 0.01]); the drape is fitted to the measured chest surface so beads lie
+ * ON the torso rather than inside it, whatever the body variant.
+ */
+const NECKLACE_SOCKET_Y = 0.12;
+const NECKLACE_SOCKET_Z = 0.01;
+
+/** Torso surface z in necklace-socket-local coordinates, with clearance. */
+function chestZAtSocket(
+  ctx: GeneratorContext,
+  x: number,
+  y: number,
+  clearance: number,
+): number {
+  return (
+    ctx.body.torsoSurfaceZAt(x, y + NECKLACE_SOCKET_Y) - NECKLACE_SOCKET_Z + clearance
+  );
+}
+
 export const necklaceHaram: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
+  // Collar torus tilted so its front rim rests on the measured chest.
+  const collarR = 0.088;
+  const tilt = 0.6;
+  const frontRimY = -Math.sin(tilt) * collarR;
+  const collarZ = chestZAtSocket(ctx, 0, frontRimY, 0.004) - Math.cos(tilt) * collarR;
   group.add(
-    mesh(new THREE.TorusGeometry(0.088, 0.013, 12, 40), metal, {
-      rotation: [Math.PI / 2 + 0.35, 0, 0],
+    mesh(new THREE.TorusGeometry(collarR, 0.013, 12, 40), metal, {
+      position: [0, 0, collarZ],
+      rotation: [Math.PI / 2 + tilt, 0, 0],
     }),
   );
-  // Bead fringe along the front half
+  // Bead fringe along the front half, seated on the chest surface
   for (let i = 0; i < 9; i++) {
     const angle = Math.PI * (0.25 + (i / 8) * 0.5);
     const x = Math.cos(angle + Math.PI / 2) * 0.09;
     const frontness = Math.sin(angle + Math.PI / 2);
     if (frontness < 0.3) continue;
+    const y = -0.028 * frontness - 0.012 + frontRimY;
     group.add(
       mesh(new THREE.SphereGeometry(0.0075, 10, 8), metal, {
-        position: [x, -0.028 * frontness - 0.012, 0.082 * frontness],
+        position: [x, y, chestZAtSocket(ctx, x, y, 0.006)],
       }),
     );
   }
   const pendant = gemStud(ctx, 0.016);
-  pendant.position.set(0, -0.055, 0.085);
+  const pendantY = frontRimY - 0.052;
+  pendant.position.set(0, pendantY, chestZAtSocket(ctx, 0, pendantY, 0.008));
   pendant.scale.set(0.8, 1.25, 0.6);
   group.add(pendant);
   return group;
@@ -190,16 +218,23 @@ export const necklaceMala: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
-  // Two strands of beads
-  for (const [radius, tilt, size] of [
-    [0.085, 0.32, 0.0085],
-    [0.105, 0.45, 0.0095],
+  const neckR = 0.078;
+  // Two strands: the back half hugs the neck, the front half drapes down
+  // and is lifted onto the measured chest surface.
+  for (const [drop, spread, size] of [
+    [0.05, 0.008, 0.0085],
+    [0.085, 0.018, 0.0095],
   ] as const) {
-    for (let i = 0; i < 22; i++) {
-      const angle = (i / 22) * Math.PI * 2;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      const y = -Math.max(0, Math.sin(angle)) * radius * tilt + 0.005;
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const frontness = Math.max(0, Math.sin(angle));
+      const x = Math.cos(angle) * (neckR + frontness * spread);
+      const y = 0.008 - frontness * drop;
+      const zNeck = Math.sin(angle) * neckR * 0.7;
+      const z =
+        frontness > 0.05
+          ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.007))
+          : zNeck;
       group.add(
         mesh(new THREE.SphereGeometry(size, 10, 8), i % 5 === 0 ? gem : metal, {
           position: [x, y, z],
@@ -237,23 +272,31 @@ export const tikkaChandra: AttachmentGenerator = (ctx) => {
 
 export const waistKamarband: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
-  const bulk = ctx.proportions.bulk;
   const group = new THREE.Group();
+  // Belt ring sized to sit just outside the dhoti waist (which wraps the
+  // hips); the belly may overhang its top in front — that is the classic
+  // lambodara silhouette, and the belt stays visible at sides and front.
+  // Socket sits at pelvis + [0, 0.04, 0.12]; work in socket-local space.
+  const beltR = ctx.body.pelvisHalfWidth + 0.022;
   group.add(
-    mesh(new THREE.TorusGeometry(0.155 * bulk, 0.012, 10, 48), metal, {
-      position: [0, 0.02, -0.12],
+    mesh(new THREE.TorusGeometry(beltR, 0.012, 10, 48), metal, {
+      position: [0, 0.015, -0.12],
       rotation: [Math.PI / 2, 0, 0],
     }),
   );
-  // Hanging tassels at the front
+  // Hanging tassels on the front of the cloth, forward of both the skirt
+  // and whatever the belly surface reaches at that height.
   for (const dx of [-0.045, 0, 0.045]) {
+    const tasselY = -0.015; // socket-local; pelvis-local 0.025
+    const bellyZ = ctx.body.bellySurfaceZAt(dx, tasselY + 0.04 - 0.1);
+    const frontZ = Math.max(beltR + 0.004, bellyZ + 0.012) - 0.12;
     group.add(
       mesh(new THREE.CapsuleGeometry(0.005, 0.03, 4, 8), metal, {
-        position: [dx, -0.008, 0.035 * bulk],
+        position: [dx, tasselY, frontZ],
       }),
     );
     const drop = gemStud(ctx, 0.007);
-    drop.position.set(dx, -0.035, 0.035 * bulk);
+    drop.position.set(dx, tasselY - 0.028, frontZ);
     group.add(drop);
   }
   return group;

@@ -27,6 +27,7 @@ import {
   BASE_BUILDERS,
   BASE_TOP_HEIGHT,
   PART_GENERATORS,
+  deriveBodyProfile,
   type GeneratorContext,
 } from "./generators";
 import { getGlb, instantiateGlb } from "./glbCache";
@@ -157,6 +158,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   root.add(characterRoot);
   const sockets = buildSockets(joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
 
+  // Body-fit: measured torso surfaces derived from the configured body
+  // asset's params (pure data — no asset-id conditionals). GLB bodies
+  // without params fall back to the canonical classic measurements.
+  const bodyAsset = resolveAssetRef(config.parts.body);
+  const bodyParams =
+    bodyAsset?.source.kind === "procedural" ? (bodyAsset.source.params ?? {}) : {};
+  const bodyProfile = deriveBodyProfile(bodyParams, config.proportions);
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,
     proportions: config.proportions,
@@ -164,6 +173,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     hands: config.hands,
     arms: config.arms,
     seated: config.pose.preset !== null && SEATED_POSE_IDS.includes(config.pose.preset),
+    body: bodyProfile,
   };
   const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
     ...baseCtx,
@@ -208,6 +218,23 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           warnings.push(`Asset ${asset.id}: unknown joint in group "${group.name}"`);
         }
       }
+      // Asset-spec socket contract: SOCKET_<id> empties inside the GLB
+      // refine the schema socket's position to the authored location.
+      renderable.traverse((node) => {
+        const socketId = node.name.match(/^SOCKET_(.+)$/)?.[1];
+        if (!socketId) return;
+        const socket = sockets.get(socketId as SocketId);
+        const parentJoint = socket?.parent;
+        if (!socket || !parentJoint) {
+          warnings.push(`Asset ${asset.id}: unknown socket in node "${node.name}"`);
+          return;
+        }
+        node.updateWorldMatrix(true, false);
+        parentJoint.updateWorldMatrix(true, false);
+        socket.position.copy(
+          parentJoint.worldToLocal(node.getWorldPosition(new THREE.Vector3())),
+        );
+      });
       if (mapped === 0) {
         warnings.push(
           `Asset ${asset.id}: GLB part has no JOINT_<id> groups; attached to character root`,
@@ -216,7 +243,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       }
       continue;
     }
-    for (const { joint, object } of renderable.jointed) {
+    for (const { joint, object, socketRefinements } of renderable.jointed) {
       const target = joints.get(joint);
       if (!target) {
         warnings.push(`Asset ${asset.id}: unknown joint ${joint}`);
@@ -224,6 +251,11 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       }
       object.name = object.name || `part:${asset.id}`;
       target.add(object);
+      // The part owns the surface its sockets terminate on (e.g. the
+      // trunk's tip) — move those sockets onto the generated geometry.
+      for (const refinement of socketRefinements ?? []) {
+        sockets.get(refinement.id)?.position.set(...refinement.position);
+      }
     }
   }
 
