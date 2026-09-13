@@ -39,8 +39,14 @@ const EXPORTS = path.resolve("../../tools/humanbase/exports");
 const OUT_DIR = path.resolve("public/assets/humanoid/body/human/1");
 const MEASURE_OUT = path.resolve("../../tools/humanbase/measurements.json");
 
-const VARIANTS = ["neutral", "lean", "athletic", "powerful"];
-const MORPHS = { lean: "bodyLean", athletic: "bodyAthletic", powerful: "bodyPowerful" };
+const VARIANTS = ["neutral", "lean", "athletic", "powerful", "heroic", "ascetic"];
+const MORPHS = {
+  lean: "bodyLean",
+  athletic: "bodyAthletic",
+  powerful: "bodyPowerful",
+  heroic: "bodyHeroic",
+  ascetic: "bodyAscetic",
+};
 /** Canonical statue height in DevaForm units (see docs/asset-specification). */
 const CANONICAL_HEIGHT = 1.0;
 
@@ -299,8 +305,15 @@ for (const chain of chains) {
   void parentChain;
 }
 
-/** Apply the retarget to one variant's vertices (linear blend skinning). */
-function retarget(positions) {
+/**
+ * Apply the retarget to one variant's vertices (linear blend skinning).
+ *
+ * Each group's vertices are measured from THAT variant's own joint and
+ * placed on the shared canonical joint: broader shoulders sit their cube
+ * slightly further out, and rotating their vertices about the neutral
+ * pivot would shear the morph target instead of just widening it.
+ */
+function retarget(positions, restSource = restMh) {
   const out = new Float32Array(positions.length);
   const source = new THREE.Vector3();
   const moved = new THREE.Vector3();
@@ -314,7 +327,7 @@ function retarget(positions) {
       if (weight <= 0) continue;
       moved
         .copy(source)
-        .sub(restMh.get(group))
+        .sub(restSource.get(group))
         .applyQuaternion(rotation.get(group))
         .add(restTarget.get(group));
       accum.addScaledVector(moved, weight);
@@ -328,8 +341,18 @@ function retarget(positions) {
   return out;
 }
 
+/** That variant's own joint cubes, in the same group vocabulary. */
+function restFor(variant) {
+  const variantJoints = report.variants[variant].joints;
+  return new Map(
+    chains.map((c) => [c.joint, new THREE.Vector3(...variantJoints[c.mh])]),
+  );
+}
+
 const retargeted = {};
-for (const variant of VARIANTS) retargeted[variant] = retarget(meshes[variant].positions);
+for (const variant of VARIANTS) {
+  retargeted[variant] = retarget(meshes[variant].positions, restFor(variant));
+}
 
 // ---------------------------------------------------------------------------
 // 4. Normalize into DevaForm units

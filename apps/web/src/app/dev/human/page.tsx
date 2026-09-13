@@ -31,7 +31,8 @@ import {
 } from "@/engine/skinning";
 
 const ASSET_ID = "humanoid.body.human";
-const MORPHS = ["bodyLean", "bodyAthletic", "bodyPowerful"] as const;
+// The asset declares what it can do; this route never hardcodes a list.
+const MORPHS: readonly string[] = getAsset(ASSET_ID)?.morphTargets ?? [];
 
 const VIEWS = {
   front: [0, 0.62, 1.9],
