@@ -84,6 +84,10 @@ export function CharacterRoot() {
       console.warn("Character rig warnings:", rig.warnings);
     }
     activeRig.current = rig;
+    if (process.env.NODE_ENV !== "production") {
+      // Dev-only handle for QA automation (scene-graph inspection scripts).
+      (window as unknown as { __devaformRig?: CharacterRig }).__devaformRig = rig;
+    }
     return () => {
       if (activeRig.current === rig) activeRig.current = null;
     };

@@ -10,6 +10,8 @@ export type CameraView = "front" | "back" | "left" | "right" | "threeQuarter" | 
 
 interface UiState {
   activeCategoryId: string;
+  /** Active subcategory within the category; null = first available. */
+  activeSubcategoryId: string | null;
   lightingPreset: LightingPresetId;
   selectedJoint: JointId;
   /** Incremented with each camera command so the viewport can react. */
@@ -18,6 +20,7 @@ interface UiState {
   statusMessage: { text: string; kind: "info" | "error" } | null;
 
   setActiveCategory: (id: string) => void;
+  setActiveSubcategory: (id: string | null) => void;
   setLightingPreset: (id: LightingPresetId) => void;
   setSelectedJoint: (id: JointId) => void;
   requestCameraView: (view: CameraView) => void;
@@ -28,13 +31,15 @@ interface UiState {
 
 export const useUiStore = create<UiState>()((set) => ({
   activeCategoryId: "head",
+  activeSubcategoryId: null,
   lightingPreset: "studio",
   selectedJoint: "arm.frontRight.upper",
   cameraCommand: { view: "threeQuarter", nonce: 0 },
   exportDialogOpen: false,
   statusMessage: null,
 
-  setActiveCategory: (id) => set({ activeCategoryId: id }),
+  setActiveCategory: (id) => set({ activeCategoryId: id, activeSubcategoryId: null }),
+  setActiveSubcategory: (id) => set({ activeSubcategoryId: id }),
   setLightingPreset: (id) => set({ lightingPreset: id }),
   setSelectedJoint: (id) => set({ selectedJoint: id }),
   requestCameraView: (view) =>

@@ -116,12 +116,19 @@ export interface AssetDefinition {
   /** Hand-grip behavior for hand-held attachments. */
   grip?: GripMetadata;
   /**
-   * Features already sculpted/baked into this part (complete sculpts, AI or
-   * artist). Entries are part slots ("eyes", "trunk", "tusks", "ears") or
-   * attachment-socket suffixes ("crown"). The engine skips rendering the
-   * corresponding standalone parts/attachments so a complete head doesn't
-   * double its ears or wear a second crown. Pure data — no renderer
-   * special-casing per asset.
+   * Features whose geometry is PHYSICALLY EMBEDDED in this part's mesh
+   * (complete sculpts, AI or artist). Entries are part slots ("eyes",
+   * "trunk", "tusks", "ears") or attachment-socket suffixes ("crown").
+   * The engine skips rendering the corresponding standalone
+   * parts/attachments so a complete head doesn't double its ears or wear
+   * a second crown.
+   *
+   * This is a truthful statement about the mesh, not a product-level
+   * customization policy: a feature must only be listed here if it is
+   * actually present, usable and intentionally authoritative in this
+   * asset. Production heads should stay modular-friendly (few or no
+   * integrated features). Pure data — no renderer special-casing per
+   * asset.
    */
   integratedFeatures?: readonly string[];
   /**

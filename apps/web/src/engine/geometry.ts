@@ -83,13 +83,15 @@ export function taperedTube(
     }
   }
 
+  // Winding: outward-facing triangles (positive signed volume) so lighting
+  // and back-face culling treat the tube as solid, opaque geometry.
   for (let i = 0; i < tubularSegments; i++) {
     for (let j = 0; j < radialSegments; j++) {
       const a = i * radialSegments + j;
       const b = i * radialSegments + ((j + 1) % radialSegments);
       const c = (i + 1) * radialSegments + j;
       const d = (i + 1) * radialSegments + ((j + 1) % radialSegments);
-      indices.push(a, c, b, b, c, d);
+      indices.push(a, b, c, b, d, c);
     }
   }
 
@@ -103,9 +105,9 @@ export function taperedTube(
   for (let j = 0; j < radialSegments; j++) {
     const a = j;
     const b = (j + 1) % radialSegments;
-    indices.push(startIndex, b, a);
+    indices.push(startIndex, a, b);
     const lastRing = tubularSegments * radialSegments;
-    indices.push(endIndex, lastRing + a, lastRing + b);
+    indices.push(endIndex, lastRing + b, lastRing + a);
   }
 
   const geometry = new THREE.BufferGeometry();

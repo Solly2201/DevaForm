@@ -34,6 +34,13 @@ export interface SocketDefinition {
   /** Local rotation (euler XYZ, radians). */
   rotation: readonly [number, number, number];
   label: string;
+  /**
+   * Where the socket is anchored. "character" (default) parents it to its
+   * joint, so it follows the pose. "statue" parents it to the statue root
+   * at the base's top surface — companions and platform items must not
+   * follow seated/levitating root offsets.
+   */
+  anchor?: "character" | "statue";
 }
 
 const ARM_SLOT_LABELS: Record<ArmSlot, string> = {
@@ -71,7 +78,7 @@ export const SOCKETS: readonly SocketDefinition[] = [
   ...handSockets,
   { id: "leg.left.anklet", joint: "leg.left.foot", position: [0, 0.04, 0], rotation: [0, 0, 0], label: "Left anklet" },
   { id: "leg.right.anklet", joint: "leg.right.foot", position: [0, 0.04, 0], rotation: [0, 0, 0], label: "Right anklet" },
-  { id: "base.platform", joint: "root", position: [0, 0, 0], rotation: [0, 0, 0], label: "Base" },
+  { id: "base.platform", joint: "root", position: [0, 0, 0], rotation: [0, 0, 0], label: "Base", anchor: "statue" },
 ] as const;
 
 const socketMap = new Map<SocketId, SocketDefinition>(SOCKETS.map((s) => [s.id, s]));

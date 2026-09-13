@@ -51,7 +51,7 @@ function AssetCard({
           : "border-surface-700 bg-surface-850 hover:border-stone-500"
       }`}
     >
-      <span className="flex h-20 items-center justify-center bg-gradient-to-b from-surface-800 to-surface-900">
+      <span className="flex h-28 items-center justify-center bg-gradient-to-b from-surface-800 to-surface-900">
         {thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element -- data URL thumbnail
           <img src={thumbnail} alt="" className="h-full w-full object-contain p-1" />

@@ -160,7 +160,11 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
         "Generated with `pnpm ai:generate-head --provider trellis2` (seed 12345, res 1024) from tools/ai3d/refs/classic-head-bust.png; cleaned + normalized by tools/ai3d/clean_mesh.py (backdrop sheets removed, normals computed, JOINT_head wrap). TRELLIS.2 model MIT (checked 2026-09-13); no provider output restriction found. Regenerate with refs/classic-head-bust-v2.png for a full trunk when ZeroGPU quota resets; ganesha.head.classic@4 stays reserved for a promotion-worthy head.",
     },
     geometry: { triangles: 64669, vertices: 45763, boundsM: [0.4513, 0.41, 0.3258] },
-    integratedFeatures: ["eyes", "ears", "trunk", "tusks", "crown"],
+    // Measured against the actual render (2026-09-13): eyes, ears, tusks
+    // and crown are baked into the mesh and usable. The trunk is truncated
+    // at the chin by the v1 reference crop, so it is NOT integrated — the
+    // modular trunk stays available.
+    integratedFeatures: ["eyes", "ears", "tusks", "crown"],
     materialZones: [],
     category: "head",
     printability: proto,

@@ -300,6 +300,10 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
 
   const L = (y: number) => y * lengthScale;
 
+  // Segment paths are authored against the trunk joint chain, which itself
+  // sweeps forward (+z) — see skeleton.ts. Local z stays small so pose
+  // rotations pivot naturally around each joint.
+
   // Segment 1 — root (parent: trunkBase joint), swelling out of the muzzle
   const base = new THREE.Group();
   base.add(
@@ -312,8 +316,8 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
     new THREE.Mesh(
       taperedTube(
         [
-          [0, 0.015, 0],
-          [0, L(-0.045), 0.045],
+          [0, 0.015, -0.005],
+          [0, L(-0.045), 0.038],
           [0, L(-0.09), 0.07],
         ],
         wrinkled(0.05, 0.041),
@@ -324,19 +328,19 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
     ),
   );
 
-  // Segment 2 — mid, hanging forward of the chest
+  // Segment 2 — mid, draping down the front of the chin/shawl line
   const mid = new THREE.Group();
   // Blend sphere hides the articulation seam with segment 1
   mid.add(
-    mesh(new THREE.SphereGeometry(0.041, 18, 14), skin, { position: [0, 0.005, 0.032] }),
+    mesh(new THREE.SphereGeometry(0.041, 18, 14), skin, { position: [0, 0.005, 0.008] }),
   );
   mid.add(
     new THREE.Mesh(
       taperedTube(
         [
-          [0, 0.012, 0.028],
-          [0, L(-0.05), 0.055],
-          [curlScale * 0.008, L(-0.095), 0.07],
+          [0, 0.012, 0.008],
+          [0, L(-0.05), 0.038],
+          [curlScale * 0.008, L(-0.095), 0.062],
         ],
         wrinkled(0.042, 0.033),
         24,
@@ -350,29 +354,29 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
   // sideways curl (or lifting upward for the urdhva variant).
   const tipEndPos: [number, number, number] =
     lift > 0
-      ? [curlScale * 0.062, L(-0.1) + 0.035 * lift, 0.115]
-      : [curlScale * 0.075, L(-0.14), 0.098];
+      ? [curlScale * 0.065, L(-0.095) + 0.07 * lift, 0.06]
+      : [curlScale * 0.085, L(-0.19), 0.052];
   const tipPath: V3[] =
     lift > 0
       ? [
-          [0, 0.012, 0.05],
-          [curlScale * 0.004, L(-0.05), 0.078],
-          [curlScale * 0.016, L(-0.098), 0.096],
-          [curlScale * 0.04, L(-0.125), 0.108],
-          [curlScale * 0.058, L(-0.115), 0.115],
+          [0, 0.012, 0.008],
+          [curlScale * 0.004, L(-0.055), 0.03],
+          [curlScale * 0.016, L(-0.1), 0.044],
+          [curlScale * 0.042, L(-0.125), 0.054],
+          [curlScale * 0.06, L(-0.11), 0.058],
           tipEndPos,
         ]
       : [
-          [0, 0.012, 0.05],
-          [curlScale * 0.004, L(-0.05), 0.075],
-          [curlScale * 0.014, L(-0.1), 0.092],
-          [curlScale * 0.042, L(-0.145), 0.09],
-          [curlScale * 0.072, L(-0.155), 0.092],
+          [0, 0.012, 0.008],
+          [curlScale * 0.004, L(-0.065), 0.03],
+          [curlScale * 0.012, L(-0.135), 0.042],
+          [curlScale * 0.045, L(-0.2), 0.048],
+          [curlScale * 0.08, L(-0.215), 0.05],
           tipEndPos,
         ];
   const tip = new THREE.Group();
   tip.add(
-    mesh(new THREE.SphereGeometry(0.033, 16, 12), skin, { position: [0, 0.005, 0.052] }),
+    mesh(new THREE.SphereGeometry(0.033, 16, 12), skin, { position: [0, 0.005, 0.008] }),
   );
   tip.add(new THREE.Mesh(taperedTube(tipPath, wrinkled(0.033, 0.015, 5), 32, 14), skin));
   // Trunk tip: nostril end + prehensile lip

@@ -63,16 +63,27 @@ function buildJointHierarchy(): { characterRoot: THREE.Group; joints: Map<JointI
   return { characterRoot, joints };
 }
 
-function buildSockets(joints: Map<JointId, THREE.Object3D>): Map<SocketId, THREE.Object3D> {
+function buildSockets(
+  joints: Map<JointId, THREE.Object3D>,
+  statueRoot: THREE.Group,
+  baseTopHeight: number,
+): Map<SocketId, THREE.Object3D> {
   const sockets = new Map<SocketId, THREE.Object3D>();
   for (const def of SOCKETS) {
-    const joint = joints.get(def.joint);
-    if (!joint) throw new Error(`Socket ${def.id} references unknown joint ${def.joint}`);
     const socket = new THREE.Object3D();
     socket.name = `socket:${def.id}`;
     socket.position.set(...def.position);
     socket.rotation.set(...def.rotation);
-    joint.add(socket);
+    if (def.anchor === "statue") {
+      // Statue-anchored sockets sit on the base's top surface and ignore
+      // pose root offsets (companions must not sink with seated poses).
+      socket.position.y += baseTopHeight;
+      statueRoot.add(socket);
+    } else {
+      const joint = joints.get(def.joint);
+      if (!joint) throw new Error(`Socket ${def.id} references unknown joint ${def.joint}`);
+      joint.add(socket);
+    }
     sockets.set(def.id, socket);
   }
   return sockets;
@@ -144,7 +155,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   root.name = "statueRoot";
   const { characterRoot, joints } = buildJointHierarchy();
   root.add(characterRoot);
-  const sockets = buildSockets(joints);
+  const sockets = buildSockets(joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
 
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,

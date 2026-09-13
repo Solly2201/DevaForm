@@ -14,7 +14,8 @@
     "generate-thumbnails": "node scripts/generate-thumbnails.mjs",
     "ingest-asset": "node scripts/ingest-asset.mjs",
     "db:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "vitest run"
   },
   "dependencies": {
     "@devaform/asset-system": "workspace:*",
@@ -43,6 +44,7 @@
     "prisma": "^6.2.1",
     "puppeteer-core": "^23.11.1",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }

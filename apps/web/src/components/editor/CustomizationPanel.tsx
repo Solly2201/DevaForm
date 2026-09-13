@@ -199,6 +199,11 @@ function SocketSection({ socket, allowNone }: { socket: SocketId; allowNone: boo
         allowNone={allowNone}
         onSelect={(assetId) => setAttachment(socket, assetId)}
       />
+      {socket.endsWith(".hand.item") && (
+        <p className="mt-1 text-[11px] text-stone-500">
+          The hand adopts the item&apos;s grip automatically (see Hands).
+        </p>
+      )}
       <AttachmentAdjust socket={socket} />
     </section>
   );
@@ -281,34 +286,6 @@ function FaceMorphSection() {
   );
 }
 
-/** Hand-item sockets on hidden arms are filtered from socket categories. */
-function useVisibleSockets(sockets: readonly SocketId[]): SocketId[] {
-  const arms = useEditorStore((s) => s.config.arms);
-  const active = activeArmSlots(arms);
-  return sockets.filter((socket) => {
-    const match = socket.match(/^arm\.(\w+)\.hand\.item$/);
-    if (!match) return true;
-    return (active as readonly string[]).includes(match[1] ?? "");
-  });
-}
-
-function SocketSections({
-  sockets,
-  allowNone,
-}: {
-  sockets: readonly SocketId[];
-  allowNone: boolean;
-}) {
-  const visible = useVisibleSockets(sockets);
-  return (
-    <>
-      {visible.map((socket) => (
-        <SocketSection key={socket} socket={socket} allowNone={allowNone} />
-      ))}
-    </>
-  );
-}
-
 /**
  * Companion placement around the base. Offsets are applied on top of the
  * asset's default transform, so "Right" (the default) is a zero offset.
@@ -352,54 +329,123 @@ function CompanionPlacementSection() {
   );
 }
 
-function CategoryContent({ category }: { category: EditorCategory }) {
+interface Subsection {
+  id: string;
+  label: string;
+  node: React.ReactNode;
+}
+
+/**
+ * Derive the category's subsections from its data definition. Each becomes
+ * an entry in the secondary navigation column; single-subsection categories
+ * (pose, color, …) render without a subnav. Pure data — future deities'
+ * categories flow through the same derivation.
+ */
+function useSubsections(category: EditorCategory): Subsection[] {
+  const arms = useEditorStore((s) => s.config.arms);
+  const active = activeArmSlots(arms);
+  const socketSubsections = (sockets: readonly SocketId[], allowNone: boolean): Subsection[] =>
+    sockets
+      .filter((socket) => {
+        const match = socket.match(/^arm\.(\w+)\.hand\.item$/);
+        return !match || (active as readonly string[]).includes(match[1] ?? "");
+      })
+      .map((socket) => ({
+        id: socket,
+        label: getSocket(socket).label,
+        node: (
+          <>
+            <SocketSection socket={socket} allowNone={allowNone} />
+            {socket === "base.platform" && <CompanionPlacementSection />}
+          </>
+        ),
+      }));
+
   switch (category.content.type) {
-    case "parts":
-      return (
-        <>
-          {category.content.slots.map((slot) => (
-            <PartSlotSection key={slot} slot={slot} />
-          ))}
-          {category.id === "face" && <FaceMorphSection />}
-          {category.id === "body" && (
+    case "parts": {
+      const sections: Subsection[] = category.content.slots.map((slot) => ({
+        id: slot,
+        label: SLOT_LABELS[slot],
+        node: <PartSlotSection slot={slot} />,
+      }));
+      if (category.id === "face") {
+        sections.push({ id: "shape", label: "Face Shaping", node: <FaceMorphSection /> });
+      }
+      if (category.id === "body") {
+        sections.push({
+          id: "form",
+          label: "Arms & Build",
+          node: (
             <>
               <ArmCountSection />
               <ProportionsSection />
             </>
-          )}
-        </>
-      );
+          ),
+        });
+      }
+      return sections;
+    }
     case "sockets":
-      return (
-        <>
-          <SocketSections
-            sockets={category.content.sockets}
-            allowNone={category.content.allowNone}
-          />
-          {category.id === "companion" && <CompanionPlacementSection />}
-        </>
-      );
+      return socketSubsections(category.content.sockets, category.content.allowNone);
     case "mixed":
-      return (
-        <>
-          <SocketSections
-            sockets={category.content.sockets}
-            allowNone={category.content.allowNone}
-          />
-          {category.content.slots.map((slot) => (
-            <PartSlotSection key={slot} slot={slot} />
-          ))}
-        </>
-      );
+      return [
+        ...socketSubsections(category.content.sockets, category.content.allowNone),
+        ...category.content.slots.map((slot) => ({
+          id: slot,
+          label: SLOT_LABELS[slot],
+          node: <PartSlotSection slot={slot} />,
+        })),
+      ];
     case "hands":
-      return <HandsPanel />;
+      return [{ id: "hands", label: "Hands", node: <HandsPanel /> }];
     case "pose":
-      return <PosePanel />;
+      return [{ id: "pose", label: "Pose", node: <PosePanel /> }];
     case "materials":
-      return <MaterialsPanel />;
+      return [{ id: "materials", label: "Color", node: <MaterialsPanel /> }];
     case "base":
-      return <BasePanel />;
+      return [{ id: "base", label: "Base", node: <BasePanel /> }];
   }
+}
+
+function CategoryPanelBody({ category }: { category: EditorCategory }) {
+  const activeSubcategoryId = useUiStore((s) => s.activeSubcategoryId);
+  const setActiveSubcategory = useUiStore((s) => s.setActiveSubcategory);
+  const subsections = useSubsections(category);
+  const activeSection =
+    subsections.find((s) => s.id === activeSubcategoryId) ?? subsections[0];
+  if (!activeSection) return null;
+  const showSubnav = subsections.length > 1;
+
+  return (
+    <div className="flex min-h-0 flex-1">
+      {showSubnav && (
+        <nav
+          aria-label={`${category.label} sections`}
+          className="w-32 shrink-0 overflow-y-auto border-r border-surface-800 bg-surface-950 py-2"
+        >
+          {subsections.map((section) => {
+            const selected = section.id === activeSection.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                aria-current={selected ? "true" : undefined}
+                onClick={() => setActiveSubcategory(section.id)}
+                className={`block w-full border-l-2 px-3 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-saffron-400 ${
+                  selected
+                    ? "border-saffron-500 bg-surface-850 font-medium text-stone-100"
+                    : "border-transparent text-stone-400 hover:bg-surface-850 hover:text-stone-200"
+                }`}
+              >
+                {section.label}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+      <div className="flex-1 overflow-y-auto px-4 py-4">{activeSection.node}</div>
+    </div>
+  );
 }
 
 export function CustomizationPanel() {
@@ -410,14 +456,12 @@ export function CustomizationPanel() {
   if (!category) return null;
 
   return (
-    <aside className="flex h-full w-80 flex-col border-l border-surface-800 bg-surface-900">
+    <aside className="flex h-full w-[30rem] max-w-[40vw] flex-col border-l border-surface-800 bg-surface-900">
       <header className="border-b border-surface-800 px-4 py-3">
         <h2 className="font-display text-base text-stone-100">{category.label}</h2>
         <p className="text-xs text-stone-500">{category.description}</p>
       </header>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <CategoryContent category={category} />
-      </div>
+      <CategoryPanelBody category={category} />
     </aside>
   );
 }

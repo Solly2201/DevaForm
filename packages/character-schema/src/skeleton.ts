@@ -125,10 +125,15 @@ export const SKELETON: readonly JointDefinition[] = [
   { id: "spine", parent: "pelvis", position: [0, 0.1, 0], limits: { x: [-0.6, 0.6], y: [-0.8, 0.8], z: [-0.5, 0.5] }, label: "Spine" },
   { id: "chest", parent: "spine", position: [0, 0.16, 0], limits: { x: [-0.5, 0.5], y: [-0.7, 0.7], z: [-0.4, 0.4] }, label: "Chest" },
   { id: "neck", parent: "chest", position: [0, 0.16, 0], limits: { x: [-0.6, 0.6], y: [-1.0, 1.0], z: [-0.5, 0.5] }, label: "Neck" },
-  { id: "head", parent: "neck", position: [0, 0.07, 0], limits: { x: [-0.7, 0.7], y: [-1.2, 1.2], z: [-0.6, 0.6] }, label: "Head" },
-  { id: "trunkBase", parent: "head", position: [0, 0.0, 0.09], limits: { x: [-0.8, 0.8], y: [-0.8, 0.8], z: [-0.8, 0.8] }, label: "Trunk Base" },
-  { id: "trunkMid", parent: "trunkBase", position: [0, -0.085, 0.035], limits: { x: [-1.2, 1.2], y: [-1.0, 1.0], z: [-1.0, 1.0] }, label: "Trunk Middle" },
-  { id: "trunkTip", parent: "trunkMid", position: [0, -0.08, 0.025], limits: { x: [-1.4, 1.4], y: [-1.2, 1.2], z: [-1.2, 1.2] }, label: "Trunk Tip" },
+  // Head sits high enough that the chin clears the shoulder line — murti
+  // composition needs daylight between muzzle and chest for the trunk.
+  { id: "head", parent: "neck", position: [0, 0.115, 0], limits: { x: [-0.7, 0.7], y: [-1.2, 1.2], z: [-0.6, 0.6] }, label: "Head" },
+  // Trunk chain sweeps forward (+z) as it descends so the trunk drapes
+  // OVER the chin/shawl/belly front surfaces instead of hanging inside
+  // the torso volume.
+  { id: "trunkBase", parent: "head", position: [0, -0.01, 0.095], limits: { x: [-0.8, 0.8], y: [-0.8, 0.8], z: [-0.8, 0.8] }, label: "Trunk Base" },
+  { id: "trunkMid", parent: "trunkBase", position: [0, -0.09, 0.05], limits: { x: [-1.2, 1.2], y: [-1.0, 1.0], z: [-1.0, 1.0] }, label: "Trunk Middle" },
+  { id: "trunkTip", parent: "trunkMid", position: [0, -0.085, 0.04], limits: { x: [-1.4, 1.4], y: [-1.2, 1.2], z: [-1.2, 1.2] }, label: "Trunk Tip" },
   ...armJoints("frontLeft", "left", "front"),
   ...armJoints("frontRight", "right", "front"),
   ...armJoints("backLeft", "left", "back"),

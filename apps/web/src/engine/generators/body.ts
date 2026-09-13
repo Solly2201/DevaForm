@@ -106,11 +106,11 @@ export const ganeshaBody: PartGenerator = (ctx) => {
     });
   }
 
-  // Neck
+  // Neck — tall enough to bridge the chest top to the raised head's jaw
   parts.push({
     joint: "neck",
-    object: mesh(new THREE.CylinderGeometry(0.062, 0.082, 0.1, 20), skin, {
-      position: [0, 0.028, 0],
+    object: mesh(new THREE.CylinderGeometry(0.062, 0.082, 0.16, 20), skin, {
+      position: [0, 0.055, 0],
     }),
   });
 

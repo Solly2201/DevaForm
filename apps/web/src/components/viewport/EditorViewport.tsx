@@ -15,7 +15,7 @@ import { getLightingPreset } from "@/engine/lighting";
 import { useUiStore, type CameraView } from "@/state/uiStore";
 
 const DEFAULT_TARGET = new THREE.Vector3(0, 0.62, 0);
-const FACE_TARGET = new THREE.Vector3(0, 1.1, 0.05);
+const FACE_TARGET = new THREE.Vector3(0, 1.16, 0.05);
 
 const VIEWS: Record<CameraView, { position: [number, number, number]; target: THREE.Vector3 }> = {
   front: { position: [0, 0.78, 2.4], target: DEFAULT_TARGET },
@@ -23,7 +23,7 @@ const VIEWS: Record<CameraView, { position: [number, number, number]; target: TH
   left: { position: [2.4, 0.78, 0], target: DEFAULT_TARGET },
   right: { position: [-2.4, 0.78, 0], target: DEFAULT_TARGET },
   threeQuarter: { position: [1.55, 1.0, 1.85], target: DEFAULT_TARGET },
-  face: { position: [0.28, 1.16, 0.85], target: FACE_TARGET },
+  face: { position: [0.28, 1.22, 0.85], target: FACE_TARGET },
   reset: { position: [1.55, 1.0, 1.85], target: DEFAULT_TARGET },
 };
 
