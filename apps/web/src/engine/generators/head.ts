@@ -300,11 +300,12 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
 
   const L = (y: number) => y * lengthScale;
 
-  // Body-fit: the drape depth is authored against the classic body
-  // (belly front ≈ 0.207 spine-local). Other bodies shift the lower trunk
-  // forward/back so it stays resting on the measured belly, neither
-  // buried in a bigger one nor floating off a slimmer one.
-  const bellyDelta = Math.min(0.035, Math.max(-0.035, ctx.body.bellyFrontZ - 0.207));
+  // Body-fit is a CLEARANCE constraint, not a shape driver: the drape is
+  // authored against the classic body (belly front ≈ 0.207 spine-local),
+  // and bodies with a deeper belly shift the lower trunk outward so it is
+  // not swallowed. Slimmer bodies never pull the trunk inward — the
+  // authored curve simply stands free in front of them.
+  const bellyDelta = Math.min(0.035, Math.max(0, ctx.body.bellyFrontZ - 0.207));
   const F = (z: number, weight: number) => z + bellyDelta * weight;
 
   // Segment paths are authored against the trunk joint chain, which itself
@@ -362,7 +363,7 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
   const tipEndPos: [number, number, number] =
     lift > 0
       ? [curlScale * 0.065, L(-0.095) + 0.07 * lift, F(0.06, 1)]
-      : [curlScale * 0.085, L(-0.19), F(0.052, 1)];
+      : [curlScale * 0.085, L(-0.215), F(0.052, 1)];
   const tipPath: V3[] =
     lift > 0
       ? [
@@ -375,10 +376,10 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
         ]
       : [
           [0, 0.012, 0.008],
-          [curlScale * 0.004, L(-0.065), F(0.03, 0.6)],
-          [curlScale * 0.012, L(-0.135), F(0.042, 0.85)],
-          [curlScale * 0.045, L(-0.2), F(0.048, 1)],
-          [curlScale * 0.08, L(-0.215), F(0.05, 1)],
+          [curlScale * 0.004, L(-0.07), F(0.03, 0.6)],
+          [curlScale * 0.012, L(-0.15), F(0.042, 0.85)],
+          [curlScale * 0.045, L(-0.225), F(0.048, 1)],
+          [curlScale * 0.08, L(-0.24), F(0.05, 1)],
           tipEndPos,
         ];
   const tip = new THREE.Group();

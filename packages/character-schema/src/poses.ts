@@ -52,10 +52,12 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     description: "Front right hand raised in abhaya, front left offering the modak.",
     joints: {
       spine: [0, 0, 2 * D],
-      // Abhaya: raise the forearm, palm turned to face the devotee
-      "arm.frontRight.upper": [-18 * D, 8 * D, -38 * D],
-      "arm.frontRight.forearm": [-96 * D, 0, 0],
-      "arm.frontRight.hand": [42 * D, 4 * D, -4 * D],
+      // Abhaya: elbow tucked, forearm folded high so the open palm rises
+      // to shoulder/chin height facing the devotee — a raised blessing
+      // hand, not a lowered open hand.
+      "arm.frontRight.upper": [-10 * D, 6 * D, -24 * D],
+      "arm.frontRight.forearm": [-118 * D, 0, 0],
+      "arm.frontRight.hand": [30 * D, 4 * D, -4 * D],
       // Offering: forearm forward, palm up under the modak
       "arm.frontLeft.upper": [18 * D, -6 * D, 42 * D],
       "arm.frontLeft.forearm": [-74 * D, 0, 0],
@@ -125,9 +127,9 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontLeft.upper": [14 * D, 0, 46 * D],
       "arm.frontLeft.forearm": [-48 * D, 0, 0],
       "arm.frontLeft.hand": [-20 * D, 0, 0],
-      "arm.frontRight.upper": [-20 * D, 8 * D, -34 * D],
-      "arm.frontRight.forearm": [-92 * D, 0, 0],
-      "arm.frontRight.hand": [40 * D, 4 * D, -4 * D],
+      "arm.frontRight.upper": [-10 * D, 6 * D, -24 * D],
+      "arm.frontRight.forearm": [-115 * D, 0, 0],
+      "arm.frontRight.hand": [30 * D, 4 * D, -4 * D],
       "arm.backLeft.upper": [-30 * D, -12 * D, 48 * D],
       "arm.backLeft.forearm": [-58 * D, 0, 0],
       "arm.backRight.upper": [-30 * D, 12 * D, -48 * D],

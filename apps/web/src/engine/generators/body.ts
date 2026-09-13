@@ -327,14 +327,47 @@ export function makeHand(
   return g;
 }
 
+/**
+ * Where each gesture actually holds an object, hand-local. The hand owns
+ * its grip surface, so it refines the arm.<slot>.hand.item socket here —
+ * items (whose grip point is their local origin) then land in the grip
+ * relationally instead of via stacked absolute offsets.
+ */
+function gripPoint(mudra: MudraId, side: 1 | -1): [number, number, number] {
+  switch (mudra) {
+    case "grip":
+      // Center of the closed fist cavity — shafts pass through here.
+      return [0, -0.052, 0.022];
+    case "hold":
+      // Cradle: offerings rest on the palm surface.
+      return [0, -0.048, 0.02];
+    case "pinch":
+      // Stem held between thumb tip and curled index.
+      return [side * 0.008, -0.055, 0.024];
+    default:
+      // Open gestures hold nothing; keep the palm center as the anchor.
+      return [0, -0.05, 0.02];
+  }
+}
+
 export const ganeshaHands: PartGenerator = (ctx) => {
-  const parts: Array<{ joint: JointId; object: THREE.Object3D }> = [];
+  const parts: Array<{
+    joint: JointId;
+    object: THREE.Object3D;
+    socketRefinements?: Array<{ id: `arm.${ArmSlot}.hand.item`; position: [number, number, number] }>;
+  }> = [];
   const armSlots = activeArmSlots(ctx.arms);
   for (const slot of armSlots) {
     const mudra = ctx.hands[slot]?.mudra ?? "open";
     const side: 1 | -1 = slot.endsWith("Left") ? 1 : -1;
     const hand = makeHand(ctx, mudra, side);
-    parts.push({ joint: `arm.${slot as ArmSlot}.hand`, object: hand });
+    parts.push({
+      joint: `arm.${slot as ArmSlot}.hand`,
+      object: hand,
+      socketRefinements: [
+        { id: `arm.${slot as ArmSlot}.hand.item`, position: gripPoint(mudra, side) },
+      ],
+    });
   }
   return parts;
 };

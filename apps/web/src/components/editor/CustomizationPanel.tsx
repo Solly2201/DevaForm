@@ -10,6 +10,7 @@ import { getAsset, listAssets, type EditorCategory } from "@devaform/asset-syste
 import { useDeity } from "@/state/deityContext";
 import {
   FACE_MORPHS,
+  JOINT_UI_GROUPS,
   activeArmSlots,
   getSocket,
   type PartSlot,
@@ -23,7 +24,7 @@ import { SliderControl } from "@/components/controls/SliderControl";
 import { BasePanel } from "./panels/BasePanel";
 import { HandsPanel } from "./panels/HandsPanel";
 import { MaterialsPanel } from "./panels/MaterialsPanel";
-import { PosePanel } from "./panels/PosePanel";
+import { JointGroupSection, PosePresetsSection } from "./panels/PosePanel";
 
 const SLOT_LABELS: Record<PartSlot, string> = {
   body: "Body",
@@ -399,7 +400,16 @@ function useSubsections(category: EditorCategory): Subsection[] {
     case "hands":
       return [{ id: "hands", label: "Hands", node: <HandsPanel /> }];
     case "pose":
-      return [{ id: "pose", label: "Pose", node: <PosePanel /> }];
+      // Presets first, then joint control organized by semantic body part
+      // (grouping declared on the skeleton — rig-driven, not hardcoded).
+      return [
+        { id: "presets", label: "Presets", node: <PosePresetsSection /> },
+        ...JOINT_UI_GROUPS.map((group) => ({
+          id: `joints:${group.label}`,
+          label: group.label,
+          node: <JointGroupSection joints={group.joints} />,
+        })),
+      ];
     case "materials":
       return [{ id: "materials", label: "Color", node: <MaterialsPanel /> }];
     case "base":
