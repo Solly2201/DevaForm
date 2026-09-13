@@ -29,6 +29,12 @@ import {
   type GeneratorContext,
 } from "./generators";
 import { getGlb, instantiateGlb } from "./glbCache";
+import {
+  applyMorphInfluences,
+  bindSkinnedMeshToJoints,
+  collectSkinnedMeshes,
+  socketNameToSocketId,
+} from "./skinning";
 import type { ZoneMaterials } from "./materials";
 
 export interface CharacterRig {
@@ -43,7 +49,7 @@ export interface CharacterRig {
   warnings: string[];
 }
 
-function buildJointHierarchy(skeleton: SkeletonDefinition): {
+export function buildJointHierarchy(skeleton: SkeletonDefinition): {
   characterRoot: THREE.Group;
   joints: Map<JointId, THREE.Object3D>;
 } {
@@ -258,6 +264,44 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
     if (!renderable) continue;
     if (renderable instanceof THREE.Object3D) {
+      // Asset-spec socket contract: SOCKET_<id> empties inside the GLB
+      // refine the schema socket's position to the authored location.
+      // Runs before any re-parenting, while the GLB hierarchy is intact.
+      renderable.traverse((node) => {
+        const socketName = node.name.match(/^SOCKET_(.+)$/)?.[1];
+        if (!socketName) return;
+        const socketId = socketNameToSocketId(socketName);
+        const socket = socketId ? sockets.get(socketId) : undefined;
+        const parentJoint = socket?.parent;
+        if (!socket || !parentJoint) {
+          warnings.push(`Asset ${asset.id}: unknown socket in node "${node.name}"`);
+          return;
+        }
+        node.updateWorldMatrix(true, false);
+        parentJoint.updateWorldMatrix(true, false);
+        socket.position.copy(
+          parentJoint.worldToLocal(node.getWorldPosition(new THREE.Vector3())),
+        );
+      });
+
+      // Skinned GLB contract: one continuous mesh whose bones are named
+      // after joint ids. The mesh is re-bound to THIS rig's joints, so the
+      // existing pose system deforms it on the GPU. Skinned meshes carry
+      // their own vertex placement — glTF ignores the node transform — so
+      // they mount on the character root at identity.
+      const skinnedMeshes = collectSkinnedMeshes(renderable);
+      if (skinnedMeshes.length > 0) {
+        for (const mesh of skinnedMeshes) {
+          mesh.name = mesh.name || `part:${asset.id}`;
+          characterRoot.add(mesh);
+          mesh.position.set(0, 0, 0);
+          mesh.quaternion.identity();
+          mesh.scale.set(1, 1, 1);
+          bindSkinnedMeshToJoints(mesh, joints, characterRoot, warnings, `Asset ${asset.id}`);
+        }
+        continue;
+      }
+
       // GLB part contract: groups named JOINT_<jointId> (searched at any
       // wrapper depth — exporters add scene/aux wrappers) are re-parented
       // onto that joint, so the part articulates with the skeleton.
@@ -275,23 +319,6 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           warnings.push(`Asset ${asset.id}: unknown joint in group "${group.name}"`);
         }
       }
-      // Asset-spec socket contract: SOCKET_<id> empties inside the GLB
-      // refine the schema socket's position to the authored location.
-      renderable.traverse((node) => {
-        const socketId = node.name.match(/^SOCKET_(.+)$/)?.[1];
-        if (!socketId) return;
-        const socket = sockets.get(socketId as SocketId);
-        const parentJoint = socket?.parent;
-        if (!socket || !parentJoint) {
-          warnings.push(`Asset ${asset.id}: unknown socket in node "${node.name}"`);
-          return;
-        }
-        node.updateWorldMatrix(true, false);
-        parentJoint.updateWorldMatrix(true, false);
-        socket.position.copy(
-          parentJoint.worldToLocal(node.getWorldPosition(new THREE.Vector3())),
-        );
-      });
       if (mapped === 0) {
         warnings.push(
           `Asset ${asset.id}: GLB part has no JOINT_<id> groups; attached to character root`,
@@ -370,6 +397,10 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
   // Whole-statue height proportion (uniform so nothing distorts).
   root.scale.setScalar(config.proportions.height);
+
+  // Morph weights for assets that expose morph targets (GLB/skinned).
+  // Procedural generators consumed the same weights parametrically above.
+  applyMorphInfluences(root, config.morphs);
 
   return { root, skeleton, joints, sockets, uprightAttachments, warnings };
 }

@@ -35,11 +35,44 @@ All names are ASCII, camelCase segments, dot-separated namespaces.
 
 ## 2b. Part GLB joint grouping
 
-Part meshes in a GLB must sit inside nodes named `JOINT_<jointId>` (e.g.
+A part GLB follows one of two contracts, and `pnpm validate-assets`
+requires one of them.
+
+**Rigid parts** — meshes sit inside nodes named `JOINT_<jointId>` (e.g.
 `JOINT_head`, `JOINT_chest`). The engine re-parents these groups onto the
-live skeleton joints so parts articulate with poses; a part without them
-fails `pnpm validate-assets`. Attachment GLBs do not use `JOINT_` groups —
-they mount on schema sockets with their attachment point at the origin.
+live skeleton joints so parts articulate with poses. Attachment GLBs do
+not use `JOINT_` groups — they mount on schema sockets with their
+attachment point at the origin.
+
+**Skinned parts** — one continuous mesh bound to a skin whose bones are
+named after canonical joint ids. The engine discards the file's own bones
+and re-binds the mesh to the live rig's joints, so the pose system deforms
+it on the GPU. Requirements:
+
+- every skin joint names a canonical joint, and no two bones claim the
+  same joint;
+- bones rest exactly where the canonical skeleton rests them (the engine
+  warns past 5 mm of drift, because the mesh would deform wrongly);
+- vertices are authored in character space, at rest;
+- ≤ 4 influences per vertex, normalized;
+- the skinned mesh node's own transform is ignored, per the glTF spec.
+
+**Name spelling.** glTF/three strip `.` from node names, so a bone cannot
+literally be called `arm.frontLeft.upper`. Skinned assets write joint ids
+with `_` in place of `.` — `arm_frontLeft_upper` — and the engine accepts
+either spelling (joint ids contain no underscores). The same tolerance
+applies to `SOCKET_<id>` empties.
+
+## 2c. Morph targets
+
+Morph targets are the parametric-morphology mechanism: named glTF targets
+(`mesh.extras.targetNames`) driven at runtime by the weights in
+`configuration.morphs`. A mesh applies the weights it exposes, ignores the
+rest, and returns un-named targets to neutral — so a configuration stays
+loadable as targets are added or removed. Assets declare the targets they
+support in the manifest's `morphTargets`; validation fails a declared name
+the GLB does not expose. Changing a weight is a GPU update: no geometry is
+rebuilt, and no new asset is generated.
 
 ## 3. Pivots & placement
 

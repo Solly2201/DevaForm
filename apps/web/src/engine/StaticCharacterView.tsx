@@ -13,6 +13,7 @@ import { getLightingPreset } from "./lighting";
 import { ZoneMaterials } from "./materials";
 import { applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig } from "./rig";
+import { applyMorphInfluences } from "./skinning";
 import { SceneEnvironment } from "./SceneEnvironment";
 import { subscribeGlbCache } from "./glbCache";
 
@@ -27,6 +28,7 @@ function StaticCharacter({ config }: { config: CharacterConfiguration }) {
   const rig = useMemo(() => {
     const built = buildRig(config, materials);
     materials.applyConfiguration(config.materials);
+    applyMorphInfluences(built.root, config.morphs);
     applyPose(built.joints, config.pose);
     alignUprightAttachments(built);
     return built;

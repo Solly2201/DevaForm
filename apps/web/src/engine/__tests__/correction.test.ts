@@ -242,12 +242,18 @@ describe("generic engine purity", () => {
       "rig.ts",
       "pose.ts",
       "materials.ts",
+      "skinning.ts",
+      "printExport.ts",
+      "glbCache.ts",
+      "CharacterRoot.tsx",
       "generators/bodyProfile.ts",
       "generators/types.ts",
       join("..", "state", "editorStore.ts"),
     ]) {
       const source = readFileSync(join(engineDir, file), "utf8");
       expect(source, file).not.toMatch(/["'`](ganesha|shiva|krishna|durga)["'`]/i);
+      // Nor may it recognize a deity, body kind or authoring tool by name.
+      expect(source, file).not.toMatch(/\b(makehuman|mixamo|humanBase)\b/i);
     }
   });
 });
