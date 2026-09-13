@@ -118,6 +118,86 @@ export function taperedTube(
 }
 
 /**
+ * Elliptical loft — ONE smooth surface swept vertically through elliptical
+ * cross-sections. This is the sculptural primitive for coherent anatomy
+ * (torsos, necks, skulls): silhouettes come from the section curve, not
+ * from unions of visible spheres. Sections are Catmull-Rom-interpolated so
+ * transitions (shoulder→waist→hip, cheek→jaw→chin) flow organically.
+ *
+ * Each section: local height y, half-widths rx (X) and rz (Z), optional
+ * forward offset z. Ends are closed with fan caps.
+ */
+export interface LoftSection {
+  y: number;
+  rx: number;
+  rz: number;
+  z?: number;
+}
+
+export function loft(
+  sections: readonly LoftSection[],
+  radialSegments = 28,
+  ringsPerSpan = 5,
+): THREE.BufferGeometry {
+  const spline = (pick: (s: LoftSection) => number) =>
+    new THREE.CatmullRomCurve3(
+      sections.map((s, i) => new THREE.Vector3(i, pick(s), 0)),
+      false,
+      "catmullrom",
+      0.5,
+    );
+  const yC = spline((s) => s.y);
+  const rxC = spline((s) => s.rx);
+  const rzC = spline((s) => s.rz);
+  const zC = spline((s) => s.z ?? 0);
+
+  const rings = (sections.length - 1) * ringsPerSpan;
+  const positions: number[] = [];
+  const indices: number[] = [];
+
+  for (let i = 0; i <= rings; i++) {
+    const t = i / rings;
+    const y = yC.getPoint(t).y;
+    const rx = Math.max(0.0005, rxC.getPoint(t).y);
+    const rz = Math.max(0.0005, rzC.getPoint(t).y);
+    const zOff = zC.getPoint(t).y;
+    for (let j = 0; j < radialSegments; j++) {
+      const angle = (j / radialSegments) * Math.PI * 2;
+      positions.push(Math.cos(angle) * rx, y, Math.sin(angle) * rz + zOff);
+    }
+  }
+  // Outward winding (positive signed volume), matching taperedTube.
+  for (let i = 0; i < rings; i++) {
+    for (let j = 0; j < radialSegments; j++) {
+      const a = i * radialSegments + j;
+      const b = i * radialSegments + ((j + 1) % radialSegments);
+      const c = (i + 1) * radialSegments + j;
+      const d = (i + 1) * radialSegments + ((j + 1) % radialSegments);
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+  // Caps
+  const first = sections[0];
+  const last = sections[sections.length - 1];
+  const bottomIndex = positions.length / 3;
+  positions.push(0, first?.y ?? 0, first?.z ?? 0);
+  const topIndex = positions.length / 3;
+  positions.push(0, last?.y ?? 0, last?.z ?? 0);
+  const lastRing = rings * radialSegments;
+  for (let j = 0; j < radialSegments; j++) {
+    const next = (j + 1) % radialSegments;
+    indices.push(bottomIndex, j, next);
+    indices.push(topIndex, lastRing + next, lastRing + j);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+/**
  * Revolved profile. Points are [radiusX, y] pairs from bottom to top.
  */
 export function lathe(

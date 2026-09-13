@@ -8,7 +8,7 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { SKELETON, type JointId } from "@devaform/character-schema";
+import { SKELETON, getSocket, type JointId } from "@devaform/character-schema";
 import { AVAILABLE_DEITIES, getAsset } from "@devaform/asset-system";
 
 /** Default configuration used for thumbnail materials/context. */
@@ -103,11 +103,22 @@ export async function buildAssetObject(
     const joints = buildRestSkeleton();
     const container = new THREE.Group();
     let rootJointHolder: THREE.Object3D | null = null;
-    for (const { joint, object } of generator(ctx)) {
-      joints.get(joint)?.add(object);
+    for (const entry of generator(ctx)) {
+      // Socket-mounted entries render at the socket's schema-default spot
+      // (thumbnails have no owner parts to refine against).
+      const jointId = entry.socket !== undefined ? getSocket(entry.socket).joint : entry.joint;
+      const holder = joints.get(jointId);
+      if (entry.socket !== undefined && holder) {
+        const socketProxy = new THREE.Object3D();
+        socketProxy.position.set(...getSocket(entry.socket).position);
+        holder.add(socketProxy);
+        socketProxy.add(entry.object);
+      } else {
+        holder?.add(entry.object);
+      }
       // Walk to the skeleton root once so the whole assembly is captured.
       if (!rootJointHolder) {
-        let walker: THREE.Object3D | undefined = joints.get(joint);
+        let walker: THREE.Object3D | undefined = holder;
         while (walker?.parent) walker = walker.parent;
         rootJointHolder = walker ?? null;
       }

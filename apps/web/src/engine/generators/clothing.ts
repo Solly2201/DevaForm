@@ -13,10 +13,16 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   const bulk = ctx.proportions.bulk;
   const group = new THREE.Group();
 
-  // Wide enough that knee/shin masses stay inside the skirt in standing
-  // poses (legs sit at |x| ≈ 0.15 including joint masses), and always
-  // wrapping outside the measured hips.
-  const topR = Math.max(0.165 * bulk, ctx.body.pelvisHalfWidth + 0.008);
+  // The skirt wraps the body's measured clearance radius — wide enough
+  // that this body's knee/shin masses stay inside it in standing poses,
+  // and always outside the measured hips. Slimmer bodies get a slimmer
+  // wrap instead of one deity's barrel.
+  // Fitted at the hips, flaring (A-line) to the leg-clearance radius.
+  const bottomR = Math.max(ctx.body.dhotiRadius, ctx.body.pelvisHalfWidth + 0.012);
+  const topR = Math.max(ctx.body.pelvisHalfWidth + 0.012, bottomR * 0.97);
+  // Seated drape volumes are authored against the classic wrap; scale
+  // them with the actual wrap so slim bodies get a proportionate lap.
+  const lapScale = bottomR / (0.165 * bulk);
 
   if (ctx.seated) {
     // Seated poses: drape a lap cloth over the folded legs instead of a
@@ -28,14 +34,14 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     );
     // Lap drape — wide, flattened cushion of cloth over the crossed legs
     group.add(
-      mesh(new THREE.SphereGeometry(0.19 * bulk, 32, 22), garment, {
+      mesh(new THREE.SphereGeometry(0.19 * bulk * lapScale, 32, 22), garment, {
         position: [0, -0.075, 0.05],
         scale: [1.15, 0.42, 0.95],
       }),
     );
     // Hem falling over the front edge of the lap
     group.add(
-      mesh(new THREE.TorusGeometry(0.185 * bulk, 0.012, 10, 40, Math.PI), accent, {
+      mesh(new THREE.TorusGeometry(0.185 * bulk * lapScale, 0.012, 10, 40, Math.PI), accent, {
         position: [0, -0.09, 0.055],
         rotation: [0.25, 0, 0],
         scale: [1.05, 0.9, 0.85],
@@ -51,7 +57,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     // Center pleat fan spilling onto the lap
     group.add(
       mesh(new THREE.BoxGeometry(0.05, 0.13, 0.006), accent, {
-        position: [0, -0.06, 0.155 * bulk],
+        position: [0, -0.06, 0.155 * bulk * lapScale],
         rotation: [0.55, 0, 0],
       }),
     );
@@ -63,13 +69,13 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
 
   // Main pleated skirt
   group.add(
-    mesh(pleatedCylinder(topR, topR * 0.94, skirtLength, 16, 0.007), garment, {
+    mesh(pleatedCylinder(topR, bottomR * 0.94, skirtLength, 16, 0.007), garment, {
       position: [0, 0.055 - skirtLength / 2, 0],
     }),
   );
   // Hem band
   group.add(
-    mesh(new THREE.TorusGeometry(topR * 0.94, 0.009, 10, 48), accent, {
+    mesh(new THREE.TorusGeometry(bottomR * 0.94, 0.009, 10, 48), accent, {
       position: [0, hemY + 0.004, 0],
       rotation: [Math.PI / 2, 0, 0],
     }),
@@ -96,7 +102,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     const stripLength = skirtLength * (0.88 - Math.abs(t) * 0.14);
     group.add(
       mesh(new THREE.BoxGeometry(0.032, stripLength, 0.005), accent, {
-        position: [t * 0.06, 0.05 - stripLength / 2, topR * 0.9 + 0.01],
+        position: [t * 0.06, 0.05 - stripLength / 2, bottomR * 0.9 + 0.01],
         rotation: [0.02, 0, t * 0.1],
       }),
     );

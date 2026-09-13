@@ -185,15 +185,18 @@ export const necklaceHaram: AttachmentGenerator = (ctx) => {
   // Relational surface drape: the collar band is a closed curve whose back
   // half hugs the neck and whose front half lies on the measured chest —
   // a rigid torus cannot do both without its sides sinking into the
-  // pectorals, so the band is swept along the surface instead.
-  const neckR = 0.075;
+  // pectorals, so the band is swept along the surface instead. The neck
+  // half wraps the measured neck column, whatever body wears it.
+  const neckR = ctx.body.neckRadius + 0.003;
+  const collarY = ctx.body.neckBaseOffsetY;
   const bandPts: V3[] = [];
   const samples = 26;
   for (let i = 0; i <= samples; i++) {
     const angle = (i / samples) * Math.PI * 2;
     const frontness = Math.max(0, Math.sin(angle));
     const x = Math.cos(angle) * (neckR + frontness * 0.015);
-    const y = 0.004 - frontness * 0.052;
+    // Back half seats at the neck base; the front drops onto the chest.
+    const y = collarY + 0.004 - frontness * (0.052 + collarY);
     const zNeck = Math.sin(angle) * neckR * 0.65;
     const z =
       frontness > 0.05
@@ -227,9 +230,10 @@ export const necklaceMala: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
-  const neckR = 0.078;
-  // Two strands: the back half hugs the neck, the front half drapes down
-  // and is lifted onto the measured chest surface.
+  const neckR = ctx.body.neckRadius + 0.006;
+  const collarY = ctx.body.neckBaseOffsetY;
+  // Two strands: the back half hugs the neck base, the front half drapes
+  // down and is lifted onto the measured chest surface.
   for (const [drop, spread, size] of [
     [0.05, 0.008, 0.0085],
     [0.085, 0.018, 0.0095],
@@ -238,7 +242,7 @@ export const necklaceMala: AttachmentGenerator = (ctx) => {
       const angle = (i / 24) * Math.PI * 2;
       const frontness = Math.max(0, Math.sin(angle));
       const x = Math.cos(angle) * (neckR + frontness * spread);
-      const y = 0.008 - frontness * drop;
+      const y = collarY + 0.008 - frontness * (drop + collarY);
       const zNeck = Math.sin(angle) * neckR * 0.7;
       const z =
         frontness > 0.05
@@ -289,9 +293,13 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
   // them. Socket sits at pelvis + [0, 0.04, 0.12]; work socket-local.
   const beltY = 0.015; // socket-local; pelvis + 0.055
   const spineY = beltY + 0.04 - 0.1; // same height in spine-local space
+  // The kamarband is worn over the dressed waist: it must clear the hips,
+  // the belly overhang AND the skirt's wrap radius (a slim body in a full
+  // dhoti still wears the belt outside the cloth, never inside it).
   const halfWidth = Math.max(
     ctx.body.pelvisHalfWidth + 0.014,
     ctx.body.bellyHalfWidthAt(spineY) + 0.008,
+    ctx.body.dhotiRadius + 0.012,
   );
   const frontDepth = Math.max(halfWidth, ctx.body.bellySurfaceZAt(0, spineY) + 0.008);
   const belt = mesh(new THREE.TorusGeometry(halfWidth, 0.012, 10, 48), metal, {
@@ -337,20 +345,30 @@ function bandRing(ctx: GeneratorContext, radius: number, tube: number, withGem =
   return g;
 }
 
+/**
+ * Kundala earrings — mounted ON the ear sockets, which the ear-owning
+ * part (Ganesha's ears, Shiva's head) refines onto its actual earlobes.
+ * The rings therefore originate at the ear of whichever head wears them;
+ * no per-deity placement exists here.
+ */
 export const earringsKundala: PartGenerator = (ctx) => {
-  const metal = ctx.materials.get("metal");
-  const group = new THREE.Group();
-  for (const side of [1, -1]) {
-    const ring = mesh(new THREE.TorusGeometry(0.02, 0.0055, 10, 22), metal, {
-      position: [side * 0.128, -0.075, 0.012],
-      rotation: [0, side * 0.45, 0],
-    });
-    group.add(ring);
-    const drop = gemStud(ctx, 0.0075);
-    drop.position.set(side * 0.128, -0.1, 0.012);
-    group.add(drop);
-  }
-  return [{ joint: "head", object: group }];
+  const earring = (side: 1 | -1): THREE.Object3D => {
+    const g = new THREE.Group();
+    g.add(
+      mesh(new THREE.TorusGeometry(0.018, 0.005, 10, 22), ctx.materials.get("metal"), {
+        position: [0, -0.014, 0.002],
+        rotation: [0, side * 0.45, 0],
+      }),
+    );
+    const drop = gemStud(ctx, 0.007);
+    drop.position.set(0, -0.037, 0.002);
+    g.add(drop);
+    return g;
+  };
+  return [
+    { socket: "head.leftEar", object: earring(1) },
+    { socket: "head.rightEar", object: earring(-1) },
+  ];
 };
 
 export const armletsVanki: PartGenerator = (ctx) => {

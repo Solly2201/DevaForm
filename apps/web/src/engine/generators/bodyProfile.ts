@@ -23,6 +23,24 @@ export interface BodyProfile {
   belly: number;
   chest: number;
   bulk: number;
+  /**
+   * Neck column radius (widest point) — neck ornaments (malas, torques,
+   * collars) wrap this surface plus their declared clearance instead of
+   * assuming one deity's neck.
+   */
+  neckRadius: number;
+  /**
+   * Height (necklace-socket-local) where the neck column begins — collar
+   * ornaments wrap their back half here so they circle the actual neck,
+   * not the shoulders below it. 0 keeps the classic collar seat.
+   */
+  neckBaseOffsetY: number;
+  /**
+   * Wrap radius a full skirt/waist garment needs to clear the hips and
+   * standing legs of THIS body. Waistbands worn over the garment wrap
+   * this too.
+   */
+  dhotiRadius: number;
   /** Belly ellipsoid, spine-joint-local: center + radii. */
   bellyCenterY: number;
   bellyCenterZ: number;
@@ -76,6 +94,9 @@ export function deriveBodyProfile(
   params: Record<string, number | string>,
   proportions: Proportions,
 ): BodyProfile {
+  // The athletic (masculine human) body declares itself via its params —
+  // pure data, so the engine never asks WHICH deity wears it.
+  if (params.form === "athletic") return deriveAthleticProfile(params, proportions);
   const belly = typeof params.belly === "number" ? params.belly : 1;
   const chest = typeof params.chest === "number" ? params.chest : 1;
   const bulk = proportions.bulk;
@@ -118,6 +139,13 @@ export function deriveBodyProfile(
     belly,
     chest,
     bulk,
+    // Mirrors body.ts neck cylinder (r 0.062 top / 0.082 bottom): widest
+    // wrap point the collar ornaments actually sit on.
+    neckRadius: 0.072,
+    neckBaseOffsetY: 0,
+    // Mirrors the classic dhoti sizing: wide enough that knee/shin masses
+    // stay inside the skirt in standing poses.
+    dhotiRadius: 0.165 * bulk,
     bellyCenterY,
     bellyCenterZ,
     bellyRadiusX,
@@ -126,6 +154,90 @@ export function deriveBodyProfile(
     bellyFrontZ: bellyCenterZ + bellyRadiusZ,
     // Mirrors body.ts pelvis mass: sphere r=0.125 scaled x by 1.22*bulk.
     pelvisHalfWidth: 0.125 * 1.22 * bulk,
+    chestCenterY,
+    chestCenterZ,
+    chestRadiusX,
+    chestRadiusY,
+    chestRadiusZ,
+    bellyHalfWidthAt,
+    bellySurfaceZAt,
+    chestSurfaceZAt,
+    torsoSurfaceZAt,
+    torsoBackZAt,
+  };
+}
+
+/**
+ * Athletic/masculine human profile — mirrors bodyAthletic.ts exactly the
+ * way the default profile mirrors body.ts:
+ * - "belly" volume = the lower-torso loft (hips → waist), spine-local
+ * - chest volume  = the upper-torso loft (ribcage/pec region), chest-local
+ * - hips, neck column, collar seat and skirt clearance from the same
+ *   params the lofts are built from.
+ */
+function deriveAthleticProfile(
+  params: Record<string, number | string>,
+  proportions: Proportions,
+): BodyProfile {
+  const chest = typeof params.chest === "number" ? params.chest : 1;
+  const waist = typeof params.waist === "number" ? params.waist : 1;
+  const shoulder = typeof params.shoulder === "number" ? params.shoulder : 1;
+  const bulk = proportions.bulk;
+
+  // Lower-torso loft approximation (spine-local): hip-dominant ellipsoid
+  // spanning crotch to waist — mirrors the pelvis loft sections.
+  const bellyCenterY = -0.02;
+  const bellyCenterZ = 0.005;
+  const bellyRadiusX = (0.107 * (0.6 + 0.4 * waist)) * bulk;
+  const bellyRadiusY = 0.15;
+  const bellyRadiusZ = 0.077 * bulk;
+
+  // Upper-torso loft approximation (chest-local): ribcage/pec ellipsoid —
+  // mirrors the chest loft sections (front reaches ≈0.097 at the pec line).
+  const chestCenterY = 0.04;
+  const chestCenterZ = 0.01;
+  const chestRadiusX = 0.142 * shoulder * bulk;
+  const chestRadiusY = 0.125 * (0.94 + 0.06 * chest);
+  const chestRadiusZ = 0.088 * bulk;
+
+  const bellyHalfWidthAt = (y: number): number => {
+    const t = 1 - ((y - bellyCenterY) / bellyRadiusY) ** 2;
+    return t <= 0 ? 0 : bellyRadiusX * Math.sqrt(t);
+  };
+  const bellySurfaceZAt = (x: number, y: number): number =>
+    ellipseSliceZ(x, y, 0, bellyCenterY, bellyCenterZ, bellyRadiusX, bellyRadiusY, bellyRadiusZ);
+  const chestSurfaceZAt = (x: number, y: number): number =>
+    ellipseSliceZ(x, y, 0, chestCenterY, chestCenterZ, chestRadiusX, chestRadiusY, chestRadiusZ);
+  const torsoSurfaceZAt = (x: number, y: number): number =>
+    Math.max(chestSurfaceZAt(x, y), bellySurfaceZAt(x, y + SPINE_TO_CHEST_Y));
+  const torsoBackZAt = (x: number, y: number): number =>
+    Math.min(
+      2 * chestCenterZ - chestSurfaceZAt(x, y),
+      2 * bellyCenterZ - bellySurfaceZAt(x, y + SPINE_TO_CHEST_Y),
+    );
+
+  const pelvisHalfWidth = 0.108 * bulk;
+
+  return {
+    belly: waist, // raw driver of the lower-torso volume
+    chest,
+    bulk,
+    // Mirrors the bodyAthletic neck loft (base rx 0.052 → 0.037).
+    neckRadius: 0.046 * bulk,
+    // The neck loft begins above the shoulder loft: collars wrap there
+    // (necklace-socket-local; socket sits at chest+0.12, neck joint +0.16).
+    neckBaseOffsetY: 0.045,
+    // Slimmer legs than the classic build -> tighter skirt wrap, but never
+    // tighter than the hips.
+    dhotiRadius: Math.max(0.15 * bulk, pelvisHalfWidth + 0.03),
+    bellyCenterY,
+    bellyCenterZ,
+    bellyRadiusX,
+    bellyRadiusY,
+    bellyRadiusZ,
+    bellyFrontZ: bellyCenterZ + bellyRadiusZ,
+    // Mirrors the pelvis loft's hip sections (rx 0.108 * bulk).
+    pelvisHalfWidth,
     chestCenterY,
     chestCenterZ,
     chestRadiusX,

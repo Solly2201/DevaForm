@@ -287,7 +287,20 @@ export const ganeshaEars: PartGenerator = (ctx) => {
     }
     group.add(ear);
   }
-  return [{ joint: "head", object: group }];
+  // The ears own the earlobe surfaces: seat the ear sockets on the lobes
+  // (tracking the ear size) so ear jewellery hangs from the actual ear.
+  const lobeX = 0.147 - 0.019 * size;
+  const lobeY = 0.06 - 0.132 * size * (1 - fold * 0.2);
+  return [
+    {
+      joint: "head",
+      object: group,
+      socketRefinements: [
+        { id: "head.leftEar", position: [lobeX, lobeY, 0.01] },
+        { id: "head.rightEar", position: [-lobeX, lobeY, 0.01] },
+      ],
+    },
+  ];
 };
 
 // ---------------------------------------------------------------------------
