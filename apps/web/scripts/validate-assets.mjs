@@ -8,7 +8,11 @@
  * GEOMETRY   meshes present, POSITION bounds, triangle counts
  * TRANSFORM  approximate bounds within the canonical scale envelope
  * MATERIALS  zone:* names must reference known zones
- * PARTS      part-kind GLBs must carry JOINT_<id> node groups
+ * PARTS      part-kind GLBs must carry JOINT_<id> groups, or a skin
+ * SKINS      every skin joint names a canonical skeleton joint, uniquely,
+ *            and skinned primitives carry JOINTS_0/WEIGHTS_0
+ * MORPHS     morph targets are named, consistent across primitives, and
+ *            agree with the names the manifest declares
  * MANIFEST   every glb reference exists; orphan files are warnings
  *
  * Severity: problems on production-stage assets are ERRORS (exit 1);
@@ -23,12 +27,24 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifestEntries, repoPaths } from "./lib/manifest.mjs";
-import { glbStats, parseGlbJson } from "./lib/glb.mjs";
+import { glbStats, parseGlbJson, skinningProblems } from "./lib/glb.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { webRoot: ROOT, assetDir: ASSET_DIR, manifestDir: MANIFEST_DIR } = repoPaths(here);
 
 const KNOWN_ZONES = ["skin", "skinSecondary", "hair", "garment", "garmentAccent", "metal", "gem", "base"];
+// Canonical joint ids, exported from the schema by
+// `pnpm --filter @devaform/character-schema export-canonical`.
+const CANONICAL_RIG = JSON.parse(
+  await readFile(path.join(ROOT, "..", "..", "tools", "blender", "canonical-rig.json"), "utf8"),
+);
+const CANONICAL_JOINTS = new Set(CANONICAL_RIG.skeleton.map((joint) => joint.id));
+/** glTF strips "." from node names, so bones may spell joint ids with "_". */
+const boneNameToJointId = (name) => {
+  if (CANONICAL_JOINTS.has(name)) return name;
+  const dotted = String(name ?? "").replace(/_/g, ".");
+  return CANONICAL_JOINTS.has(dotted) ? dotted : null;
+};
 const MIN_SIZE_M = 0.01;
 const MAX_SIZE_M = 2.0;
 const TRIANGLE_BUDGET = { production: 150_000, other: 300_000 };
@@ -71,8 +87,10 @@ for (const entry of glbEntries) {
     continue;
   }
   let stats;
+  let json;
   try {
-    stats = glbStats(parseGlbJson(await readFile(file)));
+    json = parseGlbJson(await readFile(file));
+    stats = glbStats(json);
   } catch (e) {
     error(`${label}: ${e.message}`);
     continue;
@@ -90,8 +108,16 @@ for (const entry of glbEntries) {
       problems.push(`unknown material zone "${name}"`);
     }
   }
-  if (entry.kindType === "part" && !stats.nodeNames.some((n) => n.startsWith("JOINT_"))) {
-    problems.push("part GLB has no JOINT_<id> node groups (will not follow the skeleton)");
+  problems.push(...skinningProblems(json, entry, boneNameToJointId));
+  const skinned = (json.skins ?? []).length > 0;
+  if (
+    entry.kindType === "part" &&
+    !skinned &&
+    !stats.nodeNames.some((n) => n.startsWith("JOINT_"))
+  ) {
+    problems.push(
+      "part GLB has neither JOINT_<id> node groups nor a skin (will not follow the skeleton)",
+    );
   }
   for (const texture of stats.textures) {
     if (texture.external) {

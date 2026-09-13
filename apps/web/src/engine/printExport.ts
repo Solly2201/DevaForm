@@ -13,14 +13,24 @@
  */
 import * as THREE from "three";
 import { STLExporter } from "three/examples/jsm/exporters/STLExporter.js";
+import { bakeSceneForExport } from "./skinning";
 import type { CharacterRig } from "./rig";
 
+/**
+ * Export what the viewer currently shows. Deformation from skinning and
+ * morph targets lives in GPU state, which a geometry exporter cannot see —
+ * so the rig is baked to static world-space geometry first. Rigid
+ * procedural parts pass through the same bake unchanged.
+ */
 export function exportRigStl(rig: CharacterRig): Blob {
   rig.root.updateWorldMatrix(true, true);
+  const { group, dispose } = bakeSceneForExport(rig.root);
   const exporter = new STLExporter();
-  const result = exporter.parse(rig.root, { binary: true }) as unknown as DataView;
+  const result = exporter.parse(group, { binary: true }) as unknown as DataView;
   const bytes = new Uint8Array(result.buffer as ArrayBuffer, result.byteOffset, result.byteLength);
-  return new Blob([bytes], { type: "model/stl" });
+  const blob = new Blob([bytes], { type: "model/stl" });
+  dispose();
+  return blob;
 }
 
 export interface PrintCheck {

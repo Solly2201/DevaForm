@@ -61,3 +61,69 @@ export function glbStats(json) {
     textures,
   };
 }
+
+/**
+ * Skin + morph-target contract checks. A skinned asset replaces the
+ * JOINT_<id> group contract: its bones must name canonical joints, each
+ * exactly once, and its morph targets must be named and consistent with
+ * whatever the manifest declares.
+ */
+export function skinningProblems(json, entry, boneNameToJointId) {
+  const problems = [];
+  const nodes = json.nodes ?? [];
+
+  for (const [index, skin] of (json.skins ?? []).entries()) {
+    const claimed = new Map();
+    for (const nodeIndex of skin.joints ?? []) {
+      const boneName = nodes[nodeIndex]?.name;
+      if (!boneName) {
+        problems.push(`skin ${index}: joint node ${nodeIndex} has no name`);
+        continue;
+      }
+      const jointId = boneNameToJointId(boneName);
+      if (!jointId) {
+        problems.push(`skin ${index}: bone "${boneName}" names no canonical joint`);
+        continue;
+      }
+      if (claimed.has(jointId)) {
+        problems.push(
+          `skin ${index}: bones "${claimed.get(jointId)}" and "${boneName}" both map to ${jointId}`,
+        );
+        continue;
+      }
+      claimed.set(jointId, boneName);
+    }
+    if ((skin.joints ?? []).length === 0) problems.push(`skin ${index}: declares no joints`);
+  }
+
+  const declared = new Set(entry.morphTargets ?? []);
+  const found = new Set();
+  for (const [meshIndex, mesh] of (json.meshes ?? []).entries()) {
+    const primitives = mesh.primitives ?? [];
+    const skinnedPrimitive = primitives.some((p) => p.attributes?.JOINTS_0 !== undefined);
+    const meshIsSkinned = nodes.some((n) => n.mesh === meshIndex && n.skin !== undefined);
+    if (meshIsSkinned && !skinnedPrimitive) {
+      problems.push(`mesh ${meshIndex}: skinned node but no JOINTS_0/WEIGHTS_0 attributes`);
+    }
+    const targetCounts = new Set(primitives.map((p) => (p.targets ?? []).length));
+    if (targetCounts.size > 1) {
+      problems.push(`mesh ${meshIndex}: primitives disagree on morph target count`);
+    }
+    const targetCount = primitives[0]?.targets?.length ?? 0;
+    if (targetCount === 0) continue;
+    const names = mesh.extras?.targetNames ?? [];
+    if (names.length !== targetCount) {
+      problems.push(
+        `mesh ${meshIndex}: ${targetCount} morph targets but ${names.length} names in extras.targetNames`,
+      );
+    }
+    for (const name of names) found.add(name);
+  }
+
+  for (const name of declared) {
+    if (!found.has(name)) {
+      problems.push(`manifest declares morph target "${name}" that the GLB does not expose`);
+    }
+  }
+  return problems;
+}

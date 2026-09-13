@@ -13,11 +13,13 @@
  * the rig rebuilds once the mesh arrives.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 import { applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
+import { applyMorphInfluences } from "./skinning";
 import { activeRig } from "./rigHandle";
 
 export function CharacterRoot() {
@@ -41,13 +43,26 @@ export function CharacterRoot() {
   }
   const zoneMaterials = zoneMaterialsRef.current;
 
+  // Morph weights reach mesh assets as GPU morph-target influences, which
+  // never need a rebuild. Procedural generators instead consume the same
+  // weights parametrically, so a rebuild is still required while a chosen
+  // procedural asset declares morph targets — decided from asset metadata,
+  // never from asset ids.
+  const proceduralMorphKey = useMemo(() => {
+    const rebuilds = [...Object.values(parts), ...attachments.map((a) => a.asset)].some((ref) => {
+      const asset = resolveAssetRef(ref);
+      return asset?.source.kind === "procedural" && (asset.morphTargets?.length ?? 0) > 0;
+    });
+    return rebuilds ? JSON.stringify(morphs) : "";
+  }, [parts, attachments, morphs]);
+
   // Rebuild rig only when structure changes. The pose preset participates
   // because seated presets swap clothing to pose-compatible geometry.
   const rig: CharacterRig = useMemo(() => {
     const config = useEditorStore.getState().config;
     return buildRig(config, zoneMaterials);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parts, attachments, base, proportions, morphs, hands, arms, posePreset, glbVersion, zoneMaterials]);
+  }, [parts, attachments, base, proportions, proceduralMorphKey, hands, arms, posePreset, glbVersion, zoneMaterials]);
 
   // Dispose the previous rig's geometry when a new one replaces it.
   const previousRig = useRef<CharacterRig | null>(null);
@@ -73,6 +88,11 @@ export function CharacterRoot() {
     applyPose(rig.joints, pose);
     alignUprightAttachments(rig);
   }, [rig, pose]);
+
+  // Morphs: in-place GPU influence updates (no geometry rebuild).
+  useEffect(() => {
+    applyMorphInfluences(rig.root, morphs);
+  }, [rig, morphs]);
 
   // Materials: in-place color/finish updates.
   useEffect(() => {

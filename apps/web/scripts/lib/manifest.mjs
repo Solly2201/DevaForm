@@ -22,7 +22,9 @@ export async function readManifestEntries(manifestDir) {
   if (!existsSync(manifestDir)) return entries;
   for (const file of await readdir(manifestDir)) {
     if (!file.endsWith(".ts")) continue;
-    const source = await readFile(path.join(manifestDir, file), "utf8");
+    // Normalize line endings first: a CRLF manifest would otherwise split
+    // into zero entries and silently drop a whole deity from validation.
+    const source = (await readFile(path.join(manifestDir, file), "utf8")).replace(/\r\n/g, "\n");
     const chunks = source.split(/\n  \{\n(?=\s*id:)/).slice(1);
     for (const chunk of chunks) {
       const id = chunk.match(/id:\s*"([^"]+)"/)?.[1];
@@ -34,6 +36,9 @@ export async function readManifestEntries(manifestDir) {
         kindType: chunk.match(/kind:\s*\{\s*type:\s*"([^"]+)"/)?.[1] ?? "unknown",
         glbPath: chunk.match(/kind:\s*"glb",\s*path:\s*"([^"]+)"/)?.[1] ?? null,
         thumbnail: chunk.match(/thumbnail:\s*"([^"]+)"/)?.[1] ?? null,
+        morphTargets: [
+          ...(chunk.match(/morphTargets:\s*\[([^\]]*)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g),
+        ].map((match) => match[1]),
         manifest: file,
       });
     }

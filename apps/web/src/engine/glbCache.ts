@@ -12,7 +12,9 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { MATERIAL_ZONES, type MaterialZone } from "@devaform/character-schema";
+import { collectSkinnedMeshes } from "./skinning";
 import type { ZoneMaterials } from "./materials";
 
 export type GlbEntry =
@@ -69,9 +71,14 @@ function isZoneName(name: string): name is `zone:${MaterialZone}` {
  * Deep-clone a loaded GLB scene for insertion into the rig. Zone-named
  * materials are swapped for the live shared zone materials; authored
  * materials are cloned per instance so disposal stays per-rig.
+ *
+ * Skinned scenes need SkeletonUtils: THREE.SkinnedMesh.copy() assigns the
+ * SOURCE skeleton by reference, so a plain clone would leave every
+ * instance sharing one set of bones — posing one would pose them all.
  */
 export function instantiateGlb(scene: THREE.Group, materials: ZoneMaterials): THREE.Object3D {
-  const clone = scene.clone(true);
+  const clone =
+    collectSkinnedMeshes(scene).length > 0 ? cloneSkinned(scene) : scene.clone(true);
   clone.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
     // Geometry is shared with the cached source scene — rig disposal must
