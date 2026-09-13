@@ -3,11 +3,16 @@
  * clamped to each joint's limits. Pure in-place transform mutation; never
  * rebuilds geometry.
  */
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
+  ARM_SLOTS,
+  GESTURE_MUDRAS,
+  HAND_FINGER_AXIS,
+  HAND_PALM_AXIS,
   getJoint,
   getPosePreset,
   isJointId,
+  type HandsConfiguration,
   type JointId,
   type PoseConfiguration,
   type Vec3,
@@ -43,6 +48,97 @@ export function applyPose(
       clamp(rotation[2], def.limits?.z),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Gesture orientation
+// ---------------------------------------------------------------------------
+
+const within = (value: number, range: readonly [number, number] | undefined): boolean =>
+  !range || (value >= range[0] - 1e-6 && value <= range[1] + 1e-6);
+
+/**
+ * Orthonormal frame built from a finger direction and a palm direction:
+ * columns are (fingers × palm, fingers, palm), so the frame maps local Y
+ * onto the fingers and local Z onto the palm.
+ */
+function handFrame(fingers: THREE.Vector3, palm: THREE.Vector3): THREE.Quaternion {
+  const f = fingers.clone().normalize();
+  const p = palm.clone().projectOnPlane(f).normalize();
+  return new THREE.Quaternion().setFromRotationMatrix(
+    new THREE.Matrix4().makeBasis(f.clone().cross(p), f, p),
+  );
+}
+
+/** The hand rig's own frame, from the shared axis convention. */
+const HAND_LOCAL_FRAME = handFrame(
+  new THREE.Vector3(...HAND_FINGER_AXIS),
+  new THREE.Vector3(...HAND_PALM_AXIS),
+);
+
+/**
+ * World rotation that points the hand's finger axis along `fingers` and
+ * its palm axis along `palm`: carry the hand's own frame onto the target
+ * frame. Derived from the axis constants, so the convention lives in one
+ * place and a differently-authored hand would need no code change here.
+ */
+function gestureWorldQuaternion(fingers: Vec3, palm: Vec3): THREE.Quaternion {
+  const target = handFrame(new THREE.Vector3(...fingers), new THREE.Vector3(...palm));
+  return target.multiply(HAND_LOCAL_FRAME.clone().invert());
+}
+
+const parentQuaternion = new THREE.Quaternion();
+const solvedQuaternion = new THREE.Quaternion();
+const solvedEuler = new THREE.Euler();
+
+/**
+ * Orient gesture hands by meaning rather than by baked wrist angles.
+ *
+ * A mudra like abhaya is a statement about what the devotee sees — palm
+ * toward them, fingers up — so the wrist is SOLVED from the arm the pose
+ * actually produced. Run after applyPose, before attachments are aligned.
+ *
+ * If the arm cannot present the gesture within the wrist's joint limits
+ * (a hanging arm cannot show a raised palm), the pose's own wrist is left
+ * untouched instead of snapping to a clamped, broken-looking angle.
+ * Returns the slots whose gesture was applied.
+ */
+export function applyGestureOrientations(
+  joints: ReadonlyMap<JointId, THREE.Object3D>,
+  hands: HandsConfiguration,
+): JointId[] {
+  const applied: JointId[] = [];
+  let top: THREE.Object3D | undefined = joints.get("root");
+  while (top?.parent) top = top.parent;
+  top?.updateMatrixWorld(true);
+
+  for (const slot of ARM_SLOTS) {
+    const gesture = GESTURE_MUDRAS[hands[slot]?.mudra];
+    if (!gesture) continue;
+    const handId: JointId = `arm.${slot}.hand`;
+    const hand = joints.get(handId);
+    const forearm = joints.get(`arm.${slot}.forearm`);
+    if (!hand || !forearm) continue;
+
+    forearm.getWorldQuaternion(parentQuaternion);
+    solvedQuaternion
+      .copy(parentQuaternion)
+      .invert()
+      .multiply(gestureWorldQuaternion(gesture.fingers, gesture.palm));
+    solvedEuler.setFromQuaternion(solvedQuaternion, "XYZ");
+
+    const limits = getJoint(handId).limits;
+    const fits =
+      within(solvedEuler.x, limits?.x) &&
+      within(solvedEuler.y, limits?.y) &&
+      within(solvedEuler.z, limits?.z);
+    if (!fits) continue;
+
+    hand.quaternion.copy(solvedQuaternion);
+    hand.updateMatrixWorld(true);
+    applied.push(handId);
+  }
+  return applied;
 }
 
 /** Effective rotation of a joint under the current pose (for UI sliders). */

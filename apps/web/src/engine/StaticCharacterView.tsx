@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CharacterConfiguration } from "@devaform/character-schema";
 import { getLightingPreset } from "./lighting";
 import { ZoneMaterials } from "./materials";
-import { applyPose } from "./pose";
+import { applyGestureOrientations, applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig } from "./rig";
 import { applyMorphInfluences } from "./skinning";
 import { SceneEnvironment } from "./SceneEnvironment";
@@ -30,6 +30,7 @@ function StaticCharacter({ config }: { config: CharacterConfiguration }) {
     materials.applyConfiguration(config.materials);
     applyMorphInfluences(built.root, config.morphs);
     applyPose(built.joints, config.pose);
+    applyGestureOrientations(built.joints, config.hands);
     alignUprightAttachments(built);
     return built;
     // eslint-disable-next-line react-hooks/exhaustive-deps
