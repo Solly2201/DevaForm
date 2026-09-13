@@ -34,3 +34,6 @@ tools/ai3d/out/
 /*.png
 *.blend1
 *.blend2
+
+# session QA screenshots (communication channel, not product assets)
+screenshots/

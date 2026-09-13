@@ -197,10 +197,22 @@ export const useEditorStore = create<EditorState>()(
 
       setMudra: (slot, mudra) =>
         set((state) =>
-          mutateConfig(state, (config) => ({
-            ...config,
-            hands: { ...config.hands, [slot]: { mudra } },
-          })),
+          mutateConfig(state, (config) => {
+            // A held item and its hand's mudra are one coherent state: if
+            // the new mudra can't perform the item's declared grip, the
+            // hand releases the item (data-driven via asset grip metadata).
+            const socket = `arm.${slot}.hand.item`;
+            const attachments = config.attachments.filter((a) => {
+              if (a.socket !== socket) return true;
+              const grip = getAsset(a.asset.assetId)?.grip;
+              return !grip || grip.mudra === mudra;
+            });
+            return {
+              ...config,
+              attachments,
+              hands: { ...config.hands, [slot]: { mudra } },
+            };
+          }),
         ),
 
       setArmCount: (count) =>
@@ -265,3 +277,8 @@ export const useEditorStore = create<EditorState>()(
 
 /** Hook into undo/redo state and actions. */
 export const useTemporalStore = () => useEditorStore.temporal;
+
+// Dev-only handle for QA automation (scripted editor state changes).
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (window as unknown as { __devaformStore?: typeof useEditorStore }).__devaformStore = useEditorStore;
+}

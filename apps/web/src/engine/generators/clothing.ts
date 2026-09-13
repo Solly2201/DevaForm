@@ -13,7 +13,9 @@ export const ganeshaDhoti: PartGenerator = (ctx) => {
   const bulk = ctx.proportions.bulk;
   const group = new THREE.Group();
 
-  const topR = 0.158 * bulk;
+  // Wide enough that knee/shin masses stay inside the skirt in standing
+  // poses (legs sit at |x| ≈ 0.15 including joint masses).
+  const topR = 0.165 * bulk;
 
   if (ctx.seated) {
     // Seated poses: drape a lap cloth over the folded legs instead of a
@@ -60,13 +62,13 @@ export const ganeshaDhoti: PartGenerator = (ctx) => {
 
   // Main pleated skirt
   group.add(
-    mesh(pleatedCylinder(topR, topR * 0.82, skirtLength, 16, 0.007), garment, {
+    mesh(pleatedCylinder(topR, topR * 0.94, skirtLength, 16, 0.007), garment, {
       position: [0, 0.055 - skirtLength / 2, 0],
     }),
   );
   // Hem band
   group.add(
-    mesh(new THREE.TorusGeometry(topR * 0.82, 0.009, 10, 48), accent, {
+    mesh(new THREE.TorusGeometry(topR * 0.94, 0.009, 10, 48), accent, {
       position: [0, hemY + 0.004, 0],
       rotation: [Math.PI / 2, 0, 0],
     }),
