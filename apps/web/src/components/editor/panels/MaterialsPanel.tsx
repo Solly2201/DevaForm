@@ -7,9 +7,28 @@ import {
   type MaterialFinish,
   type MaterialZone,
 } from "@devaform/character-schema";
+import { resolveAssetRef } from "@devaform/asset-system";
 import { ColorControl } from "@/components/controls/ColorControl";
 import { SegmentedControl } from "@/components/controls/SegmentedControl";
 import { useEditorStore } from "@/state/editorStore";
+
+/**
+ * Selected parts whose appearance is baked into the asset (no declared
+ * material zones on a mesh source) can't participate in recoloring —
+ * derived from asset metadata, never from specific asset ids.
+ */
+function useBakedParts(): string[] {
+  const parts = useEditorStore((s) => s.config.parts);
+  return Object.values(parts)
+    .map((ref) => resolveAssetRef(ref))
+    .filter(
+      (asset) =>
+        asset !== undefined &&
+        asset.source.kind === "glb" &&
+        asset.materialZones.length === 0,
+    )
+    .map((asset) => asset!.name);
+}
 
 const ZONE_LABELS: Record<MaterialZone, string> = {
   skin: "Skin",
@@ -48,9 +67,16 @@ export function MaterialsPanel() {
   const materials = useEditorStore((s) => s.config.materials);
   const setZoneMaterial = useEditorStore((s) => s.setZoneMaterial);
   const applyPalette = useEditorStore((s) => s.applyPalette);
+  const bakedParts = useBakedParts();
 
   return (
     <div className="space-y-5">
+      {bakedParts.length > 0 && (
+        <p className="rounded-lg border border-surface-800 bg-surface-850 p-2.5 text-[11px] text-stone-400">
+          {bakedParts.join(", ")} uses baked textures and keeps its authored
+          colors — palettes affect the rest of the statue.
+        </p>
+      )}
       <section>
         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
           Palettes

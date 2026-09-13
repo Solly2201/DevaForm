@@ -4,7 +4,7 @@
  */
 import * as THREE from "three";
 import { ARM_SLOTS, activeArmSlots, type JointId } from "@devaform/character-schema";
-import { lathe, mesh, radialRing } from "../geometry";
+import { lathe, mesh, radialRing, taperedTube, type V3 } from "../geometry";
 import { type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
 
 function gemStud(ctx: GeneratorContext, r: number): THREE.Mesh {
@@ -182,33 +182,42 @@ function chestZAtSocket(
 export const necklaceHaram: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
-  // Collar torus tilted so its front rim rests on the measured chest.
-  const collarR = 0.088;
-  const tilt = 0.6;
-  const frontRimY = -Math.sin(tilt) * collarR;
-  const collarZ = chestZAtSocket(ctx, 0, frontRimY, 0.004) - Math.cos(tilt) * collarR;
-  group.add(
-    mesh(new THREE.TorusGeometry(collarR, 0.013, 12, 40), metal, {
-      position: [0, 0, collarZ],
-      rotation: [Math.PI / 2 + tilt, 0, 0],
-    }),
-  );
+  // Relational surface drape: the collar band is a closed curve whose back
+  // half hugs the neck and whose front half lies on the measured chest —
+  // a rigid torus cannot do both without its sides sinking into the
+  // pectorals, so the band is swept along the surface instead.
+  const neckR = 0.075;
+  const bandPts: V3[] = [];
+  const samples = 26;
+  for (let i = 0; i <= samples; i++) {
+    const angle = (i / samples) * Math.PI * 2;
+    const frontness = Math.max(0, Math.sin(angle));
+    const x = Math.cos(angle) * (neckR + frontness * 0.015);
+    const y = 0.004 - frontness * 0.052;
+    const zNeck = Math.sin(angle) * neckR * 0.65;
+    const z =
+      frontness > 0.05
+        ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.005))
+        : zNeck;
+    bandPts.push([x, y, z]);
+  }
+  group.add(new THREE.Mesh(taperedTube(bandPts, [0.012, 0.012], 52, 12), metal));
   // Bead fringe along the front half, seated on the chest surface
   for (let i = 0; i < 9; i++) {
     const angle = Math.PI * (0.25 + (i / 8) * 0.5);
     const x = Math.cos(angle + Math.PI / 2) * 0.09;
     const frontness = Math.sin(angle + Math.PI / 2);
     if (frontness < 0.3) continue;
-    const y = -0.028 * frontness - 0.012 + frontRimY;
+    const y = -0.062 * frontness - 0.012;
     group.add(
       mesh(new THREE.SphereGeometry(0.0075, 10, 8), metal, {
-        position: [x, y, chestZAtSocket(ctx, x, y, 0.006)],
+        position: [x, y, chestZAtSocket(ctx, x, y, 0.007)],
       }),
     );
   }
   const pendant = gemStud(ctx, 0.016);
-  const pendantY = frontRimY - 0.052;
-  pendant.position.set(0, pendantY, chestZAtSocket(ctx, 0, pendantY, 0.008));
+  const pendantY = -0.098;
+  pendant.position.set(0, pendantY, chestZAtSocket(ctx, 0, pendantY, 0.009));
   pendant.scale.set(0.8, 1.25, 0.6);
   group.add(pendant);
   return group;
@@ -273,23 +282,30 @@ export const tikkaChandra: AttachmentGenerator = (ctx) => {
 export const waistKamarband: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
-  // Belt ring sized to sit just outside the dhoti waist (which wraps the
-  // hips); the belly may overhang its top in front — that is the classic
-  // lambodara silhouette, and the belt stays visible at sides and front.
-  // Socket sits at pelvis + [0, 0.04, 0.12]; work in socket-local space.
-  const beltR = ctx.body.pelvisHalfWidth + 0.022;
-  group.add(
-    mesh(new THREE.TorusGeometry(beltR, 0.012, 10, 48), metal, {
-      position: [0, 0.015, -0.12],
-      rotation: [Math.PI / 2, 0, 0],
-    }),
+  // Relational fit: the belt encircles whatever the torso actually is at
+  // the belt's own height — the wider of the hips and the belly overhang —
+  // with a small clearance. Front depth follows the belly surface, so the
+  // ring is elliptical on deep-bellied bodies instead of cutting through
+  // them. Socket sits at pelvis + [0, 0.04, 0.12]; work socket-local.
+  const beltY = 0.015; // socket-local; pelvis + 0.055
+  const spineY = beltY + 0.04 - 0.1; // same height in spine-local space
+  const halfWidth = Math.max(
+    ctx.body.pelvisHalfWidth + 0.014,
+    ctx.body.bellyHalfWidthAt(spineY) + 0.008,
   );
-  // Hanging tassels on the front of the cloth, forward of both the skirt
-  // and whatever the belly surface reaches at that height.
+  const frontDepth = Math.max(halfWidth, ctx.body.bellySurfaceZAt(0, spineY) + 0.008);
+  const belt = mesh(new THREE.TorusGeometry(halfWidth, 0.012, 10, 48), metal, {
+    position: [0, beltY, -0.12],
+    rotation: [Math.PI / 2, 0, 0],
+  });
+  belt.scale.z = 1; // torus lies in xz after rotation; depth scales via y
+  belt.scale.y = frontDepth / halfWidth;
+  group.add(belt);
+  // Hanging tassels on the front, forward of both skirt and belly.
   for (const dx of [-0.045, 0, 0.045]) {
     const tasselY = -0.015; // socket-local; pelvis-local 0.025
     const bellyZ = ctx.body.bellySurfaceZAt(dx, tasselY + 0.04 - 0.1);
-    const frontZ = Math.max(beltR + 0.004, bellyZ + 0.012) - 0.12;
+    const frontZ = Math.max(frontDepth + 0.004, bellyZ + 0.012) - 0.12;
     group.add(
       mesh(new THREE.CapsuleGeometry(0.005, 0.03, 4, 8), metal, {
         position: [dx, tasselY, frontZ],
@@ -354,9 +370,13 @@ export const braceletsKada: PartGenerator = (ctx) => {
   const parts: Array<{ joint: JointId; object: THREE.Object3D }> = [];
   for (const slot of ARM_SLOTS) {
     if (!activeArmSlots(ctx.arms).includes(slot)) continue;
+    // A bangle sits on the distal FOREARM: it must not rotate with the
+    // wrist, or strong hand poses (dance gestures) drive it through the
+    // palm. The forearm→hand joint offset is 0.14, so the band rests just
+    // above the wrist line.
     const band = bandRing(ctx, 0.03 * bulk, 0.0055);
-    band.position.y = 0.012;
-    parts.push({ joint: `arm.${slot}.hand`, object: band });
+    band.position.y = -0.128;
+    parts.push({ joint: `arm.${slot}.forearm`, object: band });
   }
   return parts;
 };

@@ -238,8 +238,12 @@ describe("body-fit attachment system", () => {
       return box.max.z;
     };
     const slender = tipFrontZ("ganesha.body.slender", 2);
+    const classic = tipFrontZ("ganesha.body.classic", 2);
     const mahodara = tipFrontZ("ganesha.body.mahodara", 1);
-    expect(mahodara - slender).toBeGreaterThan(0.02);
+    // Clearance-only: a deeper belly pushes the drape outward…
+    expect(mahodara - classic).toBeGreaterThan(0.012);
+    // …but a slimmer body never pulls the authored curve inward.
+    expect(slender).toBeCloseTo(classic, 3);
     materials.dispose();
   });
 
@@ -283,6 +287,96 @@ describe("body-fit attachment system", () => {
     // Held offering stays within grip range of its socket, not floating.
     expect(itemWorld.distanceTo(socketWorld)).toBeLessThan(0.06);
     materials.dispose();
+  });
+});
+
+describe("relational attachment invariants", () => {
+  it("keeps trunk variants distinct: long visibly longer than short", () => {
+    const materials = new ZoneMaterials();
+    const tipLowY = (trunkId: string) => {
+      const config = proceduralConfig();
+      config.parts.trunk = { assetId: trunkId, version: 1 };
+      const rig = buildRig(config, materials);
+      applyPose(rig.joints, { preset: "standing", jointOverrides: {} });
+      rig.root.updateWorldMatrix(true, true);
+      const box = new THREE.Box3();
+      rig.joints.get("trunkTip")?.children.forEach((child) => {
+        if (child.name.startsWith("part:ganesha.trunk")) box.expandByObject(child);
+      });
+      return box.min.y;
+    };
+    const long = tipLowY("ganesha.trunk.long");
+    const short = tipLowY("ganesha.trunk.short");
+    expect(short - long).toBeGreaterThan(0.08);
+    materials.dispose();
+  });
+
+  it("aligns a held item's grip origin with the hand's refined grip socket", () => {
+    const materials = new ZoneMaterials();
+    const config = proceduralConfig();
+    config.hands.frontLeft = { mudra: "grip" };
+    config.attachments = config.attachments
+      .filter((a) => a.socket !== "arm.frontLeft.hand.item")
+      .concat([
+        {
+          socket: "arm.frontLeft.hand.item",
+          asset: { assetId: "ganesha.item.axe", version: 2 },
+        },
+      ]);
+    const rig = buildRig(config, materials);
+    applyPose(rig.joints, { preset: "standing", jointOverrides: {} });
+    rig.root.updateWorldMatrix(true, true);
+    const socket = rig.sockets.get("arm.frontLeft.hand.item")!;
+    // Hands part refined the socket to the fist's grip point.
+    expect(socket.position.y).toBeCloseTo(-0.052, 3);
+    let item: THREE.Object3D | null = null;
+    socket.traverse((o) => {
+      if (o.name.startsWith("attachment:ganesha.item.axe")) item = o;
+    });
+    expect(item).not.toBeNull();
+    const socketWorld = socket.getWorldPosition(new THREE.Vector3());
+    const itemWorld = (item as unknown as THREE.Object3D).getWorldPosition(
+      new THREE.Vector3(),
+    );
+    // Grip point (item origin) coincides with the grip socket.
+    expect(itemWorld.distanceTo(socketWorld)).toBeLessThan(0.005);
+    materials.dispose();
+  });
+
+  it("keeps bracelets on the forearm so hand poses cannot drag them through the palm", () => {
+    const materials = new ZoneMaterials();
+    const rig = buildRig(proceduralConfig(), materials);
+    let onForearm = 0;
+    let onHand = 0;
+    rig.joints.forEach((joint, id) => {
+      joint.children.forEach((child) => {
+        if (!child.name.startsWith("part:ganesha.bracelets")) return;
+        if (id.endsWith(".forearm")) onForearm += 1;
+        if (id.endsWith(".hand")) onHand += 1;
+      });
+    });
+    expect(onForearm).toBeGreaterThan(0);
+    expect(onHand).toBe(0);
+    materials.dispose();
+  });
+
+  it("keeps engine placement code free of asset-id conditionals", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const root = join(__dirname, "..");
+    const offenders: string[] = [];
+    const scan = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory() && entry.name !== "__tests__") scan(path);
+        else if (entry.isFile() && /\.tsx?$/.test(entry.name)) {
+          const src = readFileSync(path, "utf8");
+          if (/\.(assetId|id)\s*===\s*["']/.test(src)) offenders.push(entry.name);
+        }
+      }
+    };
+    scan(root);
+    expect(offenders).toEqual([]);
   });
 });
 
