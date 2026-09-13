@@ -15,7 +15,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { MATERIAL_ZONES, type MaterialZone } from "@devaform/character-schema";
 import { collectSkinnedMeshes } from "./skinning";
-import type { ZoneMaterials } from "./materials";
+import { isFixedMaterialKey, type FixedMaterialKey, type ZoneMaterials } from "./materials";
 
 export type GlbEntry =
   | { status: "loading" }
@@ -68,6 +68,17 @@ function isZoneName(name: string): name is `zone:${MaterialZone}` {
 }
 
 /**
+ * `fixed:<key>` names the engine's non-configurable materials — eye white,
+ * iris, ivory and the rest. A mesh asset uses them for the parts of itself
+ * that are not the customer's to recolour: eyes are eyes.
+ */
+function fixedMaterialKey(name: string): FixedMaterialKey | null {
+  if (!name.startsWith("fixed:")) return null;
+  const key = name.slice("fixed:".length);
+  return isFixedMaterialKey(key) ? key : null;
+}
+
+/**
  * Deep-clone a loaded GLB scene for insertion into the rig. Zone-named
  * materials are swapped for the live shared zone materials; authored
  * materials are cloned per instance so disposal stays per-rig.
@@ -90,6 +101,8 @@ export function instantiateGlb(scene: THREE.Group, materials: ZoneMaterials): TH
       if (isZoneName(material.name)) {
         return materials.get(material.name.slice("zone:".length) as MaterialZone);
       }
+      const fixed = fixedMaterialKey(material.name);
+      if (fixed) return materials.fixed[fixed];
       return material;
     };
     object.material = Array.isArray(object.material)

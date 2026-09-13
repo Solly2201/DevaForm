@@ -39,12 +39,13 @@ const EXPORTS = path.resolve("../../tools/humanbase/exports");
 const OUT_DIR = path.resolve("public/assets/humanoid/body/human/1");
 const MEASURE_OUT = path.resolve("../../tools/humanbase/measurements.json");
 
-const VARIANTS = ["neutral", "lean", "athletic", "powerful", "heroic", "ascetic"];
+const VARIANTS = ["neutral", "lean", "athletic", "powerful", "heroic", "divine", "ascetic"];
 const MORPHS = {
   lean: "bodyLean",
   athletic: "bodyAthletic",
   powerful: "bodyPowerful",
   heroic: "bodyHeroic",
+  divine: "faceDivine",
   ascetic: "bodyAscetic",
 };
 /** Canonical statue height in DevaForm units (see docs/asset-specification). */
@@ -54,27 +55,60 @@ const CANONICAL_HEIGHT = 1.0;
 // 1. Inputs
 // ---------------------------------------------------------------------------
 
-/** Minimal OBJ reader: positions plus triangulated faces. */
+/**
+ * Minimal OBJ reader: positions, triangulated faces, and which object each
+ * face belongs to. MakeHuman writes every mesh's vertices first and then
+ * the faces grouped per object, so the body and the eye proxy arrive in one
+ * file and are separated here.
+ */
 function parseObj(text) {
   const positions = [];
   const indices = [];
+  /** group name -> the faces it owns, as [a,b,c] triangles. */
+  const groups = new Map();
+  let current = null;
   for (const line of text.split("\n")) {
     if (line.startsWith("v ")) {
       const [, x, y, z] = line.split(/\s+/);
       positions.push(Number(x), Number(y), Number(z));
+    } else if (line.startsWith("g ")) {
+      current = line.slice(2).trim();
+      if (!groups.has(current)) groups.set(current, []);
     } else if (line.startsWith("f ")) {
       const corners = line
         .trim()
         .split(/\s+/)
         .slice(1)
         .map((token) => Number(token.split("/")[0]) - 1);
+      const faces = current === null ? indices : groups.get(current);
       for (let i = 1; i + 1 < corners.length; i += 1) {
-        indices.push(corners[0], corners[i], corners[i + 1]);
+        faces.push(corners[0], corners[i], corners[i + 1]);
       }
     }
   }
-  return { positions: Float32Array.from(positions), indices: Uint32Array.from(indices) };
+  return { positions: Float32Array.from(positions), indices, groups };
 }
+
+/** Split one parsed OBJ into the body and the eye proxy. */
+function splitMesh(parsed, eyesGroup) {
+  const bodyFaces = parsed.groups.get(BODY_GROUP) ?? parsed.indices;
+  const eyeFaces = parsed.groups.get(eyesGroup);
+  if (!eyeFaces?.length) throw new Error(`no "${eyesGroup}" faces in the export`);
+  const eyeStart = Math.min(...eyeFaces);
+  if (Math.max(...bodyFaces) >= eyeStart) {
+    throw new Error("body faces reference eye vertices — the export layout changed");
+  }
+  return {
+    positions: parsed.positions.slice(0, eyeStart * 3),
+    indices: Uint32Array.from(bodyFaces),
+    eyes: {
+      positions: parsed.positions.slice(eyeStart * 3),
+      // Rebased so the eye mesh is self-contained.
+      indices: Uint32Array.from(eyeFaces, (index) => index - eyeStart),
+    },
+  };
+}
+const BODY_GROUP = "base.obj";
 
 const report = JSON.parse(await readFile(path.join(EXPORTS, "joints.json"), "utf8"));
 const rigWeights = JSON.parse(await readFile(path.join(EXPORTS, "default_weights.mhw"), "utf8")).weights;
@@ -86,13 +120,21 @@ parentMap.forEach((base, obj) => {
 
 const meshes = {};
 for (const variant of VARIANTS) {
-  meshes[variant] = parseObj(await readFile(path.join(EXPORTS, variant + ".obj"), "utf8"));
+  const parsed = parseObj(await readFile(path.join(EXPORTS, variant + ".obj"), "utf8"));
+  meshes[variant] = splitMesh(parsed, report.eyes.group);
 }
 const vertexCount = meshes.neutral.positions.length / 3;
+const eyeVertexCount = meshes.neutral.eyes.positions.length / 3;
 for (const variant of VARIANTS) {
   if (meshes[variant].positions.length / 3 !== vertexCount) {
     throw new Error(`${variant}: topology differs from neutral — morphs need one topology`);
   }
+  if (meshes[variant].eyes.positions.length / 3 !== eyeVertexCount) {
+    throw new Error(`${variant}: eye topology differs from neutral`);
+  }
+}
+if (meshes.neutral.eyes.indices.length / 6 !== report.eyes.faces) {
+  throw new Error("eye face count does not match the sampled colours");
 }
 
 const joints = report.variants.neutral.joints;
@@ -376,8 +418,53 @@ const toDevaform = (positions) => {
   }
   return out;
 };
+/**
+ * Every variant is normalised to the canonical height, not just the
+ * neutral one. A morph is a change of shape, not of size: a brow that
+ * grows the skull would otherwise make the statue taller than the height
+ * the customer ordered, and the deltas below would carry that error into
+ * every blend.
+ */
+function normalizeHeight(positions) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 1; i < positions.length; i += 3) {
+    min = Math.min(min, positions[i]);
+    max = Math.max(max, positions[i]);
+  }
+  return CANONICAL_HEIGHT / (max - min);
+}
+
 const finalMesh = {};
-for (const variant of VARIANTS) finalMesh[variant] = toDevaform(retargeted[variant]);
+const heightFix = {};
+for (const variant of VARIANTS) {
+  const placed = toDevaform(retargeted[variant]);
+  heightFix[variant] = normalizeHeight(placed);
+  for (let i = 0; i < placed.length; i += 1) placed[i] *= heightFix[variant];
+  finalMesh[variant] = placed;
+}
+
+// The eyes ride the head with full weight, so they need that one bone's
+// retarget transform rather than the blended skinning the body gets.
+const finalEyes = {};
+for (const variant of VARIANTS) {
+  const source = meshes[variant].eyes.positions;
+  const from = restFor(variant).get("head");
+  const turn = rotation.get("head");
+  const to = restTarget.get("head");
+  const moved = new Float32Array(source.length);
+  const point = new THREE.Vector3();
+  for (let i = 0; i < source.length; i += 3) {
+    point.set(source[i], source[i + 1], source[i + 2]).sub(from).applyQuaternion(turn).add(to);
+    moved[i] = point.x;
+    moved[i + 1] = point.y;
+    moved[i + 2] = point.z;
+  }
+  const placed = toDevaform(moved);
+  // The eyes take the body's correction so they stay in their sockets.
+  for (let i = 0; i < placed.length; i += 1) placed[i] *= heightFix[variant];
+  finalEyes[variant] = placed;
+}
 
 const restFinal = new Map();
 for (const [joint, position] of restTarget) {
@@ -385,6 +472,57 @@ for (const [joint, position] of restTarget) {
     joint,
     new THREE.Vector3(position.x * scale, (position.y - originY) * scale, position.z * scale),
   );
+}
+
+/**
+ * Angle-weighted vertex normals.
+ *
+ * three's computeVertexNormals weights each face by its area. The exported
+ * quads become two triangles of unequal area, so the shared diagonal gets
+ * the larger share of the vote and the triangulation shows up as faint
+ * creases across smooth skin. Weighting by the angle at the corner is
+ * independent of how the quad was split.
+ */
+function computeSmoothNormals(geometry) {
+  const position = geometry.getAttribute("position");
+  const index = geometry.getIndex();
+  const normals = new Float32Array(position.count * 3);
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const ab = new THREE.Vector3();
+  const bc = new THREE.Vector3();
+  const ca = new THREE.Vector3();
+  const faceNormal = new THREE.Vector3();
+  for (let i = 0; i < index.count; i += 3) {
+    const ia = index.getX(i);
+    const ib = index.getX(i + 1);
+    const ic = index.getX(i + 2);
+    a.fromBufferAttribute(position, ia);
+    b.fromBufferAttribute(position, ib);
+    c.fromBufferAttribute(position, ic);
+    ab.subVectors(b, a);
+    bc.subVectors(c, b);
+    ca.subVectors(a, c);
+    faceNormal.crossVectors(ab, ca.clone().negate()).normalize();
+    const angles = [
+      ab.angleTo(ca.clone().negate()),
+      bc.angleTo(ab.clone().negate()),
+      ca.angleTo(bc.clone().negate()),
+    ];
+    [ia, ib, ic].forEach((vertex, corner) => {
+      normals[vertex * 3] += faceNormal.x * angles[corner];
+      normals[vertex * 3 + 1] += faceNormal.y * angles[corner];
+      normals[vertex * 3 + 2] += faceNormal.z * angles[corner];
+    });
+  }
+  for (let i = 0; i < normals.length; i += 3) {
+    const length = Math.hypot(normals[i], normals[i + 1], normals[i + 2]) || 1;
+    normals[i] /= length;
+    normals[i + 1] /= length;
+    normals[i + 2] /= length;
+  }
+  geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
 }
 
 // ---------------------------------------------------------------------------
@@ -432,12 +570,12 @@ const skinIndices = new Uint16Array(vertexCount * 4);
 const skinWeights = new Float32Array(vertexCount * 4);
 const boneIndex = new Map(boneOrder.map((joint, index) => [joint, index]));
 for (let i = 0; i < vertexCount; i += 1) {
-  const влияния = [];
+  const influences = [];
   for (const [group, weights] of groupWeights) {
-    if (weights[i] > 0) влияния.push([boneIndex.get(group), weights[i]]);
+    if (weights[i] > 0) influences.push([boneIndex.get(group), weights[i]]);
   }
-  влияния.sort((a, b) => b[1] - a[1]);
-  const top = влияния.slice(0, 4);
+  influences.sort((a, b) => b[1] - a[1]);
+  const top = influences.slice(0, 4);
   const total = top.reduce((sum, [, w]) => sum + w, 0) || 1;
   top.forEach(([index, weight], slot) => {
     skinIndices[i * 4 + slot] = index;
@@ -454,7 +592,7 @@ geometry.setAttribute("position", new THREE.BufferAttribute(finalMesh.neutral, 3
 geometry.setAttribute("skinIndex", new THREE.BufferAttribute(skinIndices, 4));
 geometry.setAttribute("skinWeight", new THREE.BufferAttribute(skinWeights, 4));
 geometry.setIndex(new THREE.BufferAttribute(meshes.neutral.indices, 1));
-geometry.computeVertexNormals();
+computeSmoothNormals(geometry);
 geometry.morphTargetsRelative = true;
 geometry.morphAttributes.position = [];
 const morphTargetNames = [];
@@ -468,6 +606,77 @@ for (const [variant, morphName] of Object.entries(MORPHS)) {
 const material = new THREE.MeshStandardMaterial({ name: "zone:skin", roughness: 0.62 });
 const skinnedMesh = new THREE.SkinnedMesh(geometry, material);
 skinnedMesh.name = "humanBody";
+
+// ---------------------------------------------------------------------------
+// 5b. Eyes
+// ---------------------------------------------------------------------------
+
+/**
+ * The eye proxy is a painted surface: sclera, iris and pupil differ only by
+ * texture, and the outermost layer is a transparent cornea shell that would
+ * render as an opaque bubble here. Classify each face by the colour the
+ * artist put on it — the layout stays theirs — into DevaForm's fixed eye
+ * materials, and drop the cornea.
+ */
+const EYE_ZONES = ["fixed:eyeWhite", "fixed:iris", "fixed:eyeDark"];
+function eyeZone([r, g, b]) {
+  // The cornea is painted a flat pale blue; nothing else on the eye is.
+  if (b > r + 30) return null;
+  const luminance = (r + g + b) / 3;
+  if (luminance < 8) return 2; // pupil
+  if (luminance < 45) return 1; // iris
+  return 0; // sclera
+}
+
+const eyeFaceZones = report.eyes.faceColours.map(eyeZone);
+// Triangles are grouped per material so the mesh can carry all three in one
+// draw-call-friendly geometry.
+const eyeIndicesByZone = EYE_ZONES.map(() => []);
+const sourceEyeIndices = meshes.neutral.eyes.indices;
+eyeFaceZones.forEach((zone, face) => {
+  if (zone === null) return;
+  // Each exported quad became two triangles, in order.
+  for (let corner = face * 6; corner < face * 6 + 6; corner += 1) {
+    eyeIndicesByZone[zone].push(sourceEyeIndices[corner]);
+  }
+});
+
+const eyeGeometry = new THREE.BufferGeometry();
+eyeGeometry.setAttribute("position", new THREE.BufferAttribute(finalEyes.neutral, 3));
+const eyeSkinIndices = new Uint16Array(eyeVertexCount * 4);
+const eyeSkinWeights = new Float32Array(eyeVertexCount * 4);
+for (let i = 0; i < eyeVertexCount; i += 1) {
+  eyeSkinIndices[i * 4] = boneIndex.get("head");
+  eyeSkinWeights[i * 4] = 1;
+}
+eyeGeometry.setAttribute("skinIndex", new THREE.BufferAttribute(eyeSkinIndices, 4));
+eyeGeometry.setAttribute("skinWeight", new THREE.BufferAttribute(eyeSkinWeights, 4));
+eyeGeometry.setIndex(eyeIndicesByZone.flat());
+let drawn = 0;
+eyeIndicesByZone.forEach((zoneIndices, zone) => {
+  eyeGeometry.addGroup(drawn, zoneIndices.length, zone);
+  drawn += zoneIndices.length;
+});
+computeSmoothNormals(eyeGeometry);
+eyeGeometry.morphTargetsRelative = true;
+eyeGeometry.morphAttributes.position = [];
+for (const variant of Object.keys(MORPHS)) {
+  const delta = new Float32Array(finalEyes.neutral.length);
+  for (let i = 0; i < delta.length; i += 1) delta[i] = finalEyes[variant][i] - finalEyes.neutral[i];
+  eyeGeometry.morphAttributes.position.push(new THREE.BufferAttribute(delta, 3));
+}
+
+const eyeMesh = new THREE.SkinnedMesh(
+  eyeGeometry,
+  EYE_ZONES.map(
+    (name) =>
+      new THREE.MeshStandardMaterial({
+        name,
+        roughness: name === "fixed:eyeWhite" ? 0.3 : 0.2,
+      }),
+  ),
+);
+eyeMesh.name = "humanEyes";
 skinnedMesh.morphTargetDictionary = Object.fromEntries(morphTargetNames.map((n, i) => [n, i]));
 skinnedMesh.morphTargetInfluences = morphTargetNames.map(() => 0);
 
@@ -475,8 +684,11 @@ const root = new THREE.Group();
 root.name = "humanoid_body_human";
 root.add(bones.get("root"));
 root.add(skinnedMesh);
+root.add(eyeMesh);
 root.updateMatrixWorld(true);
-skinnedMesh.bind(new THREE.Skeleton(boneOrder.map((joint) => bones.get(joint))));
+const skeleton = new THREE.Skeleton(boneOrder.map((joint) => bones.get(joint)));
+skinnedMesh.bind(skeleton);
+eyeMesh.bind(skeleton);
 
 // ---------------------------------------------------------------------------
 // 6. Measure the mesh: sockets and BodyProfile
@@ -741,7 +953,9 @@ const round_ = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [
 const roundMorphs = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([name, delta]) => [name, round_(delta)]));
 
-const triangles = meshes.neutral.indices.length / 3;
+// The shipped asset is the body plus the eyes it looks out of.
+const triangles = (meshes.neutral.indices.length + eyeGeometry.getIndex().count) / 3;
+const vertices = vertexCount + eyeVertexCount;
 const bounds = new THREE.Box3().setFromBufferAttribute(
   new THREE.BufferAttribute(finalMesh.neutral, 3),
 );
@@ -771,7 +985,7 @@ await writeFile(
       morphTargets: morphTargetNames,
       geometry: {
         triangles,
-        vertices: vertexCount,
+        vertices,
         boundsM: [
           round(bounds.max.x - bounds.min.x),
           round(bounds.max.y - bounds.min.y),
@@ -829,7 +1043,8 @@ await writeFile(
 
 console.log(`wrote ${OUT_DIR}/model.glb`);
 console.log(
-  `  ${vertexCount} verts, ${triangles} tris, ${boneOrder.length} bones, ` +
+  `  ${vertices} verts (${eyeVertexCount} of them eyes), ${triangles} tris, ` +
+    `${boneOrder.length} bones, ` +
     `${morphTargetNames.length} morph targets (${morphTargetNames.join(", ")})`,
 );
 console.log(`  scale ${scale.toFixed(5)} (MakeHuman dm -> ${CANONICAL_HEIGHT} m canonical)`);
