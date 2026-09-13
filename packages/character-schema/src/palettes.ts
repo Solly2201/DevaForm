@@ -20,6 +20,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#d99a63", finish: "satin" },
       skinSecondary: { color: "#b97946", finish: "satin" },
+      hair: { color: "#31241a", finish: "matte" },
       garment: { color: "#9c1c20", finish: "satin" },
       garmentAccent: { color: "#d99b26", finish: "satin" },
       metal: { color: "#e8ae32", finish: "metallic" },
@@ -34,6 +35,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#e7b13f", finish: "metallic" },
       skinSecondary: { color: "#c98f2e", finish: "metallic" },
+      hair: { color: "#a87c2e", finish: "metallic" },
       garment: { color: "#b3822a", finish: "metallic" },
       garmentAccent: { color: "#8f1f1f", finish: "satin" },
       metal: { color: "#f3c14a", finish: "metallic" },
@@ -48,6 +50,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#efe3cd", finish: "polished" },
       skinSecondary: { color: "#dccbaa", finish: "polished" },
+      hair: { color: "#cdbb92", finish: "polished" },
       garment: { color: "#d9c49a", finish: "satin" },
       garmentAccent: { color: "#c2a368", finish: "satin" },
       metal: { color: "#cfae62", finish: "metallic" },
@@ -62,6 +65,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#b96a45", finish: "matte" },
       skinSecondary: { color: "#a05539", finish: "matte" },
+      hair: { color: "#6e3c26", finish: "matte" },
       garment: { color: "#8c4a2f", finish: "matte" },
       garmentAccent: { color: "#c9862e", finish: "matte" },
       metal: { color: "#b78a3f", finish: "satin" },
@@ -76,6 +80,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#e2602c", finish: "satin" },
       skinSecondary: { color: "#c94e22", finish: "satin" },
+      hair: { color: "#4d2c1a", finish: "matte" },
       garment: { color: "#e0a422", finish: "satin" },
       garmentAccent: { color: "#f2d06b", finish: "satin" },
       metal: { color: "#efc04a", finish: "metallic" },
@@ -90,6 +95,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#e9b98d", finish: "satin" },
       skinSecondary: { color: "#d69a72", finish: "satin" },
+      hair: { color: "#2c2018", finish: "satin" },
       garment: { color: "#1f3a8f", finish: "satin" },
       garmentAccent: { color: "#e8b83c", finish: "satin" },
       metal: { color: "#f0bd45", finish: "metallic" },
@@ -104,6 +110,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#f2efe9", finish: "polished" },
       skinSecondary: { color: "#e0dcd2", finish: "polished" },
+      hair: { color: "#dcd6c8", finish: "polished" },
       garment: { color: "#d8d4ca", finish: "polished" },
       garmentAccent: { color: "#bfb8a6", finish: "polished" },
       metal: { color: "#d6c187", finish: "metallic" },
@@ -118,6 +125,7 @@ export const MATERIAL_PALETTES: readonly MaterialPalette[] = [
     materials: {
       skin: { color: "#35322f", finish: "polished" },
       skinSecondary: { color: "#2a2724", finish: "polished" },
+      hair: { color: "#211e1b", finish: "polished" },
       garment: { color: "#413c36", finish: "satin" },
       garmentAccent: { color: "#8f7434", finish: "metallic" },
       metal: { color: "#a8873c", finish: "metallic" },

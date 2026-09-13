@@ -7,14 +7,14 @@ describe("deity registry", () => {
     expect(new Set(DEITIES.map((d) => d.id)).size).toBe(DEITIES.length);
   });
 
-  it("currently offers exactly ganesha as available", () => {
-    expect(AVAILABLE_DEITIES.map((d) => d.id)).toEqual(["ganesha"]);
+  it("currently offers exactly ganesha and shiva as available", () => {
+    expect(AVAILABLE_DEITIES.map((d) => d.id)).toEqual(["ganesha", "shiva"]);
   });
 
   it("declares the upcoming roadmap deities", () => {
     const upcoming = DEITIES.filter((d) => !d.available).map((d) => d.id);
     expect(upcoming).toEqual(
-      expect.arrayContaining(["shiva", "durga", "krishna", "hanuman", "lakshmi", "saraswati"]),
+      expect.arrayContaining(["durga", "krishna", "hanuman", "lakshmi", "saraswati"]),
     );
   });
 
@@ -32,8 +32,9 @@ describe("deity registry", () => {
 
   it("getAvailableDeity rejects upcoming and unknown deities", () => {
     expect(getAvailableDeity("ganesha")?.id).toBe("ganesha");
-    expect(getAvailableDeity("shiva")).toBeUndefined();
+    expect(getAvailableDeity("shiva")?.id).toBe("shiva");
+    expect(getAvailableDeity("durga")).toBeUndefined();
     expect(getAvailableDeity("zeus")).toBeUndefined();
-    expect(getDeity("shiva")?.available).toBe(false);
+    expect(getDeity("durga")?.available).toBe(false);
   });
 });

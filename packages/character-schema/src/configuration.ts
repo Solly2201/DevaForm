@@ -16,7 +16,9 @@ import { isSocketId } from "./sockets";
 
 export const SCHEMA_VERSION = 1;
 
-export type DeityId = "ganesha"; // widened as deities are added
+/** Deities a configuration may reference — widened as deities are added. */
+export const DEITY_IDS = ["ganesha", "shiva"] as const;
+export type DeityId = (typeof DEITY_IDS)[number];
 
 /**
  * Part slots — mesh regions of the character that are swapped as whole
@@ -86,8 +88,17 @@ export type AttachmentConfiguration = z.infer<typeof attachmentConfigurationSche
  * Material zones — logical color/finish regions. Production materials will
  * map zones to PBR material variants; for now each zone is a color + finish.
  */
-export const MATERIAL_ZONES = ["skin", "skinSecondary", "garment", "garmentAccent", "metal", "gem", "base"] as const;
+export const MATERIAL_ZONES = ["skin", "skinSecondary", "hair", "garment", "garmentAccent", "metal", "gem", "base"] as const;
 export type MaterialZone = (typeof MATERIAL_ZONES)[number];
+
+/**
+ * Zones added after launch default on parse so configurations saved before
+ * the zone existed keep loading byte-for-byte (the default is only material
+ * for assets that actually declare the zone).
+ */
+const LATE_ZONE_DEFAULTS: Partial<Record<MaterialZone, ZoneMaterial>> = {
+  hair: { color: "#31241a", finish: "matte" },
+};
 
 export const materialFinishSchema = z.enum(["matte", "satin", "polished", "metallic"]);
 export type MaterialFinish = z.infer<typeof materialFinishSchema>;
@@ -99,10 +110,12 @@ export const zoneMaterialSchema = z.object({
 export type ZoneMaterial = z.infer<typeof zoneMaterialSchema>;
 
 export const materialsConfigurationSchema = z.object(
-  Object.fromEntries(MATERIAL_ZONES.map((zone) => [zone, zoneMaterialSchema])) as Record<
-    MaterialZone,
-    typeof zoneMaterialSchema
-  >,
+  Object.fromEntries(
+    MATERIAL_ZONES.map((zone) => {
+      const lateDefault = LATE_ZONE_DEFAULTS[zone];
+      return [zone, lateDefault ? zoneMaterialSchema.default(lateDefault) : zoneMaterialSchema];
+    }),
+  ) as Record<MaterialZone, typeof zoneMaterialSchema>,
 );
 export type MaterialsConfiguration = z.infer<typeof materialsConfigurationSchema>;
 
@@ -175,7 +188,7 @@ export function activeArmSlots(arms: ArmsConfiguration): readonly ArmSlot[] {
 
 export const characterConfigurationSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
-  deity: z.literal("ganesha"),
+  deity: z.enum(DEITY_IDS),
   /**
    * Mesh part selections. null = intentionally empty slot (e.g. no upper
    * garment); absent = slot not used by this deity.

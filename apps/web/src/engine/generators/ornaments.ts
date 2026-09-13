@@ -168,7 +168,7 @@ const NECKLACE_SOCKET_Y = 0.12;
 const NECKLACE_SOCKET_Z = 0.01;
 
 /** Torso surface z in necklace-socket-local coordinates, with clearance. */
-function chestZAtSocket(
+export function chestZAtSocket(
   ctx: GeneratorContext,
   x: number,
   y: number,

@@ -7,18 +7,24 @@
  * route selects; adding a deity is primarily a matter of authoring a new
  * definition plus its asset manifest.
  *
- * Ganesha is the first (and currently only) available deity. The others
- * are declared as roadmap entries so the product can present them honestly
- * as "coming soon" without pretending they work.
+ * Ganesha and Shiva are available; the others are declared as roadmap
+ * entries so the product can present them honestly as "coming soon"
+ * without pretending they work.
  */
 import {
+  GANESHA_SKELETON,
+  HUMANOID_SKELETON,
   POSE_PRESETS,
+  SHIVA_POSE_PRESETS,
   createDefaultGaneshaConfiguration,
+  createDefaultShivaConfiguration,
   type CharacterConfiguration,
   type PosePreset,
+  type SkeletonDefinition,
 } from "@devaform/character-schema";
-import { GANESHA_EDITOR_CATEGORIES } from "./categories";
+import { GANESHA_EDITOR_CATEGORIES, SHIVA_EDITOR_CATEGORIES } from "./categories";
 import { GANESHA_ASSETS } from "./manifests/ganesha";
+import { SHIVA_ASSETS } from "./manifests/shiva";
 import type { AssetDefinition, EditorCategory } from "./types";
 
 interface DeityDefinitionBase {
@@ -35,6 +41,8 @@ export interface AvailableDeity extends DeityDefinitionBase {
   available: true;
   assets: readonly AssetDefinition[];
   categories: readonly EditorCategory[];
+  /** The skeleton (joints + sockets) this deity's rig is built from. */
+  skeleton: SkeletonDefinition;
   posePresets: readonly PosePreset[];
   /** Arm configurations this deity supports (rendered pairs). */
   armOptions: readonly (2 | 4)[];
@@ -57,9 +65,26 @@ const ganesha: AvailableDeity = {
   available: true,
   assets: GANESHA_ASSETS,
   categories: GANESHA_EDITOR_CATEGORIES,
+  skeleton: GANESHA_SKELETON,
   posePresets: POSE_PRESETS,
   armOptions: [4, 2],
   createDefaultConfiguration: createDefaultGaneshaConfiguration,
+};
+
+const shiva: AvailableDeity = {
+  id: "shiva",
+  name: "Shiva",
+  epithet: "The Auspicious One",
+  description:
+    "The great ascetic and cosmic dancer. Jata, crescent, third eye, rudraksha, trishul and damaru — the Mahadeva in your form.",
+  accent: "#60a5fa",
+  available: true,
+  assets: SHIVA_ASSETS,
+  categories: SHIVA_EDITOR_CATEGORIES,
+  skeleton: HUMANOID_SKELETON,
+  posePresets: SHIVA_POSE_PRESETS,
+  armOptions: [2, 4],
+  createDefaultConfiguration: createDefaultShivaConfiguration,
 };
 
 const upcoming = (
@@ -72,7 +97,7 @@ const upcoming = (
 
 export const DEITIES: readonly DeityDefinition[] = [
   ganesha,
-  upcoming("shiva", "Shiva", "The Auspicious One", "The great ascetic and cosmic dancer.", "#60a5fa"),
+  shiva,
   upcoming("durga", "Durga", "The Invincible", "The fierce mother astride the lion.", "#f87171"),
   upcoming("krishna", "Krishna", "The All-Attractive", "The divine cowherd with the flute.", "#818cf8"),
   upcoming("hanuman", "Hanuman", "The Devoted", "The mighty devotee of Rama.", "#fb923c"),

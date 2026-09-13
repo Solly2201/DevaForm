@@ -11,17 +11,15 @@
  */
 import * as THREE from "three";
 import {
-  SEATED_POSE_IDS,
-  SKELETON,
-  SOCKETS,
   activeArmSlots,
-  getSocket,
+  getPosePreset,
   isJointId,
   type CharacterConfiguration,
   type JointId,
+  type SkeletonDefinition,
   type SocketId,
 } from "@devaform/character-schema";
-import { resolveAssetRef, type AssetDefinition } from "@devaform/asset-system";
+import { getAvailableDeity, resolveAssetRef, type AssetDefinition } from "@devaform/asset-system";
 import {
   ATTACHMENT_GENERATORS,
   BASE_BUILDERS,
@@ -35,6 +33,8 @@ import type { ZoneMaterials } from "./materials";
 
 export interface CharacterRig {
   root: THREE.Group;
+  /** The skeleton this rig was built from (the active deity's). */
+  skeleton: SkeletonDefinition;
   joints: ReadonlyMap<JointId, THREE.Object3D>;
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
   /** Attachments that must stay world-upright after every pose change. */
@@ -43,12 +43,15 @@ export interface CharacterRig {
   warnings: string[];
 }
 
-function buildJointHierarchy(): { characterRoot: THREE.Group; joints: Map<JointId, THREE.Object3D> } {
+function buildJointHierarchy(skeleton: SkeletonDefinition): {
+  characterRoot: THREE.Group;
+  joints: Map<JointId, THREE.Object3D>;
+} {
   const joints = new Map<JointId, THREE.Object3D>();
   const characterRoot = new THREE.Group();
   characterRoot.name = "characterRoot";
 
-  for (const def of SKELETON) {
+  for (const def of skeleton.joints) {
     const joint = new THREE.Object3D();
     joint.name = `joint:${def.id}`;
     joint.position.set(...def.position);
@@ -65,12 +68,13 @@ function buildJointHierarchy(): { characterRoot: THREE.Group; joints: Map<JointI
 }
 
 function buildSockets(
+  skeleton: SkeletonDefinition,
   joints: Map<JointId, THREE.Object3D>,
   statueRoot: THREE.Group,
   baseTopHeight: number,
 ): Map<SocketId, THREE.Object3D> {
   const sockets = new Map<SocketId, THREE.Object3D>();
-  for (const def of SOCKETS) {
+  for (const def of skeleton.sockets) {
     const socket = new THREE.Object3D();
     socket.name = `socket:${def.id}`;
     socket.position.set(...def.position);
@@ -193,13 +197,19 @@ function applyAttachmentTransforms(
 }
 
 export function buildRig(config: CharacterConfiguration, materials: ZoneMaterials): CharacterRig {
+  // The configuration names the deity; the deity's definition carries the
+  // skeleton. Pure data lookup — the engine never branches on WHICH deity.
+  const deity = getAvailableDeity(config.deity);
+  if (!deity) throw new Error(`No available deity definition for "${config.deity}"`);
+  const skeleton = deity.skeleton;
+
   const warnings: string[] = [];
   const uprightAttachments: THREE.Object3D[] = [];
   const root = new THREE.Group();
   root.name = "statueRoot";
-  const { characterRoot, joints } = buildJointHierarchy();
+  const { characterRoot, joints } = buildJointHierarchy(skeleton);
   root.add(characterRoot);
-  const sockets = buildSockets(joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
+  const sockets = buildSockets(skeleton, joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
 
   // Body-fit: measured torso surfaces derived from the configured body
   // asset's params (pure data — no asset-id conditionals). GLB bodies
@@ -215,7 +225,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     morphs: config.morphs,
     hands: config.hands,
     arms: config.arms,
-    seated: config.pose.preset !== null && SEATED_POSE_IDS.includes(config.pose.preset),
+    seated:
+      config.pose.preset !== null && getPosePreset(config.pose.preset)?.seated === true,
     body: bodyProfile,
   };
   const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
@@ -344,7 +355,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Whole-statue height proportion (uniform so nothing distorts).
   root.scale.setScalar(config.proportions.height);
 
-  return { root, joints, sockets, uprightAttachments, warnings };
+  return { root, skeleton, joints, sockets, uprightAttachments, warnings };
 }
 
 const worldQuaternion = new THREE.Quaternion();
@@ -377,11 +388,11 @@ export function disposeRig(rig: CharacterRig): void {
   });
 }
 
-/** Verify every socket in the schema exists on the built rig (dev sanity). */
+/** Verify every socket of the rig's skeleton exists on the built rig. */
 export function assertRigIntegrity(rig: CharacterRig): void {
-  for (const socket of SOCKETS) {
+  for (const socket of rig.skeleton.sockets) {
     if (!rig.sockets.has(socket.id)) {
-      throw new Error(`Rig integrity: missing socket ${socket.id} (${getSocket(socket.id).label})`);
+      throw new Error(`Rig integrity: missing socket ${socket.id} (${socket.label})`);
     }
   }
 }

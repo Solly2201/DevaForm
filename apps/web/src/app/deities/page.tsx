@@ -12,7 +12,7 @@ export default function DeitiesPage() {
         <h1 className="font-display text-3xl text-stone-100">Choose a Divine Form</h1>
         <p className="mt-2 max-w-xl text-sm text-stone-400">
           Each deity opens in Divine Studio with its own anatomy, components, attributes and
-          poses. Ganesha leads the way; six more forms are in preparation.
+          poses. Ganesha and Shiva are available; five more forms are in preparation.
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

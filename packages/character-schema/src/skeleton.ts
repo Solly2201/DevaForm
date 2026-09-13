@@ -1,5 +1,5 @@
 /**
- * Canonical skeleton definition shared by the editor engine, pose system,
+ * Canonical skeleton definitions shared by the editor engine, pose system,
  * asset pipeline and (later) the print/bake pipeline.
  *
  * Joint ids are stable, dot-namespaced strings. Production GLB rigs must use
@@ -7,6 +7,13 @@
  *
  * Units: meters. Coordinate system: Y-up, character faces +Z.
  * The canonical character is ~1.0m tall (statues are scaled at print time).
+ *
+ * Skeletons are per-deity data: every deity references a SkeletonDefinition
+ * (see skeletons.ts) built from the shared humanoid joint chain plus any
+ * deity-specific extensions (Ganesha adds the trunk chain). The engine only
+ * ever builds the joints of the active deity's skeleton — joint VALIDATION
+ * accepts the union of all skeletons so a configuration schema stays
+ * deity-agnostic.
  */
 
 export type ArmSlot = "frontLeft" | "frontRight" | "backLeft" | "backRight";
@@ -130,31 +137,47 @@ const legJoints = (slot: LegSlot): JointDefinition[] => {
 };
 
 /**
- * Canonical Ganesha-class skeleton. Order matters: parents precede children.
- * Future joints (fingers, facial controls, spine chains) extend this list —
- * unknown joints in an old config are ignored; missing joints default to rest.
+ * Shared humanoid core: torso, head, four arm chains, two legs. Every deity
+ * skeleton starts from these joints. Order matters: parents precede children.
  */
-export const SKELETON: readonly JointDefinition[] = [
+export const HUMANOID_CORE_JOINTS: readonly JointDefinition[] = [
   { id: "root", parent: null, position: [0, 0, 0], label: "Root" },
   { id: "pelvis", parent: "root", position: [0, 0.52, 0], limits: { x: [-PI * 0.3, PI * 0.3], y: [-PI * 0.4, PI * 0.4], z: [-PI * 0.25, PI * 0.25] }, label: "Pelvis", uiGroup: "Torso" },
   { id: "spine", parent: "pelvis", position: [0, 0.1, 0], limits: { x: [-0.6, 0.6], y: [-0.8, 0.8], z: [-0.5, 0.5] }, label: "Spine", uiGroup: "Torso" },
   { id: "chest", parent: "spine", position: [0, 0.16, 0], limits: { x: [-0.5, 0.5], y: [-0.7, 0.7], z: [-0.4, 0.4] }, label: "Chest", uiGroup: "Torso" },
   { id: "neck", parent: "chest", position: [0, 0.16, 0], limits: { x: [-0.6, 0.6], y: [-1.0, 1.0], z: [-0.5, 0.5] }, label: "Neck", uiGroup: "Head" },
   // Head sits high enough that the chin clears the shoulder line — murti
-  // composition needs daylight between muzzle and chest for the trunk.
+  // composition needs daylight between chin and chest.
   { id: "head", parent: "neck", position: [0, 0.115, 0], limits: { x: [-0.7, 0.7], y: [-1.2, 1.2], z: [-0.6, 0.6] }, label: "Head", uiGroup: "Head" },
-  // Trunk chain sweeps forward (+z) as it descends so the trunk drapes
-  // OVER the chin/shawl/belly front surfaces instead of hanging inside
-  // the torso volume.
-  { id: "trunkBase", parent: "head", position: [0, -0.01, 0.095], limits: { x: [-0.8, 0.8], y: [-0.8, 0.8], z: [-0.8, 0.8] }, label: "Trunk Base", uiGroup: "Trunk" },
-  { id: "trunkMid", parent: "trunkBase", position: [0, -0.09, 0.05], limits: { x: [-1.2, 1.2], y: [-1.0, 1.0], z: [-1.0, 1.0] }, label: "Trunk Middle", uiGroup: "Trunk" },
-  { id: "trunkTip", parent: "trunkMid", position: [0, -0.085, 0.04], limits: { x: [-1.4, 1.4], y: [-1.2, 1.2], z: [-1.2, 1.2] }, label: "Trunk Tip", uiGroup: "Trunk" },
   ...armJoints("frontLeft", "left", "front"),
   ...armJoints("frontRight", "right", "front"),
   ...armJoints("backLeft", "left", "back"),
   ...armJoints("backRight", "right", "back"),
   ...legJoints("left"),
   ...legJoints("right"),
+] as const;
+
+/**
+ * Ganesha's trunk extension. The chain sweeps forward (+z) as it descends
+ * so the trunk drapes OVER the chin/shawl/belly front surfaces instead of
+ * hanging inside the torso volume.
+ */
+export const TRUNK_JOINTS: readonly JointDefinition[] = [
+  { id: "trunkBase", parent: "head", position: [0, -0.01, 0.095], limits: { x: [-0.8, 0.8], y: [-0.8, 0.8], z: [-0.8, 0.8] }, label: "Trunk Base", uiGroup: "Trunk" },
+  { id: "trunkMid", parent: "trunkBase", position: [0, -0.09, 0.05], limits: { x: [-1.2, 1.2], y: [-1.0, 1.0], z: [-1.0, 1.0] }, label: "Trunk Middle", uiGroup: "Trunk" },
+  { id: "trunkTip", parent: "trunkMid", position: [0, -0.085, 0.04], limits: { x: [-1.4, 1.4], y: [-1.2, 1.2], z: [-1.2, 1.2] }, label: "Trunk Tip", uiGroup: "Trunk" },
+] as const;
+
+/**
+ * Union of every joint across all skeletons — used for validation and as
+ * the legacy `SKELETON` export. Future joints (fingers, facial controls,
+ * spine chains) extend the definitions — unknown joints in an old config
+ * are ignored; missing joints default to rest.
+ */
+export const SKELETON: readonly JointDefinition[] = [
+  ...HUMANOID_CORE_JOINTS.slice(0, 6), // root..head
+  ...TRUNK_JOINTS,
+  ...HUMANOID_CORE_JOINTS.slice(6), // arms + legs
 ] as const;
 
 export const JOINT_IDS: readonly JointId[] = SKELETON.map((j) => j.id);
@@ -167,11 +190,13 @@ export interface JointUiGroup {
 /**
  * User-posable joints organized by their declared semantic body part, in
  * skeleton order. Joints without a uiGroup (the root) are not exposed.
+ * Data-driven: the grouping comes from the joints themselves, so each
+ * deity's skeleton yields its own pose UI without hardcoded hierarchies.
  */
-export const JOINT_UI_GROUPS: readonly JointUiGroup[] = (() => {
+export function computeJointUiGroups(joints: readonly JointDefinition[]): readonly JointUiGroup[] {
   const order: string[] = [];
   const byGroup = new Map<string, JointDefinition[]>();
-  for (const joint of SKELETON) {
+  for (const joint of joints) {
     if (!joint.uiGroup) continue;
     if (!byGroup.has(joint.uiGroup)) {
       byGroup.set(joint.uiGroup, []);
@@ -180,7 +205,10 @@ export const JOINT_UI_GROUPS: readonly JointUiGroup[] = (() => {
     byGroup.get(joint.uiGroup)?.push(joint);
   }
   return order.map((label) => ({ label, joints: byGroup.get(label) ?? [] }));
-})();
+}
+
+/** Legacy: UI groups of the union skeleton. Prefer the deity skeleton's groups. */
+export const JOINT_UI_GROUPS: readonly JointUiGroup[] = computeJointUiGroups(SKELETON);
 
 const jointMap = new Map<JointId, JointDefinition>(SKELETON.map((j) => [j.id, j]));
 

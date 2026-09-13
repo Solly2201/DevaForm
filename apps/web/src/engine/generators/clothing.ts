@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { mesh, pleatedCylinder, taperedTube, type V3 } from "../geometry";
 import { num, type PartGenerator } from "./types";
 
-export const ganeshaDhoti: PartGenerator = (ctx) => {
+export const humanoidDhoti: PartGenerator = (ctx) => {
   const garment = ctx.materials.get("garment");
   const accent = ctx.materials.get("garmentAccent");
   const length = num(ctx, "length", 1);
@@ -105,7 +105,7 @@ export const ganeshaDhoti: PartGenerator = (ctx) => {
   return [{ joint: "pelvis", object: group }];
 };
 
-export const ganeshaShawl: PartGenerator = (ctx) => {
+export const humanoidShawl: PartGenerator = (ctx) => {
   const accent = ctx.materials.get("garmentAccent");
   const group = new THREE.Group();
   const bulk = ctx.proportions.bulk;

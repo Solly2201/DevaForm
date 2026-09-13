@@ -10,12 +10,12 @@ import { getAsset, listAssets, type EditorCategory } from "@devaform/asset-syste
 import { useDeity } from "@/state/deityContext";
 import {
   FACE_MORPHS,
-  JOINT_UI_GROUPS,
   activeArmSlots,
   getSocket,
   type PartSlot,
   type SocketId,
 } from "@devaform/character-schema";
+import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
 import { AssetGrid } from "./AssetGrid";
@@ -266,12 +266,20 @@ function ArmCountSection() {
 
 function FaceMorphSection() {
   const morphs = useEditorStore((s) => s.config.morphs);
+  const parts = useEditorStore((s) => s.config.parts);
   const setMorph = useEditorStore((s) => s.setMorph);
+  // Only offer morphs some selected part actually exposes — asset metadata
+  // decides, so a deity without a trunk never shows trunk sliders.
+  const exposed = new Set(
+    Object.values(parts).flatMap((ref) => resolveAssetRef(ref)?.morphTargets ?? []),
+  );
+  const available = FACE_MORPHS.filter((m) => exposed.has(m.id));
+  if (available.length === 0) return null;
   return (
     <section>
       <SectionHeading>Face Shaping</SectionHeading>
       <div className="space-y-3">
-        {FACE_MORPHS.map((m) => (
+        {available.map((m) => (
           <SliderControl
             key={m.id}
             label={m.label}
@@ -343,6 +351,7 @@ interface Subsection {
  * categories flow through the same derivation.
  */
 function useSubsections(category: EditorCategory): Subsection[] {
+  const deity = useDeity();
   const arms = useEditorStore((s) => s.config.arms);
   const active = activeArmSlots(arms);
   const socketSubsections = (sockets: readonly SocketId[], allowNone: boolean): Subsection[] =>
@@ -401,10 +410,10 @@ function useSubsections(category: EditorCategory): Subsection[] {
       return [{ id: "hands", label: "Hands", node: <HandsPanel /> }];
     case "pose":
       // Presets first, then joint control organized by semantic body part
-      // (grouping declared on the skeleton — rig-driven, not hardcoded).
+      // (grouping declared on the active deity's skeleton — data-driven).
       return [
         { id: "presets", label: "Presets", node: <PosePresetsSection /> },
-        ...JOINT_UI_GROUPS.map((group) => ({
+        ...deity.skeleton.uiGroups.map((group) => ({
           id: `joints:${group.label}`,
           label: group.label,
           node: <JointGroupSection joints={group.joints} />,

@@ -109,7 +109,7 @@ export const ganeshaHead: PartGenerator = (ctx) => {
 // EYES
 // ---------------------------------------------------------------------------
 
-export const ganeshaEyes: PartGenerator = (ctx) => {
+export const classicEyes: PartGenerator = (ctx) => {
   const skin = ctx.materials.get("skin");
   const lidCover = num(ctx, "lidCover", 1.15); // radians of upper-lid cap
   const shapeX = num(ctx, "shapeX", 1);
@@ -117,19 +117,26 @@ export const ganeshaEyes: PartGenerator = (ctx) => {
   const kohl = num(ctx, "kohl", 0);
   const gazeDown = num(ctx, "gazeDown", 0.25);
   const irisScale = num(ctx, "iris", 1);
+  // Placement on the owning head's brow surface — pure manifest data, so
+  // the same generator serves any head (defaults match the Ganesha brow
+  // plate, whose front reaches z≈0.132).
+  const baseY = num(ctx, "baseY", 0.062);
+  const baseZ = num(ctx, "baseZ", 0.124);
+  const baseSpacing = num(ctx, "spacing", 0.049);
+  const eyeScale = num(ctx, "eyeScale", 1);
+  const splay = num(ctx, "splay", 0.28);
 
-  const size = 1 + 0.28 * morph(ctx, "eyeSize");
-  const spacing = 0.049 * (1 + 0.28 * morph(ctx, "eyeSpacing"));
-  const height = 0.062 + 0.02 * morph(ctx, "eyeHeight");
+  const size = eyeScale * (1 + 0.28 * morph(ctx, "eyeSize"));
+  const spacing = baseSpacing * (1 + 0.28 * morph(ctx, "eyeSpacing"));
+  const height = baseY + 0.02 * morph(ctx, "eyeHeight");
   const browLift = 0.017 * morph(ctx, "browHeight");
 
   const group = new THREE.Group();
 
   for (const side of [1, -1]) {
     const eye = new THREE.Group();
-    // Seated on the brow-plate surface (brow front reaches z≈0.132).
-    eye.position.set(side * spacing, height, 0.124);
-    eye.rotation.y = side * 0.28;
+    eye.position.set(side * spacing, height, baseZ);
+    eye.rotation.y = side * splay;
     eye.rotation.x = 0.08;
     eye.scale.setScalar(size);
     eye.scale.x *= shapeX;
@@ -196,15 +203,18 @@ export const ganeshaEyes: PartGenerator = (ctx) => {
 
     group.add(eye);
 
-    // Brow — arched tube above the eye
+    // Brow — arched tube above the eye, scaled with the eye itself
     const bx = side * spacing;
     const browPts: V3[] = [
-      [bx - side * 0.028, height + 0.028 + browLift, 0.126],
-      [bx, height + 0.04 + browLift, 0.131],
-      [bx + side * 0.032, height + 0.03 + browLift, 0.122],
+      [bx - side * 0.028 * eyeScale, height + (0.028 + browLift) * eyeScale, baseZ + 0.002],
+      [bx, height + (0.04 + browLift) * eyeScale, baseZ + 0.007],
+      [bx + side * 0.032 * eyeScale, height + (0.03 + browLift) * eyeScale, baseZ - 0.002],
     ];
     group.add(
-      new THREE.Mesh(taperedTube(browPts, [0.0035, 0.0018], 12, 8), ctx.materials.get("skinSecondary")),
+      new THREE.Mesh(
+        taperedTube(browPts, [0.0035 * eyeScale, 0.0018 * eyeScale], 12, 8),
+        ctx.materials.get("skinSecondary"),
+      ),
     );
   }
 

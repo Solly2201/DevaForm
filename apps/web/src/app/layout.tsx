@@ -12,7 +12,7 @@ const display = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "DevaForm | Divine Studio",
   description:
-    "Divine Studio — design your own customizable deity statue in 3D: pose, ornaments, attributes and materials — crafted for premium 3D printing. First deity: Ganesha.",
+    "Divine Studio — design your own customizable deity statue in 3D: pose, ornaments, attributes and materials — crafted for premium 3D printing. Available now: Ganesha and Shiva.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

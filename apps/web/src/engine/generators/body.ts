@@ -39,7 +39,7 @@ function limbTube(
 // BODY
 // ---------------------------------------------------------------------------
 
-export const ganeshaBody: PartGenerator = (ctx) => {
+export const humanoidBody: PartGenerator = (ctx) => {
   const skin = ctx.materials.get("skin");
   const belly = num(ctx, "belly", 1);
   const chest = num(ctx, "chest", 1);
@@ -350,7 +350,7 @@ function gripPoint(mudra: MudraId, side: 1 | -1): [number, number, number] {
   }
 }
 
-export const ganeshaHands: PartGenerator = (ctx) => {
+export const humanoidHands: PartGenerator = (ctx) => {
   const parts: Array<{
     joint: JointId;
     object: THREE.Object3D;
