@@ -4,8 +4,10 @@ import type {
   HandsConfiguration,
   JointId,
   Proportions,
+  SocketId,
 } from "@devaform/character-schema";
 import type { ZoneMaterials } from "../materials";
+import type { BodyProfile } from "./bodyProfile";
 
 export interface GeneratorContext {
   /** Static parameters from the asset manifest entry. */
@@ -21,10 +23,29 @@ export interface GeneratorContext {
    * pose-compatible geometry (a draped lap instead of a full skirt).
    */
   seated: boolean;
+  /**
+   * Measured torso surfaces of the configured body — clothing and
+   * ornaments fit themselves against these instead of absolute
+   * one-body constants (see bodyProfile.ts).
+   */
+  body: BodyProfile;
 }
 
-/** A part places objects onto one or more joints so posing articulates it. */
-export type JointedPart = ReadonlyArray<{ joint: JointId; object: THREE.Object3D }>;
+/**
+ * A part places objects onto one or more joints so posing articulates it.
+ * A part that owns the geometry a socket terminates on (e.g. the trunk
+ * owning trunk.tip) may refine that socket's joint-local position so
+ * attachments land on the actual generated surface.
+ */
+export type JointedPart = ReadonlyArray<{
+  joint: JointId;
+  object: THREE.Object3D;
+  socketRefinements?: ReadonlyArray<{
+    id: SocketId;
+    /** New socket position, local to the socket's parent joint. */
+    position: readonly [number, number, number];
+  }>;
+}>;
 
 export type PartGenerator = (ctx: GeneratorContext) => JointedPart;
 export type AttachmentGenerator = (ctx: GeneratorContext) => THREE.Object3D;

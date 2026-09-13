@@ -14,8 +14,9 @@ export const ganeshaDhoti: PartGenerator = (ctx) => {
   const group = new THREE.Group();
 
   // Wide enough that knee/shin masses stay inside the skirt in standing
-  // poses (legs sit at |x| ≈ 0.15 including joint masses).
-  const topR = 0.165 * bulk;
+  // poses (legs sit at |x| ≈ 0.15 including joint masses), and always
+  // wrapping outside the measured hips.
+  const topR = Math.max(0.165 * bulk, ctx.body.pelvisHalfWidth + 0.008);
 
   if (ctx.seated) {
     // Seated poses: drape a lap cloth over the folded legs instead of a
@@ -108,20 +109,26 @@ export const ganeshaShawl: PartGenerator = (ctx) => {
   const accent = ctx.materials.get("garmentAccent");
   const group = new THREE.Group();
   const bulk = ctx.proportions.bulk;
+  const body = ctx.body;
 
   // Diagonal sash from the left shoulder across the chest to the right hip,
   // returning across the back — the classic angavastram/yajnopavita drape.
+  // The cloth path is draped over the measured torso surfaces (slightly
+  // sunk for an intentional cloth-on-skin seat) so it conforms to every
+  // body variant instead of one tuned volume.
+  const onFront = (x: number, y: number): V3 => [x, y, body.torsoSurfaceZAt(x, y) + 0.008];
+  const onBack = (x: number, y: number): V3 => [x, y, body.torsoBackZAt(x, y) - 0.006];
   const front: V3[] = [
     [0.155 * bulk, 0.13, 0.02],
-    [0.1, 0.05, 0.135 * bulk],
-    [-0.02, -0.06, 0.16 * bulk],
-    [-0.13, -0.17, 0.12 * bulk],
+    onFront(0.1, 0.05),
+    onFront(-0.02, -0.06),
+    onFront(-0.13, -0.17),
     [-0.165 * bulk, -0.23, 0.02],
   ];
   const back: V3[] = [
     [-0.165 * bulk, -0.23, 0.02],
-    [-0.1, -0.1, -0.13 * bulk],
-    [0.05, 0.04, -0.145 * bulk],
+    onBack(-0.1, -0.1),
+    onBack(0.05, 0.04),
     [0.155 * bulk, 0.13, 0.02],
   ];
   for (const pts of [front, back]) {

@@ -17,7 +17,12 @@ function thumbnailBaseConfig() {
   if (!deity) throw new Error("No available deity registered");
   return deity.createDefaultConfiguration();
 }
-import { ATTACHMENT_GENERATORS, PART_GENERATORS, type GeneratorContext } from "./generators";
+import {
+  ATTACHMENT_GENERATORS,
+  PART_GENERATORS,
+  deriveBodyProfile,
+  type GeneratorContext,
+} from "./generators";
 import { ZoneMaterials } from "./materials";
 
 const SIZE = 160;
@@ -84,6 +89,8 @@ export async function buildAssetObject(
     hands: config.hands,
     arms: config.arms,
     seated: false,
+    // Thumbnails render against the canonical classic body measurements.
+    body: deriveBodyProfile({ belly: 1 }, config.proportions),
   };
 
   if (asset.source.kind === "glb") {

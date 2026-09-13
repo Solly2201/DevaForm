@@ -37,6 +37,7 @@ import { taperedTube } from "../geometry";
 import { buildRig } from "../rig";
 import { applyPose } from "../pose";
 import { ZoneMaterials } from "../materials";
+import { deriveBodyProfile } from "../generators";
 import { useEditorStore } from "@/state/editorStore";
 
 function signedVolume(geometry: THREE.BufferGeometry): number {
@@ -205,6 +206,83 @@ describe("pose presets", () => {
     expect(base.position[2]).toBeGreaterThan(0.08);
     expect(mid.position[2]).toBeGreaterThan(0.03);
     expect(tip.position[2]).toBeGreaterThan(0.03);
+  });
+});
+
+describe("body-fit attachment system", () => {
+  const proportions = { height: 1, bulk: 1 };
+
+  it("derives distinct torso measurements per body variant", () => {
+    const slender = deriveBodyProfile({ belly: 0.45 }, proportions);
+    const classic = deriveBodyProfile({ belly: 1 }, proportions);
+    const mahodara = deriveBodyProfile({ belly: 1.35 }, proportions);
+    expect(slender.bellyFrontZ).toBeLessThan(classic.bellyFrontZ);
+    expect(classic.bellyFrontZ).toBeLessThan(mahodara.bellyFrontZ);
+    // Chest surface queries stay on the front of the volume.
+    expect(classic.chestSurfaceZAt(0, 0.045)).toBeGreaterThan(0.1);
+    expect(classic.torsoBackZAt(0, 0.045)).toBeLessThan(-0.1);
+  });
+
+  it("drapes the trunk against the configured body's belly", () => {
+    const materials = new ZoneMaterials();
+    const tipFrontZ = (bodyId: string, version: number) => {
+      const config = proceduralConfig();
+      config.parts.body = { assetId: bodyId, version };
+      const rig = buildRig(config, materials);
+      applyPose(rig.joints, { preset: "standing", jointOverrides: {} });
+      rig.root.updateWorldMatrix(true, true);
+      const box = new THREE.Box3();
+      rig.joints.get("trunkTip")?.children.forEach((child) => {
+        if (child.name.startsWith("part:ganesha.trunk")) box.expandByObject(child);
+      });
+      return box.max.z;
+    };
+    const slender = tipFrontZ("ganesha.body.slender", 2);
+    const mahodara = tipFrontZ("ganesha.body.mahodara", 1);
+    expect(mahodara - slender).toBeGreaterThan(0.02);
+    materials.dispose();
+  });
+
+  it("refines trunk.tip onto the generated trunk tip, mirrored per curl", () => {
+    const materials = new ZoneMaterials();
+    const socketLocal = (trunkId: string) => {
+      const config = proceduralConfig();
+      config.parts.trunk = { assetId: trunkId, version: 1 };
+      const rig = buildRig(config, materials);
+      const socket = rig.sockets.get("trunk.tip")!;
+      return socket.position.clone();
+    };
+    const left = socketLocal("ganesha.trunk.leftCurl");
+    const right = socketLocal("ganesha.trunk.rightCurl");
+    // The refined socket sits out at the curl (not the static schema spot)
+    expect(left.x).toBeGreaterThan(0.05);
+    expect(right.x).toBeLessThan(-0.05);
+    expect(left.z).toBeGreaterThan(0.03);
+    materials.dispose();
+  });
+
+  it("keeps a trunk-tip attachment on the refined socket", () => {
+    const materials = new ZoneMaterials();
+    const config = proceduralConfig();
+    config.attachments = [
+      ...config.attachments,
+      { socket: "trunk.tip", asset: { assetId: "ganesha.item.modak", version: 2 } },
+    ];
+    const rig = buildRig(config, materials);
+    rig.root.updateWorldMatrix(true, true);
+    const socket = rig.sockets.get("trunk.tip")!;
+    let attachment: THREE.Object3D | null = null;
+    socket.traverse((o) => {
+      if (o.name.startsWith("attachment:ganesha.item.modak")) attachment = o;
+    });
+    expect(attachment).not.toBeNull();
+    const socketWorld = socket.getWorldPosition(new THREE.Vector3());
+    const itemWorld = (attachment as unknown as THREE.Object3D).getWorldPosition(
+      new THREE.Vector3(),
+    );
+    // Held offering stays within grip range of its socket, not floating.
+    expect(itemWorld.distanceTo(socketWorld)).toBeLessThan(0.06);
+    materials.dispose();
   });
 });
 

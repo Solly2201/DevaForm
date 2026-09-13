@@ -300,6 +300,13 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
 
   const L = (y: number) => y * lengthScale;
 
+  // Body-fit: the drape depth is authored against the classic body
+  // (belly front ≈ 0.207 spine-local). Other bodies shift the lower trunk
+  // forward/back so it stays resting on the measured belly, neither
+  // buried in a bigger one nor floating off a slimmer one.
+  const bellyDelta = Math.min(0.035, Math.max(-0.035, ctx.body.bellyFrontZ - 0.207));
+  const F = (z: number, weight: number) => z + bellyDelta * weight;
+
   // Segment paths are authored against the trunk joint chain, which itself
   // sweeps forward (+z) — see skeleton.ts. Local z stays small so pose
   // rotations pivot naturally around each joint.
@@ -339,8 +346,8 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
       taperedTube(
         [
           [0, 0.012, 0.008],
-          [0, L(-0.05), 0.038],
-          [curlScale * 0.008, L(-0.095), 0.062],
+          [0, L(-0.05), F(0.038, 0.3)],
+          [curlScale * 0.008, L(-0.095), F(0.062, 0.6)],
         ],
         wrinkled(0.042, 0.033),
         24,
@@ -354,24 +361,24 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
   // sideways curl (or lifting upward for the urdhva variant).
   const tipEndPos: [number, number, number] =
     lift > 0
-      ? [curlScale * 0.065, L(-0.095) + 0.07 * lift, 0.06]
-      : [curlScale * 0.085, L(-0.19), 0.052];
+      ? [curlScale * 0.065, L(-0.095) + 0.07 * lift, F(0.06, 1)]
+      : [curlScale * 0.085, L(-0.19), F(0.052, 1)];
   const tipPath: V3[] =
     lift > 0
       ? [
           [0, 0.012, 0.008],
-          [curlScale * 0.004, L(-0.055), 0.03],
-          [curlScale * 0.016, L(-0.1), 0.044],
-          [curlScale * 0.042, L(-0.125), 0.054],
-          [curlScale * 0.06, L(-0.11), 0.058],
+          [curlScale * 0.004, L(-0.055), F(0.03, 0.6)],
+          [curlScale * 0.016, L(-0.1), F(0.044, 0.85)],
+          [curlScale * 0.042, L(-0.125), F(0.054, 1)],
+          [curlScale * 0.06, L(-0.11), F(0.058, 1)],
           tipEndPos,
         ]
       : [
           [0, 0.012, 0.008],
-          [curlScale * 0.004, L(-0.065), 0.03],
-          [curlScale * 0.012, L(-0.135), 0.042],
-          [curlScale * 0.045, L(-0.2), 0.048],
-          [curlScale * 0.08, L(-0.215), 0.05],
+          [curlScale * 0.004, L(-0.065), F(0.03, 0.6)],
+          [curlScale * 0.012, L(-0.135), F(0.042, 0.85)],
+          [curlScale * 0.045, L(-0.2), F(0.048, 1)],
+          [curlScale * 0.08, L(-0.215), F(0.05, 1)],
           tipEndPos,
         ];
   const tip = new THREE.Group();
@@ -400,7 +407,18 @@ export const ganeshaTrunk: PartGenerator = (ctx) => {
   return [
     { joint: "trunkBase", object: base },
     { joint: "trunkMid", object: mid },
-    { joint: "trunkTip", object: tip },
+    {
+      joint: "trunkTip",
+      object: tip,
+      // The trunk owns the trunk.tip socket surface: park it at this
+      // variant's actual generated tip so held offerings sit in the curl.
+      socketRefinements: [
+        {
+          id: "trunk.tip",
+          position: [tipEndPos[0], tipEndPos[1] - 0.012, tipEndPos[2] + 0.012],
+        },
+      ],
+    },
   ];
 };
 
