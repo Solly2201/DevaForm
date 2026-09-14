@@ -509,14 +509,23 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
 export const itemTrishul: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
+
+  // A trishul is a planted staff, not a wand: its butt rests on the
+  // ground and its head clears the figure, with the hand gripping
+  // somewhere along the shaft. When the engine tells us how high above
+  // the base this hand is (see ItemPresentation.grounded), the shaft is
+  // built to that length; without it the classic proportions stand.
+  const butt = ctx.reach !== undefined ? -ctx.reach : -0.304;
+  const headBase = ctx.reach !== undefined ? ctx.reach * 0.78 : 0.243;
+
   // Tall shaft through the grip
   group.add(
     new THREE.Mesh(
       taperedTube(
         [
-          [0, -0.3, 0],
-          [0, 0.02, 0],
-          [0, 0.24, 0],
+          [0, butt + 0.004, 0],
+          [0, (butt + headBase) / 2, 0],
+          [0, headBase, 0],
         ],
         [0.0068, 0.0056],
         16,
@@ -525,27 +534,33 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
       metal,
     ),
   );
+  group.add(mesh(new THREE.SphereGeometry(0.0095, 12, 10), metal, { position: [0, butt, 0] }));
+
+  // The trident head keeps its own size whatever the shaft does.
+  const head = new THREE.Group();
+  head.position.y = headBase;
+  group.add(head);
   // Collar under the head
-  group.add(
+  head.add(
     mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.016, 12), metal, {
-      position: [0, 0.243, 0],
+      position: [0, 0, 0],
     }),
   );
   // Crossbar the prongs rise from
-  group.add(
+  head.add(
     mesh(new THREE.CapsuleGeometry(0.0042, 0.062, 6, 10), metal, {
-      position: [0, 0.256, 0],
+      position: [0, 0.013, 0],
       rotation: [0, 0, Math.PI / 2],
     }),
   );
   // Center prong
-  group.add(
+  head.add(
     new THREE.Mesh(
       taperedTube(
         [
-          [0, 0.256, 0],
-          [0, 0.33, 0],
-          [0, 0.385, 0],
+          [0, 0.013, 0],
+          [0, 0.087, 0],
+          [0, 0.142, 0],
         ],
         [0.0055, 0.0012],
         14,
@@ -556,14 +571,14 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
   );
   // Curved side prongs
   for (const side of [1, -1]) {
-    group.add(
+    head.add(
       new THREE.Mesh(
         taperedTube(
           [
-            [side * 0.031, 0.252, 0],
-            [side * 0.044, 0.3, 0],
-            [side * 0.033, 0.352, 0],
-            [side * 0.022, 0.372, 0],
+            [side * 0.031, 0.009, 0],
+            [side * 0.044, 0.057, 0],
+            [side * 0.033, 0.109, 0],
+            [side * 0.022, 0.129, 0],
           ],
           [0.005, 0.0012],
           18,
@@ -573,8 +588,6 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
       ),
     );
   }
-  // Pommel
-  group.add(mesh(new THREE.SphereGeometry(0.0095, 12, 10), metal, { position: [0, -0.304, 0] }));
   return group;
 };
 

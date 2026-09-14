@@ -398,12 +398,22 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       warnings.push(`Attachment ${asset.id}: unknown socket ${attachment.socket}`);
       continue;
     }
-    const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
+    // A planted staff needs to know how high above the base it is being
+    // held, so it can be built long enough to stand on the ground. The
+    // character root has not been lifted onto the base yet, so the
+    // socket's height IS its clearance above it.
+    const presentation = asset.presentation ?? {};
+    let reach: number | undefined;
+    if (presentation.grounded) {
+      socket.updateWorldMatrix(true, false);
+      reach = socket.getWorldPosition(new THREE.Vector3()).y;
+    }
+    const renderable = resolveRenderable(asset, { ...ctxFor(asset), reach }, warnings);
     if (!renderable || !(renderable instanceof THREE.Object3D)) continue;
     renderable.name = `attachment:${asset.id}`;
     applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
     socket.add(renderable);
-    if (asset.keepUpright) uprightAttachments.push(renderable);
+    if (asset.keepUpright || presentation.upright) uprightAttachments.push(renderable);
   }
 
   // Base platform; the character stands on its top surface.

@@ -12,6 +12,12 @@ import type { BodyProfile } from "./bodyProfile";
 export interface GeneratorContext {
   /** Static parameters from the asset manifest entry. */
   params: Record<string, number | string>;
+  /**
+   * For a planted attribute: how far its socket stands above the base,
+   * so a staff can be built long enough to reach the ground. Absent
+   * for everything that is not grounded.
+   */
+  reach?: number;
   materials: ZoneMaterials;
   proportions: Proportions;
   /** Live morph weights from the configuration (parametric morphs). */

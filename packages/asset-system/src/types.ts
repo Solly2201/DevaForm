@@ -163,6 +163,28 @@ export interface MeasuredBodyProfile {
   morphs?: Readonly<Record<string, Partial<MeasuredBodySurfaces>>>;
 }
 
+/**
+ * How an attribute presents itself once it is held.
+ *
+ * This is a different question from `grip`, which says how the hand meets
+ * the item. Presentation says what the item does in the world: a trishul
+ * stands vertically with its head up and its butt on the ground however
+ * the wrist is posed, because that is how the icon is read — while a
+ * modak simply follows the palm that cradles it. Keeping the two apart is
+ * what lets the wrist be posed freely without the attribute going with it.
+ */
+export interface ItemPresentation {
+  /** Hold the item world-upright, whatever the joint chain does. */
+  upright?: boolean;
+  /**
+   * A staff is planted: it reaches from the ground to above the figure,
+   * and the hand grips it somewhere along its length rather than at its
+   * end. The engine tells the generator how far the socket holding it
+   * stands above the base, and the generator builds a shaft that long.
+   */
+  grounded?: boolean;
+}
+
 export interface AssetDefinition {
   /** Stable id, dot-namespaced: `<deity|shared>.<category>.<name>` */
   id: string;
@@ -206,8 +228,13 @@ export interface AssetDefinition {
    * Keep the attachment world-upright regardless of joint rotation —
    * classical iconography holds shafted attributes (axe, noose, goad,
    * lotus) vertical in any pose. Cradled items (modak) follow the palm.
+   *
+   * Shorthand for `presentation: { upright: true }`, which is the fuller
+   * statement of the same idea.
    */
   keepUpright?: boolean;
+  /** How this item presents itself once a hand holds it. */
+  presentation?: ItemPresentation;
   /**
    * Material zones this asset participates in. The engine colors the asset's
    * meshes from the configuration's zone materials via mesh naming
