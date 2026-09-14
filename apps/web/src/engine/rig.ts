@@ -12,6 +12,7 @@
 import * as THREE from "three";
 import {
   ARM_SLOTS,
+  HAND_PALM_AXIS,
   activeArmSlots,
   getPosePreset,
   getSkeleton,
@@ -47,14 +48,31 @@ export interface CharacterRig {
   skeleton: SkeletonDefinition;
   joints: ReadonlyMap<JointId, THREE.Object3D>;
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
-  /** Attachments that must stay world-upright after every pose change. */
-  uprightAttachments: THREE.Object3D[];
+  /**
+   * Attachments whose presentation is achieved by overriding their world
+   * rotation, because the hand holding them cannot be turned.
+   *
+   * A hand generated per mudra has its grip channel baked into geometry:
+   * the fist closes around a shaft lying across the palm, and rotating
+   * the wrist would move the fist off the very axis the fingers were
+   * built around. For those, the ITEM is turned. It is a real fallback,
+   * not the design — see `held` for the relational path — and naming it
+   * is what stops it silently superseding a declared grip frame.
+   */
+  worldAlignedAttachments: THREE.Object3D[];
   /**
    * Planted attachments: a staff stands on the ground whatever the hand
    * does, so when a pose lifts the hand the hand slides up the shaft
-   * rather than carrying the whole weapon into the air.
+   * rather than carrying the whole weapon into the air. The slide is
+   * along the item's OWN axis, which for an upright item is world
+   * vertical and for anything else is not.
    */
-  groundedAttachments: Array<{ object: THREE.Object3D; reach: number; baseTop: number }>;
+  groundedAttachments: Array<{
+    object: THREE.Object3D;
+    reach: number;
+    baseTop: number;
+    axis: THREE.Vector3;
+  }>;
   /**
    * What each hand is holding, and which way the item runs in the world.
    * The hand has to be TURNED onto it — see applyGripOrientations — or
@@ -92,6 +110,47 @@ export function buildJointHierarchy(skeleton: SkeletonDefinition): {
     }
   }
   return { characterRoot, joints };
+}
+
+const socketBasis = new THREE.Matrix4();
+
+/**
+ * Turn each hand's item socket so its +Y runs up the hand's GRIP CHANNEL.
+ *
+ * This is the link that was missing, and without it the rest of the grip
+ * chain could not close. An asset declares which of its own axes runs up
+ * the shaft, and gripFrameTransform aligns that axis to the socket's +Y.
+ * The solver, at the other end, turns the hand so its grip channel points
+ * where the item must be presented. But the socket's +Y and the hand's
+ * grip channel were never the same direction, so the two halves described
+ * different things and only a world-space override made the result look
+ * right.
+ *
+ * A closed fist's channel runs across the knuckles toward the thumb, so
+ * the thumb axis IS the channel, and a body that measured its own hands
+ * says where that is. Only such a body gets its sockets aimed: a hand
+ * generated per mudra already refines this socket onto the grip its own
+ * fingers were built around, and turning it would move items off the
+ * cradle the geometry provides. The palm supplies the roll, so the turn
+ * is fully determined.
+ */
+function orientGripSockets(
+  sockets: Map<SocketId, THREE.Object3D>,
+  thumbAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
+): void {
+  for (const slot of ARM_SLOTS) {
+    const measured = thumbAxes?.[slot];
+    if (!measured) continue;
+    const socket = sockets.get(`arm.${slot}.hand.item` as SocketId);
+    if (!socket) continue;
+    const channel = new THREE.Vector3(...measured).normalize();
+    const palm = new THREE.Vector3(...HAND_PALM_AXIS).projectOnPlane(channel).normalize();
+    if (palm.lengthSq() < 1e-8) continue;
+    // Columns (x, y, z): the socket's +Y becomes the channel, its +Z the
+    // palm, so an item authored shaft-up lands shaft-along-the-channel.
+    socketBasis.makeBasis(channel.clone().cross(palm), channel, palm);
+    socket.quaternion.setFromRotationMatrix(socketBasis);
+  }
 }
 
 function buildSockets(
@@ -238,7 +297,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   const skeleton = bodySkeleton ?? deity.skeleton;
 
   const warnings: string[] = [];
-  const uprightAttachments: THREE.Object3D[] = [];
+  const worldAlignedAttachments: THREE.Object3D[] = [];
   const groundedAttachments: CharacterRig["groundedAttachments"] = [];
   const held: HeldItem[] = [];
   const root = new THREE.Group();
@@ -246,6 +305,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   const { characterRoot, joints } = buildJointHierarchy(skeleton);
   root.add(characterRoot);
   const sockets = buildSockets(skeleton, joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
+  orientGripSockets(sockets, bodyAsset?.thumbAxes);
 
   // Body-fit: torso surfaces for the configured body asset (pure data — no
   // asset-id conditionals). A mesh body ships measurements of itself and
@@ -456,34 +516,50 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     renderable.name = `attachment:${asset.id}`;
     applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
     socket.add(renderable);
-    if (asset.keepUpright || presentation.upright) uprightAttachments.push(renderable);
-    // A hand socket holding something that stands upright in the world
-    // tells the arm which way the fist has to face — but only a hand that
-    // is MODELLED needs turning. A procedural hand is generated in the
-    // mudra it was asked for, fingers already closed the right way round
-    // the item, so its wrist belongs to the pose. A mesh hand says which
-    // it is by declaring a grip morph for that arm.
+
+    // How this item's presentation is achieved: by turning the HAND onto
+    // it, or by turning the ITEM in the world.
+    //
+    // Turning the hand is the design. The item then sits in the grip
+    // exactly as its declared grip frame says, and the relationship is
+    // rig-relative all the way down. That needs a hand whose grip channel
+    // the engine can actually aim — a modelled mesh hand, which says so
+    // by shipping a grip morph for that arm.
+    //
+    // A procedural hand is rebuilt per mudra with the shaft's channel
+    // baked into the geometry, so aiming the wrist would carry the fist
+    // off the axis its fingers were closed around. Those keep the world
+    // override, and it is recorded as such rather than applied to
+    // everything.
+    const upright = asset.keepUpright === true || presentation.upright === true;
     const heldBy = attachment.socket.match(/^arm\.([A-Za-z]+)\.hand\.item$/)?.[1];
     const modelledHand =
       heldBy !== undefined &&
       (bodyAsset?.morphTargets ?? []).includes(
         `grip${heldBy[0]!.toUpperCase()}${heldBy.slice(1)}`,
       );
-    if (heldBy && modelledHand && (asset.keepUpright || presentation.upright)) {
+    const solvedByRig = upright && heldBy !== undefined && modelledHand;
+    if (solvedByRig) {
       held.push({
         slot: heldBy as HeldItem["slot"],
         // Upright items present their own axis vertically, whatever the
-        // asset's local axis is; the engine has already turned them.
+        // asset's local axis is; the grip frame has already turned them.
         axis: [0, 1, 0],
         // Where this body's thumb actually is, if it measured itself.
         thumb: bodyAsset?.thumbAxes?.[heldBy] as HeldItem["thumb"],
       });
+    } else if (upright) {
+      worldAlignedAttachments.push(renderable);
     }
     if (reach !== undefined) {
       groundedAttachments.push({
         object: renderable,
         reach,
         baseTop: BASE_TOP_HEIGHT[config.base.style] ?? 0,
+        // Upright is the only presentation that plants anything today, and
+        // it presents vertically. Stated as the item's axis so a future
+        // presentation that does not can slide along its own shaft.
+        axis: new THREE.Vector3(0, 1, 0),
       });
     }
   }
@@ -509,7 +585,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     skeleton,
     joints,
     sockets,
-    uprightAttachments,
+    worldAlignedAttachments,
     groundedAttachments,
     held,
     body: bodyProfile,
@@ -521,30 +597,48 @@ const worldQuaternion = new THREE.Quaternion();
 const groundedPoint = new THREE.Vector3();
 
 /**
- * Re-orient upright attachments after a pose change: the object's world
- * rotation becomes identity (shaft vertical, as classical iconography
- * depicts held attributes), whatever its parent joint chain does.
+ * Settle held attachments after a pose change.
+ *
+ * TWO things happen here, and only one of them is a world-space override.
+ *
+ * Orientation: an item whose hand could be turned onto it (see
+ * `CharacterRig.held` and applyGripOrientations) is already correct — the
+ * arm was solved to present it, and the item sits in the grip exactly as
+ * its declared grip frame says. Nothing is done to it here. Only items
+ * held by a hand that CANNOT be aimed — a procedural fist with its grip
+ * channel baked into geometry — are turned in the world instead, and
+ * those are the ones the rig recorded as world-aligned.
+ *
+ * This used to be applied to every upright item unconditionally, which
+ * meant a declared grip frame was overwritten a moment after it was
+ * honoured. GripMetadata's own documentation conceded the point.
+ *
+ * Position: a planted staff slides along its OWN axis until its butt
+ * meets the base — the hand grips it further up rather than the whole
+ * weapon rising. A slide along the shaft is a relationship between the
+ * item and the ground, not a coordinate correction, and it survives the
+ * item being presented along any axis rather than only vertically.
  */
 export function alignUprightAttachments(rig: CharacterRig): void {
-  for (const object of rig.uprightAttachments) {
+  for (const object of rig.worldAlignedAttachments) {
     const parent = object.parent;
     if (!parent) continue;
     parent.updateWorldMatrix(true, false);
     parent.getWorldQuaternion(worldQuaternion);
     object.quaternion.copy(worldQuaternion.invert());
   }
-  // Re-plant the staffs. Their butt belongs on the base whatever the pose
-  // did to the hand, so the offset is computed in the statue's own frame
-  // and then expressed in the socket's — which by now may be rotated any
-  // which way by the arm carrying it.
-  for (const { object, reach, baseTop } of rig.groundedAttachments) {
+  for (const { object, reach, baseTop, axis } of rig.groundedAttachments) {
     const parent = object.parent;
     if (!parent) continue;
     parent.updateWorldMatrix(true, false);
     const socket = rig.root.worldToLocal(parent.getWorldPosition(groundedPoint));
     parent.getWorldQuaternion(worldQuaternion);
+    // How far short of the base the butt currently falls, measured along
+    // the axis the item is presented on.
+    const shortfall = (baseTop + reach - socket.y) / (axis.y !== 0 ? axis.y : 1);
     object.position
-      .set(0, baseTop + reach - socket.y, 0)
+      .copy(axis)
+      .multiplyScalar(shortfall)
       .applyQuaternion(worldQuaternion.invert());
   }
 }
