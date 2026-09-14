@@ -92,6 +92,14 @@ function humanShiva(preset: string, morphs: Record<string, number>): CharacterCo
       // The serpent is Shiva's, and an optional ornament like any other.
       { socket: "chest.necklace" as const, asset: { assetId: NAGA, version: 1 } },
     ],
+    // The reference dresses him in cream cloth under a tan hide; the
+    // production palette still has its ochre dhoti, which is the studio's
+    // to change when this body becomes the default.
+    materials: {
+      ...base.materials,
+      garment: { color: "#e3d6bb", finish: "satin" },
+      garmentAccent: { color: "#b07a41", finish: "matte" },
+    },
     pose: { preset, jointOverrides: {} },
     morphs,
   };
