@@ -1115,6 +1115,36 @@ function gripPoint(prefix) {
     .addScaledVector(fingers, span * 0.12);
 }
 
+/**
+ * Which way the thumb points, in the hand's own rest frame.
+ *
+ * The hand contract needs this and cannot assume it: the mesh's hands are
+ * mirrored while the rig is not, so no single constant reaches the thumb
+ * on both sides, and which local axis it lands on depends on how the
+ * retarget turned the arm. So the body measures it and ships it, and the
+ * solver is told rather than guessing.
+ */
+function thumbAxis(prefix, slot) {
+  const { fingers } = palmNormal(prefix);
+  const palmCentre = v3(`${prefix}-finger-2-1`).add(v3(`${prefix}-finger-5-1`)).multiplyScalar(0.5);
+  const toThumb = v3(`${prefix}-finger-1-4`).sub(palmCentre);
+  // In the rest pose the hand's local frame is the character's, so the
+  // retarget rotation is all that stands between the two.
+  const turn = rotation.get(`arm.${slot}.hand`);
+  const rest = toThumb.applyQuaternion(turn).normalize();
+  const restFingers = fingers.clone().applyQuaternion(turn).normalize();
+  // Across the hand, not along it: the thumb reaches sideways from the
+  // line the fingers run in.
+  return rest.projectOnPlane(restFingers).normalize();
+}
+
+const thumbAxes = {};
+for (const side of SIDES) {
+  const prefix = side.mh === "L" ? "l" : "r";
+  const axis = thumbAxis(prefix, side.arm);
+  thumbAxes[side.arm] = [axis.x, axis.y, axis.z].map((v) => Number(v.toFixed(5)));
+}
+
 for (const side of SIDES) {
   const point = gripPoint(side.mh === "L" ? "l" : "r")
     .sub(restFor("neutral").get(`arm.${side.arm}.hand`))
@@ -1343,6 +1373,7 @@ await writeFile(
       upAxis: "+Y",
       forwardAxis: "+Z",
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
+      thumbAxes,
       torsoFront: torsoFrontSurface(finalMesh.neutral),
       printability: { printSourceAvailable: false },
     },
@@ -1383,6 +1414,7 @@ await writeFile(
       ),
       morphTargets: morphTargetNames,
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
+      thumbAxes,
       torsoFront: torsoFrontSurface(finalMesh.neutral),
     },
     null,

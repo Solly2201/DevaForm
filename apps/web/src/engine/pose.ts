@@ -8,8 +8,8 @@ import {
   ARM_SLOTS,
   GESTURE_MUDRAS,
   HAND_FINGER_AXIS,
-  HAND_GRIP_AXIS,
   HAND_PALM_AXIS,
+  handThumbAxis,
   getJoint,
   getPosePreset,
   isJointId,
@@ -160,22 +160,20 @@ export function isKnownJoint(id: string): id is JointId {
 // ---------------------------------------------------------------------------
 
 /**
- * Frame built from the fist's channel and the palm: columns are
- * (channel, channel × palm, palm), so the frame maps local X onto the
- * channel and local Z onto the palm.
+ * Frame built from a hand's thumb direction and its palm direction:
+ * columns are (thumb, palm × thumb, palm), so the frame maps the thumb
+ * axis onto its first column and the palm axis onto its third.
+ *
+ * Both a hand and its target are described this way, which is what makes
+ * the solve unambiguous — there is no sign left to choose.
  */
-function gripFrame(channel: THREE.Vector3, palm: THREE.Vector3): THREE.Quaternion {
-  const c = channel.clone().normalize();
-  const p = palm.clone().projectOnPlane(c).normalize();
+function gripFrame(thumb: THREE.Vector3, palm: THREE.Vector3): THREE.Quaternion {
+  const t = thumb.clone().normalize();
+  const p = palm.clone().projectOnPlane(t).normalize();
   return new THREE.Quaternion().setFromRotationMatrix(
-    new THREE.Matrix4().makeBasis(c, p.clone().cross(c), p),
+    new THREE.Matrix4().makeBasis(t, p.clone().cross(t), p),
   );
 }
-
-const HAND_GRIP_FRAME = gripFrame(
-  new THREE.Vector3(...HAND_GRIP_AXIS),
-  new THREE.Vector3(...HAND_PALM_AXIS),
-);
 
 /** How far a rotation falls outside a joint's limit, in radians. */
 const excess = (value: number, range: readonly [number, number] | undefined): number =>
@@ -186,6 +184,12 @@ export interface HeldItem {
   slot: ArmSlot;
   /** World axis of the item's shaft — for an upright item, straight up. */
   axis: Vec3;
+  /**
+   * Which way this hand's thumb points, in the hand's own frame. A body
+   * that has measured its hands supplies it; otherwise the contract's
+   * side-aware default stands.
+   */
+  thumb?: Vec3;
 }
 
 const gripQuaternion = new THREE.Quaternion();
@@ -195,21 +199,23 @@ const gripPosition = new THREE.Vector3();
 
 /**
  * Turn the hands that are holding something so the thing is actually IN
- * them.
+ * them, the right way up.
  *
- * A closed fist has a hole through it, and that hole runs across the
- * knuckles. A shaft whose axis does not line up with it cannot be held —
- * it can only lie between the fingers, which is what the hand looks like
- * it is doing. Aligning the two is not a wrist rotation: a real arm turns
- * its FOREARM to bring the fist onto a vertical staff, and the wrist only
- * trims the result. So this searches the forearm's own twist for the
- * value that lets the wrist land inside its limits, and takes the palm
- * inward — the way an arm at rest holds a staff.
+ * A closed fist has a hole through it; that hole runs across the knuckles
+ * from the little finger to the THUMB, which gives it a direction and not
+ * merely a line. You grip a staff with your thumb toward its head — so
+ * the solve is: put this hand's thumb along the item's presented axis,
+ * and turn its palm toward the body, the way a hanging arm does. Two
+ * directions, one frame, no sign left to guess at. An earlier version
+ * tried both signs of the channel and kept whichever the arm could reach,
+ * which is how the hand ended up holding the trishul upside down.
  *
- * It solves an axis, not a direction: a shaft may pass through the fist
- * either way round, so both signs are tried and the reachable one wins.
- * If neither is reachable the pose's own wrist is left alone rather than
- * snapping to something broken. Returns the joints it moved.
+ * It is not a wrist rotation: a real arm turns its FOREARM to bring the
+ * fist onto a vertical staff and the wrist only trims the result, so the
+ * solver searches the forearm's own twist for the value that lets the
+ * wrist land inside its limits. If none does, the pose's own wrist is
+ * left alone rather than snapping to something broken. Returns the joints
+ * it moved.
  */
 export function applyGripOrientations(
   joints: ReadonlyMap<JointId, THREE.Object3D>,
@@ -220,18 +226,26 @@ export function applyGripOrientations(
   while (top?.parent) top = top.parent;
   top?.updateMatrixWorld(true);
 
-  for (const { slot, axis } of held) {
+  for (const { slot, axis, thumb } of held) {
     const handId: JointId = `arm.${slot}.hand`;
     const forearmId: JointId = `arm.${slot}.forearm`;
     const hand = joints.get(handId);
     const forearm = joints.get(forearmId);
     if (!hand || !forearm) continue;
 
+    // This hand's own frame — chiral, so the left and the right are not
+    // the same hand with a different name.
+    const handFrame = gripFrame(
+      new THREE.Vector3(...(thumb ?? handThumbAxis(slot))),
+      new THREE.Vector3(...HAND_PALM_AXIS),
+    ).invert();
+
     // The palm turns toward the body's midline, which is what a hanging
     // arm does with a staff, with a little forward so it is not flat on.
     hand.getWorldPosition(gripPosition);
     const inward = new THREE.Vector3(gripPosition.x > 0 ? -1 : 1, 0, 0.3).normalize();
     const shaft = new THREE.Vector3(...axis).normalize();
+    const target = gripFrame(shaft, inward).multiply(handFrame);
 
     const twistLimit = getJoint(forearmId).limits?.y;
     const wristLimits = getJoint(handId).limits;
@@ -245,27 +259,22 @@ export function applyGripOrientations(
       forearm.getWorldQuaternion(gripParent);
       gripParent.invert();
 
-      for (const sign of [1, -1]) {
-        const target = gripFrame(shaft.clone().multiplyScalar(sign), inward).multiply(
-          HAND_GRIP_FRAME.clone().invert(),
-        );
-        gripQuaternion.copy(gripParent).multiply(target);
-        gripEuler.setFromQuaternion(gripQuaternion, "XYZ");
-        const outside =
-          excess(gripEuler.x, wristLimits?.x) +
-          excess(gripEuler.y, wristLimits?.y) +
-          excess(gripEuler.z, wristLimits?.z);
-        // Prefer a reachable pose, then the least wrist bend, then the
-        // least twist away from what the pose asked for.
-        const cost =
-          outside * 100 +
-          Math.abs(gripEuler.x) +
-          Math.abs(gripEuler.y) +
-          Math.abs(gripEuler.z) +
-          Math.abs(twist - restTwist) * 0.35;
-        if (!best || cost < best.cost) {
-          best = { twist, wrist: gripQuaternion.clone(), cost };
-        }
+      gripQuaternion.copy(gripParent).multiply(target);
+      gripEuler.setFromQuaternion(gripQuaternion, "XYZ");
+      const outside =
+        excess(gripEuler.x, wristLimits?.x) +
+        excess(gripEuler.y, wristLimits?.y) +
+        excess(gripEuler.z, wristLimits?.z);
+      // Prefer a reachable pose, then the least wrist bend, then the
+      // least twist away from what the pose asked for.
+      const cost =
+        outside * 100 +
+        Math.abs(gripEuler.x) +
+        Math.abs(gripEuler.y) +
+        Math.abs(gripEuler.z) +
+        Math.abs(twist - restTwist) * 0.35;
+      if (!best || cost < best.cost) {
+        best = { twist, wrist: gripQuaternion.clone(), cost };
       }
     }
 

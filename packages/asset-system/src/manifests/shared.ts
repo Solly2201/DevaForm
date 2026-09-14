@@ -219,6 +219,12 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
       },
     },
+    // Measured off the mesh: this body's hands are mirrored, so the two
+    // thumbs do not share an axis.
+    thumbAxes: {
+      frontLeft: [0.79651, 0, 0.60463],
+      frontRight: [-0.79651, 0, 0.60463],
+    },
     // The measured front of this torso, sampled off the mesh. An
     // ellipsoid describes a torso's volume well and its surface badly;
     // anything that lies ON the chest asks this instead.

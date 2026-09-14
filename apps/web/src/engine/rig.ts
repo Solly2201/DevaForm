@@ -451,6 +451,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         // Upright items present their own axis vertically, whatever the
         // asset's local axis is; the engine has already turned them.
         axis: [0, 1, 0],
+        // Where this body's thumb actually is, if it measured itself.
+        thumb: bodyAsset?.thumbAxes?.[heldBy] as HeldItem["thumb"],
       });
     }
     if (reach !== undefined) {
