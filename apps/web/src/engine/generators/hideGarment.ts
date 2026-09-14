@@ -25,7 +25,7 @@
  */
 import * as THREE from "three";
 import { mesh } from "../geometry";
-import { num, type JointedPart, type PartGenerator } from "./types";
+import { num, type PartGenerator } from "./types";
 import type { BodyProfile } from "./bodyProfile";
 
 /** Cloth sits this far off the skin — enough to read as fabric, not paint. */

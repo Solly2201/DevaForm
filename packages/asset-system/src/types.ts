@@ -168,6 +168,27 @@ export interface MeasuredBodySurfaces {
   necklaceSocketZ: number;
 }
 
+/**
+ * The front of the torso, measured off the mesh as a height field in the
+ * chest joint's space: `depth[row * columns + col]` is the frontmost z at
+ * that grid point.
+ *
+ * An ellipsoid fitted to a torso is a fair description of its volume and a
+ * poor description of its surface — it under-reports wherever the real
+ * body is flatter or broader than the fit, and anything laid on that
+ * answer sinks into the mesh. Bodies that can measure themselves ship this
+ * instead, and everything that drapes on the chest asks it.
+ */
+export interface MeasuredTorsoFront {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  rows: number;
+  columns: number;
+  depth: readonly number[];
+}
+
 /** A body asset's measured surfaces, plus how each morph target moves them. */
 export interface MeasuredBodyProfile {
   base: MeasuredBodySurfaces;
@@ -270,6 +291,8 @@ export interface AssetDefinition {
    * from params it does not have.
    */
   bodyProfile?: MeasuredBodyProfile;
+  /** Body-slot assets: the measured front of this mesh's torso. */
+  torsoFront?: MeasuredTorsoFront;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
   /** Categorization for the editor UI. */

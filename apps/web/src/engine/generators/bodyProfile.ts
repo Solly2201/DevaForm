@@ -17,7 +17,11 @@
  * same attachments without renderer special cases.
  */
 import type { Proportions } from "@devaform/character-schema";
-import type { MeasuredBodyProfile, MeasuredBodySurfaces } from "@devaform/asset-system";
+import type {
+  MeasuredBodyProfile,
+  MeasuredBodySurfaces,
+  MeasuredTorsoFront,
+} from "@devaform/asset-system";
 
 export interface BodyProfile {
   /** Raw drivers from the body asset's params. */
@@ -172,9 +176,15 @@ export function deriveBodyProfile(
    * currently applied to it. When present they win: a measurement of the
    * mesh beats any formula guessing at it.
    */
-  measured?: { profile: MeasuredBodyProfile; morphs: Readonly<Record<string, number>> },
+  measured?: {
+    profile: MeasuredBodyProfile;
+    morphs: Readonly<Record<string, number>>;
+    torsoFront?: MeasuredTorsoFront;
+  },
 ): BodyProfile {
-  if (measured) return deriveMeasuredProfile(measured.profile, measured.morphs);
+  if (measured) {
+    return deriveMeasuredProfile(measured.profile, measured.morphs, measured.torsoFront);
+  }
   // The athletic (masculine human) body declares itself via its params —
   // pure data, so the engine never asks WHICH deity wears it.
   if (params.form === "athletic") return deriveAthleticProfile(params, proportions);
@@ -284,9 +294,37 @@ export function deriveBodyProfile(
  * mesh body travels through its morph targets, which is exactly what the
  * deltas below describe.
  */
+/**
+ * Read a measured torso-front field at a chest-local point, bilinearly.
+ * Outside the grid it holds the edge value, which is what a surface does
+ * at a silhouette: it stops, it does not fall away to the centre line.
+ */
+function sampleFront(field: MeasuredTorsoFront, x: number, y: number): number {
+  const cx = Math.min(
+    field.columns - 1,
+    Math.max(0, ((x - field.minX) / (field.maxX - field.minX)) * (field.columns - 1)),
+  );
+  const cy = Math.min(
+    field.rows - 1,
+    Math.max(0, ((y - field.minY) / (field.maxY - field.minY)) * (field.rows - 1)),
+  );
+  const x0 = Math.floor(cx);
+  const y0 = Math.floor(cy);
+  const x1 = Math.min(field.columns - 1, x0 + 1);
+  const y1 = Math.min(field.rows - 1, y0 + 1);
+  const fx = cx - x0;
+  const fy = cy - y0;
+  const at = (row: number, col: number) => field.depth[row * field.columns + col] ?? 0;
+  return (
+    (at(y0, x0) * (1 - fx) + at(y0, x1) * fx) * (1 - fy) +
+    (at(y1, x0) * (1 - fx) + at(y1, x1) * fx) * fy
+  );
+}
+
 function deriveMeasuredProfile(
   measured: MeasuredBodyProfile,
   morphs: Readonly<Record<string, number>>,
+  torsoFront?: MeasuredTorsoFront,
 ): BodyProfile {
   const value = (key: keyof MeasuredBodySurfaces): number => {
     let total = measured.base[key];
@@ -317,9 +355,13 @@ function deriveMeasuredProfile(
     ellipseSliceZ(x, y, 0, bellyCenterY, bellyCenterZ, bellyRadiusX, bellyRadiusY, bellyRadiusZ);
   const chestSurfaceZAt = (x: number, y: number): number =>
     ellipseSliceZ(x, y, 0, chestCenterY, chestCenterZ, chestRadiusX, chestRadiusY, chestRadiusZ);
-  // This body's own spine->chest gap, not the stylised rig's.
+  // The measured front wins where the body shipped one: an ellipsoid
+  // describes a torso's volume well and its surface badly, and ornaments
+  // lie on the surface. Otherwise, this body's own spine->chest gap.
   const torsoSurfaceZAt = (x: number, y: number): number =>
-    Math.max(chestSurfaceZAt(x, y), bellySurfaceZAt(x, y + spineToChestY));
+    torsoFront
+      ? sampleFront(torsoFront, x, y)
+      : Math.max(chestSurfaceZAt(x, y), bellySurfaceZAt(x, y + spineToChestY));
   const torsoBackZAt = (x: number, y: number): number =>
     Math.min(
       2 * chestCenterZ - chestSurfaceZAt(x, y),
