@@ -291,6 +291,13 @@ export interface AssetDefinition {
    * from params it does not have.
    */
   bodyProfile?: MeasuredBodyProfile;
+  /**
+   * Body-slot assets: which way the thumb points on each hand, in that
+   * hand's own rest frame. A mesh body measures this rather than
+   * assuming a convention — its hands are mirrored while the rig is
+   * not, so no single constant reaches the thumb on both sides.
+   */
+  thumbAxes?: Readonly<Record<string, readonly [number, number, number]>>;
   /** Body-slot assets: the measured front of this mesh's torso. */
   torsoFront?: MeasuredTorsoFront;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */

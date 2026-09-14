@@ -44,16 +44,33 @@ const D = Math.PI / 180;
 export const HAND_FINGER_AXIS: Vec3 = [0, -1, 0];
 export const HAND_PALM_AXIS: Vec3 = [0, 0, 1];
 /**
- * The channel a closed fist makes. Curl the fingers and the hole they
- * leave runs ACROSS the knuckles — thumb side to little-finger side —
- * which on a hand built to this contract is the local X.
+ * Hand-local direction toward the THUMB, for a right hand.
  *
- * This is the third axis of the hand contract and the one that decides
- * whether a held shaft is inside the fist or merely between the fingers.
- * A shaft can lie either way along it, so it is a line, not a direction:
- * the solver is free to choose the sign that the arm can actually reach.
+ * This is the axis that makes the contract chiral, and it is the one the
+ * hand contract was missing. Curl the fingers and the hole a fist leaves
+ * runs across the knuckles from the little finger to the thumb — so the
+ * thumb axis IS the grip channel, with a direction rather than merely a
+ * line. Without that direction a solver can align a shaft with the
+ * channel and still hand it to you upside down, which is exactly what
+ * happened: geometrically valid, anatomically wrong.
+ *
+ * A left hand is a mirror of a right one through the body's plane, so its
+ * thumb points the opposite way in the same local frame. Use
+ * `handThumbAxis(slot)` rather than this constant directly.
  */
-export const HAND_GRIP_AXIS: Vec3 = [1, 0, 0];
+export const HAND_THUMB_AXIS: Vec3 = [-1, 0, 0];
+
+/**
+ * Where the thumb points on a given hand, in that hand's local frame.
+ *
+ * A single constant cannot serve both hands: the meshes are mirrored and
+ * the rig is not, so hand-local +X reaches the thumb on one side and the
+ * little finger on the other.
+ */
+export function handThumbAxis(slot: ArmSlot): Vec3 {
+  const [x, y, z] = HAND_THUMB_AXIS;
+  return slot === "frontLeft" || slot === "backLeft" ? [-x, y, z] : [x, y, z];
+}
 
 export interface MudraArmPose {
   upper: Vec3;
