@@ -56,7 +56,7 @@
       "parent": "neck",
       "position": [
         0,
-        0.07,
+        0.115,
         0
       ]
     },
@@ -65,8 +65,8 @@
       "parent": "head",
       "position": [
         0,
-        0,
-        0.09
+        -0.01,
+        0.095
       ]
     },
     {
@@ -74,8 +74,8 @@
       "parent": "trunkBase",
       "position": [
         0,
-        -0.085,
-        0.035
+        -0.09,
+        0.05
       ]
     },
     {
@@ -83,8 +83,8 @@
       "parent": "trunkMid",
       "position": [
         0,
-        -0.08,
-        0.025
+        -0.085,
+        0.04
       ]
     },
     {
@@ -308,11 +308,11 @@
       ]
     },
     {
-      "id": "trunk.tip",
-      "joint": "trunkTip",
+      "id": "head.moon",
+      "joint": "head",
       "position": [
-        0,
-        -0.04,
+        0.05,
+        0.15,
         0.02
       ],
       "rotation": [
@@ -406,6 +406,48 @@
       ]
     },
     {
+      "id": "leg.left.anklet",
+      "joint": "leg.left.foot",
+      "position": [
+        0,
+        0.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "leg.right.anklet",
+      "joint": "leg.right.foot",
+      "position": [
+        0,
+        0.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "base.platform",
+      "joint": "root",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
       "id": "arm.backLeft.hand.item",
       "joint": "arm.backLeft.hand",
       "position": [
@@ -462,40 +504,12 @@
       ]
     },
     {
-      "id": "leg.left.anklet",
-      "joint": "leg.left.foot",
+      "id": "trunk.tip",
+      "joint": "trunkTip",
       "position": [
         0,
-        0.04,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ]
-    },
-    {
-      "id": "leg.right.anklet",
-      "joint": "leg.right.foot",
-      "position": [
-        0,
-        0.04,
-        0
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ]
-    },
-    {
-      "id": "base.platform",
-      "joint": "root",
-      "position": [
-        0,
-        0,
-        0
+        -0.04,
+        0.02
       ],
       "rotation": [
         0,
@@ -504,9 +518,174 @@
       ]
     }
   ],
+  "skeletons": {
+    "humanoid": {
+      "joints": [
+        "root",
+        "pelvis",
+        "spine",
+        "chest",
+        "neck",
+        "head",
+        "arm.frontLeft.upper",
+        "arm.frontLeft.forearm",
+        "arm.frontLeft.hand",
+        "arm.frontRight.upper",
+        "arm.frontRight.forearm",
+        "arm.frontRight.hand",
+        "arm.backLeft.upper",
+        "arm.backLeft.forearm",
+        "arm.backLeft.hand",
+        "arm.backRight.upper",
+        "arm.backRight.forearm",
+        "arm.backRight.hand",
+        "leg.left.thigh",
+        "leg.left.shin",
+        "leg.left.foot",
+        "leg.right.thigh",
+        "leg.right.shin",
+        "leg.right.foot"
+      ],
+      "sockets": [
+        "head.crown",
+        "head.leftEar",
+        "head.rightEar",
+        "head.forehead",
+        "head.moon",
+        "chest.necklace",
+        "waist.ornament",
+        "arm.frontLeft.hand.item",
+        "arm.frontLeft.wrist",
+        "arm.frontRight.hand.item",
+        "arm.frontRight.wrist",
+        "leg.left.anklet",
+        "leg.right.anklet",
+        "base.platform",
+        "arm.backLeft.hand.item",
+        "arm.backLeft.wrist",
+        "arm.backRight.hand.item",
+        "arm.backRight.wrist"
+      ],
+      "armSlots": [
+        "frontLeft",
+        "frontRight",
+        "backLeft",
+        "backRight"
+      ],
+      "extensions": {
+        "backArms": true
+      }
+    },
+    "ganesha": {
+      "joints": [
+        "root",
+        "pelvis",
+        "spine",
+        "chest",
+        "neck",
+        "head",
+        "trunkBase",
+        "trunkMid",
+        "trunkTip",
+        "arm.frontLeft.upper",
+        "arm.frontLeft.forearm",
+        "arm.frontLeft.hand",
+        "arm.frontRight.upper",
+        "arm.frontRight.forearm",
+        "arm.frontRight.hand",
+        "arm.backLeft.upper",
+        "arm.backLeft.forearm",
+        "arm.backLeft.hand",
+        "arm.backRight.upper",
+        "arm.backRight.forearm",
+        "arm.backRight.hand",
+        "leg.left.thigh",
+        "leg.left.shin",
+        "leg.left.foot",
+        "leg.right.thigh",
+        "leg.right.shin",
+        "leg.right.foot"
+      ],
+      "sockets": [
+        "head.crown",
+        "head.leftEar",
+        "head.rightEar",
+        "head.forehead",
+        "head.moon",
+        "chest.necklace",
+        "waist.ornament",
+        "arm.frontLeft.hand.item",
+        "arm.frontLeft.wrist",
+        "arm.frontRight.hand.item",
+        "arm.frontRight.wrist",
+        "leg.left.anklet",
+        "leg.right.anklet",
+        "base.platform",
+        "arm.backLeft.hand.item",
+        "arm.backLeft.wrist",
+        "arm.backRight.hand.item",
+        "arm.backRight.wrist",
+        "trunk.tip"
+      ],
+      "armSlots": [
+        "frontLeft",
+        "frontRight",
+        "backLeft",
+        "backRight"
+      ],
+      "extensions": {
+        "backArms": true,
+        "trunk": true
+      }
+    },
+    "human": {
+      "joints": [
+        "root",
+        "pelvis",
+        "spine",
+        "chest",
+        "neck",
+        "head",
+        "arm.frontLeft.upper",
+        "arm.frontLeft.forearm",
+        "arm.frontLeft.hand",
+        "arm.frontRight.upper",
+        "arm.frontRight.forearm",
+        "arm.frontRight.hand",
+        "leg.left.thigh",
+        "leg.left.shin",
+        "leg.left.foot",
+        "leg.right.thigh",
+        "leg.right.shin",
+        "leg.right.foot"
+      ],
+      "sockets": [
+        "head.crown",
+        "head.leftEar",
+        "head.rightEar",
+        "head.forehead",
+        "head.moon",
+        "chest.necklace",
+        "waist.ornament",
+        "arm.frontLeft.hand.item",
+        "arm.frontLeft.wrist",
+        "arm.frontRight.hand.item",
+        "arm.frontRight.wrist",
+        "leg.left.anklet",
+        "leg.right.anklet",
+        "base.platform"
+      ],
+      "armSlots": [
+        "frontLeft",
+        "frontRight"
+      ],
+      "extensions": {}
+    }
+  },
   "materialZones": [
     "skin",
     "skinSecondary",
+    "hair",
     "garment",
     "garmentAccent",
     "metal",

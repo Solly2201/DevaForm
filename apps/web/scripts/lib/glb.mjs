@@ -82,7 +82,9 @@ export function skinningProblems(json, entry, boneNameToJointId) {
       }
       const jointId = boneNameToJointId(boneName);
       if (!jointId) {
-        problems.push(`skin ${index}: bone "${boneName}" names no canonical joint`);
+        problems.push(
+          `skin ${index}: bone "${boneName}" names no joint of skeleton "${entry.skeleton ?? "canonical"}"`,
+        );
         continue;
       }
       if (claimed.has(jointId)) {

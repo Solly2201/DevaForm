@@ -9,8 +9,9 @@
  * TRANSFORM  approximate bounds within the canonical scale envelope
  * MATERIALS  zone:* names must reference known zones
  * PARTS      part-kind GLBs must carry JOINT_<id> groups, or a skin
- * SKINS      every skin joint names a canonical skeleton joint, uniquely,
- *            and skinned primitives carry JOINTS_0/WEIGHTS_0
+ * SKINS      every skin joint names a joint of the skeleton the asset
+ *            DECLARES, uniquely, and skinned primitives carry
+ *            JOINTS_0/WEIGHTS_0
  * MORPHS     morph targets are named, consistent across primitives, and
  *            agree with the names the manifest declares
  * MANIFEST   every glb reference exists; orphan files are warnings
@@ -39,11 +40,28 @@ const CANONICAL_RIG = JSON.parse(
   await readFile(path.join(ROOT, "..", "..", "tools", "blender", "canonical-rig.json"), "utf8"),
 );
 const CANONICAL_JOINTS = new Set(CANONICAL_RIG.skeleton.map((joint) => joint.id));
+/** Per-skeleton joint sets, so an asset is checked against its own anatomy. */
+const SKELETON_JOINTS = new Map(
+  Object.entries(CANONICAL_RIG.skeletons ?? {}).map(([id, s]) => [id, new Set(s.joints)]),
+);
 /** glTF strips "." from node names, so bones may spell joint ids with "_". */
-const boneNameToJointId = (name) => {
-  if (CANONICAL_JOINTS.has(name)) return name;
+const boneNameToJointId = (name, joints = CANONICAL_JOINTS) => {
+  if (joints.has(name)) return name;
   const dotted = String(name ?? "").replace(/_/g, ".");
-  return CANONICAL_JOINTS.has(dotted) ? dotted : null;
+  return joints.has(dotted) ? dotted : null;
+};
+/**
+ * The joints an asset's bones are allowed to name. A body declaring the
+ * human skeleton may not ship bones for a second pair of arms: they would
+ * bind to joints the rig does not build, and the mesh would go undeformed
+ * with only a warning to show for it.
+ */
+const jointsFor = (entry) => {
+  if (!entry.skeleton) return CANONICAL_JOINTS;
+  const joints = SKELETON_JOINTS.get(entry.skeleton);
+  if (joints) return joints;
+  error(`${entry.id}: names skeleton "${entry.skeleton}", which does not exist`);
+  return CANONICAL_JOINTS;
 };
 const MIN_SIZE_M = 0.01;
 const MAX_SIZE_M = 2.0;
@@ -108,7 +126,10 @@ for (const entry of glbEntries) {
       problems.push(`unknown material zone "${name}"`);
     }
   }
-  problems.push(...skinningProblems(json, entry, boneNameToJointId));
+  const allowedJoints = jointsFor(entry);
+  problems.push(
+    ...skinningProblems(json, entry, (name) => boneNameToJointId(name, allowedJoints)),
+  );
   const skinned = (json.skins ?? []).length > 0;
   if (
     entry.kindType === "part" &&
