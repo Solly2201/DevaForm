@@ -293,7 +293,10 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.damaru" },
-    grip: { mudra: "grip" },
+    // Pinched at the waist, not fisted: a drum is held between thumb and
+    // fingers, and a hand closed all the way round it would have to close
+    // through the drum heads.
+    grip: { mudra: "pinch" },
     // A damaru hangs from the fist that holds its waist: heads up and
     // down, hourglass in profile. Without this it turns with the wrist
     // and presents a drum head to the viewer like a medallion.
