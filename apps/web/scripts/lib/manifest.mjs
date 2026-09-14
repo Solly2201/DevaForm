@@ -39,6 +39,10 @@ export async function readManifestEntries(manifestDir) {
         morphTargets: [
           ...(chunk.match(/morphTargets:\s*\[([^\]]*)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g),
         ].map((match) => match[1]),
+        // The anatomy this asset says it was built for. A skinned body is
+        // checked against THAT skeleton's joints, not against the union of
+        // every joint that exists anywhere.
+        skeleton: chunk.match(/^\s*skeleton:\s*"([^"]+)"/m)?.[1] ?? null,
         manifest: file,
       });
     }

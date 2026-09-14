@@ -9,7 +9,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { MATERIAL_ZONES, PART_SLOTS, SKELETON, SOCKETS } from "../src/index";
+import {
+  GANESHA_SKELETON,
+  HUMANOID_SKELETON,
+  HUMAN_SKELETON,
+  MATERIAL_ZONES,
+  PART_SLOTS,
+  SKELETON,
+  SOCKETS,
+  type SkeletonDefinition,
+} from "../src/index";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(here, "..", "..", "..", "tools", "blender");
@@ -30,6 +39,25 @@ const payload = {
     position: socket.position,
     rotation: socket.rotation,
   })),
+  /**
+   * The individual skeletons, so tooling can check an asset against the
+   * anatomy it DECLARES rather than against the union of every anatomy
+   * that exists. A body built for the human rig must not ship bones for
+   * a second pair of arms, and only this tells a validator that.
+   */
+  skeletons: Object.fromEntries(
+    ([HUMANOID_SKELETON, GANESHA_SKELETON, HUMAN_SKELETON] as SkeletonDefinition[]).map(
+      (skeleton) => [
+        skeleton.id,
+        {
+          joints: skeleton.joints.map((joint) => joint.id),
+          sockets: skeleton.sockets.map((socket) => socket.id),
+          armSlots: skeleton.armSlots,
+          extensions: skeleton.extensions,
+        },
+      ],
+    ),
+  ),
   materialZones: MATERIAL_ZONES,
   partSlots: PART_SLOTS,
 };
@@ -40,3 +68,6 @@ console.log(`wrote ${file}`);
 console.log(
   `  ${payload.skeleton.length} joints, ${payload.sockets.length} sockets, ${payload.materialZones.length} zones`,
 );
+for (const [id, skeleton] of Object.entries(payload.skeletons)) {
+  console.log(`  skeleton ${id}: ${skeleton.joints.length} joints, ${skeleton.armSlots.length} arms`);
+}
