@@ -8,10 +8,12 @@ import {
   ARM_SLOTS,
   GESTURE_MUDRAS,
   HAND_FINGER_AXIS,
+  HAND_GRIP_AXIS,
   HAND_PALM_AXIS,
   getJoint,
   getPosePreset,
   isJointId,
+  type ArmSlot,
   type HandsConfiguration,
   type JointId,
   type PoseConfiguration,
@@ -151,4 +153,131 @@ export function effectiveJointRotation(pose: PoseConfiguration, jointId: JointId
 
 export function isKnownJoint(id: string): id is JointId {
   return isJointId(id);
+}
+
+// ---------------------------------------------------------------------------
+// Holding things
+// ---------------------------------------------------------------------------
+
+/**
+ * Frame built from the fist's channel and the palm: columns are
+ * (channel, channel × palm, palm), so the frame maps local X onto the
+ * channel and local Z onto the palm.
+ */
+function gripFrame(channel: THREE.Vector3, palm: THREE.Vector3): THREE.Quaternion {
+  const c = channel.clone().normalize();
+  const p = palm.clone().projectOnPlane(c).normalize();
+  return new THREE.Quaternion().setFromRotationMatrix(
+    new THREE.Matrix4().makeBasis(c, p.clone().cross(c), p),
+  );
+}
+
+const HAND_GRIP_FRAME = gripFrame(
+  new THREE.Vector3(...HAND_GRIP_AXIS),
+  new THREE.Vector3(...HAND_PALM_AXIS),
+);
+
+/** How far a rotation falls outside a joint's limit, in radians. */
+const excess = (value: number, range: readonly [number, number] | undefined): number =>
+  !range ? 0 : Math.max(0, range[0] - value, value - range[1]);
+
+/** An item a hand is holding, and the world direction it runs along. */
+export interface HeldItem {
+  slot: ArmSlot;
+  /** World axis of the item's shaft — for an upright item, straight up. */
+  axis: Vec3;
+}
+
+const gripQuaternion = new THREE.Quaternion();
+const gripParent = new THREE.Quaternion();
+const gripEuler = new THREE.Euler();
+const gripPosition = new THREE.Vector3();
+
+/**
+ * Turn the hands that are holding something so the thing is actually IN
+ * them.
+ *
+ * A closed fist has a hole through it, and that hole runs across the
+ * knuckles. A shaft whose axis does not line up with it cannot be held —
+ * it can only lie between the fingers, which is what the hand looks like
+ * it is doing. Aligning the two is not a wrist rotation: a real arm turns
+ * its FOREARM to bring the fist onto a vertical staff, and the wrist only
+ * trims the result. So this searches the forearm's own twist for the
+ * value that lets the wrist land inside its limits, and takes the palm
+ * inward — the way an arm at rest holds a staff.
+ *
+ * It solves an axis, not a direction: a shaft may pass through the fist
+ * either way round, so both signs are tried and the reachable one wins.
+ * If neither is reachable the pose's own wrist is left alone rather than
+ * snapping to something broken. Returns the joints it moved.
+ */
+export function applyGripOrientations(
+  joints: ReadonlyMap<JointId, THREE.Object3D>,
+  held: readonly HeldItem[],
+): JointId[] {
+  const applied: JointId[] = [];
+  let top: THREE.Object3D | undefined = joints.get("root");
+  while (top?.parent) top = top.parent;
+  top?.updateMatrixWorld(true);
+
+  for (const { slot, axis } of held) {
+    const handId: JointId = `arm.${slot}.hand`;
+    const forearmId: JointId = `arm.${slot}.forearm`;
+    const hand = joints.get(handId);
+    const forearm = joints.get(forearmId);
+    if (!hand || !forearm) continue;
+
+    // The palm turns toward the body's midline, which is what a hanging
+    // arm does with a staff, with a little forward so it is not flat on.
+    hand.getWorldPosition(gripPosition);
+    const inward = new THREE.Vector3(gripPosition.x > 0 ? -1 : 1, 0, 0.3).normalize();
+    const shaft = new THREE.Vector3(...axis).normalize();
+
+    const twistLimit = getJoint(forearmId).limits?.y;
+    const wristLimits = getJoint(handId).limits;
+    const restTwist = forearm.rotation.y;
+    let best: { twist: number; wrist: THREE.Quaternion; cost: number } | null = null;
+
+    for (let step = 0; step <= 48; step += 1) {
+      const twist = clamp(-Math.PI + (step / 48) * Math.PI * 2, twistLimit);
+      forearm.rotation.y = twist;
+      forearm.updateMatrixWorld(true);
+      forearm.getWorldQuaternion(gripParent);
+      gripParent.invert();
+
+      for (const sign of [1, -1]) {
+        const target = gripFrame(shaft.clone().multiplyScalar(sign), inward).multiply(
+          HAND_GRIP_FRAME.clone().invert(),
+        );
+        gripQuaternion.copy(gripParent).multiply(target);
+        gripEuler.setFromQuaternion(gripQuaternion, "XYZ");
+        const outside =
+          excess(gripEuler.x, wristLimits?.x) +
+          excess(gripEuler.y, wristLimits?.y) +
+          excess(gripEuler.z, wristLimits?.z);
+        // Prefer a reachable pose, then the least wrist bend, then the
+        // least twist away from what the pose asked for.
+        const cost =
+          outside * 100 +
+          Math.abs(gripEuler.x) +
+          Math.abs(gripEuler.y) +
+          Math.abs(gripEuler.z) +
+          Math.abs(twist - restTwist) * 0.35;
+        if (!best || cost < best.cost) {
+          best = { twist, wrist: gripQuaternion.clone(), cost };
+        }
+      }
+    }
+
+    forearm.rotation.y = restTwist;
+    forearm.updateMatrixWorld(true);
+    if (!best || best.cost >= 100) continue; // unreachable: leave the pose alone
+
+    forearm.rotation.y = best.twist;
+    forearm.updateMatrixWorld(true);
+    hand.quaternion.copy(best.wrist);
+    hand.updateMatrixWorld(true);
+    applied.push(forearmId, handId);
+  }
+  return applied;
 }
