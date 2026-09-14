@@ -86,7 +86,13 @@ function digest(rows: readonly string[]): string {
 
 const PINNED = {
   ganesha: { nodes: 370, digest: "65100aec2a4dae90" },
-  shiva: { nodes: 314, digest: "c17d22aa808af918" },
+  // Re-pinned when the trishul's grip anchor moved onto the shaft. Its
+  // trident head used to sit at a fraction of however high the hand
+  // happened to be when the rig was built (reach * 0.78), which is not a
+  // property of the weapon at all; it now sits a declared distance above
+  // the whole range of shaft a hand can slide along. The node count is
+  // unchanged — same parts, one of them the right length.
+  shiva: { nodes: 314, digest: "a981ff6cbb4be3fc" },
 } as const;
 
 describe("protected characters do not move", () => {

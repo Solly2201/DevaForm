@@ -15,10 +15,14 @@ import {
   HAND_PALM_AXIS,
   activeArmSlots,
   getPosePreset,
+  isGestureMudra,
+  resolveHands,
   getSkeleton,
   isJointId,
   type CharacterConfiguration,
+  type HandsConfiguration,
   type JointId,
+  type MudraId,
   type SkeletonDefinition,
   type SocketId,
 } from "@devaform/character-schema";
@@ -72,6 +76,12 @@ export interface CharacterRig {
     reach: number;
     baseTop: number;
     axis: THREE.Vector3;
+    /**
+     * How far the hand may slide along the shaft before it reaches
+     * something no one grips. The asset declares it (GripMetadata.travel)
+     * because only the asset knows where its own head is.
+     */
+    travel: { up: number; down: number };
   }>;
   /**
    * What each hand is holding, and which way the item runs in the world.
@@ -79,6 +89,13 @@ export interface CharacterRig {
    * the item ends up lying between the fingers instead of in the fist.
    */
   held: HeldItem[];
+  /**
+   * What each hand is doing, pose and configuration reconciled — see
+   * resolveHands. Consumers must read THIS rather than the configuration,
+   * or the wrist solver and the rig will disagree about whether a hand is
+   * blessing or gripping.
+   */
+  hands: HandsConfiguration;
   /**
    * Torso surfaces this rig's body-fitted geometry was built against —
    * measured from a mesh body, or derived from a procedural one.
@@ -333,15 +350,20 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     skeleton.armSlots.includes(slot),
   );
 
+  // What each hand is actually doing, pose and configuration reconciled.
+  // A preset that raises a blessing arm means that hand blesses, whatever
+  // the configuration still says it grips.
+  const posePreset = config.pose.preset ? getPosePreset(config.pose.preset) : undefined;
+  const hands = resolveHands(config.hands, posePreset);
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,
     proportions: config.proportions,
     morphs: config.morphs,
-    hands: config.hands,
+    hands,
     arms: config.arms,
     armSlots,
-    seated:
-      config.pose.preset !== null && getPosePreset(config.pose.preset)?.seated === true,
+    seated: posePreset?.seated === true,
     body: bodyProfile,
   };
   const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
@@ -501,6 +523,15 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       warnings.push(`Attachment ${asset.id}: unknown socket ${attachment.socket}`);
       continue;
     }
+    // A hand that is blessing is not also gripping. Nobody shows a palm
+    // to a devotee with a trident in the same fist, and trying produced
+    // exactly that: the abhaya arm rose, the staff stayed planted, and
+    // the hand slid a third of a metre up the shaft into the prongs.
+    const handSlot = attachment.socket.match(/^arm\.([A-Za-z]+)\.hand\.item$/)?.[1];
+    const gesturing =
+      handSlot !== undefined && isGestureMudra(
+        (hands as Record<string, { mudra: MudraId } | undefined>)[handSlot]?.mudra ?? "open",
+      );
     // A planted staff needs to know how high above the base it is being
     // held, so it can be built long enough to stand on the ground. The
     // character root has not been lifted onto the base yet, so the
@@ -515,6 +546,40 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     if (!renderable || !(renderable instanceof THREE.Object3D)) continue;
     renderable.name = `attachment:${asset.id}`;
     applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
+
+    if (gesturing) {
+      // The hand has let go. A PLANTED item does not need holding — it
+      // was already standing on the base and the fist was only resting on
+      // it — so it stays exactly where it stood, beside the figure, while
+      // the hand gets on with blessing. Anything that needed a palm under
+      // it has nowhere to be, and says so rather than floating.
+      if (reach !== undefined) {
+        socket.updateWorldMatrix(true, false);
+        // The base lift and the height scale are applied to the roots
+        // later, so a socket's position here is already base-relative.
+        const stood = socket.getWorldPosition(new THREE.Vector3());
+        // Set down BESIDE the figure, not against it. The hand's own rest
+        // position is where a staff would be let go, but that is a hand's
+        // clearance from the hip, not a staff's — and with the arm raised
+        // out of the way the shaft had nothing to lean on and crossed the
+        // shoulder. The body says how wide it is; the staff stands clear
+        // of that.
+        const clear = bodyProfile.dhotiRadius + 0.045;
+        const side = stood.x < 0 ? -1 : 1;
+        root.add(renderable);
+        renderable.position.set(
+          side * Math.max(Math.abs(stood.x), clear),
+          (BASE_TOP_HEIGHT[config.base.style] ?? 0) + reach,
+          stood.z,
+        );
+      } else {
+        warnings.push(
+          `Attachment ${asset.id}: ${handSlot} is performing a gesture and cannot hold it`,
+        );
+      }
+      continue;
+    }
+
     socket.add(renderable);
 
     // How this item's presentation is achieved: by turning the HAND onto
@@ -560,6 +625,10 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         // it presents vertically. Stated as the item's axis so a future
         // presentation that does not can slide along its own shaft.
         axis: new THREE.Vector3(0, 1, 0),
+        travel: {
+          up: asset.grip?.travel?.up ?? Number.POSITIVE_INFINITY,
+          down: asset.grip?.travel?.down ?? Number.POSITIVE_INFINITY,
+        },
       });
     }
   }
@@ -587,6 +656,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     sockets,
     worldAlignedAttachments,
     groundedAttachments,
+    hands,
     held,
     body: bodyProfile,
     warnings,
@@ -627,7 +697,7 @@ export function alignUprightAttachments(rig: CharacterRig): void {
     parent.getWorldQuaternion(worldQuaternion);
     object.quaternion.copy(worldQuaternion.invert());
   }
-  for (const { object, reach, baseTop, axis } of rig.groundedAttachments) {
+  for (const { object, reach, baseTop, axis, travel } of rig.groundedAttachments) {
     const parent = object.parent;
     if (!parent) continue;
     parent.updateWorldMatrix(true, false);
@@ -636,9 +706,15 @@ export function alignUprightAttachments(rig: CharacterRig): void {
     // How far short of the base the butt currently falls, measured along
     // the axis the item is presented on.
     const shortfall = (baseTop + reach - socket.y) / (axis.y !== 0 ? axis.y : 1);
+    // ...but a hand can only slide as far as there is shaft to slide on.
+    // Sliding the item DOWN carries the grip UP toward the head, so a
+    // negative shortfall is bounded by travel.up. Past that the butt
+    // leaves the ground, which is the honest failure: better a staff that
+    // hovers than a fist closed around a trident's prongs.
+    const slide = Math.min(travel.down, Math.max(-travel.up, shortfall));
     object.position
       .copy(axis)
-      .multiplyScalar(shortfall)
+      .multiplyScalar(slide)
       .applyQuaternion(worldQuaternion.invert());
   }
 }

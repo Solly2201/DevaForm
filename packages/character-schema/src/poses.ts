@@ -27,6 +27,18 @@ export interface PosePreset {
    * the pose itself, so every deity's presets carry their own truth.
    */
   seated?: boolean;
+  /**
+   * Hands this pose puts into a gesture, and which gesture.
+   *
+   * The preset already embeds the arm chain for them — see gestureArm —
+   * but embedding it only moved the arm. The HAND went on doing whatever
+   * the configuration last said, so "Blessing" raised an abhaya arm whose
+   * hand was still set to grip, and the engine dutifully closed a fist
+   * around a trident and carried it up to head height. A hand cannot bless
+   * and grip at the same time, and naming the gesture here is what lets
+   * the engine know which one this is.
+   */
+  gestures?: Partial<Record<ArmSlot, MudraId>>;
 }
 
 const D = Math.PI / 180;
@@ -70,6 +82,36 @@ export const HAND_THUMB_AXIS: Vec3 = [-1, 0, 0];
 export function handThumbAxis(slot: ArmSlot): Vec3 {
   const [x, y, z] = HAND_THUMB_AXIS;
   return slot === "frontLeft" || slot === "backLeft" ? [-x, y, z] : [x, y, z];
+}
+
+/**
+ * What each hand is actually DOING, once the pose and the configuration
+ * are reconciled.
+ *
+ * A pose preset that raises an abhaya arm is asserting that the hand
+ * blesses; the configuration may still say it grips, because the two were
+ * set at different times. The gesture wins for the hands the preset names
+ * — it is the whole identity of that pose — and everything else keeps
+ * what the customer chose.
+ *
+ * Resolve once, here, and every consumer agrees: the wrist solver, the
+ * hand generator, and the rig deciding whether a hand can hold anything.
+ */
+export function resolveHands<T extends Record<string, { mudra: MudraId }>>(
+  hands: T,
+  preset: PosePreset | undefined,
+): T {
+  if (!preset?.gestures) return hands;
+  const resolved = { ...hands } as Record<string, { mudra: MudraId }>;
+  for (const [slot, mudra] of Object.entries(preset.gestures)) {
+    if (mudra && resolved[slot]) resolved[slot] = { ...resolved[slot]!, mudra };
+  }
+  return resolved as T;
+}
+
+/** True when this mudra is a gesture — a statement, not a grip. */
+export function isGestureMudra(mudra: MudraId): boolean {
+  return GESTURE_MUDRAS[mudra] !== undefined;
 }
 
 export interface MudraArmPose {
@@ -179,6 +221,7 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       // Abhaya arm comes from the gesture itself, so the preset and the
       // mudra can never disagree; the engine solves the wrist.
       ...gestureArm("abhaya", "frontRight"),
+      // (declared in `gestures` below — see PosePreset.gestures)
       // Offering: forearm forward, palm up under the modak
       "arm.frontLeft.upper": [18 * D, -6 * D, 42 * D],
       "arm.frontLeft.forearm": [-74 * D, 0, 0],
@@ -198,6 +241,7 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       trunkMid: [-2 * D, 8 * D, 0],
       trunkTip: [-4 * D, 12 * D, 0],
     },
+    gestures: { frontRight: "abhaya" },
   },
   {
     id: "meditation",
@@ -397,6 +441,7 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
       "leg.right.thigh": [0, -5 * D, -2 * D],
       head: [3 * D, 0, 0],
     },
+    gestures: { frontRight: "abhaya", frontLeft: "varada" },
   },
   {
     id: "shiva.tandava",

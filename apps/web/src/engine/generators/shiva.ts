@@ -895,17 +895,29 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
 // TRISHUL — grip at origin, shaft along +Y, world-upright
 // ---------------------------------------------------------------------------
 
+/**
+ * How far the hand may slide up the shaft. Declared in the manifest as
+ * grip.travel.up; repeated here because the geometry has to honour it,
+ * and a test holds the two to each other.
+ */
+export const GRIP_TRAVEL_UP = 0.24;
+
 export const itemTrishul: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
 
   // A trishul is a planted staff, not a wand: its butt rests on the
-  // ground and its head clears the figure, with the hand gripping
-  // somewhere along the shaft. When the engine tells us how high above
-  // the base this hand is (see ItemPresentation.grounded), the shaft is
-  // built to that length; without it the classic proportions stand.
+  // ground and the hand grips the SHAFT, with the whole head above the
+  // fist. When the engine tells us how high above the base this hand is
+  // (see ItemPresentation.grounded) the shaft is built to reach down that
+  // far; without it the classic proportions stand.
   const butt = ctx.reach !== undefined ? -ctx.reach : -0.304;
-  const headBase = ctx.reach !== undefined ? ctx.reach * 0.78 : 0.243;
+  // The head sits above everywhere the hand can be, not at a fraction of
+  // wherever the hand happened to be when the rig was built. A planted
+  // staff slides through the fist as the arm moves — by a third of a
+  // metre between a hanging arm and a raised one — and tying the head to
+  // the starting position left the hand holding the prongs.
+  const headBase = GRIP_TRAVEL_UP + 0.075;
 
   // Tall shaft through the grip
   group.add(

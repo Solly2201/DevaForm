@@ -141,7 +141,7 @@ function Statue({
 
   useEffect(() => {
     applyPose(rig.joints, config.pose);
-    applyGestureOrientations(rig.joints, config.hands);
+    applyGestureOrientations(rig.joints, rig.hands);
     // Hands that are holding something are turned onto it before the
     // item is aligned, or the item lands between the fingers.
     applyGripOrientations(rig.joints, rig.held);
