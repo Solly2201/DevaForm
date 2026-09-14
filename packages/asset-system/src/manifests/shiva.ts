@@ -277,7 +277,9 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.trishul" },
     grip: { mudra: "grip" },
-    keepUpright: true,
+    // The icon's trishul stands: vertical, head up, butt on the ground,
+    // whatever the wrist is doing.
+    presentation: { upright: true, grounded: true },
     materialZones: ["metal"],
     category: "attributes",
     printability: proto,
