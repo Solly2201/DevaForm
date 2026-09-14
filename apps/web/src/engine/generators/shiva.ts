@@ -928,18 +928,21 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   const held = new THREE.Group();
   held.scale.setScalar(handFit(ctx.body));
   group.add(held);
-  // Hourglass body — two shallow drums meeting at the waist the fist
-  // closes on. Sized like the instrument it is: a span of a hand, not a
-  // shield, and narrow enough at the middle for fingers to meet round it.
+  // Hourglass body — two shallow drums joined by a waist long enough to
+  // be held. A waist of a few millimetres is a shape, not a handle: the
+  // fingers have to close on SOMETHING, and if the heads flare inside the
+  // hand they close through them instead.
   held.add(
     mesh(
       lathe([
-        [0.0185, -0.033],
-        [0.0225, -0.029],
-        [0.0062, -0.0025],
-        [0.0062, 0.0025],
-        [0.0225, 0.029],
-        [0.0185, 0.033],
+        [0.0178, -0.038],
+        [0.0216, -0.0335],
+        [0.0084, -0.0155],
+        [0.0062, -0.009],
+        [0.0062, 0.009],
+        [0.0084, 0.0155],
+        [0.0216, 0.0335],
+        [0.0178, 0.038],
       ]),
       wood,
     ),
@@ -947,14 +950,14 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   // Drum heads (hide membranes), slightly proud of the rim.
   for (const side of [1, -1]) {
     held.add(
-      mesh(new THREE.CylinderGeometry(0.0208, 0.0208, 0.0032, 20), ctx.materials.fixed.ivory, {
-        position: [0, side * 0.0325, 0],
+      mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.0032, 20), ctx.materials.fixed.ivory, {
+        position: [0, side * 0.0372, 0],
       }),
     );
   }
   // Waist cord
   held.add(
-    mesh(new THREE.TorusGeometry(0.0072, 0.0019, 8, 20), metal, {
+    mesh(new THREE.TorusGeometry(0.0072, 0.0017, 8, 20), metal, {
       position: [0, 0, 0],
       rotation: [Math.PI / 2, 0, 0],
     }),
@@ -967,8 +970,8 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
         taperedTube(
           [
             [side * 0.006, 0, 0.002],
-            [swing * 1.15, -0.012, 0.008],
-            [swing * 1.25, -0.026, 0.011],
+            [swing * 1.15, -0.016, 0.008],
+            [swing * 1.25, -0.032, 0.011],
           ],
           [0.0011, 0.0009],
           12,
@@ -979,7 +982,7 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
     );
     held.add(
       mesh(new THREE.SphereGeometry(0.0031, 10, 8), metal, {
-        position: [swing * 1.25, -0.028, 0.011],
+        position: [swing * 1.25, -0.034, 0.011],
       }),
     );
   }

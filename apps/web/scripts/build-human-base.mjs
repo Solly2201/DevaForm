@@ -418,6 +418,13 @@ const FINGER_CURL = {
 };
 // Enough flexion for the fingertips to come round a shaft and meet the
 // thumb — a hand laid over a staff is not holding it.
+//
+// NOTE: this is a fixed pose, not a closure that stops on contact. A hand
+// closes to the same radius whatever it holds, which is why fingers still
+// meet a drum head. Fixing that needs the item to declare the radius it
+// presents and the body to report how wide its fist is at each end of
+// this range — both measured in the SAME frame, which is where a first
+// attempt went wrong. Left as a known defect rather than half-built.
 const CURL_ANGLES = [0.78, 0.95, 0.62]; // radians at full grip, per segment
 
 function curledHand(positions, prefix) {
@@ -453,6 +460,7 @@ function curledHand(positions, prefix) {
         ? trial
         : pivot(-angle)
       ).multiply(chain);
+
 
       const bone = rigWeights[`finger${finger}-${segment}.${side}`];
       if (!bone) throw new Error(`no rig weights for finger${finger}-${segment}.${side}`);
