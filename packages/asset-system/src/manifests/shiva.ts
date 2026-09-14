@@ -276,7 +276,11 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.trishul" },
-    grip: { mudra: "grip" },
+    // A hand grips the shaft and slides along it as the arm moves. It may
+    // go a quarter of a metre up before the shaft stops being shaft — the
+    // generator builds the trident head above exactly this, so the number
+    // and the geometry cannot disagree.
+    grip: { mudra: "grip", travel: { up: 0.24, down: 0.24 } },
     // The icon's trishul stands: vertical, head up, butt on the ground,
     // whatever the wrist is doing.
     presentation: { upright: true, grounded: true },

@@ -194,3 +194,84 @@ describe("a hand that cannot be aimed still presents its item", () => {
     materials.dispose();
   });
 });
+
+describe("a hand grips the shaft, never the head", () => {
+  const TRISHUL = "attachment:shiva.attribute.trishul";
+
+  it("keeps the whole trident head above the fist, in every pose", () => {
+    // The grip anchor is a point ON THE SHAFT, and a planted staff slides
+    // through the fist as the arm moves — so "above the hand" has to hold
+    // across the whole range of that slide, not just where it starts.
+    for (const preset of [null, "shiva.standingStaff", "shiva.meditation"]) {
+      const config = humanShiva();
+      config.pose = { preset, jointOverrides: {} } as CharacterConfiguration["pose"];
+      const { rig, materials } = posedRig(config);
+      const staff = find(rig, TRISHUL);
+      expect(staff, `${preset}`).not.toBeNull();
+      const socket = staff!.parent!;
+      const handY = socket.getWorldPosition(new THREE.Vector3()).y;
+      // The head's own geometry: everything above the shaft's top.
+      const head = staff!.children.find((child) => child.type === "Group");
+      expect(head, "trident head group").toBeDefined();
+      const headBottom = new THREE.Box3().setFromObject(head!).min.y;
+      expect(headBottom, `${preset}: head above the fist`).toBeGreaterThan(handY + 0.05);
+      materials.dispose();
+    }
+  });
+
+  it("never slides the hand further than the asset says there is shaft", () => {
+    const config = humanShiva();
+    config.pose = { preset: "shiva.standingStaff", jointOverrides: {} } as CharacterConfiguration["pose"];
+    const { rig, materials } = posedRig(config);
+    const planted = rig.groundedAttachments[0]!;
+    expect(planted.travel.up).toBeLessThan(Number.POSITIVE_INFINITY);
+    // The asset declares its travel; the slide is bounded by it.
+    const slide = planted.object.position.length();
+    expect(slide).toBeLessThanOrEqual(Math.max(planted.travel.up, planted.travel.down) + 1e-6);
+    materials.dispose();
+  });
+});
+
+describe("a hand that is blessing is not also gripping", () => {
+  it("releases what it held, and plants it if it stands", () => {
+    const config = humanShiva();
+    config.pose = { preset: "shiva.blessing", jointOverrides: {} } as CharacterConfiguration["pose"];
+    const { rig, materials } = posedRig(config);
+
+    // The pose says both front hands are gesturing; the configuration
+    // still says they grip. The pose wins, and the rig agrees with the
+    // wrist solver because both read the same resolved hands.
+    expect(rig.hands.frontRight.mudra).toBe("abhaya");
+    expect(rig.hands.frontLeft.mudra).toBe("varada");
+    expect(rig.held).toHaveLength(0);
+
+    // The staff was standing on the ground before the hand let go, so it
+    // goes on standing — beside the figure, upright, butt on the base.
+    const staff = find(rig, "attachment:shiva.attribute.trishul");
+    expect(staff).not.toBeNull();
+    expect(staff!.parent).toBe(rig.root);
+    expect(presentedAxis(staff!).angleTo(new THREE.Vector3(0, 1, 0))).toBeLessThan(1e-4);
+    // The same ground a held staff stands on: grounded means one ground.
+    const held = posedRig(humanShiva());
+    const heldButt = new THREE.Box3()
+      .setFromObject(find(held.rig, "attachment:shiva.attribute.trishul")!)
+      .min.y;
+    held.materials.dispose();
+    expect(new THREE.Box3().setFromObject(staff!).min.y).toBeCloseTo(heldButt, 3);
+    // ...and clear of the body rather than through it.
+    expect(Math.abs(staff!.position.x)).toBeGreaterThan(rig.body.dhotiRadius);
+
+    // What needed a palm under it has nowhere to be, and says so.
+    expect(find(rig, "attachment:shiva.attribute.damaru")).toBeNull();
+    expect(rig.warnings.join(" ")).toContain("cannot hold it");
+    materials.dispose();
+  });
+
+  it("leaves an ordinary pose holding everything", () => {
+    const { rig, materials } = posedRig(humanShiva());
+    expect(rig.warnings).toEqual([]);
+    expect(find(rig, "attachment:shiva.attribute.damaru")).not.toBeNull();
+    expect(find(rig, "attachment:shiva.attribute.trishul")!.parent).not.toBe(rig.root);
+    materials.dispose();
+  });
+});

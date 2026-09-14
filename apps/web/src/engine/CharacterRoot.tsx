@@ -97,7 +97,7 @@ export function CharacterRoot() {
   // their mudra's meaning, then held shafts re-verticalized.
   useEffect(() => {
     applyPose(rig.joints, pose);
-    applyGestureOrientations(rig.joints, hands);
+    applyGestureOrientations(rig.joints, rig.hands);
     // Hands that are holding something are turned onto it before the
     // item is aligned, or the item lands between the fingers.
     applyGripOrientations(rig.joints, rig.held);

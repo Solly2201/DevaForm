@@ -100,6 +100,23 @@ export interface GripMetadata {
   origin?: readonly [number, number, number];
   axis?: readonly [number, number, number];
   roll?: number;
+  /**
+   * How far a hand may travel along the grip channel from the grip
+   * origin, in metres, before it reaches something no one grips.
+   *
+   * A planted item slides through the hand as the arm moves — that is the
+   * point of planting it — so the grip point is not one spot on the shaft
+   * but a RANGE of them, and the range ends where the shaft does. Without
+   * this the trishul had no way to say that the top of its shaft is a
+   * trident: raising the arm slid the hand 34 cm up and left it holding
+   * the prongs, which is not how anybody holds a trident.
+   *
+   * `up` is toward the item's head along its declared axis, `down` toward
+   * its butt. The asset's geometry must honour what it declares here —
+   * see the generator, which builds its head above the travel rather than
+   * at a fraction of wherever the hand happened to be.
+   */
+  travel?: { up?: number; down?: number };
 }
 
 export interface PrintabilityMetadata {
