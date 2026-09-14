@@ -1,7 +1,7 @@
 {
   "source": "apps/web/scripts/build-human-base.mjs",
   "canonicalHeight": 1,
-  "scale": 0.050341684118145796,
+  "scale": 0.05046841984025123,
   "skeleton": [
     {
       "id": "root",
@@ -17,8 +17,8 @@
       "parent": "root",
       "position": [
         0,
-        0.55063,
-        0.00238
+        0.55199,
+        0.00246
       ]
     },
     {
@@ -26,8 +26,8 @@
       "parent": "pelvis",
       "position": [
         0,
-        0.086,
-        -0.0123
+        0.08546,
+        -0.01261
       ]
     },
     {
@@ -35,8 +35,8 @@
       "parent": "spine",
       "position": [
         0,
-        0.11426,
-        -0.0172
+        0.11374,
+        -0.01815
       ]
     },
     {
@@ -44,8 +44,8 @@
       "parent": "chest",
       "position": [
         0,
-        0.11356,
-        0.03347
+        0.11373,
+        0.03429
       ]
     },
     {
@@ -53,25 +53,25 @@
       "parent": "neck",
       "position": [
         0,
-        0.05313,
-        0.01731
+        0.05237,
+        0.01676
       ]
     },
     {
       "id": "arm.frontLeft.upper",
       "parent": "chest",
       "position": [
-        0.10593,
-        0.05677,
-        0.03667
+        0.10538,
+        0.05691,
+        0.03693
       ]
     },
     {
       "id": "arm.frontLeft.forearm",
       "parent": "arm.frontLeft.upper",
       "position": [
-        0.01861,
-        -0.14892,
+        0.01852,
+        -0.14816,
         0
       ]
     },
@@ -80,7 +80,7 @@
       "parent": "arm.frontLeft.forearm",
       "position": [
         0,
-        -0.14786,
+        -0.14556,
         0
       ]
     },
@@ -88,9 +88,9 @@
       "id": "leg.left.thigh",
       "parent": "pelvis",
       "position": [
-        0.06049,
-        -0.00479,
-        -0.00568
+        0.06121,
+        -0.00683,
+        -0.0057
       ]
     },
     {
@@ -98,7 +98,7 @@
       "parent": "leg.left.thigh",
       "position": [
         0,
-        -0.26121,
+        -0.25867,
         0
       ]
     },
@@ -107,7 +107,7 @@
       "parent": "leg.left.shin",
       "position": [
         0,
-        -0.2438,
+        -0.246,
         0
       ]
     },
@@ -115,17 +115,17 @@
       "id": "arm.frontRight.upper",
       "parent": "chest",
       "position": [
-        -0.10593,
-        0.05677,
-        0.03667
+        -0.10538,
+        0.05691,
+        0.03693
       ]
     },
     {
       "id": "arm.frontRight.forearm",
       "parent": "arm.frontRight.upper",
       "position": [
-        -0.01861,
-        -0.14892,
+        -0.01852,
+        -0.14816,
         0
       ]
     },
@@ -134,7 +134,7 @@
       "parent": "arm.frontRight.forearm",
       "position": [
         0,
-        -0.14786,
+        -0.14556,
         0
       ]
     },
@@ -142,9 +142,9 @@
       "id": "leg.right.thigh",
       "parent": "pelvis",
       "position": [
-        -0.06049,
-        -0.00479,
-        -0.00568
+        -0.06121,
+        -0.00683,
+        -0.0057
       ]
     },
     {
@@ -152,7 +152,7 @@
       "parent": "leg.right.thigh",
       "position": [
         0,
-        -0.26121,
+        -0.25867,
         0
       ]
     },
@@ -161,7 +161,7 @@
       "parent": "leg.right.shin",
       "position": [
         0,
-        -0.2438,
+        -0.246,
         0
       ]
     }
@@ -169,467 +169,467 @@
   "sockets": {
     "head.crown": [
       0,
-      0.07043,
-      -0.01479
+      0.07071,
+      -0.01501
     ],
     "head.forehead": [
       0,
-      0.03985,
-      0.0568
+      0.0294,
+      0.0615
     ],
     "head.leftEar": [
-      0.04212,
+      0.04203,
       0.022,
-      0.00415
+      0.00464
     ],
     "head.rightEar": [
-      -0.04212,
+      -0.04203,
       0.022,
-      0.00415
+      0.00464
     ],
     "head.moon": [
       0.04,
-      0.05243,
-      -0.01367
+      0.05271,
+      -0.01274
     ],
     "chest.necklace": [
       0,
-      0.10356,
-      0.036
+      0.10373,
+      0.03604
     ],
     "waist.ornament": [
       0,
-      0.089,
-      0.04794
+      0.09,
+      0.0554
     ]
   },
   "measurements": {
     "neutral": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01715,
-        "radiusX": 0.08352,
-        "radiusY": 0.08156,
-        "radiusZ": 0.05727
+        "centerY": 0.58699,
+        "centerZ": 0.01801,
+        "radiusX": 0.08453,
+        "radiusY": 0.055,
+        "radiusZ": 0.0582
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01802,
-        "radiusX": 0.12186,
-        "radiusY": 0.04356,
-        "radiusZ": 0.0617
+        "centerY": 0.75345,
+        "centerZ": 0.01672,
+        "radiusX": 0.12156,
+        "radiusY": 0.11146,
+        "radiusZ": 0.06235
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02704
+        "offsetY": -0.05037,
+        "radius": 0.02664
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01371
+        "offsetY": -0.12518,
+        "radius": 0.01349
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.02017
+        "offsetY": -0.22632,
+        "radius": 0.02015
       },
       "cranium": {
-        "centerY": 0.07134,
-        "radius": 0.04013
+        "centerY": 0.07147,
+        "radius": 0.04022
       },
       "leg": {
-        "thighTopRadius": 0.05021,
-        "thighMidRadius": 0.04501,
-        "kneeRadius": 0.0292,
-        "calfRadius": 0.0331,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.05047,
+        "thighMidRadius": 0.04478,
+        "kneeRadius": 0.02918,
+        "calfRadius": 0.03306,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03237,
-      "neckCentreZ": 0.00888,
-      "neckBaseY": 0.86444,
-      "waistY": 0.63963,
-      "waistHalfWidth": 0.07573,
-      "waistHalfDepth": 0.0402,
-      "waistCentreZ": 0.01013,
-      "chestHalfWidth": 0.11344,
-      "chestHalfDepth": 0.06252,
-      "chestCentreZ": 0.0173,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08352,
-      "hipY": 0.58063,
-      "legClearance": 0.09933,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.03246,
+      "neckCentreZ": 0.00773,
+      "neckBaseY": 0.86492,
+      "waistY": 0.64199,
+      "waistHalfWidth": 0.07513,
+      "waistHalfDepth": 0.04459,
+      "waistCentreZ": 0.01327,
+      "chestHalfWidth": 0.11359,
+      "chestHalfDepth": 0.06256,
+      "chestCentreZ": 0.01642,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08453,
+      "hipY": 0.58199,
+      "legClearance": 0.09972,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     },
     "lean": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01375,
-        "radiusX": 0.08183,
-        "radiusY": 0.08156,
-        "radiusZ": 0.05901
+        "centerY": 0.58599,
+        "centerZ": 0.01452,
+        "radiusX": 0.08284,
+        "radiusY": 0.054,
+        "radiusZ": 0.05966
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01837,
-        "radiusX": 0.12072,
-        "radiusY": 0.04356,
-        "radiusZ": 0.06176
+        "centerY": 0.75245,
+        "centerZ": 0.01717,
+        "radiusX": 0.12037,
+        "radiusY": 0.11246,
+        "radiusZ": 0.0623
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02583
+        "offsetY": -0.05037,
+        "radius": 0.0254
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01379
+        "offsetY": -0.12518,
+        "radius": 0.01357
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.02033
+        "offsetY": -0.22632,
+        "radius": 0.02031
       },
       "cranium": {
-        "centerY": 0.07147,
-        "radius": 0.04023
+        "centerY": 0.0716,
+        "radius": 0.04032
       },
       "leg": {
-        "thighTopRadius": 0.04961,
-        "thighMidRadius": 0.04373,
-        "kneeRadius": 0.02879,
-        "calfRadius": 0.03275,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.04983,
+        "thighMidRadius": 0.04354,
+        "kneeRadius": 0.02886,
+        "calfRadius": 0.03272,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03115,
-      "neckCentreZ": 0.00864,
-      "neckBaseY": 0.86444,
-      "waistY": 0.63963,
-      "waistHalfWidth": 0.07377,
-      "waistHalfDepth": 0.04017,
-      "waistCentreZ": 0.01024,
-      "chestHalfWidth": 0.11322,
-      "chestHalfDepth": 0.06263,
-      "chestCentreZ": 0.0174,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08183,
-      "hipY": 0.58563,
-      "legClearance": 0.09641,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.03125,
+      "neckCentreZ": 0.00749,
+      "neckBaseY": 0.86492,
+      "waistY": 0.63999,
+      "waistHalfWidth": 0.07413,
+      "waistHalfDepth": 0.04072,
+      "waistCentreZ": 0.00969,
+      "chestHalfWidth": 0.1133,
+      "chestHalfDepth": 0.0625,
+      "chestCentreZ": 0.0164,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08284,
+      "hipY": 0.58699,
+      "legClearance": 0.09673,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     },
     "athletic": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01654,
-        "radiusX": 0.08528,
-        "radiusY": 0.08156,
-        "radiusZ": 0.05673
+        "centerY": 0.59249,
+        "centerZ": 0.01982,
+        "radiusX": 0.08643,
+        "radiusY": 0.0605,
+        "radiusZ": 0.05584
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01675,
-        "radiusX": 0.12172,
-        "radiusY": 0.04356,
-        "radiusZ": 0.06119
+        "centerY": 0.75895,
+        "centerZ": 0.01513,
+        "radiusX": 0.12148,
+        "radiusY": 0.10596,
+        "radiusZ": 0.06201
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02651
+        "offsetY": -0.05037,
+        "radius": 0.02623
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01282
+        "offsetY": -0.12518,
+        "radius": 0.01256
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.01987
+        "offsetY": -0.22632,
+        "radius": 0.01986
       },
       "cranium": {
-        "centerY": 0.07146,
-        "radius": 0.03995
+        "centerY": 0.07159,
+        "radius": 0.04005
       },
       "leg": {
-        "thighTopRadius": 0.04928,
-        "thighMidRadius": 0.04485,
-        "kneeRadius": 0.02858,
-        "calfRadius": 0.03226,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.04998,
+        "thighMidRadius": 0.0444,
+        "kneeRadius": 0.02867,
+        "calfRadius": 0.0322,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03208,
-      "neckCentreZ": 0.00885,
-      "neckBaseY": 0.86444,
-      "waistY": 0.65163,
-      "waistHalfWidth": 0.07355,
-      "waistHalfDepth": 0.04329,
-      "waistCentreZ": 0.01162,
-      "chestHalfWidth": 0.1128,
-      "chestHalfDepth": 0.06094,
-      "chestCentreZ": 0.017,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08528,
-      "hipY": 0.58063,
-      "legClearance": 0.0981,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.03217,
+      "neckCentreZ": 0.00768,
+      "neckBaseY": 0.86492,
+      "waistY": 0.65299,
+      "waistHalfWidth": 0.07399,
+      "waistHalfDepth": 0.04393,
+      "waistCentreZ": 0.01085,
+      "chestHalfWidth": 0.11301,
+      "chestHalfDepth": 0.06173,
+      "chestCentreZ": 0.01541,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08643,
+      "hipY": 0.58199,
+      "legClearance": 0.09848,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     },
     "powerful": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01756,
-        "radiusX": 0.08705,
-        "radiusY": 0.08156,
-        "radiusZ": 0.06242
+        "centerY": 0.58549,
+        "centerZ": 0.02094,
+        "radiusX": 0.08816,
+        "radiusY": 0.0535,
+        "radiusZ": 0.05746
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01716,
-        "radiusX": 0.12173,
-        "radiusY": 0.04356,
-        "radiusZ": 0.06635
+        "centerY": 0.75195,
+        "centerZ": 0.01552,
+        "radiusX": 0.12149,
+        "radiusY": 0.11296,
+        "radiusZ": 0.06722
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02957
+        "offsetY": -0.05037,
+        "radius": 0.02984
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01397
+        "offsetY": -0.12518,
+        "radius": 0.01376
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.02032
+        "offsetY": -0.22632,
+        "radius": 0.0205
       },
       "cranium": {
-        "centerY": 0.07146,
-        "radius": 0.03996
+        "centerY": 0.07159,
+        "radius": 0.04005
       },
       "leg": {
-        "thighTopRadius": 0.05043,
-        "thighMidRadius": 0.04922,
-        "kneeRadius": 0.03059,
-        "calfRadius": 0.03474,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.05107,
+        "thighMidRadius": 0.04893,
+        "kneeRadius": 0.03034,
+        "calfRadius": 0.03465,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03809,
-      "neckCentreZ": 0.00912,
-      "neckBaseY": 0.86444,
-      "waistY": 0.63763,
-      "waistHalfWidth": 0.07996,
-      "waistHalfDepth": 0.04316,
-      "waistCentreZ": 0.01233,
-      "chestHalfWidth": 0.11301,
-      "chestHalfDepth": 0.06635,
-      "chestCentreZ": 0.01716,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08705,
-      "hipY": 0.58063,
-      "legClearance": 0.10162,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.0382,
+      "neckCentreZ": 0.00823,
+      "neckBaseY": 0.86492,
+      "waistY": 0.63899,
+      "waistHalfWidth": 0.08044,
+      "waistHalfDepth": 0.04382,
+      "waistCentreZ": 0.01166,
+      "chestHalfWidth": 0.11283,
+      "chestHalfDepth": 0.06722,
+      "chestCentreZ": 0.01552,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08816,
+      "hipY": 0.58199,
+      "legClearance": 0.10201,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     },
     "heroic": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01873,
-        "radiusX": 0.09116,
-        "radiusY": 0.08156,
-        "radiusZ": 0.05588
+        "centerY": 0.58699,
+        "centerZ": 0.01908,
+        "radiusX": 0.08158,
+        "radiusY": 0.055,
+        "radiusZ": 0.05631
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01875,
-        "radiusX": 0.12984,
-        "radiusY": 0.04356,
-        "radiusZ": 0.06545
+        "centerY": 0.75345,
+        "centerZ": 0.01808,
+        "radiusX": 0.12957,
+        "radiusY": 0.11146,
+        "radiusZ": 0.06587
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02898
+        "offsetY": -0.05037,
+        "radius": 0.02883
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01352
+        "offsetY": -0.12518,
+        "radius": 0.01331
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.02012
+        "offsetY": -0.22632,
+        "radius": 0.0201
       },
       "cranium": {
-        "centerY": 0.07146,
-        "radius": 0.0401
+        "centerY": 0.07159,
+        "radius": 0.04019
       },
       "leg": {
-        "thighTopRadius": 0.05037,
-        "thighMidRadius": 0.04766,
-        "kneeRadius": 0.02962,
-        "calfRadius": 0.03596,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.0502,
+        "thighMidRadius": 0.0471,
+        "kneeRadius": 0.0296,
+        "calfRadius": 0.03595,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03422,
-      "neckCentreZ": 0.00889,
-      "neckBaseY": 0.86444,
-      "waistY": 0.63963,
-      "waistHalfWidth": 0.07142,
-      "waistHalfDepth": 0.04017,
-      "waistCentreZ": 0.01005,
-      "chestHalfWidth": 0.12234,
-      "chestHalfDepth": 0.06561,
-      "chestCentreZ": 0.01891,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08058,
-      "hipY": 0.58063,
-      "legClearance": 0.10231,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.03431,
+      "neckCentreZ": 0.00773,
+      "neckBaseY": 0.86492,
+      "waistY": 0.64199,
+      "waistHalfWidth": 0.07135,
+      "waistHalfDepth": 0.04453,
+      "waistCentreZ": 0.01315,
+      "chestHalfWidth": 0.12244,
+      "chestHalfDepth": 0.06587,
+      "chestCentreZ": 0.01808,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08158,
+      "hipY": 0.58199,
+      "legClearance": 0.1027,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     },
     "divine": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01767,
-        "radiusX": 0.08303,
-        "radiusY": 0.08156,
-        "radiusZ": 0.05696
+        "centerY": 0.58699,
+        "centerZ": 0.0164,
+        "radiusX": 0.08432,
+        "radiusY": 0.055,
+        "radiusZ": 0.05928
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01823,
-        "radiusX": 0.12123,
-        "radiusY": 0.04356,
-        "radiusZ": 0.06107
+        "centerY": 0.75345,
+        "centerZ": 0.01662,
+        "radiusX": 0.12133,
+        "radiusY": 0.11146,
+        "radiusZ": 0.06218
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02731
+        "offsetY": -0.05037,
+        "radius": 0.02679
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01379
+        "offsetY": -0.12518,
+        "radius": 0.01346
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.02
+        "offsetY": -0.22632,
+        "radius": 0.02008
       },
       "cranium": {
-        "centerY": 0.07147,
-        "radius": 0.03896
+        "centerY": 0.07145,
+        "radius": 0.04
       },
       "leg": {
-        "thighTopRadius": 0.05004,
-        "thighMidRadius": 0.04587,
-        "kneeRadius": 0.02892,
-        "calfRadius": 0.03289,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.05028,
+        "thighMidRadius": 0.04466,
+        "kneeRadius": 0.02903,
+        "calfRadius": 0.03297,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03118,
-      "neckCentreZ": 0.0048,
-      "neckBaseY": 0.86444,
-      "waistY": 0.63863,
-      "waistHalfWidth": 0.07427,
-      "waistHalfDepth": 0.04366,
-      "waistCentreZ": 0.01376,
-      "chestHalfWidth": 0.12123,
-      "chestHalfDepth": 0.06202,
-      "chestCentreZ": 0.01702,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08303,
-      "hipY": 0.58063,
-      "legClearance": 0.09885,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.03134,
+      "neckCentreZ": 0.00397,
+      "neckBaseY": 0.86492,
+      "waistY": 0.64199,
+      "waistHalfWidth": 0.07492,
+      "waistHalfDepth": 0.04447,
+      "waistCentreZ": 0.01322,
+      "chestHalfWidth": 0.12133,
+      "chestHalfDepth": 0.06243,
+      "chestCentreZ": 0.01628,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08432,
+      "hipY": 0.58199,
+      "legClearance": 0.09956,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     },
     "ascetic": {
       "lowerTorso": {
-        "centerY": 0.61219,
-        "centerZ": 0.01005,
-        "radiusX": 0.08185,
-        "radiusY": 0.08156,
-        "radiusZ": 0.05341
+        "centerY": 0.58649,
+        "centerZ": 0.01855,
+        "radiusX": 0.08294,
+        "radiusY": 0.0545,
+        "radiusZ": 0.05401
       },
       "upperTorso": {
-        "centerY": 0.73732,
-        "centerZ": 0.01641,
-        "radiusX": 0.12091,
-        "radiusY": 0.04356,
-        "radiusZ": 0.05845
+        "centerY": 0.75295,
+        "centerZ": 0.01514,
+        "radiusX": 0.12059,
+        "radiusY": 0.11196,
+        "radiusZ": 0.05907
       },
       "armBand": {
-        "offsetY": -0.05063,
-        "radius": 0.02325
+        "offsetY": -0.05037,
+        "radius": 0.02279
       },
       "wristBand": {
-        "offsetY": -0.12716,
-        "radius": 0.01335
+        "offsetY": -0.12518,
+        "radius": 0.01308
       },
       "ankleBand": {
-        "offsetY": -0.2243,
-        "radius": 0.02013
+        "offsetY": -0.22632,
+        "radius": 0.02011
       },
       "cranium": {
-        "centerY": 0.07146,
-        "radius": 0.04015
+        "centerY": 0.07159,
+        "radius": 0.04024
       },
       "leg": {
-        "thighTopRadius": 0.04903,
-        "thighMidRadius": 0.04076,
-        "kneeRadius": 0.02859,
-        "calfRadius": 0.03182,
-        "thighLength": 0.26121,
-        "shinLength": 0.2438,
-        "spreadX": 0.06049,
-        "seatY": -0.00479
+        "thighTopRadius": 0.04968,
+        "thighMidRadius": 0.04054,
+        "kneeRadius": 0.02847,
+        "calfRadius": 0.03178,
+        "thighLength": 0.25867,
+        "shinLength": 0.246,
+        "spreadX": 0.06121,
+        "seatY": -0.00683
       },
-      "neckRadius": 0.03181,
-      "neckCentreZ": 0.00805,
-      "neckBaseY": 0.86444,
-      "waistY": 0.63963,
-      "waistHalfWidth": 0.07375,
-      "waistHalfDepth": 0.03812,
-      "waistCentreZ": 0.01114,
-      "chestHalfWidth": 0.11326,
-      "chestHalfDepth": 0.05955,
-      "chestCentreZ": 0.01526,
-      "chestY": 0.75088,
-      "spineY": 0.63662,
-      "pelvisY": 0.55063,
-      "hipHalfWidth": 0.08185,
-      "hipY": 0.58063,
-      "legClearance": 0.09252,
-      "torsoTop": 0.78088,
-      "torsoBottom": 0.53063,
-      "headY": 0.91757
+      "neckRadius": 0.03189,
+      "neckCentreZ": 0.00691,
+      "neckBaseY": 0.86492,
+      "waistY": 0.64099,
+      "waistHalfWidth": 0.0735,
+      "waistHalfDepth": 0.0428,
+      "waistCentreZ": 0.01362,
+      "chestHalfWidth": 0.11336,
+      "chestHalfDepth": 0.05971,
+      "chestCentreZ": 0.01445,
+      "chestY": 0.75119,
+      "spineY": 0.63745,
+      "pelvisY": 0.55199,
+      "hipHalfWidth": 0.08294,
+      "hipY": 0.58199,
+      "legClearance": 0.09285,
+      "torsoTop": 0.78119,
+      "torsoBottom": 0.53199,
+      "headY": 0.91729
     }
   },
   "morphTargets": [
@@ -644,243 +644,257 @@
   ],
   "bodyProfile": {
     "base": {
-      "spineToChestY": 0.11426,
-      "neckRadius": 0.03237,
+      "spineToChestY": 0.11374,
+      "neckRadius": 0.03246,
       "neckBaseOffsetY": 0.01,
-      "pelvisHalfWidth": 0.08352,
-      "waistSeatY": 0.05655,
-      "dhotiRadius": 0.11133,
-      "bellyCenterY": -0.02443,
-      "bellyCenterZ": 0.02706,
-      "bellyRadiusX": 0.08352,
-      "bellyRadiusY": 0.08156,
-      "bellyRadiusZ": 0.05727,
-      "chestCenterY": -0.01356,
-      "chestCenterZ": 0.04514,
-      "chestRadiusX": 0.12186,
-      "chestRadiusY": 0.04356,
-      "chestRadiusZ": 0.0617,
-      "armBandOffsetY": -0.05063,
-      "armBandRadius": 0.02704,
-      "wristBandOffsetY": -0.12716,
-      "wristBandRadius": 0.01371,
-      "ankleBandOffsetY": 0.0195,
-      "ankleBandRadius": 0.02017,
-      "headCenterY": 0.07134,
-      "headRadius": 0.04013,
-      "thighTopRadius": 0.05021,
-      "thighMidRadius": 0.04501,
-      "kneeRadius": 0.0292,
-      "calfRadius": 0.0331,
-      "thighLength": 0.26121,
-      "shinLength": 0.2438,
-      "legSpreadX": 0.06049,
-      "thighSeatY": -0.00479
+      "pelvisHalfWidth": 0.08453,
+      "waistSeatY": 0.057,
+      "dhotiRadius": 0.11172,
+      "bellyCenterY": -0.05046,
+      "bellyCenterZ": 0.02816,
+      "bellyRadiusX": 0.08453,
+      "bellyRadiusY": 0.055,
+      "bellyRadiusZ": 0.0582,
+      "chestCenterY": 0.00227,
+      "chestCenterZ": 0.04503,
+      "chestRadiusX": 0.12156,
+      "chestRadiusY": 0.11146,
+      "chestRadiusZ": 0.06235,
+      "armBandOffsetY": -0.05037,
+      "armBandRadius": 0.02664,
+      "wristBandOffsetY": -0.12518,
+      "wristBandRadius": 0.01349,
+      "ankleBandOffsetY": 0.01968,
+      "ankleBandRadius": 0.02015,
+      "headCenterY": 0.07147,
+      "headRadius": 0.04022,
+      "thighTopRadius": 0.05047,
+      "thighMidRadius": 0.04478,
+      "kneeRadius": 0.02918,
+      "calfRadius": 0.03306,
+      "thighLength": 0.25867,
+      "shinLength": 0.246,
+      "legSpreadX": 0.06121,
+      "thighSeatY": -0.00683,
+      "necklaceSocketY": 0.10373,
+      "necklaceSocketZ": 0.03604
     },
     "morphs": {
       "bodyLean": {
         "spineToChestY": 0,
-        "neckRadius": -0.00122,
+        "neckRadius": -0.00121,
         "neckBaseOffsetY": 0,
         "pelvisHalfWidth": -0.00169,
-        "waistSeatY": 0.00275,
-        "dhotiRadius": -0.00292,
-        "bellyCenterY": 0,
-        "bellyCenterZ": -0.0034,
+        "waistSeatY": 0.00185,
+        "dhotiRadius": -0.00299,
+        "bellyCenterY": -0.001,
+        "bellyCenterZ": -0.00348,
         "bellyRadiusX": -0.00169,
-        "bellyRadiusY": 0,
-        "bellyRadiusZ": 0.00174,
-        "chestCenterY": 0,
-        "chestCenterZ": 0.00034,
-        "chestRadiusX": -0.00114,
-        "chestRadiusY": 0,
-        "chestRadiusZ": 0.00006,
+        "bellyRadiusY": -0.001,
+        "bellyRadiusZ": 0.00147,
+        "chestCenterY": -0.001,
+        "chestCenterZ": 0.00045,
+        "chestRadiusX": -0.00119,
+        "chestRadiusY": 0.001,
+        "chestRadiusZ": -0.00004,
         "armBandOffsetY": 0,
-        "armBandRadius": -0.00121,
+        "armBandRadius": -0.00123,
         "wristBandOffsetY": 0,
         "wristBandRadius": 0.00009,
         "ankleBandOffsetY": 0,
-        "ankleBandRadius": 0.00017,
+        "ankleBandRadius": 0.00016,
         "headCenterY": 0.00013,
-        "headRadius": 0.00011,
-        "thighTopRadius": -0.00059,
-        "thighMidRadius": -0.00128,
-        "kneeRadius": -0.00041,
-        "calfRadius": -0.00035,
+        "headRadius": 0.0001,
+        "thighTopRadius": -0.00065,
+        "thighMidRadius": -0.00124,
+        "kneeRadius": -0.00032,
+        "calfRadius": -0.00034,
         "thighLength": 0,
         "shinLength": 0,
         "legSpreadX": 0,
-        "thighSeatY": 0
+        "thighSeatY": 0,
+        "necklaceSocketY": 0,
+        "necklaceSocketZ": 0
       },
       "bodyAthletic": {
         "spineToChestY": 0,
         "neckRadius": -0.00029,
         "neckBaseOffsetY": 0,
-        "pelvisHalfWidth": 0.00177,
-        "waistSeatY": 0.0054,
-        "dhotiRadius": -0.00123,
-        "bellyCenterY": 0,
-        "bellyCenterZ": -0.00061,
-        "bellyRadiusX": 0.00177,
-        "bellyRadiusY": 0,
-        "bellyRadiusZ": -0.00054,
-        "chestCenterY": 0,
-        "chestCenterZ": -0.00128,
-        "chestRadiusX": -0.00014,
-        "chestRadiusY": 0,
-        "chestRadiusZ": -0.00052,
+        "pelvisHalfWidth": 0.0019,
+        "waistSeatY": 0.00495,
+        "dhotiRadius": -0.00124,
+        "bellyCenterY": 0.0055,
+        "bellyCenterZ": 0.00182,
+        "bellyRadiusX": 0.0019,
+        "bellyRadiusY": 0.0055,
+        "bellyRadiusZ": -0.00236,
+        "chestCenterY": 0.0055,
+        "chestCenterZ": -0.00159,
+        "chestRadiusX": -0.00008,
+        "chestRadiusY": -0.0055,
+        "chestRadiusZ": -0.00034,
         "armBandOffsetY": 0,
-        "armBandRadius": -0.00053,
+        "armBandRadius": -0.00041,
         "wristBandOffsetY": 0,
-        "wristBandRadius": -0.00089,
+        "wristBandRadius": -0.00093,
         "ankleBandOffsetY": 0,
-        "ankleBandRadius": -0.0003,
+        "ankleBandRadius": -0.00028,
         "headCenterY": 0.00012,
         "headRadius": -0.00017,
-        "thighTopRadius": -0.00092,
-        "thighMidRadius": -0.00016,
-        "kneeRadius": -0.00062,
-        "calfRadius": -0.00083,
+        "thighTopRadius": -0.00049,
+        "thighMidRadius": -0.00037,
+        "kneeRadius": -0.00051,
+        "calfRadius": -0.00086,
         "thighLength": 0,
         "shinLength": 0,
         "legSpreadX": 0,
-        "thighSeatY": 0
+        "thighSeatY": 0,
+        "necklaceSocketY": 0,
+        "necklaceSocketZ": 0
       },
       "bodyPowerful": {
         "spineToChestY": 0,
-        "neckRadius": 0.00572,
+        "neckRadius": 0.00574,
         "neckBaseOffsetY": 0,
-        "pelvisHalfWidth": 0.00353,
-        "waistSeatY": -0.0009,
+        "pelvisHalfWidth": 0.00363,
+        "waistSeatY": -0.00135,
         "dhotiRadius": 0.00229,
-        "bellyCenterY": 0,
-        "bellyCenterZ": 0.00041,
-        "bellyRadiusX": 0.00353,
-        "bellyRadiusY": 0,
-        "bellyRadiusZ": 0.00515,
-        "chestCenterY": 0,
-        "chestCenterZ": -0.00086,
-        "chestRadiusX": -0.00013,
-        "chestRadiusY": 0,
-        "chestRadiusZ": 0.00465,
+        "bellyCenterY": -0.0015,
+        "bellyCenterZ": 0.00293,
+        "bellyRadiusX": 0.00363,
+        "bellyRadiusY": -0.0015,
+        "bellyRadiusZ": -0.00073,
+        "chestCenterY": -0.0015,
+        "chestCenterZ": -0.00119,
+        "chestRadiusX": -0.00007,
+        "chestRadiusY": 0.0015,
+        "chestRadiusZ": 0.00487,
         "armBandOffsetY": 0,
-        "armBandRadius": 0.00253,
+        "armBandRadius": 0.0032,
         "wristBandOffsetY": 0,
-        "wristBandRadius": 0.00026,
+        "wristBandRadius": 0.00028,
         "ankleBandOffsetY": 0,
-        "ankleBandRadius": 0.00015,
+        "ankleBandRadius": 0.00035,
         "headCenterY": 0.00012,
         "headRadius": -0.00017,
-        "thighTopRadius": 0.00022,
-        "thighMidRadius": 0.00422,
-        "kneeRadius": 0.00139,
-        "calfRadius": 0.00164,
+        "thighTopRadius": 0.0006,
+        "thighMidRadius": 0.00415,
+        "kneeRadius": 0.00116,
+        "calfRadius": 0.00159,
         "thighLength": 0,
         "shinLength": 0,
         "legSpreadX": 0,
-        "thighSeatY": 0
+        "thighSeatY": 0,
+        "necklaceSocketY": 0,
+        "necklaceSocketZ": 0
       },
       "bodyHeroic": {
         "spineToChestY": 0,
         "neckRadius": 0.00185,
         "neckBaseOffsetY": 0,
-        "pelvisHalfWidth": -0.00294,
+        "pelvisHalfWidth": -0.00295,
         "waistSeatY": 0,
         "dhotiRadius": 0.00298,
         "bellyCenterY": 0,
-        "bellyCenterZ": 0.00158,
-        "bellyRadiusX": 0.00764,
+        "bellyCenterZ": 0.00107,
+        "bellyRadiusX": -0.00295,
         "bellyRadiusY": 0,
-        "bellyRadiusZ": -0.00139,
+        "bellyRadiusZ": -0.00189,
         "chestCenterY": 0,
-        "chestCenterZ": 0.00072,
-        "chestRadiusX": 0.00799,
+        "chestCenterZ": 0.00136,
+        "chestRadiusX": 0.00801,
         "chestRadiusY": 0,
-        "chestRadiusZ": 0.00375,
+        "chestRadiusZ": 0.00352,
         "armBandOffsetY": 0,
-        "armBandRadius": 0.00194,
+        "armBandRadius": 0.00219,
         "wristBandOffsetY": 0,
         "wristBandRadius": -0.00018,
         "ankleBandOffsetY": 0,
-        "ankleBandRadius": -0.00005,
+        "ankleBandRadius": -0.00004,
         "headCenterY": 0.00012,
-        "headRadius": -0.00002,
-        "thighTopRadius": 0.00017,
-        "thighMidRadius": 0.00265,
+        "headRadius": -0.00003,
+        "thighTopRadius": -0.00028,
+        "thighMidRadius": 0.00233,
         "kneeRadius": 0.00042,
-        "calfRadius": 0.00287,
+        "calfRadius": 0.00288,
         "thighLength": 0,
         "shinLength": 0,
         "legSpreadX": 0,
-        "thighSeatY": 0
+        "thighSeatY": 0,
+        "necklaceSocketY": 0,
+        "necklaceSocketZ": 0
       },
       "faceDivine": {
         "spineToChestY": 0,
-        "neckRadius": -0.00119,
+        "neckRadius": -0.00112,
         "neckBaseOffsetY": 0,
-        "pelvisHalfWidth": -0.00048,
-        "waistSeatY": -0.00045,
-        "dhotiRadius": -0.00049,
+        "pelvisHalfWidth": -0.00021,
+        "waistSeatY": 0,
+        "dhotiRadius": -0.00017,
         "bellyCenterY": 0,
-        "bellyCenterZ": 0.00052,
-        "bellyRadiusX": -0.00048,
+        "bellyCenterZ": -0.00161,
+        "bellyRadiusX": -0.00021,
         "bellyRadiusY": 0,
-        "bellyRadiusZ": -0.00031,
+        "bellyRadiusZ": 0.00108,
         "chestCenterY": 0,
-        "chestCenterZ": 0.00021,
-        "chestRadiusX": -0.00063,
+        "chestCenterZ": -0.0001,
+        "chestRadiusX": -0.00023,
         "chestRadiusY": 0,
-        "chestRadiusZ": -0.00063,
+        "chestRadiusZ": -0.00017,
         "armBandOffsetY": 0,
-        "armBandRadius": 0.00027,
+        "armBandRadius": 0.00015,
         "wristBandOffsetY": 0,
-        "wristBandRadius": 0.00009,
+        "wristBandRadius": -0.00003,
         "ankleBandOffsetY": 0,
-        "ankleBandRadius": -0.00016,
-        "headCenterY": 0.00013,
-        "headRadius": -0.00117,
-        "thighTopRadius": -0.00016,
-        "thighMidRadius": 0.00087,
-        "kneeRadius": -0.00028,
-        "calfRadius": -0.00021,
+        "ankleBandRadius": -0.00007,
+        "headCenterY": -0.00002,
+        "headRadius": -0.00021,
+        "thighTopRadius": -0.0002,
+        "thighMidRadius": -0.00011,
+        "kneeRadius": -0.00015,
+        "calfRadius": -0.00009,
         "thighLength": 0,
         "shinLength": 0,
         "legSpreadX": 0,
-        "thighSeatY": 0
+        "thighSeatY": 0,
+        "necklaceSocketY": 0,
+        "necklaceSocketZ": 0
       },
       "bodyAscetic": {
         "spineToChestY": 0,
         "neckRadius": -0.00057,
         "neckBaseOffsetY": 0,
-        "pelvisHalfWidth": -0.00166,
-        "waistSeatY": 0,
-        "dhotiRadius": -0.00682,
-        "bellyCenterY": 0,
-        "bellyCenterZ": -0.0071,
-        "bellyRadiusX": -0.00166,
-        "bellyRadiusY": 0,
-        "bellyRadiusZ": -0.00386,
-        "chestCenterY": 0,
-        "chestCenterZ": -0.00161,
-        "chestRadiusX": -0.00094,
-        "chestRadiusY": 0,
-        "chestRadiusZ": -0.00326,
+        "pelvisHalfWidth": -0.00159,
+        "waistSeatY": -0.00045,
+        "dhotiRadius": -0.00687,
+        "bellyCenterY": -0.0005,
+        "bellyCenterZ": 0.00055,
+        "bellyRadiusX": -0.00159,
+        "bellyRadiusY": -0.0005,
+        "bellyRadiusZ": -0.00419,
+        "chestCenterY": -0.0005,
+        "chestCenterZ": -0.00158,
+        "chestRadiusX": -0.00097,
+        "chestRadiusY": 0.0005,
+        "chestRadiusZ": -0.00328,
         "armBandOffsetY": 0,
-        "armBandRadius": -0.00379,
+        "armBandRadius": -0.00385,
         "wristBandOffsetY": 0,
-        "wristBandRadius": -0.00036,
+        "wristBandRadius": -0.00041,
         "ankleBandOffsetY": 0,
         "ankleBandRadius": -0.00004,
         "headCenterY": 0.00012,
         "headRadius": 0.00002,
-        "thighTopRadius": -0.00118,
-        "thighMidRadius": -0.00425,
-        "kneeRadius": -0.00061,
-        "calfRadius": -0.00128,
+        "thighTopRadius": -0.0008,
+        "thighMidRadius": -0.00424,
+        "kneeRadius": -0.00071,
+        "calfRadius": -0.00129,
         "thighLength": 0,
         "shinLength": 0,
         "legSpreadX": 0,
-        "thighSeatY": 0
+        "thighSeatY": 0,
+        "necklaceSocketY": 0,
+        "necklaceSocketZ": 0
       }
     }
   }

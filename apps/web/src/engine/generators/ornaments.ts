@@ -165,8 +165,8 @@ export const crownFan: AttachmentGenerator = (ctx) => {
  * 0.01]); the drape is fitted to the measured chest surface so beads lie
  * ON the torso rather than inside it, whatever the body variant.
  */
-const NECKLACE_SOCKET_Y = 0.12;
-const NECKLACE_SOCKET_Z = 0.01;
+// Where that socket actually is comes from the body being worn — the
+// stylised rig's numbers are its own, not every body's.
 
 /** Torso surface z in necklace-socket-local coordinates, with clearance. */
 export function chestZAtSocket(
@@ -176,7 +176,9 @@ export function chestZAtSocket(
   clearance: number,
 ): number {
   return (
-    ctx.body.torsoSurfaceZAt(x, y + NECKLACE_SOCKET_Y) - NECKLACE_SOCKET_Z + clearance
+    ctx.body.torsoSurfaceZAt(x, y + ctx.body.necklaceSocketY) -
+    ctx.body.necklaceSocketZ +
+    clearance
   );
 }
 

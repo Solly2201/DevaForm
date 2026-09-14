@@ -37,6 +37,7 @@ import { morphInfluences } from "@/engine/morphs";
 
 const HUMAN_BODY = "humanoid.body.human";
 const HIDE_WRAP = "humanoid.garment.hideWrap";
+const TRIPUNDRA = "humanoid.tilak.tripundra";
 /** The build this candidate is judged at — heroic frame, ascetic spare. */
 const SHIVA_MORPHS = {
   bodyPowerful: 0.35,
@@ -74,6 +75,12 @@ function humanShiva(preset: string, morphs: Record<string, number>): CharacterCo
       body: { assetId: HUMAN_BODY, version: 1 },
       lowerGarment: { assetId: HIDE_WRAP, version: 1 },
     },
+    // The ash marks are their own ornament here: the procedural head
+    // drew them, and this body has no procedural head.
+    attachments: [
+      ...base.attachments,
+      { socket: "head.forehead" as const, asset: { assetId: TRIPUNDRA, version: 1 } },
+    ],
     pose: { preset, jointOverrides: {} },
     morphs,
   };

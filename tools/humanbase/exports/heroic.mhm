@@ -23,7 +23,7 @@ modifier armslegs/l-upperleg-muscle-decr|incr 0.500000
 modifier breast/BreastSize 0.000000
 modifier breast/BreastFirmness 0.500000
 modifier macrodetails/Gender 1.000000
-modifier macrodetails/Age 0.550000
+modifier macrodetails/Age 0.620000
 modifier macrodetails/African 0.120001
 modifier macrodetails/Asian 0.299999
 modifier macrodetails/Caucasian 0.580000
