@@ -65,6 +65,14 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         ankleBandRadius: 0.02017,
         headCenterY: 0.07134,
         headRadius: 0.04013,
+        thighTopRadius: 0.05021,
+        thighMidRadius: 0.04501,
+        kneeRadius: 0.0292,
+        calfRadius: 0.0331,
+        thighLength: 0.26121,
+        shinLength: 0.2438,
+        legSpreadX: 0.06049,
+        thighSeatY: -0.00479,
       },
       morphs: {
         bodyLean: {
@@ -83,6 +91,10 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
           ankleBandRadius: 0.00017,
           headCenterY: 0.00013,
           headRadius: 0.00011,
+          thighTopRadius: -0.00059,
+          thighMidRadius: -0.00128,
+          kneeRadius: -0.00041,
+          calfRadius: -0.00035,
         },
         bodyAthletic: {
           neckRadius: -0.00029,
@@ -100,6 +112,10 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
           ankleBandRadius: -0.0003,
           headCenterY: 0.00012,
           headRadius: -0.00017,
+          thighTopRadius: -0.00092,
+          thighMidRadius: -0.00016,
+          kneeRadius: -0.00062,
+          calfRadius: -0.00083,
         },
         bodyPowerful: {
           neckRadius: 0.00572,
@@ -117,6 +133,10 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
           ankleBandRadius: 0.00015,
           headCenterY: 0.00012,
           headRadius: -0.00017,
+          thighTopRadius: 0.00022,
+          thighMidRadius: 0.00422,
+          kneeRadius: 0.00139,
+          calfRadius: 0.00164,
         },
         bodyHeroic: {
           neckRadius: 0.00185,
@@ -133,6 +153,10 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
           ankleBandRadius: -0.00005,
           headCenterY: 0.00012,
           headRadius: -0.00002,
+          thighTopRadius: 0.00017,
+          thighMidRadius: 0.00265,
+          kneeRadius: 0.00042,
+          calfRadius: 0.00287,
         },
         faceDivine: {
           neckRadius: -0.00119,
@@ -150,6 +174,10 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
           ankleBandRadius: -0.00016,
           headCenterY: 0.00013,
           headRadius: -0.00117,
+          thighTopRadius: -0.00016,
+          thighMidRadius: 0.00087,
+          kneeRadius: -0.00028,
+          calfRadius: -0.00021,
         },
         bodyAscetic: {
           neckRadius: -0.00057,
@@ -166,11 +194,40 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
           ankleBandRadius: -0.00004,
           headCenterY: 0.00012,
           headRadius: 0.00002,
+          thighTopRadius: -0.00118,
+          thighMidRadius: -0.00425,
+          kneeRadius: -0.00061,
+          calfRadius: -0.00128,
         },
       },
     },
     materialZones: ["skin"],
     category: "body",
+    printability: {
+      printSourceAvailable: false,
+      notes: "Evaluation asset: not validated for manufacturing.",
+    },
+  },
+  {
+    id: "humanoid.garment.hideWrap",
+    version: 1,
+    name: "Hide Wrap",
+    description:
+      "Shiva's animal-hide lower cloth, cut to a measured body: wrapped over the hips, carried down each leg by the leg itself, torn at the hem and marked in its own vertex colours.",
+    kind: { type: "part", slot: "lowerGarment" },
+    // Offered to no deity yet: it is only sound on a body that reports
+    // real measurements, and the mesh body is still a candidate.
+    deityCompatibility: [],
+    stage: "experimental",
+    source: { kind: "procedural", generatorId: "humanoid.hideWrap", params: { length: 1 } },
+    provenance: {
+      type: "procedural",
+      tool: "apps/web/src/engine/generators/hideGarment.ts",
+      notes:
+        "Every surface is lofted from the wearer's own BodyProfile. The garment is split at the hip and knee so each piece rides the joint below it, which is what keeps a folded leg inside its cloth.",
+    },
+    materialZones: ["garment", "garmentAccent", "metal"],
+    category: "clothing",
     printability: {
       printSourceAvailable: false,
       notes: "Evaluation asset: not validated for manufacturing.",

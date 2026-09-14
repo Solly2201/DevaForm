@@ -235,6 +235,16 @@
         "centerY": 0.07134,
         "radius": 0.04013
       },
+      "leg": {
+        "thighTopRadius": 0.05021,
+        "thighMidRadius": 0.04501,
+        "kneeRadius": 0.0292,
+        "calfRadius": 0.0331,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
+      },
       "neckRadius": 0.03237,
       "neckCentreZ": 0.00888,
       "neckBaseY": 0.86444,
@@ -285,6 +295,16 @@
       "cranium": {
         "centerY": 0.07147,
         "radius": 0.04023
+      },
+      "leg": {
+        "thighTopRadius": 0.04961,
+        "thighMidRadius": 0.04373,
+        "kneeRadius": 0.02879,
+        "calfRadius": 0.03275,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
       },
       "neckRadius": 0.03115,
       "neckCentreZ": 0.00864,
@@ -337,6 +357,16 @@
         "centerY": 0.07146,
         "radius": 0.03995
       },
+      "leg": {
+        "thighTopRadius": 0.04928,
+        "thighMidRadius": 0.04485,
+        "kneeRadius": 0.02858,
+        "calfRadius": 0.03226,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
+      },
       "neckRadius": 0.03208,
       "neckCentreZ": 0.00885,
       "neckBaseY": 0.86444,
@@ -387,6 +417,16 @@
       "cranium": {
         "centerY": 0.07146,
         "radius": 0.03996
+      },
+      "leg": {
+        "thighTopRadius": 0.05043,
+        "thighMidRadius": 0.04922,
+        "kneeRadius": 0.03059,
+        "calfRadius": 0.03474,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
       },
       "neckRadius": 0.03809,
       "neckCentreZ": 0.00912,
@@ -439,6 +479,16 @@
         "centerY": 0.07146,
         "radius": 0.0401
       },
+      "leg": {
+        "thighTopRadius": 0.05037,
+        "thighMidRadius": 0.04766,
+        "kneeRadius": 0.02962,
+        "calfRadius": 0.03596,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
+      },
       "neckRadius": 0.03422,
       "neckCentreZ": 0.00889,
       "neckBaseY": 0.86444,
@@ -490,6 +540,16 @@
         "centerY": 0.07147,
         "radius": 0.03896
       },
+      "leg": {
+        "thighTopRadius": 0.05004,
+        "thighMidRadius": 0.04587,
+        "kneeRadius": 0.02892,
+        "calfRadius": 0.03289,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
+      },
       "neckRadius": 0.03118,
       "neckCentreZ": 0.0048,
       "neckBaseY": 0.86444,
@@ -540,6 +600,16 @@
       "cranium": {
         "centerY": 0.07146,
         "radius": 0.04015
+      },
+      "leg": {
+        "thighTopRadius": 0.04903,
+        "thighMidRadius": 0.04076,
+        "kneeRadius": 0.02859,
+        "calfRadius": 0.03182,
+        "thighLength": 0.26121,
+        "shinLength": 0.2438,
+        "spreadX": 0.06049,
+        "seatY": -0.00479
       },
       "neckRadius": 0.03181,
       "neckCentreZ": 0.00805,
@@ -597,7 +667,15 @@
       "ankleBandOffsetY": 0.0195,
       "ankleBandRadius": 0.02017,
       "headCenterY": 0.07134,
-      "headRadius": 0.04013
+      "headRadius": 0.04013,
+      "thighTopRadius": 0.05021,
+      "thighMidRadius": 0.04501,
+      "kneeRadius": 0.0292,
+      "calfRadius": 0.0331,
+      "thighLength": 0.26121,
+      "shinLength": 0.2438,
+      "legSpreadX": 0.06049,
+      "thighSeatY": -0.00479
     },
     "morphs": {
       "bodyLean": {
@@ -624,7 +702,15 @@
         "ankleBandOffsetY": 0,
         "ankleBandRadius": 0.00017,
         "headCenterY": 0.00013,
-        "headRadius": 0.00011
+        "headRadius": 0.00011,
+        "thighTopRadius": -0.00059,
+        "thighMidRadius": -0.00128,
+        "kneeRadius": -0.00041,
+        "calfRadius": -0.00035,
+        "thighLength": 0,
+        "shinLength": 0,
+        "legSpreadX": 0,
+        "thighSeatY": 0
       },
       "bodyAthletic": {
         "spineToChestY": 0,
@@ -650,7 +736,15 @@
         "ankleBandOffsetY": 0,
         "ankleBandRadius": -0.0003,
         "headCenterY": 0.00012,
-        "headRadius": -0.00017
+        "headRadius": -0.00017,
+        "thighTopRadius": -0.00092,
+        "thighMidRadius": -0.00016,
+        "kneeRadius": -0.00062,
+        "calfRadius": -0.00083,
+        "thighLength": 0,
+        "shinLength": 0,
+        "legSpreadX": 0,
+        "thighSeatY": 0
       },
       "bodyPowerful": {
         "spineToChestY": 0,
@@ -676,7 +770,15 @@
         "ankleBandOffsetY": 0,
         "ankleBandRadius": 0.00015,
         "headCenterY": 0.00012,
-        "headRadius": -0.00017
+        "headRadius": -0.00017,
+        "thighTopRadius": 0.00022,
+        "thighMidRadius": 0.00422,
+        "kneeRadius": 0.00139,
+        "calfRadius": 0.00164,
+        "thighLength": 0,
+        "shinLength": 0,
+        "legSpreadX": 0,
+        "thighSeatY": 0
       },
       "bodyHeroic": {
         "spineToChestY": 0,
@@ -702,7 +804,15 @@
         "ankleBandOffsetY": 0,
         "ankleBandRadius": -0.00005,
         "headCenterY": 0.00012,
-        "headRadius": -0.00002
+        "headRadius": -0.00002,
+        "thighTopRadius": 0.00017,
+        "thighMidRadius": 0.00265,
+        "kneeRadius": 0.00042,
+        "calfRadius": 0.00287,
+        "thighLength": 0,
+        "shinLength": 0,
+        "legSpreadX": 0,
+        "thighSeatY": 0
       },
       "faceDivine": {
         "spineToChestY": 0,
@@ -728,7 +838,15 @@
         "ankleBandOffsetY": 0,
         "ankleBandRadius": -0.00016,
         "headCenterY": 0.00013,
-        "headRadius": -0.00117
+        "headRadius": -0.00117,
+        "thighTopRadius": -0.00016,
+        "thighMidRadius": 0.00087,
+        "kneeRadius": -0.00028,
+        "calfRadius": -0.00021,
+        "thighLength": 0,
+        "shinLength": 0,
+        "legSpreadX": 0,
+        "thighSeatY": 0
       },
       "bodyAscetic": {
         "spineToChestY": 0,
@@ -754,7 +872,15 @@
         "ankleBandOffsetY": 0,
         "ankleBandRadius": -0.00004,
         "headCenterY": 0.00012,
-        "headRadius": 0.00002
+        "headRadius": 0.00002,
+        "thighTopRadius": -0.00118,
+        "thighMidRadius": -0.00425,
+        "kneeRadius": -0.00061,
+        "calfRadius": -0.00128,
+        "thighLength": 0,
+        "shinLength": 0,
+        "legSpreadX": 0,
+        "thighSeatY": 0
       }
     }
   }

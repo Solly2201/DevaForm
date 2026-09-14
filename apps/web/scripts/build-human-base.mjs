@@ -964,6 +964,23 @@ function measure(positions) {
   const wristBand = limbBand(positions, "arm.frontLeft.forearm", "arm.frontLeft.forearm", "arm.frontLeft.hand", 0.86);
   const ankleBand = limbBand(positions, "leg.left.shin", "leg.left.shin", "leg.left.foot", 0.92);
 
+  // The leg, as a garment has to wrap it: girth at the top of the thigh,
+  // mid-thigh, knee and calf, plus the two segment lengths, so cloth can
+  // be lofted down the leg instead of guessed at.
+  const legBand = (group, from, to, along) => limbBand(positions, group, from, to, along).radius;
+  const thighLength = restFinal.get("leg.left.thigh").distanceTo(restFinal.get("leg.left.shin"));
+  const shinLength = restFinal.get("leg.left.shin").distanceTo(restFinal.get("leg.left.foot"));
+  const leg = {
+    thighTopRadius: legBand("leg.left.thigh", "leg.left.thigh", "leg.left.shin", 0.12),
+    thighMidRadius: legBand("leg.left.thigh", "leg.left.thigh", "leg.left.shin", 0.5),
+    kneeRadius: legBand("leg.left.thigh", "leg.left.thigh", "leg.left.shin", 0.93),
+    calfRadius: legBand("leg.left.shin", "leg.left.shin", "leg.left.foot", 0.3),
+    thighLength,
+    shinLength,
+    spreadX: Math.abs(restFinal.get("leg.left.thigh").x),
+    seatY: restFinal.get("leg.left.thigh").y - restFinal.get("pelvis").y,
+  };
+
   const torsoTop = chestY + 0.03;
   const torsoBottom = pelvisY - 0.02;
   // The torso splits halfway between the spine and chest joints: below is
@@ -979,6 +996,7 @@ function measure(positions) {
     wristBand,
     ankleBand,
     cranium,
+    leg,
     neckRadius,
     neckCentreZ: neckZ.mid,
     neckBaseY: neckY,
@@ -1090,6 +1108,15 @@ function profileBlock(m) {
     ankleBandRadius: m.ankleBand.radius,
     headCenterY: m.cranium.centerY,
     headRadius: m.cranium.radius,
+    // The leg a wrapped garment has to follow.
+    thighTopRadius: m.leg.thighTopRadius,
+    thighMidRadius: m.leg.thighMidRadius,
+    kneeRadius: m.leg.kneeRadius,
+    calfRadius: m.leg.calfRadius,
+    thighLength: m.leg.thighLength,
+    shinLength: m.leg.shinLength,
+    legSpreadX: m.leg.spreadX,
+    thighSeatY: m.leg.seatY,
   };
 }
 

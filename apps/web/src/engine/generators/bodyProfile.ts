@@ -79,6 +79,19 @@ export interface BodyProfile {
    */
   headCenterY: number;
   headRadius: number;
+  /**
+   * The leg a wrapped garment has to follow: girths down its length,
+   * the two segment lengths, and how far apart the hips set them.
+   */
+  thighTopRadius: number;
+  thighMidRadius: number;
+  kneeRadius: number;
+  calfRadius: number;
+  thighLength: number;
+  shinLength: number;
+  legSpreadX: number;
+  /** Pelvis-local height of the hip joints — where the legs begin. */
+  thighSeatY: number;
   /** Belly half-width at a spine-local height (0 where the slice is empty). */
   bellyHalfWidthAt(spineLocalY: number): number;
   /** Belly surface z at a spine-local (x, y); falls back to center z. */
@@ -208,6 +221,15 @@ export function deriveBodyProfile(
     wristBandRadius: 0.03 * bulk,
     ankleBandOffsetY: 0.018,
     ankleBandRadius: 0.043,
+    // The legs the classic body generator draws (see body.ts).
+    thighTopRadius: 0.062 * bulk,
+    thighMidRadius: 0.056 * bulk,
+    kneeRadius: 0.042 * bulk,
+    calfRadius: 0.046 * bulk,
+    thighLength: 0.2,
+    shinLength: 0.19,
+    legSpreadX: 0.075 * bulk,
+    thighSeatY: -0.05,
     headCenterY: 0.063,
     headRadius: 0.067,
     bellyHalfWidthAt,
@@ -303,6 +325,14 @@ function deriveMeasuredProfile(
     wristBandRadius: value("wristBandRadius"),
     ankleBandOffsetY: value("ankleBandOffsetY"),
     ankleBandRadius: value("ankleBandRadius"),
+    thighTopRadius: value("thighTopRadius"),
+    thighMidRadius: value("thighMidRadius"),
+    kneeRadius: value("kneeRadius"),
+    calfRadius: value("calfRadius"),
+    thighLength: value("thighLength"),
+    shinLength: value("shinLength"),
+    legSpreadX: value("legSpreadX"),
+    thighSeatY: value("thighSeatY"),
     headCenterY: value("headCenterY"),
     headRadius: value("headRadius"),
     bellyHalfWidthAt,
@@ -397,6 +427,15 @@ function deriveAthleticProfile(
     wristBandRadius: 0.03 * bulk,
     ankleBandOffsetY: 0.018,
     ankleBandRadius: 0.043,
+    // The legs the classic body generator draws (see body.ts).
+    thighTopRadius: 0.062 * bulk,
+    thighMidRadius: 0.056 * bulk,
+    kneeRadius: 0.042 * bulk,
+    calfRadius: 0.046 * bulk,
+    thighLength: 0.2,
+    shinLength: 0.19,
+    legSpreadX: 0.075 * bulk,
+    thighSeatY: -0.05,
     headCenterY: 0.063,
     headRadius: 0.067,
     bellyHalfWidthAt,

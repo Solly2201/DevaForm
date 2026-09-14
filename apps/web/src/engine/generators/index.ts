@@ -7,6 +7,7 @@ import type { AttachmentGenerator, PartGenerator } from "./types";
 import { humanoidBody, humanoidHands } from "./body";
 import { athleticBody } from "./bodyAthletic";
 import { ganeshaEars, classicEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
+import { humanoidHideWrap } from "./hideGarment";
 import { humanoidDhoti, humanoidShawl } from "./clothing";
 import {
   ankletsPayal,
@@ -45,6 +46,7 @@ export const PART_GENERATORS: Record<string, PartGenerator> = {
   "humanoid.athletic": athleticBody,
   "humanoid.hands": humanoidHands,
   "humanoid.dhoti": humanoidDhoti,
+  "humanoid.hideWrap": humanoidHideWrap,
   "humanoid.shawl": humanoidShawl,
   "humanoid.eyes": classicEyes,
   // Ganesha anatomy
