@@ -85,6 +85,141 @@
       ]
     },
     {
+      "id": "arm.frontLeft.hand.thumb.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        0.01751,
+        -0.01993,
+        -0.00572
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.thumb.02",
+      "parent": "arm.frontLeft.hand.thumb.01",
+      "position": [
+        0.01185,
+        -0.01027,
+        0.00975
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.thumb.03",
+      "parent": "arm.frontLeft.hand.thumb.02",
+      "position": [
+        0.01306,
+        -0.0171,
+        0.00478
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.index.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        0.02392,
+        -0.05567,
+        -0.02126
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.index.02",
+      "parent": "arm.frontLeft.hand.index.01",
+      "position": [
+        0.00405,
+        -0.01499,
+        -0.00203
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.index.03",
+      "parent": "arm.frontLeft.hand.index.02",
+      "position": [
+        0.00263,
+        -0.01376,
+        0.001
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.middle.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        0.00856,
+        -0.05586,
+        -0.02501
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.middle.02",
+      "parent": "arm.frontLeft.hand.middle.01",
+      "position": [
+        -0.00041,
+        -0.02028,
+        -0.00217
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.middle.03",
+      "parent": "arm.frontLeft.hand.middle.02",
+      "position": [
+        0.00051,
+        -0.01638,
+        0.0002
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.ring.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        -0.00352,
+        -0.05365,
+        -0.02501
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.ring.02",
+      "parent": "arm.frontLeft.hand.ring.01",
+      "position": [
+        -0.00337,
+        -0.01745,
+        -0.00253
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.ring.03",
+      "parent": "arm.frontLeft.hand.ring.02",
+      "position": [
+        -0.00169,
+        -0.01484,
+        -0.00025
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.little.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        -0.01551,
+        -0.05085,
+        -0.02126
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.little.02",
+      "parent": "arm.frontLeft.hand.little.01",
+      "position": [
+        -0.00376,
+        -0.01231,
+        -0.00074
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.little.03",
+      "parent": "arm.frontLeft.hand.little.02",
+      "position": [
+        -0.00225,
+        -0.00901,
+        0.00097
+      ]
+    },
+    {
       "id": "leg.left.thigh",
       "parent": "pelvis",
       "position": [
@@ -136,6 +271,141 @@
         0,
         -0.14556,
         0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.thumb.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        -0.01751,
+        -0.01993,
+        -0.00572
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.thumb.02",
+      "parent": "arm.frontRight.hand.thumb.01",
+      "position": [
+        -0.01185,
+        -0.01027,
+        0.00975
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.thumb.03",
+      "parent": "arm.frontRight.hand.thumb.02",
+      "position": [
+        -0.01306,
+        -0.0171,
+        0.00478
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.index.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        -0.02392,
+        -0.05567,
+        -0.02126
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.index.02",
+      "parent": "arm.frontRight.hand.index.01",
+      "position": [
+        -0.00405,
+        -0.01499,
+        -0.00203
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.index.03",
+      "parent": "arm.frontRight.hand.index.02",
+      "position": [
+        -0.00263,
+        -0.01376,
+        0.001
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.middle.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        -0.00856,
+        -0.05586,
+        -0.02501
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.middle.02",
+      "parent": "arm.frontRight.hand.middle.01",
+      "position": [
+        0.00041,
+        -0.02028,
+        -0.00217
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.middle.03",
+      "parent": "arm.frontRight.hand.middle.02",
+      "position": [
+        -0.00051,
+        -0.01638,
+        0.0002
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.ring.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        0.00352,
+        -0.05365,
+        -0.02501
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.ring.02",
+      "parent": "arm.frontRight.hand.ring.01",
+      "position": [
+        0.00337,
+        -0.01745,
+        -0.00253
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.ring.03",
+      "parent": "arm.frontRight.hand.ring.02",
+      "position": [
+        0.00169,
+        -0.01484,
+        -0.00025
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.little.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        0.01551,
+        -0.05085,
+        -0.02126
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.little.02",
+      "parent": "arm.frontRight.hand.little.01",
+      "position": [
+        0.00376,
+        -0.01231,
+        -0.00074
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.little.03",
+      "parent": "arm.frontRight.hand.little.02",
+      "position": [
+        0.00225,
+        -0.00901,
+        0.00097
       ]
     },
     {
@@ -229,7 +499,7 @@
         "radiusY": 0.11146,
         "radiusZ": 0.06235
       },
-      "handReach": 0.07469,
+      "handReach": 0.03991,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02664
@@ -291,7 +561,7 @@
         "radiusY": 0.11246,
         "radiusZ": 0.0623
       },
-      "handReach": 0.07451,
+      "handReach": 0.0398,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.0254
@@ -353,7 +623,7 @@
         "radiusY": 0.10596,
         "radiusZ": 0.06201
       },
-      "handReach": 0.07452,
+      "handReach": 0.0398,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02623
@@ -415,7 +685,7 @@
         "radiusY": 0.11296,
         "radiusZ": 0.06722
       },
-      "handReach": 0.07454,
+      "handReach": 0.03994,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02984
@@ -477,7 +747,7 @@
         "radiusY": 0.11146,
         "radiusZ": 0.06587
       },
-      "handReach": 0.07452,
+      "handReach": 0.03981,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02883
@@ -539,7 +809,7 @@
         "radiusY": 0.11146,
         "radiusZ": 0.06218
       },
-      "handReach": 0.07486,
+      "handReach": 0.04013,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02679
@@ -601,7 +871,7 @@
         "radiusY": 0.11196,
         "radiusZ": 0.05907
       },
-      "handReach": 0.07452,
+      "handReach": 0.03981,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02279

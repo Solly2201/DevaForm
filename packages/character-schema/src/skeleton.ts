@@ -28,6 +28,29 @@
 export type ArmSlot = "frontLeft" | "frontRight" | "backLeft" | "backRight";
 export type LegSlot = "left" | "right";
 
+/**
+ * The five digits, named rather than numbered.
+ *
+ * A hand is chiral and anatomically structured, and until these existed
+ * the rig said so only through an axis constant: fingers along -Y, palm
+ * along +Z, thumb along ±X depending which hand it was. That is enough to
+ * point a hand at something and not nearly enough to close it around
+ * something — which is why a fist could only ever be one fixed shape,
+ * and met a drum's flare as readily as a staff's shaft.
+ */
+export type FingerId = "thumb" | "index" | "middle" | "ring" | "little";
+export type FingerSegment = "01" | "02" | "03";
+
+export const FINGER_IDS: readonly FingerId[] = [
+  "thumb",
+  "index",
+  "middle",
+  "ring",
+  "little",
+] as const;
+
+export const FINGER_SEGMENTS: readonly FingerSegment[] = ["01", "02", "03"] as const;
+
 export const ARM_SLOTS: readonly ArmSlot[] = [
   "frontLeft",
   "frontRight",
@@ -50,6 +73,7 @@ export type JointId =
   | `arm.${ArmSlot}.upper`
   | `arm.${ArmSlot}.forearm`
   | `arm.${ArmSlot}.hand`
+  | `arm.${ArmSlot}.hand.${FingerId}.${FingerSegment}`
   | `leg.${LegSlot}.thigh`
   | `leg.${LegSlot}.shin`
   | `leg.${LegSlot}.foot`;
@@ -113,6 +137,66 @@ const armJoints = (slot: ArmSlot, side: "left" | "right", row: "front" | "back")
   ];
 };
 
+/**
+ * One hand's digits, in the hand's own frame: fingers grow along -Y, the
+ * palm faces +Z, the thumb lies toward the hand's ±X depending on side.
+ * Rest lengths are a stylised adult hand; a mesh body that measured its
+ * own replaces them, exactly as it does for every other joint.
+ *
+ * Three segments a finger, because that is what flexes. The fingertip is
+ * the end of the last segment, not a joint of its own — nothing is skinned
+ * to a point.
+ */
+const FINGER_ROOTS: Record<FingerId, { x: number; y: number; z: number }> = {
+  thumb: { x: 0.026, y: -0.03, z: 0.008 },
+  index: { x: 0.021, y: -0.058, z: 0.006 },
+  middle: { x: 0.007, y: -0.062, z: 0.008 },
+  ring: { x: -0.007, y: -0.062, z: 0.008 },
+  little: { x: -0.021, y: -0.057, z: 0.006 },
+};
+/** Segment lengths, proximal to distal, as a fraction of the finger. */
+const FINGER_LENGTHS: Record<FingerId, readonly [number, number, number]> = {
+  thumb: [0.026, 0.02, 0.017],
+  index: [0.031, 0.019, 0.013],
+  middle: [0.034, 0.021, 0.014],
+  ring: [0.031, 0.02, 0.013],
+  little: [0.025, 0.015, 0.011],
+};
+
+const fingerJoints = (slot: ArmSlot): JointDefinition[] => {
+  // The rig is not mirrored but the hands are, so the thumb reaches the
+  // opposite way on each side. This is the same chirality the grip
+  // contract states as an axis — here it is anatomy instead.
+  const sideSign = slot === "frontLeft" || slot === "backLeft" ? 1 : -1;
+  const joints: JointDefinition[] = [];
+  for (const finger of FINGER_IDS) {
+    const root = FINGER_ROOTS[finger];
+    const lengths = FINGER_LENGTHS[finger];
+    FINGER_SEGMENTS.forEach((segment, index) => {
+      const first = index === 0;
+      joints.push({
+        id: `arm.${slot}.hand.${finger}.${segment}`,
+        parent: first
+          ? `arm.${slot}.hand`
+          : `arm.${slot}.hand.${finger}.${FINGER_SEGMENTS[index - 1]!}`,
+        position: first
+          ? [sideSign * root.x, root.y, root.z]
+          : [0, -(lengths[index - 1] ?? 0.02), 0],
+        // A finger curls toward the palm and splays a little; it does not
+        // bend backwards past a stop, and it does not twist.
+        limits:
+          finger === "thumb"
+            ? { x: [-0.3, 1.2], y: [-0.6, 0.6], z: [-0.9, 0.9] }
+            : { x: [-0.15, PI * 0.55], y: [-0.25, 0.25], z: [-0.2, 0.2] },
+        label: `${finger} ${segment}`,
+        // Deliberately no uiGroup: fifteen sliders a hand would drown the
+        // pose UI. Mudras and grips drive these, the way a hand works.
+      });
+    });
+  }
+  return joints;
+};
+
 const legJoints = (slot: LegSlot): JointDefinition[] => {
   const sideSign = slot === "left" ? 1 : -1;
   const label = slot === "left" ? "Left" : "Right";
@@ -174,6 +258,16 @@ export const BACK_ARM_JOINTS: readonly JointDefinition[] = [
 ] as const;
 
 /**
+ * Digits for one hand. An EXTENSION, like the back arms: the contract is
+ * common — one naming, one chirality, one set of limits, defined here and
+ * nowhere else — but a skeleton instantiates it only for a body whose mesh
+ * actually has fingers to drive. A procedural hand that is rebuilt per
+ * mudra has no use for a joint it never deforms.
+ */
+export const fingerJointsFor = (slot: ArmSlot): readonly JointDefinition[] =>
+  fingerJoints(slot);
+
+/**
  * Ganesha's trunk extension. The chain sweeps forward (+z) as it descends
  * so the trunk drapes OVER the chin/shawl/belly front surfaces instead of
  * hanging inside the torso volume.
@@ -197,12 +291,18 @@ const LEG_JOINTS: readonly JointDefinition[] = [
 export function humanoidJoints(extensions: {
   trunk?: boolean;
   backArms?: boolean;
+  fingers?: boolean;
 } = {}): readonly JointDefinition[] {
+  const slots: ArmSlot[] = extensions.backArms
+    ? ["frontLeft", "frontRight", "backLeft", "backRight"]
+    : ["frontLeft", "frontRight"];
   return [
     ...TORSO_JOINTS,
     ...(extensions.trunk ? TRUNK_JOINTS : []),
     ...FRONT_ARM_JOINTS,
     ...(extensions.backArms ? BACK_ARM_JOINTS : []),
+    // Digits come after every arm, so a hand exists before its fingers do.
+    ...(extensions.fingers ? slots.flatMap(fingerJoints) : []),
     ...LEG_JOINTS,
   ];
 }
@@ -222,6 +322,7 @@ export const HUMANOID_CORE_JOINTS: readonly JointDefinition[] = humanoidJoints()
 export const SKELETON: readonly JointDefinition[] = humanoidJoints({
   trunk: true,
   backArms: true,
+  fingers: true,
 });
 
 export const JOINT_IDS: readonly JointId[] = SKELETON.map((j) => j.id);
