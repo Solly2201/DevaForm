@@ -294,6 +294,10 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.damaru" },
     grip: { mudra: "grip" },
+    // A damaru hangs from the fist that holds its waist: heads up and
+    // down, hourglass in profile. Without this it turns with the wrist
+    // and presents a drum head to the viewer like a medallion.
+    presentation: { upright: true },
     materialZones: ["garmentAccent", "metal"],
     category: "attributes",
     printability: proto,

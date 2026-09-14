@@ -297,6 +297,31 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
     },
   },
   {
+    id: "shiva.standingStaff",
+    label: "Standing with Staff",
+    description:
+      "Samabhanga, planting the trishul. The staff arm comes forward and out so the shaft stands clear of the body instead of running through it — how a person actually holds a staff they are leaning on.",
+    joints: {
+      "arm.frontLeft.upper": [8 * D, 0, 30 * D],
+      // Forward at the shoulder is what puts the shaft in front of the
+      // hip rather than inside it; the extra abduction keeps it off the
+      // thigh, and the straighter elbow carries the hand further out.
+      "arm.frontRight.upper": [-30 * D, 0, -36 * D],
+      "arm.frontLeft.forearm": [-24 * D, 0, 0],
+      "arm.frontRight.forearm": [-14 * D, 0, 0],
+      "arm.frontLeft.hand": [-12 * D, 0, 6 * D],
+      "arm.frontRight.hand": [-4 * D, 0, -6 * D],
+      "arm.backLeft.upper": [-18 * D, -10 * D, 38 * D],
+      "arm.backRight.upper": [-18 * D, 10 * D, -38 * D],
+      "arm.backLeft.forearm": [-52 * D, 0, 0],
+      "arm.backRight.forearm": [-52 * D, 0, 0],
+      "arm.backLeft.hand": [-20 * D, 0, 0],
+      "arm.backRight.hand": [-20 * D, 0, 0],
+      "leg.left.thigh": [0, 4 * D, 2 * D],
+      "leg.right.thigh": [0, -4 * D, -2 * D],
+    },
+  },
+  {
     id: "shiva.meditation",
     label: "Meditation",
     description: "The great yogi in padmasana, front hands in dhyana.",

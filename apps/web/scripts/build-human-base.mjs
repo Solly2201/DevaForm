@@ -408,19 +408,20 @@ function restFor(variant) {
  * uses, applied to three joints per finger instead of one per limb.
  */
 const FINGER_CURL = {
-  // thumb wraps across rather than folding in
-  1: [0.5, 0.55, 0.45],
-  2: [1, 1, 0.9],
-  3: [1, 1, 0.95],
-  4: [1, 1, 0.95],
-  5: [0.95, 1, 0.9],
+  // The thumb does not fold in like a finger: it comes ACROSS the palm to
+  // meet them, which is what closes the ring and makes a grip a grip.
+  1: [0.62, 0.7, 0.5],
+  2: [1, 1, 0.92],
+  3: [1, 1, 0.97],
+  4: [1, 1, 0.97],
+  5: [0.96, 1, 0.92],
 };
-// A grip closes around a shaft, so the fingers make a C rather than a
-// fist: curl them all the way and they drive through the palm.
-const CURL_ANGLES = [0.5, 0.62, 0.45]; // radians at full grip, per segment
+// Enough flexion for the fingertips to come round a shaft and meet the
+// thumb — a hand laid over a staff is not holding it.
+const CURL_ANGLES = [0.78, 0.95, 0.62]; // radians at full grip, per segment
 
 function curledHand(positions, prefix) {
-  const { normal } = palmNormal(prefix);
+  const { fingers, normal } = palmNormal(prefix);
   const lateral = v3(`${prefix}-finger-2-1`).sub(v3(`${prefix}-finger-5-1`)).normalize();
   const out = new Float32Array(positions);
   const side = prefix === "l" ? "L" : "R";
@@ -434,20 +435,24 @@ function curledHand(positions, prefix) {
     for (let segment = 1; segment <= 3; segment += 1) {
       const joint = v3(`${prefix}-finger-${finger}-${segment}`).applyMatrix4(chain);
       const angle = CURL_ANGLES[segment - 1] * FINGER_CURL[finger][segment - 1];
-      // Curl toward the palm; which sign that is depends on the hand.
+      // Fingers flex about the knuckle line; the thumb swings about the
+      // line of the fingers, which carries it across the palm instead of
+      // folding it flat against its own side.
+      const axis = finger === 1 ? fingers : lateral;
       const tip = v3(`${prefix}-finger-${finger}-4`).applyMatrix4(chain);
-      const trial = new THREE.Matrix4()
-        .makeTranslation(joint.x, joint.y, joint.z)
-        .multiply(new THREE.Matrix4().makeRotationAxis(lateral, angle))
-        .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
-      const towardPalm = tip.clone().applyMatrix4(trial).sub(tip).dot(normal) > 0;
-      const rotation = towardPalm
+      const pivot = (turn) =>
+        new THREE.Matrix4()
+          .makeTranslation(joint.x, joint.y, joint.z)
+          .multiply(new THREE.Matrix4().makeRotationAxis(axis, turn))
+          .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
+      // Whichever sign carries the tip toward the palm is the way a hand
+      // closes; it differs between the left hand and the right.
+      const toward = finger === 1 ? lateral.clone().multiplyScalar(-1) : normal;
+      const trial = pivot(angle);
+      chain = (tip.clone().applyMatrix4(trial).sub(tip).dot(toward) > 0
         ? trial
-        : new THREE.Matrix4()
-            .makeTranslation(joint.x, joint.y, joint.z)
-            .multiply(new THREE.Matrix4().makeRotationAxis(lateral, -angle))
-            .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
-      chain = rotation.multiply(chain);
+        : pivot(-angle)
+      ).multiply(chain);
 
       const bone = rigWeights[`finger${finger}-${segment}.${side}`];
       if (!bone) throw new Error(`no rig weights for finger${finger}-${segment}.${side}`);
