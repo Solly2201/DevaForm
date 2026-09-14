@@ -311,17 +311,18 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
     id: "shiva.standingStaff",
     label: "Standing with Staff",
     description:
-      "Samabhanga, planting the trishul. The staff arm comes forward and out so the shaft stands clear of the body instead of running through it — how a person actually holds a staff they are leaning on.",
+      "Samabhanga, planting the trishul. The staff arm rests rather than reaches: the shoulder barely leaves the side, the elbow keeps a soft bend, and the staff stands just clear of the hip because the garment ends above the knee — not because the arm was thrown out to make room for it.",
     joints: {
       "arm.frontLeft.upper": [8 * D, 0, 30 * D],
-      // Forward at the shoulder is what puts the shaft in front of the
-      // hip rather than inside it; the extra abduction keeps it off the
-      // thigh, and the straighter elbow carries the hand further out.
-      "arm.frontRight.upper": [-30 * D, 0, -36 * D],
+      // A held staff does not need the arm extended. A little forward at
+      // the shoulder and a little out is all it takes for the shaft to
+      // pass beside the hip; the elbow keeps the bend a resting arm has,
+      // so the silhouette reads as a figure standing rather than posing.
+      "arm.frontRight.upper": [-11 * D, 0, -21 * D],
       "arm.frontLeft.forearm": [-24 * D, 0, 0],
-      "arm.frontRight.forearm": [-14 * D, 0, 0],
+      "arm.frontRight.forearm": [-27 * D, 0, 0],
       "arm.frontLeft.hand": [-12 * D, 0, 6 * D],
-      "arm.frontRight.hand": [-4 * D, 0, -6 * D],
+      "arm.frontRight.hand": [-8 * D, 0, -5 * D],
       "arm.backLeft.upper": [-18 * D, -10 * D, 38 * D],
       "arm.backRight.upper": [-18 * D, 10 * D, -38 * D],
       "arm.backLeft.forearm": [-52 * D, 0, 0],
