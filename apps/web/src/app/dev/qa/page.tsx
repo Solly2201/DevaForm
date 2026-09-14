@@ -31,12 +31,10 @@ import {
   type CharacterConfiguration,
   type Vec3,
 } from "@devaform/character-schema";
-import { resolveAssetRef } from "@devaform/asset-system";
 import { getLightingPreset } from "@/engine/lighting";
 import { ZoneMaterials } from "@/engine/materials";
-import { buildRig, disposeRig, poseRig, rigWarnings } from "@/engine/rig";
+import { buildRig, disposeRig, poseRig, rigMorphInfluences, rigWarnings } from "@/engine/rig";
 import { applyMorphInfluences } from "@/engine/skinning";
-import { morphInfluences } from "@/engine/morphs";
 import { SceneEnvironment } from "@/engine/SceneEnvironment";
 import { subscribeGlbCache } from "@/engine/glbCache";
 
@@ -141,10 +139,7 @@ function Figure({
   const rig = useMemo(() => {
     const built = buildRig(config, materials);
     materials.applyConfiguration(config.materials);
-    applyMorphInfluences(
-      built.root,
-      morphInfluences(config.morphs, built.hands, resolveAssetRef(config.parts.body)),
-    );
+    applyMorphInfluences(built.root, rigMorphInfluences(built, config.morphs));
     poseRig(built);
     built.root.updateWorldMatrix(true, true);
     return built;

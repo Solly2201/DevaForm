@@ -17,10 +17,12 @@ import {
 import type { AssetDefinition } from "@devaform/asset-system";
 
 /**
- * How closed each mudra's hand is. `grip` is a fist around a shaft;
- * `pinch` holds a stem between thumb and fingers, which a single
- * whole-hand curl can only approximate; `hold` is a cradle, barely
- * closed. The open-palm gestures are exactly that.
+ * How closed each mudra's hand is when it is holding NOTHING.
+ *
+ * A hand that is holding something closes onto that instead — see
+ * `closureFor`. These are the empty-handed shapes: a cradle is barely
+ * closed, a pinch without a stem is a suggestion, and the open-palm
+ * gestures are exactly that.
  */
 const MUDRA_CLOSURE: Record<MudraId, number> = {
   abhaya: 0,
@@ -33,16 +35,51 @@ const MUDRA_CLOSURE: Record<MudraId, number> = {
 
 const gripTarget = (slot: ArmSlot): string => `grip${slot[0]!.toUpperCase()}${slot.slice(1)}`;
 
+/**
+ * The closure that brings this hand onto an object of this radius.
+ *
+ * The body measured its own fist at a series of influences; this reads
+ * that curve backwards. Closing further than the object allows would put
+ * fingers through it, so the answer is the influence whose aperture the
+ * object exactly fills — and when the object is thinner than the fist can
+ * ever close, the hand simply shuts, because that is all it can do.
+ */
+export function closureFor(
+  aperture: readonly (readonly [number, number])[] | undefined,
+  radius: number,
+): number | undefined {
+  if (!aperture || aperture.length === 0) return undefined;
+  let previous = aperture[0] as readonly [number, number];
+  if (radius >= previous[1]) return previous[0];
+  for (let i = 1; i < aperture.length; i += 1) {
+    const current = aperture[i] as readonly [number, number];
+    if (radius >= current[1]) {
+      const span = previous[1] - current[1];
+      const t = Math.abs(span) < 1e-9 ? 0 : (previous[1] - radius) / span;
+      return previous[0] + (current[0] - previous[0]) * t;
+    }
+    previous = current;
+  }
+  return previous[0];
+}
+
 export function handMorphInfluences(
   hands: HandsConfiguration,
   body: AssetDefinition | undefined,
+  /** What each hand is holding, and how thick it is where the hand closes. */
+  held: Readonly<Partial<Record<ArmSlot, { radius?: number }>>> = {},
 ): Record<string, number> {
   const available = new Set(body?.morphTargets ?? []);
   const influences: Record<string, number> = {};
   for (const slot of ARM_SLOTS) {
     const target = gripTarget(slot);
     if (!available.has(target)) continue;
-    influences[target] = MUDRA_CLOSURE[hands[slot].mudra];
+    const radius = held[slot]?.radius;
+    const measured =
+      radius !== undefined
+        ? closureFor(body?.gripApertures?.[slot], radius)
+        : undefined;
+    influences[target] = measured ?? MUDRA_CLOSURE[hands[slot].mudra];
   }
   return influences;
 }
@@ -56,6 +93,7 @@ export function morphInfluences(
   configured: Readonly<Record<string, number>>,
   hands: HandsConfiguration,
   body: AssetDefinition | undefined,
+  held: Readonly<Partial<Record<ArmSlot, { radius?: number }>>> = {},
 ): Record<string, number> {
-  return { ...handMorphInfluences(hands, body), ...configured };
+  return { ...handMorphInfluences(hands, body, held), ...configured };
 }

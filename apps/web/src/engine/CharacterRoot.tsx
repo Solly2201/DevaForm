@@ -17,9 +17,15 @@ import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
-import { buildRig, disposeRig, poseRig, rigWarnings, type CharacterRig } from "./rig";
+import {
+  buildRig,
+  disposeRig,
+  poseRig,
+  rigMorphInfluences,
+  rigWarnings,
+  type CharacterRig,
+} from "./rig";
 import { applyMorphInfluences } from "./skinning";
-import { morphInfluences } from "./morphs";
 import { activeRig } from "./rigHandle";
 
 export function CharacterRoot() {
@@ -102,7 +108,7 @@ export function CharacterRoot() {
   // gestures contribute their own influences on bodies that can close
   // their hands — see morphs.ts.
   useEffect(() => {
-    applyMorphInfluences(rig.root, morphInfluences(morphs, hands, resolveAssetRef(parts.body)));
+    applyMorphInfluences(rig.root, rigMorphInfluences(rig, morphs));
   }, [rig, morphs, hands, parts.body]);
 
   // Materials: in-place color/finish updates.

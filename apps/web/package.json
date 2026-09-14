@@ -15,7 +15,9 @@
     "ingest-asset": "node scripts/ingest-asset.mjs",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build-human-base": "node scripts/build-human-base.mjs && node scripts/sync-measured-manifest.mjs",
+    "qa-capture": "node scripts/qa-capture.mjs"
   },
   "dependencies": {
     "@devaform/asset-system": "workspace:*",

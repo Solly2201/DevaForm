@@ -251,6 +251,19 @@ export interface AssetDefinition {
    * not, so no single constant reaches the thumb on both sides.
    */
   thumbAxes?: Readonly<Record<string, readonly [number, number, number]>>;
+  /**
+   * Body-slot assets: how wide a hole each hand leaves at each stage of
+   * closing, measured off the mesh — `[influence, radius]` pairs, open to
+   * shut.
+   *
+   * A hand modelled once and shipped as a curl morph can only be dialled,
+   * and dialling it to a fixed amount gives every fist the same diameter.
+   * That is why fingers met a drum head as readily as a staff's shaft. The
+   * item declares the radius it presents at the grip; the engine reads
+   * this curve and dials the influence that matches. Nothing is assumed
+   * about a hand that has not measured itself.
+   */
+  gripApertures?: Readonly<Record<string, readonly (readonly [number, number])[]>>;
   /** Body-slot assets: this mesh's torso and neck, measured all round. */
   torsoSurface?: MeasuredTorsoSurface;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
