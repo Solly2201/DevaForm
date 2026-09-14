@@ -34,6 +34,12 @@ export async function readManifestEntries(manifestDir) {
         version: Number(chunk.match(/version:\s*(\d+)/)?.[1] ?? 0),
         stage: chunk.match(/stage:\s*"([^"]+)"/)?.[1] ?? "unknown",
         kindType: chunk.match(/kind:\s*\{\s*type:\s*"([^"]+)"/)?.[1] ?? "unknown",
+        slot: chunk.match(/kind:\s*\{\s*type:\s*"part",\s*slot:\s*"([^"]+)"/)?.[1] ?? null,
+        sockets: [
+          ...(chunk.match(/kind:\s*\{\s*type:\s*"attachment",\s*sockets:\s*\[([^\]]*)\]/)?.[1] ?? "").matchAll(
+            /"([^"]+)"/g,
+          ),
+        ].map((match) => match[1]),
         glbPath: chunk.match(/kind:\s*"glb",\s*path:\s*"([^"]+)"/)?.[1] ?? null,
         thumbnail: chunk.match(/thumbnail:\s*"([^"]+)"/)?.[1] ?? null,
         morphTargets: [

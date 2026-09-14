@@ -127,8 +127,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "part", slot: "head" },
     deityCompatibility: ["ganesha"],
     stage: "experimental",
-    source: { kind: "glb", path: "/assets/ganesha/head/classic-sculpt/1/model.glb" },
-    thumbnail: "/assets/ganesha/head/classic-sculpt/1/thumbnail.png",
+    source: { kind: "glb", path: "/assets/foundations/heads/ganesha-sculpted/1/model.glb" },
+    thumbnail: "/assets/foundations/heads/ganesha-sculpted/1/thumbnail.png",
     provenance: {
       type: "procedural",
       tool: "apps/web/scripts/generate-hero-head.mjs",
@@ -150,8 +150,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "part", slot: "head" },
     deityCompatibility: ["ganesha"],
     stage: "review",
-    source: { kind: "glb", path: "/assets/ganesha/head/aidraft/2/model.glb" },
-    thumbnail: "/assets/ganesha/head/aidraft/2/thumbnail.png",
+    source: { kind: "glb", path: "/assets/foundations/heads/ganesha-aidraft/2/model.glb" },
+    thumbnail: "/assets/foundations/heads/ganesha-aidraft/2/thumbnail.png",
     provenance: {
       type: "ai",
       provider: "trellis2",
@@ -767,8 +767,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "attachment", sockets: ["base.platform"] },
     deityCompatibility: ["ganesha"],
     stage: "integration",
-    source: { kind: "glb", path: "/assets/ganesha/companion/kalash/1/model.glb" },
-    thumbnail: "/assets/ganesha/companion/kalash/1/thumbnail.png",
+    source: { kind: "glb", path: "/assets/companions/ganesha-kalash/1/model.glb" },
+    thumbnail: "/assets/companions/ganesha-kalash/1/thumbnail.png",
     provenance: {
       type: "procedural",
       tool: "scripts/fixtures/make-kalash-obj.mjs (ingestion pipeline fixture)",
@@ -788,8 +788,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "attachment", sockets: ["base.platform"] },
     deityCompatibility: ["ganesha"],
     stage: "prototype",
-    source: { kind: "glb", path: "/assets/ganesha/companion/mushak/1/model.glb" },
-    thumbnail: "/assets/ganesha/companion/mushak/1/thumbnail.png",
+    source: { kind: "glb", path: "/assets/companions/ganesha-mushak/1/model.glb" },
+    thumbnail: "/assets/companions/ganesha-mushak/1/thumbnail.png",
     provenance: {
       type: "procedural",
       tool: "apps/web/scripts/generate-prototype-glbs.mjs",

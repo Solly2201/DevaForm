@@ -15,6 +15,8 @@
  * MORPHS     morph targets are named, consistent across primitives, and
  *            agree with the names the manifest declares
  * MANIFEST   every glb reference exists; orphan files are warnings
+ * LAYOUT     a GLB is stored where its KIND says it belongs, so the tree
+ *            and lib/layout.mjs cannot drift apart
  *
  * Severity: problems on production-stage assets are ERRORS (exit 1);
  * the same problems on prototype/experimental assets may be warnings.
@@ -28,6 +30,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readManifestEntries, repoPaths } from "./lib/manifest.mjs";
+import { storagePath } from "./lib/layout.mjs";
 import { glbStats, parseGlbJson, skinningProblems } from "./lib/glb.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -175,6 +178,28 @@ for (const entry of glbEntries) {
     for (const problem of problems) report(`${label}: ${problem}`);
   }
 }
+
+console.log("\nLayout check:");
+{
+  let misplaced = 0;
+  for (const entry of entries) {
+    if (!entry.glbPath) continue;
+    const kind =
+      entry.kindType === "part"
+        ? { type: "part", slot: entry.slot }
+        : { type: "attachment", sockets: entry.sockets };
+    const expected = storagePath(entry.id, kind, entry.version);
+    if (entry.glbPath !== expected) {
+      // Storage is organised by what an asset IS. A file somewhere else
+      // still loads, so nothing breaks today — but the tree stops being
+      // legible, and the next ingest writes somewhere different again.
+      error(`${entry.id}: stored at ${entry.glbPath}, belongs at ${expected}`);
+      misplaced += 1;
+    }
+  }
+  if (misplaced === 0) pass("every GLB is stored where its kind says it belongs");
+}
+
 
 console.log("\nOrphan check:");
 const referenced = new Set(glbEntries.map((e) => e.glbPath));
