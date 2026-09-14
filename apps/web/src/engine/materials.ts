@@ -99,7 +99,7 @@ export class ZoneMaterials {
       rudraksha: fixed("rudraksha", { color: "#6b4423", roughness: 0.85 }),
       // A serpent is a serpent: its colour is not the customer's to pick,
       // any more than an eye's is.
-      serpent: fixed("serpent", { color: "#5c6b3f", roughness: 0.45, clearcoat: 0.5 }),
+      serpent: fixed("serpent", { color: "#55613a", roughness: 0.72, clearcoat: 0.18 }),
     };
   }
 
