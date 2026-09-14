@@ -715,7 +715,7 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   // looking out — not reaching up beside the jaw. The body stops where
   // the hood begins; the two are swept together below.
   path.push(onNeck(exit + 0.24, collarY - 0.002, 0.003));
-  const headBase = onNeck(exit + 0.6, collarY + 0.008, 0.012);
+  const headBase = onNeck(exit + 0.66, collarY + 0.012, 0.02);
 
   // Thickness along that curve.
   const girth = (t: number): number => {
@@ -731,7 +731,7 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   // Hood and head are one piece, swept: the neck spreads flat into the
   // hood, draws back in, swells into a wedge of a skull and narrows to a
   // snout. A cobra is that shape; nothing stuck onto a tube is.
-  const headTip: V3 = [headBase[0] * 0.64, headBase[1] - 0.001, headBase[2] + 0.062];
+  const headTip: V3 = [headBase[0] * 1.04, headBase[1] + 0.004, headBase[2] + 0.086];
   const hoodStart = onNeck(exit + 0.22, collarY - 0.004, 0.004);
   const headMid: V3 = [
     headBase[0] * 0.82 + headTip[0] * 0.18,
@@ -747,25 +747,25 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
     [hoodStart, headBase, headMid, crownPoint, headTip],
     (t) => {
       // t runs neck -> hood -> skull -> snout.
-      if (t < 0.12) return { halfWidth: 0.0098, halfHeight: 0.0098 };
-      if (t < 0.34) {
-        const k = (t - 0.12) / 0.22;
-        return { halfWidth: 0.0098 + k * 0.0142, halfHeight: 0.0098 - k * 0.0034 };
+      if (t < 0.12) return { halfWidth: 0.0104, halfHeight: 0.0104 };
+      if (t < 0.36) {
+        const k = (t - 0.12) / 0.24;
+        return { halfWidth: 0.0104 + k * 0.0246, halfHeight: 0.0104 - k * 0.0026 };
       }
-      if (t < 0.52) {
-        const k = (t - 0.34) / 0.18;
-        return { halfWidth: 0.024 - k * 0.0118, halfHeight: 0.0064 + k * 0.0026 };
+      if (t < 0.54) {
+        const k = (t - 0.36) / 0.18;
+        return { halfWidth: 0.035 - k * 0.0156, halfHeight: 0.0078 + k * 0.0052 };
       }
-      if (t < 0.78) {
-        const k = (t - 0.52) / 0.26;
+      if (t < 0.8) {
+        const k = (t - 0.54) / 0.26;
         // The skull: wider than it is tall, and flat underneath.
-        return { halfWidth: 0.0122 + k * 0.0022, halfHeight: 0.009 + k * 0.0008, drop: -k * 0.001 };
+        return { halfWidth: 0.0194 + k * 0.003, halfHeight: 0.013 + k * 0.0014, drop: -k * 0.0014 };
       }
-      const k = (t - 0.78) / 0.22;
+      const k = (t - 0.8) / 0.2;
       return {
-        halfWidth: 0.0144 - k * 0.0106,
-        halfHeight: 0.0098 - k * 0.0072,
-        drop: -0.001 - k * 0.0018,
+        halfWidth: 0.0224 - k * 0.0168,
+        halfHeight: 0.0144 - k * 0.0104,
+        drop: -0.0014 - k * 0.0026,
       };
     },
     new THREE.Vector3(0, 1, 0),
@@ -790,37 +790,37 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   };
 
   // The line of the mouth, set into the wedge rather than drawn on it.
-  const mouth = facingGroup(0.66, -0.0036);
+  const mouth = facingGroup(0.68, -0.005);
   mouth.add(
-    mesh(new THREE.SphereGeometry(0.0062, 14, 8), ctx.materials.fixed.eyeDark, {
-      position: [0.001, 0, 0],
-      scale: [1.5, 0.12, 1.05],
+    mesh(new THREE.SphereGeometry(0.0092, 14, 8), ctx.materials.fixed.eyeDark, {
+      position: [0.0014, 0, 0],
+      scale: [1.5, 0.11, 1.05],
     }),
   );
 
   // Eyes: a hooded brow, and under it an eye small enough to be a glint.
-  const eyes = facingGroup(0.58, 0.0036);
+  const eyes = facingGroup(0.6, 0.005);
   for (const side of [1, -1]) {
     eyes.add(
-      mesh(new THREE.SphereGeometry(0.0042, 12, 8), scales, {
-        position: [0, 0.0018, side * 0.0088],
-        scale: [1.35, 0.4, 0.85],
+      mesh(new THREE.SphereGeometry(0.0058, 12, 8), scales, {
+        position: [0, 0.0026, side * 0.0132],
+        scale: [1.35, 0.38, 0.85],
       }),
     );
     eyes.add(
-      mesh(new THREE.SphereGeometry(0.0016, 8, 6), ctx.materials.fixed.eyeDark, {
-        position: [0.0008, -0.0011, side * 0.0094],
-        scale: [1, 0.75, 0.75],
+      mesh(new THREE.SphereGeometry(0.0021, 8, 6), ctx.materials.fixed.eyeDark, {
+        position: [0.0011, -0.0016, side * 0.014],
+        scale: [1, 0.72, 0.72],
       }),
     );
   }
 
   // The pale throat, under the jaw where a snake shows it.
-  const throat = facingGroup(0.5, -0.0085);
+  const throat = facingGroup(0.52, -0.0122);
   throat.add(
-    mesh(new THREE.SphereGeometry(0.0058, 12, 10), belly, {
+    mesh(new THREE.SphereGeometry(0.0082, 12, 10), belly, {
       rotation: [0, -facing, 0],
-      scale: [1.7, 0.26, 0.75],
+      scale: [1.7, 0.24, 0.75],
     }),
   );
   return group;
