@@ -54,7 +54,9 @@ const VIEWS = {
   back: [0, 0.62, -1.9],
   face: [0, 0.95, 0.55],
   torso: [0, 0.75, 1.0],
-  grip: [-0.42, 0.66, 0.42],
+  grip: [-0.45, 0.72, 0.52],
+  drum: [0.40, 0.66, 0.40],
+  naga: [0.30, 0.93, 0.34],
 } as const;
 type ViewId = keyof typeof VIEWS;
 const TARGET: Record<ViewId, [number, number, number]> = {
@@ -64,10 +66,12 @@ const TARGET: Record<ViewId, [number, number, number]> = {
   back: [0, 0.55, 0],
   face: [0, 0.93, 0],
   torso: [0, 0.72, 0],
-  grip: [-0.25, 0.6, 0.05],
+  grip: [-0.23, 0.66, 0.19],
+  drum: [0.24, 0.6, 0.06],
+  naga: [0.05, 0.88, 0.03],
 };
 
-const POSES = ["shiva.standing", "shiva.blessing", "shiva.meditation"] as const;
+const POSES = ["shiva.standingStaff", "shiva.blessing", "shiva.meditation"] as const;
 
 function humanShiva(preset: string, morphs: Record<string, number>): CharacterConfiguration {
   const base = createDefaultShivaConfiguration();

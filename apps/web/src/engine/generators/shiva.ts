@@ -569,90 +569,133 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   const scales = ctx.materials.fixed.serpent;
   const belly = ctx.materials.fixed.ivory;
   const group = new THREE.Group();
-  // The torque's owner surface is the neck column: wrap the MEASURED neck
-  // radius with a declared clearance, whatever body wears it. The front
-  // half additionally lifts onto the chest surface where the coil dips.
-  const neckR = ctx.body.neckRadius + 0.005;
+
+  // One animal, not a ring with a head glued to it. A single curve runs
+  // from the tail lying on the chest, once round the measured neck, and
+  // out into the head — and its thickness varies along the way a snake's
+  // does: nothing at the tail tip, heaviest through the coil, drawn in
+  // again behind the skull. It is all in the necklace socket's space, so
+  // it wraps the neck this body actually has.
+  const neckR = ctx.body.neckRadius + 0.007;
   const collarY = ctx.body.neckBaseOffsetY;
-  // The necklace socket sits slightly forward of the neck axis; pull the
-  // coil back onto it.
-  const zBias = -0.008;
-  const coil: V3[] = [];
-  const samples = 30;
-  for (let i = 0; i <= samples; i++) {
-    const angle = (i / samples) * Math.PI * 2;
-    const frontness = Math.max(0, Math.sin(angle));
-    const x = Math.cos(angle) * (neckR + frontness * 0.006);
-    const y = collarY + 0.006 - frontness * 0.022 - (i / samples) * 0.01; // gentle spiral
-    const zNeck = Math.sin(angle) * neckR + zBias;
-    const z =
-      frontness > 0.05 ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.005)) : zNeck;
-    coil.push([x, y, z]);
+  // The socket sits forward of the neck axis; pull the coil back onto it.
+  const zBias = -0.01;
+
+  /** A point on the neck column at `turn` radians (+Z is the front). */
+  const onNeck = (turn: number, y: number, out = 0): V3 => [
+    Math.cos(turn) * (neckR + out),
+    y,
+    Math.sin(turn) * (neckR + out) + zBias,
+  ];
+
+  // Just over one turn, entering at the front-right and leaving at the
+  // front-left, rising a little as it goes — a coil, not a ring.
+  const start = Math.PI * 0.16;
+  const turns = Math.PI * 2.28;
+  const exit = start + turns;
+
+  const path: V3[] = [];
+  // Tail, lying down the chest and thinning to nothing.
+  path.push([-0.062, -0.128, chestZAtSocket(ctx, -0.062, -0.128, 0.003)]);
+  path.push([-0.05, -0.092, chestZAtSocket(ctx, -0.05, -0.092, 0.004)]);
+  path.push([-0.035, -0.055, chestZAtSocket(ctx, -0.035, -0.055, 0.006)]);
+  path.push([-0.026, -0.03, chestZAtSocket(ctx, -0.026, -0.03, 0.008)]);
+  // Onto the neck and round it.
+  const samples = 26;
+  for (let i = 0; i <= samples; i += 1) {
+    const t = i / samples;
+    path.push(onNeck(start + t * turns, collarY - 0.02 + t * 0.026, t * 0.002));
   }
-  group.add(new THREE.Mesh(taperedTube(coil, [0.008, 0.0095], 60, 12), scales));
-  // Tail tapering down the chest from the coil's end
-  const tail: V3[] = [
-    coil[coil.length - 1] as V3,
-    [-0.03, -0.05, chestZAtSocket(ctx, -0.03, -0.05, 0.006)],
-    [-0.044, -0.078, chestZAtSocket(ctx, -0.044, -0.078, 0.006)],
+  // Out of the coil and forward, so the head rests over the collarbone
+  // looking out — not reaching up beside the jaw.
+  path.push(onNeck(exit + 0.16, collarY + 0.002, 0.006));
+  const headBase = onNeck(exit + 0.3, collarY + 0.008, 0.014);
+  path.push(headBase);
+
+  // Thickness along that curve.
+  const girth = (t: number): number => {
+    if (t < 0.2) return 0.0018 + (t / 0.2) * 0.0072;
+    if (t < 0.34) return 0.009 + ((t - 0.34) / 0.14 + 1) * 0.0024;
+    if (t < 0.8) return 0.0114;
+    if (t < 0.93) return 0.0114 - ((t - 0.8) / 0.13) * 0.0022;
+    return 0.0092;
+  };
+  group.add(new THREE.Mesh(taperedTube(path, girth, 190, 18), scales));
+
+  // The head carries on the same line: a wedge that swells off the neck
+  // and draws down to a snout, rather than a ball on a stick.
+  // The head leaves the neck circle and points out across the chest.
+  const headTip: V3 = [headBase[0] * 0.72, headBase[1] + 0.004, headBase[2] + 0.04];
+  const headMid: V3 = [
+    headBase[0] * 0.45 + headTip[0] * 0.55,
+    (headBase[1] + headTip[1]) / 2 + 0.0022,
+    headBase[2] * 0.45 + headTip[2] * 0.55,
   ];
-  group.add(new THREE.Mesh(taperedTube(tail, [0.008, 0.0025], 18, 8), scales));
-  // Neck rising to the raised hood beside the head, tracking the coil
-  const hoodX = neckR + 0.032;
-  const rise: V3[] = [
-    coil[0] as V3,
-    [hoodX - 0.008, collarY + 0.008, zBias + 0.008],
-    [hoodX, collarY + 0.028, zBias + 0.016],
+  group.add(
+    new THREE.Mesh(
+      taperedTube(
+        [headBase, headMid, headTip],
+        (t) => 0.0092 + Math.sin(t * Math.PI) * 0.0034 - t * 0.0056,
+        26,
+        16,
+      ),
+      scales,
+    ),
+  );
+
+  // Orientation of the head, used to place everything that hangs off it.
+  const facing = Math.atan2(headTip[2] - headBase[2], headTip[0] - headBase[0]);
+  const along = (f: number, lift = 0): [number, number, number] => [
+    headBase[0] + (headTip[0] - headBase[0]) * f,
+    headBase[1] + (headTip[1] - headBase[1]) * f + lift,
+    headBase[2] + (headTip[2] - headBase[2]) * f,
   ];
-  group.add(new THREE.Mesh(taperedTube(rise, [0.0095, 0.007], 18, 10), scales));
-  // The hood: a cobra's spread, flared and canted forward so it reads as
-  // a head turned toward the devotee rather than a leaf stuck to a neck.
-  // At the shoulder, not up by the ear: the hood rises from the coil.
-  const hoodY = collarY + 0.034;
-  const hood = new THREE.Group();
-  hood.position.set(hoodX, hoodY, zBias + 0.022);
-  hood.rotation.set(-0.25, -0.5, -0.18);
-  group.add(hood);
-  hood.add(
-    mesh(new THREE.SphereGeometry(0.0125, 20, 16), scales, {
-      // A cobra's spread is a spade: taller than it is wide, and thin.
-      scale: [1.15, 1.75, 0.34],
+  const facingGroup = (f: number, lift = 0): THREE.Group => {
+    const node = new THREE.Group();
+    node.position.set(...along(f, lift));
+    node.rotation.y = -facing;
+    group.add(node);
+    return node;
+  };
+
+  // The spread of the hood: two flattened lobes sweeping back from behind
+  // the skull, so it reads as loose skin rather than a plate.
+  const spread = facingGroup(-0.08, -0.001);
+  for (const side of [1, -1]) {
+    spread.add(
+      mesh(new THREE.SphereGeometry(0.0138, 16, 12), scales, {
+        position: [-0.003, 0.002, side * 0.0072],
+        rotation: [0, 0, side * 0.1],
+        scale: [0.95, 1.2, 0.4],
+      }),
+    );
+  }
+
+  // Eyes, set into the sides of the skull. At this scale a serpent's eye
+  // is a glint under a brow — anything larger reads as a toy.
+  const eyes = facingGroup(0.52, 0.0028);
+  for (const side of [1, -1]) {
+    eyes.add(
+      mesh(new THREE.SphereGeometry(0.0036, 10, 8), scales, {
+        position: [0, 0.0015, side * 0.0055],
+        scale: [1.35, 0.45, 0.9],
+      }),
+    );
+    eyes.add(
+      mesh(new THREE.SphereGeometry(0.0012, 8, 6), ctx.materials.fixed.eyeDark, {
+        position: [0.0006, -0.0004, side * 0.006],
+        scale: [1, 0.8, 0.8],
+      }),
+    );
+  }
+
+  // The pale throat, only where a snake actually shows it.
+  const throat = facingGroup(0.45, -0.0056);
+  throat.add(
+    mesh(new THREE.SphereGeometry(0.0054, 12, 10), belly, {
+      scale: [1.5, 0.36, 0.85],
     }),
   );
-  // The spectacle marking a cobra carries on the back of its hood — a
-  // thin pale band low on the spread, not a disc that reads as an eye.
-  for (const side of [1, -1]) {
-    hood.add(
-      mesh(new THREE.SphereGeometry(0.0034, 12, 10), belly, {
-        position: [side * 0.0052, -0.0125, 0.0028],
-        scale: [1.1, 0.5, 0.16],
-      }),
-    );
-  }
-  // Snout, brow and eyes.
-  // The snout comes forward from the top of the spread, where the head is.
-  hood.add(
-    mesh(new THREE.SphereGeometry(0.0062, 14, 12), scales, {
-      position: [0, 0.012, 0.006],
-      scale: [1, 0.9, 1.7],
-    }),
-  );
-  for (const side of [1, -1]) {
-    // A brow ridge over a small dark eye recessed beneath it: a snake
-    // watches, it does not stare.
-    hood.add(
-      mesh(new THREE.SphereGeometry(0.0024, 10, 8), scales, {
-        position: [side * 0.0044, 0.0158, 0.0055],
-        scale: [1.2, 0.55, 1.1],
-      }),
-    );
-    hood.add(
-      mesh(new THREE.SphereGeometry(0.0009, 8, 6), ctx.materials.fixed.eyeDark, {
-        position: [side * 0.0047, 0.0146, 0.0072],
-        scale: [1, 0.85, 0.7],
-      }),
-    );
-  }
   return group;
 };
 
@@ -681,7 +724,7 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
           [0, (butt + headBase) / 2, 0],
           [0, headBase, 0],
         ],
-        [0.0068, 0.0056],
+        [0.0086, 0.0072],
         16,
         10,
       ),
@@ -758,46 +801,49 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   const held = new THREE.Group();
   held.scale.setScalar(handFit(ctx.body));
   group.add(held);
-  // Hourglass body — two cones meeting at the gripped waist
+  // Hourglass body — two shallow drums meeting at the waist the fist
+  // closes on. Sized like the instrument it is: a span of a hand, not a
+  // shield, and narrow enough at the middle for fingers to meet round it.
   held.add(
     mesh(
       lathe([
-        [0.0245, -0.042],
-        [0.0285, -0.037],
-        [0.0095, -0.003],
-        [0.0095, 0.003],
-        [0.0285, 0.037],
-        [0.0245, 0.042],
+        [0.0185, -0.033],
+        [0.0225, -0.029],
+        [0.0062, -0.0025],
+        [0.0062, 0.0025],
+        [0.0225, 0.029],
+        [0.0185, 0.033],
       ]),
       wood,
     ),
   );
-  // Drum heads (hide membranes)
+  // Drum heads (hide membranes), slightly proud of the rim.
   for (const side of [1, -1]) {
     held.add(
-      mesh(new THREE.CylinderGeometry(0.0265, 0.0265, 0.004, 20), ctx.materials.fixed.ivory, {
-        position: [0, side * 0.041, 0],
+      mesh(new THREE.CylinderGeometry(0.0208, 0.0208, 0.0032, 20), ctx.materials.fixed.ivory, {
+        position: [0, side * 0.0325, 0],
       }),
     );
   }
   // Waist cord
   held.add(
-    mesh(new THREE.TorusGeometry(0.0105, 0.0026, 8, 20), metal, {
+    mesh(new THREE.TorusGeometry(0.0072, 0.0019, 8, 20), metal, {
       position: [0, 0, 0],
       rotation: [Math.PI / 2, 0, 0],
     }),
   );
-  // Striker cords with knots
+  // The two knotted strikers, hanging from the waist as cords do.
   for (const side of [1, -1]) {
+    const swing = side * 0.0165;
     held.add(
       new THREE.Mesh(
         taperedTube(
           [
-            [side * 0.01, 0, 0],
-            [side * 0.034, side * 0.014, 0.006],
-            [side * 0.046, side * 0.024, 0.01],
+            [side * 0.006, 0, 0.002],
+            [swing * 1.15, -0.012, 0.008],
+            [swing * 1.25, -0.026, 0.011],
           ],
-          [0.0014, 0.0012],
+          [0.0011, 0.0009],
           12,
           6,
         ),
@@ -805,8 +851,8 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
       ),
     );
     held.add(
-      mesh(new THREE.SphereGeometry(0.0042, 10, 8), metal, {
-        position: [side * 0.046, side * 0.024, 0.01],
+      mesh(new THREE.SphereGeometry(0.0031, 10, 8), metal, {
+        position: [swing * 1.25, -0.028, 0.011],
       }),
     );
   }
