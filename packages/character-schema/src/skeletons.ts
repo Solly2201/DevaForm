@@ -45,6 +45,13 @@ export interface SkeletonExtensions {
   trunk?: boolean;
   /** A second pair of arms, with their hand and wrist sockets. */
   backArms?: boolean;
+  /**
+   * Digits on every hand. The contract is common — one naming, one
+   * chirality, defined once in skeleton.ts — but it is instantiated only
+   * for a body whose mesh has fingers to deform. A procedural hand that
+   * is rebuilt per mudra would carry sixty joints it never uses.
+   */
+  fingers?: boolean;
 }
 
 export interface SkeletonDefinition {
@@ -95,6 +102,17 @@ export const GANESHA_SKELETON: SkeletonDefinition = defineSkeleton("ganesha", {
   trunk: true,
 });
 
+/** Every joint a hand of this skeleton has, for the grip/mudra solvers. */
+export function fingerJointIds(
+  skeleton: SkeletonDefinition,
+  slot: ArmSlot,
+): readonly JointId[] {
+  const prefix = `arm.${slot}.hand.`;
+  return skeleton.joints
+    .filter((joint) => joint.id.startsWith(prefix))
+    .map((joint) => joint.id);
+}
+
 // ---------------------------------------------------------------------------
 // Human-proportioned skeleton
 // ---------------------------------------------------------------------------
@@ -128,6 +146,38 @@ const HUMAN_JOINT_POSITIONS: Partial<Record<JointId, Vec3>> = {
   "leg.right.thigh": [-0.06121, -0.00683, -0.0057],
   "leg.right.shin": [0, -0.25867, 0],
   "leg.right.foot": [0, -0.246, 0],
+  // Left hand
+  "arm.frontLeft.hand.thumb.01": [0.01751, -0.01993, -0.00572],
+  "arm.frontLeft.hand.thumb.02": [0.01185, -0.01027, 0.00975],
+  "arm.frontLeft.hand.thumb.03": [0.01306, -0.0171, 0.00478],
+  "arm.frontLeft.hand.index.01": [0.02392, -0.05567, -0.02126],
+  "arm.frontLeft.hand.index.02": [0.00405, -0.01499, -0.00203],
+  "arm.frontLeft.hand.index.03": [0.00263, -0.01376, 0.001],
+  "arm.frontLeft.hand.middle.01": [0.00856, -0.05586, -0.02501],
+  "arm.frontLeft.hand.middle.02": [-0.00041, -0.02028, -0.00217],
+  "arm.frontLeft.hand.middle.03": [0.00051, -0.01638, 0.0002],
+  "arm.frontLeft.hand.ring.01": [-0.00352, -0.05365, -0.02501],
+  "arm.frontLeft.hand.ring.02": [-0.00337, -0.01745, -0.00253],
+  "arm.frontLeft.hand.ring.03": [-0.00169, -0.01484, -0.00025],
+  "arm.frontLeft.hand.little.01": [-0.01551, -0.05085, -0.02126],
+  "arm.frontLeft.hand.little.02": [-0.00376, -0.01231, -0.00074],
+  "arm.frontLeft.hand.little.03": [-0.00225, -0.00901, 0.00097],
+  // Right hand
+  "arm.frontRight.hand.thumb.01": [-0.01751, -0.01993, -0.00572],
+  "arm.frontRight.hand.thumb.02": [-0.01185, -0.01027, 0.00975],
+  "arm.frontRight.hand.thumb.03": [-0.01306, -0.0171, 0.00478],
+  "arm.frontRight.hand.index.01": [-0.02392, -0.05567, -0.02126],
+  "arm.frontRight.hand.index.02": [-0.00405, -0.01499, -0.00203],
+  "arm.frontRight.hand.index.03": [-0.00263, -0.01376, 0.001],
+  "arm.frontRight.hand.middle.01": [-0.00856, -0.05586, -0.02501],
+  "arm.frontRight.hand.middle.02": [0.00041, -0.02028, -0.00217],
+  "arm.frontRight.hand.middle.03": [-0.00051, -0.01638, 0.0002],
+  "arm.frontRight.hand.ring.01": [0.00352, -0.05365, -0.02501],
+  "arm.frontRight.hand.ring.02": [0.00337, -0.01745, -0.00253],
+  "arm.frontRight.hand.ring.03": [0.00169, -0.01484, -0.00025],
+  "arm.frontRight.hand.little.01": [0.01551, -0.05085, -0.02126],
+  "arm.frontRight.hand.little.02": [0.00376, -0.01231, -0.00074],
+  "arm.frontRight.hand.little.03": [0.00225, -0.00901, 0.00097],
 };
 
 /** Socket seats measured on the same mesh (the GLB refines them further). */
@@ -156,7 +206,7 @@ const HUMAN_SOCKET_POSITIONS: Partial<Record<SocketId, Vec3>> = {
  */
 export const HUMAN_SKELETON: SkeletonDefinition = defineSkeleton(
   "human",
-  {},
+  { fingers: true },
   { joints: HUMAN_JOINT_POSITIONS, sockets: HUMAN_SOCKET_POSITIONS },
 );
 

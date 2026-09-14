@@ -149,6 +149,11 @@ const SIDES = [
   { mh: "R", dev: "right", arm: "frontRight", sign: -1 },
 ];
 
+/**
+ * MakeHuman numbers its digits; DevaForm names them. finger1 is the thumb.
+ */
+const FINGER_NAMES = ["thumb", "index", "middle", "ring", "little"];
+
 /** Which DevaForm joint each MakeHuman bone's weights belong to. */
 function devaformGroup(bone) {
   const side = bone.endsWith(".L") ? SIDES[0] : bone.endsWith(".R") ? SIDES[1] : null;
@@ -164,7 +169,16 @@ function devaformGroup(bone) {
   if (/^(clavicle)$/.test(stem)) return "chest";
   if (/^(shoulder01|upperarm0[12])$/.test(stem)) return `arm.${side.arm}.upper`;
   if (/^lowerarm0[12]$/.test(stem)) return `arm.${side.arm}.forearm`;
-  if (/^(wrist|metacarpal[1-5]|finger[1-5]-[1-4])$/.test(stem)) return `arm.${side.arm}.hand`;
+  if (/^(wrist|metacarpal[1-5])$/.test(stem)) return `arm.${side.arm}.hand`;
+  // Digits are their own joints now. MakeHuman gives each finger four
+  // cubes — three segments and a tip — and the tip's weights belong to
+  // the segment it caps, because nothing is skinned to a point.
+  const digit = stem.match(/^finger([1-5])-([1-4])$/);
+  if (digit) {
+    const finger = FINGER_NAMES[Number(digit[1]) - 1];
+    const segment = Math.min(Number(digit[2]), 3);
+    return `arm.${side.arm}.hand.${finger}.0${segment}`;
+  }
   if (/^(pelvis|upperleg0[12])$/.test(stem)) return `leg.${side.dev}.thigh`;
   if (/^lowerleg0[12]$/.test(stem)) return `leg.${side.dev}.shin`;
   if (/^(foot|toe[1-5]-[1-3])$/.test(stem)) return `leg.${side.dev}.foot`;
@@ -267,6 +281,23 @@ function buildChains() {
       dir: new THREE.Vector3(0, -1, 0),
       secondary: new THREE.Vector3(0, 0, 1),
     });
+    // Digits: no reorientation. A finger inherits the hand's rotation and
+    // keeps the shape MakeHuman gave it, which is a relaxed open hand —
+    // exactly the rest pose the mudra and grip solvers want to work from.
+    for (const [index, finger] of FINGER_NAMES.entries()) {
+      for (let segment = 1; segment <= 3; segment += 1) {
+        chains.push({
+          joint: `arm.${side.arm}.hand.${finger}.0${segment}`,
+          mh: `${p}-finger-${index + 1}-${segment}`,
+          parent:
+            segment === 1
+              ? `arm.${side.arm}.hand`
+              : `arm.${side.arm}.hand.${finger}.0${segment - 1}`,
+          child: null,
+          dir: null,
+        });
+      }
+    }
     // Legs: straight down, feet forward.
     chains.push({
       joint: `leg.${side.dev}.thigh`,
@@ -643,6 +674,14 @@ for (const side of SIDES) {
   PARENT[`arm.${side.arm}.upper`] = "chest";
   PARENT[`arm.${side.arm}.forearm`] = `arm.${side.arm}.upper`;
   PARENT[`arm.${side.arm}.hand`] = `arm.${side.arm}.forearm`;
+  for (const finger of FINGER_NAMES) {
+    for (let segment = 1; segment <= 3; segment += 1) {
+      PARENT[`arm.${side.arm}.hand.${finger}.0${segment}`] =
+        segment === 1
+          ? `arm.${side.arm}.hand`
+          : `arm.${side.arm}.hand.${finger}.0${segment - 1}`;
+    }
+  }
   PARENT[`leg.${side.dev}.thigh`] = "pelvis";
   PARENT[`leg.${side.dev}.shin`] = `leg.${side.dev}.thigh`;
   PARENT[`leg.${side.dev}.foot`] = `leg.${side.dev}.shin`;

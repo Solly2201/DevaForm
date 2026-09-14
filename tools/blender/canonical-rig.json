@@ -196,6 +196,546 @@
       ]
     },
     {
+      "id": "arm.frontLeft.hand.thumb.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        0.026,
+        -0.03,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.thumb.02",
+      "parent": "arm.frontLeft.hand.thumb.01",
+      "position": [
+        0,
+        -0.026,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.thumb.03",
+      "parent": "arm.frontLeft.hand.thumb.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.index.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        0.021,
+        -0.058,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.index.02",
+      "parent": "arm.frontLeft.hand.index.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.index.03",
+      "parent": "arm.frontLeft.hand.index.02",
+      "position": [
+        0,
+        -0.019,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.middle.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.middle.02",
+      "parent": "arm.frontLeft.hand.middle.01",
+      "position": [
+        0,
+        -0.034,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.middle.03",
+      "parent": "arm.frontLeft.hand.middle.02",
+      "position": [
+        0,
+        -0.021,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.ring.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        -0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.ring.02",
+      "parent": "arm.frontLeft.hand.ring.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.ring.03",
+      "parent": "arm.frontLeft.hand.ring.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.little.01",
+      "parent": "arm.frontLeft.hand",
+      "position": [
+        -0.021,
+        -0.057,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.little.02",
+      "parent": "arm.frontLeft.hand.little.01",
+      "position": [
+        0,
+        -0.025,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontLeft.hand.little.03",
+      "parent": "arm.frontLeft.hand.little.02",
+      "position": [
+        0,
+        -0.015,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.thumb.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        -0.026,
+        -0.03,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.thumb.02",
+      "parent": "arm.frontRight.hand.thumb.01",
+      "position": [
+        0,
+        -0.026,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.thumb.03",
+      "parent": "arm.frontRight.hand.thumb.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.index.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        -0.021,
+        -0.058,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.index.02",
+      "parent": "arm.frontRight.hand.index.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.index.03",
+      "parent": "arm.frontRight.hand.index.02",
+      "position": [
+        0,
+        -0.019,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.middle.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        -0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.middle.02",
+      "parent": "arm.frontRight.hand.middle.01",
+      "position": [
+        0,
+        -0.034,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.middle.03",
+      "parent": "arm.frontRight.hand.middle.02",
+      "position": [
+        0,
+        -0.021,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.ring.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.ring.02",
+      "parent": "arm.frontRight.hand.ring.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.ring.03",
+      "parent": "arm.frontRight.hand.ring.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.little.01",
+      "parent": "arm.frontRight.hand",
+      "position": [
+        0.021,
+        -0.057,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.little.02",
+      "parent": "arm.frontRight.hand.little.01",
+      "position": [
+        0,
+        -0.025,
+        0
+      ]
+    },
+    {
+      "id": "arm.frontRight.hand.little.03",
+      "parent": "arm.frontRight.hand.little.02",
+      "position": [
+        0,
+        -0.015,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.thumb.01",
+      "parent": "arm.backLeft.hand",
+      "position": [
+        0.026,
+        -0.03,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.thumb.02",
+      "parent": "arm.backLeft.hand.thumb.01",
+      "position": [
+        0,
+        -0.026,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.thumb.03",
+      "parent": "arm.backLeft.hand.thumb.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.index.01",
+      "parent": "arm.backLeft.hand",
+      "position": [
+        0.021,
+        -0.058,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.index.02",
+      "parent": "arm.backLeft.hand.index.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.index.03",
+      "parent": "arm.backLeft.hand.index.02",
+      "position": [
+        0,
+        -0.019,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.middle.01",
+      "parent": "arm.backLeft.hand",
+      "position": [
+        0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.middle.02",
+      "parent": "arm.backLeft.hand.middle.01",
+      "position": [
+        0,
+        -0.034,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.middle.03",
+      "parent": "arm.backLeft.hand.middle.02",
+      "position": [
+        0,
+        -0.021,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.ring.01",
+      "parent": "arm.backLeft.hand",
+      "position": [
+        -0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.ring.02",
+      "parent": "arm.backLeft.hand.ring.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.ring.03",
+      "parent": "arm.backLeft.hand.ring.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.little.01",
+      "parent": "arm.backLeft.hand",
+      "position": [
+        -0.021,
+        -0.057,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.little.02",
+      "parent": "arm.backLeft.hand.little.01",
+      "position": [
+        0,
+        -0.025,
+        0
+      ]
+    },
+    {
+      "id": "arm.backLeft.hand.little.03",
+      "parent": "arm.backLeft.hand.little.02",
+      "position": [
+        0,
+        -0.015,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.thumb.01",
+      "parent": "arm.backRight.hand",
+      "position": [
+        -0.026,
+        -0.03,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.thumb.02",
+      "parent": "arm.backRight.hand.thumb.01",
+      "position": [
+        0,
+        -0.026,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.thumb.03",
+      "parent": "arm.backRight.hand.thumb.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.index.01",
+      "parent": "arm.backRight.hand",
+      "position": [
+        -0.021,
+        -0.058,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.index.02",
+      "parent": "arm.backRight.hand.index.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.index.03",
+      "parent": "arm.backRight.hand.index.02",
+      "position": [
+        0,
+        -0.019,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.middle.01",
+      "parent": "arm.backRight.hand",
+      "position": [
+        -0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.middle.02",
+      "parent": "arm.backRight.hand.middle.01",
+      "position": [
+        0,
+        -0.034,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.middle.03",
+      "parent": "arm.backRight.hand.middle.02",
+      "position": [
+        0,
+        -0.021,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.ring.01",
+      "parent": "arm.backRight.hand",
+      "position": [
+        0.007,
+        -0.062,
+        0.008
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.ring.02",
+      "parent": "arm.backRight.hand.ring.01",
+      "position": [
+        0,
+        -0.031,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.ring.03",
+      "parent": "arm.backRight.hand.ring.02",
+      "position": [
+        0,
+        -0.02,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.little.01",
+      "parent": "arm.backRight.hand",
+      "position": [
+        0.021,
+        -0.057,
+        0.006
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.little.02",
+      "parent": "arm.backRight.hand.little.01",
+      "position": [
+        0,
+        -0.025,
+        0
+      ]
+    },
+    {
+      "id": "arm.backRight.hand.little.03",
+      "parent": "arm.backRight.hand.little.02",
+      "position": [
+        0,
+        -0.015,
+        0
+      ]
+    },
+    {
       "id": "leg.left.thigh",
       "parent": "pelvis",
       "position": [
@@ -652,6 +1192,36 @@
         "arm.frontRight.upper",
         "arm.frontRight.forearm",
         "arm.frontRight.hand",
+        "arm.frontLeft.hand.thumb.01",
+        "arm.frontLeft.hand.thumb.02",
+        "arm.frontLeft.hand.thumb.03",
+        "arm.frontLeft.hand.index.01",
+        "arm.frontLeft.hand.index.02",
+        "arm.frontLeft.hand.index.03",
+        "arm.frontLeft.hand.middle.01",
+        "arm.frontLeft.hand.middle.02",
+        "arm.frontLeft.hand.middle.03",
+        "arm.frontLeft.hand.ring.01",
+        "arm.frontLeft.hand.ring.02",
+        "arm.frontLeft.hand.ring.03",
+        "arm.frontLeft.hand.little.01",
+        "arm.frontLeft.hand.little.02",
+        "arm.frontLeft.hand.little.03",
+        "arm.frontRight.hand.thumb.01",
+        "arm.frontRight.hand.thumb.02",
+        "arm.frontRight.hand.thumb.03",
+        "arm.frontRight.hand.index.01",
+        "arm.frontRight.hand.index.02",
+        "arm.frontRight.hand.index.03",
+        "arm.frontRight.hand.middle.01",
+        "arm.frontRight.hand.middle.02",
+        "arm.frontRight.hand.middle.03",
+        "arm.frontRight.hand.ring.01",
+        "arm.frontRight.hand.ring.02",
+        "arm.frontRight.hand.ring.03",
+        "arm.frontRight.hand.little.01",
+        "arm.frontRight.hand.little.02",
+        "arm.frontRight.hand.little.03",
         "leg.left.thigh",
         "leg.left.shin",
         "leg.left.foot",
@@ -679,7 +1249,9 @@
         "frontLeft",
         "frontRight"
       ],
-      "extensions": {}
+      "extensions": {
+        "fingers": true
+      }
     }
   },
   "materialZones": [
