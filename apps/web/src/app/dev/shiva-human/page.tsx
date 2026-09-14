@@ -74,6 +74,8 @@ function humanShiva(preset: string, morphs: Record<string, number>): CharacterCo
       ...base.parts,
       body: { assetId: HUMAN_BODY, version: 1 },
       lowerGarment: { assetId: HIDE_WRAP, version: 1 },
+      // The reference shows a mane, not a topknot alone.
+      hair: { assetId: "shiva.jata.flowing", version: 1 },
     },
     // The ash marks are their own ornament here: the procedural head
     // drew them, and this body has no procedural head.
