@@ -68,6 +68,13 @@ export function isFixedMaterialKey(value: string): value is FixedMaterialKey {
 export class ZoneMaterials {
   readonly zones: Record<MaterialZone, THREE.MeshPhysicalMaterial>;
   readonly fixed: Record<FixedMaterialKey, THREE.MeshPhysicalMaterial>;
+  /**
+   * Zone materials that read per-vertex colour as a multiplier. A hide has
+   * markings, and a statue's markings are geometry-free: the generator
+   * paints them into the mesh's colour attribute, and this material lets
+   * them tint the zone colour the customer chose instead of replacing it.
+   */
+  private readonly patterned = new Map<MaterialZone, THREE.MeshPhysicalMaterial>();
 
   constructor() {
     this.zones = Object.fromEntries(
@@ -95,6 +102,39 @@ export class ZoneMaterials {
     return this.zones[zone];
   }
 
+  /**
+   * The same zone, rendering its mesh's vertex colours on top. Meshes that
+   * ask for this MUST carry a colour attribute, or they render black.
+   */
+  getPatterned(zone: MaterialZone): THREE.MeshPhysicalMaterial {
+    let material = this.patterned.get(zone);
+    if (!material) {
+      material = this.zones[zone].clone();
+      material.name = `zone:${zone}`;
+      material.vertexColors = true;
+      // Cloth is a surface, not a solid: the inside of a hem is visible.
+      material.side = THREE.DoubleSide;
+      this.patterned.set(zone, material);
+      this.syncPatterned(zone);
+    }
+    return material;
+  }
+
+  private syncPatterned(zone: MaterialZone): void {
+    const patterned = this.patterned.get(zone);
+    if (!patterned) return;
+    const source = this.zones[zone];
+    patterned.color.copy(source.color);
+    patterned.roughness = source.roughness;
+    patterned.metalness = source.metalness;
+    patterned.clearcoat = source.clearcoat;
+    patterned.clearcoatRoughness = source.clearcoatRoughness;
+    patterned.envMapIntensity = source.envMapIntensity;
+    patterned.sheen = source.sheen;
+    patterned.sheenColor.copy(source.sheenColor);
+    patterned.sheenRoughness = source.sheenRoughness;
+  }
+
   applyConfiguration(materials: MaterialsConfiguration): void {
     for (const zone of MATERIAL_ZONES) {
       const target = this.zones[zone];
@@ -111,11 +151,14 @@ export class ZoneMaterials {
         target.sheenColor.set(color);
         target.sheenRoughness = 0.55;
       }
+      this.syncPatterned(zone);
     }
   }
 
   dispose(): void {
     for (const material of Object.values(this.zones)) material.dispose();
     for (const material of Object.values(this.fixed)) material.dispose();
+    for (const material of this.patterned.values()) material.dispose();
+    this.patterned.clear();
   }
 }

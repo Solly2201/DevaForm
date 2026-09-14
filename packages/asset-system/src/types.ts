@@ -154,6 +154,15 @@ export interface MeasuredBodySurfaces {
   /** Cranium the hair and crown must fit, head-joint-local. */
   headCenterY: number;
   headRadius: number;
+  /** The leg a wrapped garment has to follow, joint to joint. */
+  thighTopRadius: number;
+  thighMidRadius: number;
+  kneeRadius: number;
+  calfRadius: number;
+  thighLength: number;
+  shinLength: number;
+  legSpreadX: number;
+  thighSeatY: number;
 }
 
 /** A body asset's measured surfaces, plus how each morph target moves them. */

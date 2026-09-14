@@ -36,6 +36,7 @@ import { applyMorphInfluences } from "@/engine/skinning";
 import { morphInfluences } from "@/engine/morphs";
 
 const HUMAN_BODY = "humanoid.body.human";
+const HIDE_WRAP = "humanoid.garment.hideWrap";
 /** The build this candidate is judged at — heroic frame, ascetic spare. */
 const SHIVA_MORPHS = {
   bodyPowerful: 0.35,
@@ -68,7 +69,11 @@ function humanShiva(preset: string, morphs: Record<string, number>): CharacterCo
   const base = createDefaultShivaConfiguration();
   return {
     ...base,
-    parts: { ...base.parts, body: { assetId: HUMAN_BODY, version: 1 } },
+    parts: {
+      ...base.parts,
+      body: { assetId: HUMAN_BODY, version: 1 },
+      lowerGarment: { assetId: HIDE_WRAP, version: 1 },
+    },
     pose: { preset, jointOverrides: {} },
     morphs,
   };
