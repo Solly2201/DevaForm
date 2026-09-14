@@ -11,10 +11,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CharacterConfiguration } from "@devaform/character-schema";
 import { getLightingPreset } from "./lighting";
 import { ZoneMaterials } from "./materials";
-import { buildRig, disposeRig, poseRig } from "./rig";
-import { resolveAssetRef } from "@devaform/asset-system";
+import { buildRig, disposeRig, poseRig, rigMorphInfluences } from "./rig";
 import { applyMorphInfluences } from "./skinning";
-import { morphInfluences } from "./morphs";
 import { SceneEnvironment } from "./SceneEnvironment";
 import { subscribeGlbCache } from "./glbCache";
 
@@ -29,10 +27,7 @@ function StaticCharacter({ config }: { config: CharacterConfiguration }) {
   const rig = useMemo(() => {
     const built = buildRig(config, materials);
     materials.applyConfiguration(config.materials);
-    applyMorphInfluences(
-      built.root,
-      morphInfluences(config.morphs, config.hands, resolveAssetRef(config.parts.body)),
-    );
+    applyMorphInfluences(built.root, rigMorphInfluences(built, config.morphs));
     poseRig(built);
     return built;
     // eslint-disable-next-line react-hooks/exhaustive-deps

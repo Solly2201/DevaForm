@@ -1201,6 +1201,95 @@ for (const side of SIDES) {
 }
 
 /**
+ * How wide a hole this hand leaves at each stage of closing.
+ *
+ * A hand closes until it meets what it is holding and then stops. The
+ * curl shipped as a morph target is a FIXED pose, so without this the
+ * engine could only dial it to a fixed amount and every fist came out the
+ * same diameter — which is why fingers met a drum head as readily as a
+ * staff's shaft, and why the build script used to carry that as a known
+ * defect.
+ *
+ * So the aperture is measured: the morph is applied at a series of
+ * influences, and at each one the narrowest the fist gets around its own
+ * grip axis is recorded. The engine then dials the influence that matches
+ * the radius the held item declares — no per-item fudging, and nothing
+ * assumed about a hand it has not measured.
+ *
+ * The axis is the one the grip chain already uses (the thumb axis through
+ * the grip point) and the window along it is the width of a palm, so the
+ * measurement is of the tube a fist makes rather than of a fingertip that
+ * happens to stray near the line.
+ */
+function gripAperture(prefix, slot, curled) {
+  const neutral = finalMesh.neutral;
+  const axis = new THREE.Vector3(...thumbAxes[slot]).normalize();
+  // Both the socket and the axis are in the hand's own frame; the mesh is
+  // in the character's. Carry the socket back out to compare with it.
+  const origin = restFinal
+    .get(`arm.${slot}.hand`)
+    .clone()
+    .add(
+      sockets[`arm.${slot}.hand.item`]
+        .clone()
+        .applyQuaternion(rotation.get(`arm.${slot}.hand`).clone().invert()),
+    );
+  const worldAxis = axis
+    .clone()
+    .applyQuaternion(rotation.get(`arm.${slot}.hand`).clone().invert())
+    .normalize();
+
+  // Only the flesh that closes: every finger segment of this hand.
+  const closing = new Set();
+  for (const finger of [1, 2, 3, 4, 5]) {
+    for (const segment of [1, 2, 3]) {
+      const bone = rigWeights[`finger${finger}-${segment}.${prefix === "l" ? "L" : "R"}`];
+      for (const [baseIndex, weight] of bone ?? []) {
+        if (weight <= 0.25) continue;
+        const vertex = inverseParentMap[baseIndex];
+        if (vertex >= 0) closing.add(vertex);
+      }
+    }
+  }
+
+  /** Half the width of a palm, along the axis: the length of the tube. */
+  const WINDOW = 0.035;
+  const point = new THREE.Vector3();
+  const offset = new THREE.Vector3();
+  const measureAt = (influence) => {
+    let narrowest = Infinity;
+    for (const vertex of closing) {
+      const i = vertex * 3;
+      point.set(
+        neutral[i] + (curled[i] - neutral[i]) * influence,
+        neutral[i + 1] + (curled[i + 1] - neutral[i + 1]) * influence,
+        neutral[i + 2] + (curled[i + 2] - neutral[i + 2]) * influence,
+      );
+      offset.copy(point).sub(origin);
+      const along = offset.dot(worldAxis);
+      if (Math.abs(along) > WINDOW) continue;
+      narrowest = Math.min(narrowest, offset.addScaledVector(worldAxis, -along).length());
+    }
+    return Number.isFinite(narrowest) ? Number(narrowest.toFixed(5)) : 0;
+  };
+
+  const curve = [];
+  for (let step = 0; step <= 8; step += 1) {
+    const influence = step / 8;
+    curve.push([Number(influence.toFixed(3)), measureAt(influence)]);
+  }
+  return curve;
+}
+
+const gripApertures = {};
+for (const side of SIDES) {
+  const prefix = side.mh === "L" ? "l" : "r";
+  const name = `grip${side.arm[0].toUpperCase()}${side.arm.slice(1)}`;
+  if (!finalGrips[name]) continue;
+  gripApertures[side.arm] = gripAperture(prefix, side.arm, finalGrips[name]);
+}
+
+/**
  * The BodyProfile block the engine consumes, in the exact local spaces its
  * generators expect: belly relative to the spine joint, chest relative to
  * the chest joint, collar seat relative to the necklace socket. Everything
@@ -1438,6 +1527,7 @@ await writeFile(
       forwardAxis: "+Z",
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
+      gripApertures,
       torsoSurface: torsoSurfaceMap(finalMesh.neutral),
       printability: { printSourceAvailable: false },
     },
@@ -1479,6 +1569,7 @@ await writeFile(
       morphTargets: morphTargetNames,
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
+      gripApertures,
       torsoSurface: torsoSurfaceMap(finalMesh.neutral),
     },
     null,

@@ -24,10 +24,14 @@ import {
 } from "@devaform/character-schema";
 import { subscribeGlbCache } from "@/engine/glbCache";
 import { ZoneMaterials } from "@/engine/materials";
-import { buildRig, disposeRig, poseRig, type CharacterRig } from "@/engine/rig";
-import { resolveAssetRef } from "@devaform/asset-system";
+import {
+  buildRig,
+  disposeRig,
+  poseRig,
+  rigMorphInfluences,
+  type CharacterRig,
+} from "@/engine/rig";
 import { applyMorphInfluences } from "@/engine/skinning";
-import { morphInfluences } from "@/engine/morphs";
 
 const HUMAN_BODY = "humanoid.body.human";
 const HIDE_WRAP = "humanoid.garment.hideWrap";
@@ -135,10 +139,7 @@ function Statue({
 
   useEffect(() => {
     poseRig(rig);
-    applyMorphInfluences(
-      rig.root,
-      morphInfluences(config.morphs, config.hands, resolveAssetRef(config.parts.body)),
-    );
+    applyMorphInfluences(rig.root, rigMorphInfluences(rig, config.morphs));
     const box = new THREE.Box3().setFromObject(rig.root);
     let triangles = 0;
     rig.root.traverse((object) => {

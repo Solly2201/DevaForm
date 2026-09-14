@@ -58,6 +58,7 @@ import {
   collectSkinnedMeshes,
   socketNameToSocketId,
 } from "./skinning";
+import { morphInfluences } from "./morphs";
 import type { ZoneMaterials } from "./materials";
 import {
   applyGestureOrientations,
@@ -121,6 +122,10 @@ export interface CharacterRig {
    * measured from a mesh body, or derived from a procedural one.
    */
   body: BodyProfile;
+  /** The body this rig was built on, when one was selected. */
+  bodyAsset: AssetDefinition | undefined;
+  /** What each hand is closing on — the radius it must close onto. */
+  heldByHand: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>;
   /** Assets that failed to resolve or are still loading (not fatal). */
   warnings: string[];
   /**
@@ -130,6 +135,20 @@ export interface CharacterRig {
    * hundred copies of the same sentence.
    */
   poseWarnings: string[];
+}
+
+/**
+ * Every morph influence this rig should carry: the customer's, plus the
+ * ones its own state implies. Exposed so the in-place update path cannot
+ * drift from what buildRig applied — four call sites used to assemble
+ * this by hand, and a hand closing onto what it holds would have reached
+ * only whichever of them remembered.
+ */
+export function rigMorphInfluences(
+  rig: CharacterRig,
+  configured: Readonly<Record<string, number>>,
+): Record<string, number> {
+  return morphInfluences(configured, rig.hands, rig.bodyAsset, rig.heldByHand);
 }
 
 /** Everything worth telling the developer about this rig, right now. */
@@ -416,7 +435,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // What each hand will be closing on, known before any geometry exists —
   // so a hand can be BUILT around what it holds rather than closed to a
   // fixed diameter and hoped for.
-  const heldByHand: Partial<Record<string, HeldItemSpec>> = {};
+  const heldByHand: Partial<Record<ArmSlot, HeldItemSpec>> = {};
   for (const attachment of resolved.attachments) {
     if (!attachment.handSlot) continue;
     heldByHand[attachment.handSlot] = {
@@ -640,7 +659,12 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
   // Morph weights for assets that expose morph targets (GLB/skinned).
   // Procedural generators consumed the same weights parametrically above.
-  applyMorphInfluences(root, config.morphs);
+  // The customer's weights are not all of them: a modelled hand closes by
+  // deformation, onto the radius the thing it holds declares.
+  applyMorphInfluences(
+    root,
+    morphInfluences(config.morphs, hands, bodyAsset, heldByHand),
+  );
 
   // What the resolver could not honour is a rig warning too — one list,
   // so nothing is reported in a place nobody reads.
@@ -658,6 +682,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     hands,
     held,
     body: bodyProfile,
+    bodyAsset,
+    heldByHand,
     warnings,
     poseWarnings: [],
   };
