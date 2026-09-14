@@ -33,7 +33,7 @@ if (typeof globalThis.FileReader === "undefined") {
   };
 }
 
-const OUT_DIR = path.resolve("public/assets/ganesha/head/classic-sculpt/1");
+const OUT_DIR = path.resolve("public/assets/foundations/heads/ganesha-sculpted/1");
 // 120 keeps every sculpted feature (smallest: 5.5 mm mouth crease vs 3.2 mm
 // cells) while staying browser-friendly; final decimation to the 20k artist
 // budget belongs to the Blender pass (see docs/production-asset-pipeline.md).

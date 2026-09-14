@@ -36,7 +36,7 @@ if (typeof globalThis.FileReader === "undefined") {
 }
 
 const EXPORTS = path.resolve("../../tools/humanbase/exports");
-const OUT_DIR = path.resolve("public/assets/humanoid/body/human/1");
+const OUT_DIR = path.resolve("public/assets/foundations/bodies/human/1");
 const MEASURE_OUT = path.resolve("../../tools/humanbase/measurements.json");
 
 const VARIANTS = ["neutral", "lean", "athletic", "powerful", "heroic", "divine", "ascetic"];

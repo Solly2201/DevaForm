@@ -34,7 +34,7 @@ if (typeof globalThis.FileReader === "undefined") {
   };
 }
 
-const OUT_DIR = path.resolve("public/assets/ganesha/companion/mushak/1");
+const OUT_DIR = path.resolve("public/assets/companions/ganesha-mushak/1");
 
 function mesh(geometry, material, { position, rotation, scale } = {}) {
   const m = new THREE.Mesh(geometry, material);

@@ -21,7 +21,7 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "part", slot: "body" },
     deityCompatibility: [],
     stage: "experimental",
-    source: { kind: "glb", path: "/assets/humanoid/body/human/1/model.glb" },
+    source: { kind: "glb", path: "/assets/foundations/bodies/human/1/model.glb" },
     skeleton: "human",
     provenance: {
       type: "imported",

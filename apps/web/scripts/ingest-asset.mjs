@@ -5,8 +5,13 @@
  * it to the DevaForm contract, writes it into the versioned dataset layout
  * and emits the sidecar + a ready-to-commit manifest entry:
  *
- *   public/assets/<deity>/<category>/<name>/<version>/
+ *   public/assets/<area>/<name>/<version>/
  *     model.glb  asset.json  manifest-entry.ts.txt
+ *
+ * The area comes from WHAT THE ASSET IS — see lib/layout.mjs. It used to
+ * come from splitting the asset id on dots, which made the filesystem a
+ * projection of identity: a shared human body had nowhere to live that
+ * was not some deity's folder.
  *
  * Normalization (baked into geometry, transforms reset):
  *   --z-up            rotate a Z-up asset to Y-up
@@ -31,6 +36,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { glbStats, parseGlbJson } from "./lib/glb.mjs";
+import { storageDir } from "./lib/layout.mjs";
 
 if (typeof globalThis.FileReader === "undefined") {
   globalThis.FileReader = class FileReader {
@@ -125,9 +131,11 @@ if (offsetFlag && (offsetFlag.length !== 3 || offsetFlag.some(Number.isNaN))) {
 const recenter = flag("recenter") ?? (isPart ? "none" : "base");
 const sourceType = flag("source") ?? "imported";
 
-const outDir = path.resolve("public", "assets", deity, category, assetName, String(version));
+const kind = isPart ? { type: "part", slot } : { type: "attachment", sockets };
+const storage = storageDir(id, kind, version);
+const outDir = path.resolve("public", "assets", ...storage.split("/"));
 const modelOut = path.join(outDir, "model.glb");
-const publicPath = `/assets/${deity}/${category}/${assetName}/${version}/model.glb`;
+const publicPath = `/assets/${storage}/model.glb`;
 
 // ---------------------------------------------------------------------------
 // Load
@@ -369,7 +377,7 @@ const sidecar = {
   name,
   deity,
   category,
-  kind: isPart ? { type: "part", slot } : { type: "attachment", sockets },
+  kind,
   stage,
   provenance,
   model: "model.glb",
@@ -392,7 +400,7 @@ const manifestEntry = `  {
     deityCompatibility: ["${deity}"],
     stage: "${stage}",
     source: { kind: "glb", path: "${publicPath}" },
-    thumbnail: "/assets/${deity}/${category}/${assetName}/${version}/thumbnail.png",
+    thumbnail: "/assets/${storage}/thumbnail.png",
     provenance: ${JSON.stringify(provenance)},
     ${Object.keys(geometryMeta).length ? `geometry: ${JSON.stringify(geometryMeta)},` : ""}
     materialZones: [${materialZones.map((z) => `"${z}"`).join(", ")}],

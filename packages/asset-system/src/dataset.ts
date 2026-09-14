@@ -1,9 +1,11 @@
 /**
  * Asset dataset sidecar contract.
  *
- * Every GLB asset lives in a versioned dataset directory:
+ * Every GLB asset lives in a versioned dataset directory, filed by what
+ * the asset IS rather than by who uses it (see public/assets/README.md
+ * and scripts/lib/layout.mjs):
  *
- *   public/assets/<deity>/<category>/<name>/<version>/
+ *   public/assets/<area>/<name>/<version>/
  *     model.glb
  *     asset.json      ← this schema
  *     thumbnail.png   (generated)
