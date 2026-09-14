@@ -6,8 +6,8 @@
  *    deity, through generic pose semantics.
  * 2. Earrings originate at the ear sockets their owner part refined —
  *    for Ganesha (ears part) and Shiva (head part) alike.
- * 3. The naga torque wraps the MEASURED neck radius (BodyProfile), so its
- *    coil tracks body proportions instead of one hardcoded neck.
+ * 3. The naga is a walk over the body's OWN surface: it scales with the
+ *    figure and its coil stays outside the skin while lying against it.
  * 4. The kamarband wraps the dressed waist (hips/belly/garment), never
  *    disappearing inside the dhoti.
  * 5. Generic engine modules contain no deity string literals.
@@ -262,31 +262,91 @@ describe("earrings hang from refined ear sockets", () => {
   });
 });
 
-describe("naga torque wraps the measured neck", () => {
-  const nagaWidth = (bulk: number): number => {
+describe("naga lies on the body it is worn by", () => {
+  const nagaConfig = (bulk: number): CharacterConfiguration => {
     const config = createDefaultShivaConfiguration();
     config.proportions.bulk = bulk;
     config.attachments = [
       ...config.attachments.filter((a) => a.socket !== "chest.necklace"),
       { socket: "chest.necklace", asset: { assetId: "shiva.ornament.naga", version: 1 } },
     ];
-    const box = bboxOf(config, "attachment:shiva.ornament.naga");
+    return config;
+  };
+  const nagaWidth = (bulk: number): number => {
+    const box = bboxOf(nagaConfig(bulk), "attachment:shiva.ornament.naga");
     expect(box).not.toBeNull();
     return box!.max.x - box!.min.x;
   };
 
-  it("coil width tracks the body's neck radius", () => {
+  it("scales with the body it is worn by", () => {
     const slim = nagaWidth(0.8);
     const broad = nagaWidth(1.3);
     expect(broad).toBeGreaterThan(slim + 0.02);
-    // And stays a collar, not a floating hoop: bounded by neck + hood.
-    const profile = deriveBodyProfile(
-      { form: "athletic", chest: 1, waist: 1, shoulder: 1 },
-      { height: 1, bulk: 1 },
-    );
-    const width = nagaWidth(1);
-    expect(width).toBeGreaterThan(2 * profile.neckRadius);
-    expect(width).toBeLessThan(2 * profile.neckRadius + 0.09);
+  });
+
+  /**
+   * The serpent is authored as a walk over the body's own surface, so the
+   * guarantee is a CLEARANCE, not a bounding box: every part of the coil
+   * that lies against the figure is outside the skin and close to it.
+   *
+   * This is what a bounding-box test could never say. A coil can have
+   * exactly the right width and still run through the sternum.
+   */
+  it("keeps its coil outside the skin, and against it", () => {
+    const rig = buildRig(nagaConfig(1), new ZoneMaterials());
+    applyPose(rig.joints, nagaConfig(1).pose);
+    rig.root.updateWorldMatrix(true, true);
+    let naga: THREE.Object3D | null = null;
+    rig.root.traverse((o) => {
+      if (o.name === "attachment:shiva.ornament.naga") naga = o;
+    });
+    expect(naga).not.toBeNull();
+    const socket = (naga as unknown as THREE.Object3D).parent!;
+    socket.updateWorldMatrix(true, false);
+    const toSocket = new THREE.Matrix4().copy(socket.matrixWorld).invert();
+
+    const body = rig.body;
+    let inside = 0;
+    let against = 0;
+    let total = 0;
+    const p = new THREE.Vector3();
+    (naga as unknown as THREE.Object3D).traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      m.updateWorldMatrix(true, false);
+      const local = new THREE.Matrix4().multiplyMatrices(toSocket, m.matrixWorld);
+      const pos = m.geometry.getAttribute("position");
+      for (let i = 0; i < pos.count; i += 7) {
+        p.fromBufferAttribute(pos, i).applyMatrix4(local);
+        // Socket space -> the chest-joint space the surface answers in.
+        const y = p.y + body.necklaceSocketY;
+        const z = p.z + body.necklaceSocketZ;
+        total += 1;
+        // The reared hood stands off the shoulder on purpose; only the
+        // part of the serpent lying along the figure is being judged.
+        if (y > body.necklaceSocketY + 0.06) continue;
+        // The slice of the body at this height. It is an ellipse, not a
+        // circle, so "how far out is this point" has to be asked in the
+        // slice's own terms — comparing bare radii puts a point above the
+        // sternum next to a measurement taken at the shoulder.
+        const front = body.surfaceAt(0, y);
+        const back = body.surfaceAt(Math.PI, y);
+        const halfWidth = Math.max(1e-4, body.surfaceAt(Math.PI / 2, y).x);
+        const centreZ = (front.z + back.z) / 2;
+        const halfDepth = Math.max(1e-4, front.z - centreZ);
+        const out = Math.hypot(p.x / halfWidth, (z - centreZ) / halfDepth);
+        // Back into metres, along the smaller of the two radii, so the
+        // figure quoted is never flattering.
+        const gap = (out - 1) * Math.min(halfWidth, halfDepth);
+        if (gap < -0.004) inside += 1;
+        else if (gap < 0.05) against += 1;
+      }
+    });
+    expect(total).toBeGreaterThan(50);
+    // Nothing of consequence buried in the chest...
+    expect(inside / total).toBeLessThan(0.02);
+    // ...and the coil is a coil, not a hoop floating clear of the body.
+    expect(against / total).toBeGreaterThan(0.5);
   });
 });
 

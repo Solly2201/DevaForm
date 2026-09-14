@@ -169,24 +169,28 @@ export interface MeasuredBodySurfaces {
 }
 
 /**
- * The front of the torso, measured off the mesh as a height field in the
- * chest joint's space: `depth[row * columns + col]` is the frontmost z at
- * that grid point.
+ * The torso and neck measured all the way round, in the chest joint's
+ * space: a stack of horizontal slices, each with its own centre, each
+ * sampled on a ring of bearings.
  *
- * An ellipsoid fitted to a torso is a fair description of its volume and a
- * poor description of its surface — it under-reports wherever the real
- * body is flatter or broader than the fit, and anything laid on that
- * answer sinks into the mesh. Bodies that can measure themselves ship this
- * instead, and everything that drapes on the chest asks it.
+ * `centreZ[row]` is that slice's own centre — a neck does not sit above
+ * the middle of a chest — and `radius[row * columns + col]` is how far the
+ * skin lies from it on that bearing, measured from the front (+Z) turning
+ * toward the figure's left.
+ *
+ * Ornaments do not merely rest on the front of a body, they wrap it: a
+ * serpent goes round a neck, a thread crosses a shoulder, a sash passes
+ * behind a waist. None of those can be placed against an ellipsoid fitted
+ * to the torso — it under-reports the surface wherever the real body is
+ * flatter or broader, and stops answering entirely beyond its own extent.
  */
-export interface MeasuredTorsoFront {
-  minX: number;
-  maxX: number;
+export interface MeasuredTorsoSurface {
   minY: number;
   maxY: number;
   rows: number;
   columns: number;
-  depth: readonly number[];
+  centreZ: readonly number[];
+  radius: readonly number[];
 }
 
 /** A body asset's measured surfaces, plus how each morph target moves them. */
@@ -298,8 +302,8 @@ export interface AssetDefinition {
    * not, so no single constant reaches the thumb on both sides.
    */
   thumbAxes?: Readonly<Record<string, readonly [number, number, number]>>;
-  /** Body-slot assets: the measured front of this mesh's torso. */
-  torsoFront?: MeasuredTorsoFront;
+  /** Body-slot assets: this mesh's torso and neck, measured all round. */
+  torsoSurface?: MeasuredTorsoSurface;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
   /** Categorization for the editor UI. */
