@@ -92,6 +92,14 @@ export interface BodyProfile {
   legSpreadX: number;
   /** Pelvis-local height of the hip joints — where the legs begin. */
   thighSeatY: number;
+  /**
+   * Where the necklace socket sits relative to the chest joint on THIS
+   * body. Collars are drawn in socket space and fitted to the torso in
+   * chest space; without this the two spaces are assumed to differ by
+   * the stylised rig's offset, and a measured body's beads sink in.
+   */
+  necklaceSocketY: number;
+  necklaceSocketZ: number;
   /** Belly half-width at a spine-local height (0 where the slice is empty). */
   bellyHalfWidthAt(spineLocalY: number): number;
   /** Belly surface z at a spine-local (x, y); falls back to center z. */
@@ -230,6 +238,9 @@ export function deriveBodyProfile(
     shinLength: 0.19,
     legSpreadX: 0.075 * bulk,
     thighSeatY: -0.05,
+    // The socket the stylised skeleton declares (see sockets.ts).
+    necklaceSocketY: 0.12,
+    necklaceSocketZ: 0.01,
     headCenterY: 0.063,
     headRadius: 0.067,
     bellyHalfWidthAt,
@@ -333,6 +344,8 @@ function deriveMeasuredProfile(
     shinLength: value("shinLength"),
     legSpreadX: value("legSpreadX"),
     thighSeatY: value("thighSeatY"),
+    necklaceSocketY: value("necklaceSocketY"),
+    necklaceSocketZ: value("necklaceSocketZ"),
     headCenterY: value("headCenterY"),
     headRadius: value("headRadius"),
     bellyHalfWidthAt,
@@ -436,6 +449,9 @@ function deriveAthleticProfile(
     shinLength: 0.19,
     legSpreadX: 0.075 * bulk,
     thighSeatY: -0.05,
+    // The socket the stylised skeleton declares (see sockets.ts).
+    necklaceSocketY: 0.12,
+    necklaceSocketZ: 0.01,
     headCenterY: 0.063,
     headRadius: 0.067,
     bellyHalfWidthAt,

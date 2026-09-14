@@ -302,6 +302,43 @@ export const shivaJata: PartGenerator = (ctx) => {
 };
 
 // ---------------------------------------------------------------------------
+// TRIPUNDRA — three lines of ash across the brow
+// ---------------------------------------------------------------------------
+
+/**
+ * The three horizontal bands of vibhuti that mark a devotee of Shiva, and
+ * Shiva himself. They are ash on skin, so they are relief measured in
+ * millimetres, curved to follow the brow they lie on rather than three
+ * straight bars stuck to a forehead.
+ *
+ * Width comes from the head being worn, so the same mark fits a stylised
+ * skull and a measured human one.
+ */
+export const ornamentTripundra: AttachmentGenerator = (ctx) => {
+  const ash = ctx.materials.fixed.ivory;
+  const group = new THREE.Group();
+  const fit = headFit(ctx.body);
+  const half = 0.032 * fit;
+  for (const [index, lift] of [0.019, 0.007, -0.005].entries()) {
+    // Each band is one smooth stroke, shorter than the one above it as
+    // the brow narrows, and bowed so it lies along the forehead rather
+    // than cutting across it.
+    const reach = half * (1 - index * 0.09);
+    const path: V3[] = [];
+    for (let i = 0; i <= 8; i += 1) {
+      const t = i / 8 - 0.5;
+      path.push([t * 2 * reach, lift * fit, -Math.pow(Math.abs(t) * 2, 2) * 0.013 * fit]);
+    }
+    const band = new THREE.Mesh(taperedTube(path, [0.0038 * fit, 0.0038 * fit], 20, 8), ash);
+    // Ash is a stroke of powder, not a rod: flatten it onto the skin.
+    band.scale.set(1, 0.85, 0.4);
+    group.add(band);
+  }
+  group.rotation.x = -0.18; // the forehead's upward tilt, as the third eye
+  return group;
+};
+
+// ---------------------------------------------------------------------------
 // CRESCENT MOON — seats on the jata's moon socket
 // ---------------------------------------------------------------------------
 

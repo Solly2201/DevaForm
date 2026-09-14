@@ -30,6 +30,7 @@ import {
   ornamentNaga,
   ornamentRudraksha,
   ornamentThirdEye,
+  ornamentTripundra,
   shivaHead,
   shivaJata,
 } from "./shiva";
@@ -74,6 +75,7 @@ export const ATTACHMENT_GENERATORS: Record<string, AttachmentGenerator> = {
   "ornament.tikka": tikkaChandra,
   "ornament.crescent": ornamentCrescent,
   "ornament.thirdeye": ornamentThirdEye,
+  "ornament.tripundra": ornamentTripundra,
   "ornament.rudraksha": ornamentRudraksha,
   "ornament.naga": ornamentNaga,
   "item.modak": itemModak,

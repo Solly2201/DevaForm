@@ -100,7 +100,9 @@ ObjConfig = _plugin.ObjConfig
 
 BASE = {
     "macrodetails/Gender": 1.0,
-    "macrodetails/Age": 0.55,          # mature adult
+    # A god is depicted in his prime, not in his twenties: the base is a
+    # mature adult so the face has structure to be serene with.
+    "macrodetails/Age": 0.62,
     # South-Asian-leaning mix. MakeHuman offers only these three axes, and
     # this blend is the usual approximation. It belongs in the base rather
     # than in a deity's morph: every deity DevaForm makes is Indian, so a
@@ -168,31 +170,58 @@ VARIANTS = {
         # Kept small on purpose: a taller brow grows the skull, and every
         # morph has to leave the statue exactly one canonical metre tall.
         "forehead/forehead-scale-vert-decr|incr": 0.22,
-        "forehead/forehead-temple-decr|incr": 0.30,
-        "forehead/forehead-trans-backward|forward": 0.15,
-        "eyebrows/eyebrows-angle-down|up": 0.25,
-        "eyes/l-eye-scale-decr|incr": 0.30,
-        "eyes/r-eye-scale-decr|incr": 0.30,
-        "eyes/l-eye-height2-decr|incr": -0.35,
-        "eyes/r-eye-height2-decr|incr": -0.35,
-        "eyes/l-eye-corner2-down|up": 0.35,
-        "eyes/r-eye-corner2-down|up": 0.35,
-        "eyes/l-eye-eyefold-angle-down|up": 0.20,
-        "eyes/r-eye-eyefold-angle-down|up": 0.20,
-        "nose/nose-greek-decr|incr": 0.40,
+        "forehead/forehead-temple-decr|incr": 0.35,
+        # A brow that comes forward shades the eyes, which is most of what
+        # makes a face read as composed rather than alert.
+        "forehead/forehead-trans-backward|forward": 0.40,
+        "forehead/forehead-nubian-decr|incr": -0.25,
+        "eyebrows/eyebrows-trans-down|up": -0.45,
+        "eyebrows/eyebrows-angle-down|up": 0.18,
+        "eyebrows/eyebrows-trans-backward|forward": 0.25,
+        # Long, level, half-lidded eyes set deep under that brow.
+        "eyes/l-eye-scale-decr|incr": 0.26,
+        "eyes/r-eye-scale-decr|incr": 0.26,
+        "eyes/l-eye-height1-decr|incr": -0.45,
+        "eyes/r-eye-height1-decr|incr": -0.45,
+        "eyes/l-eye-height2-decr|incr": -0.62,
+        "eyes/r-eye-height2-decr|incr": -0.62,
+        "eyes/l-eye-height3-decr|incr": -0.35,
+        "eyes/r-eye-height3-decr|incr": -0.35,
+        "eyes/l-eye-push1-in|out": -0.35,
+        "eyes/r-eye-push1-in|out": -0.35,
+        "eyes/l-eye-eyefold-concave|convex": 0.40,
+        "eyes/r-eye-eyefold-concave|convex": 0.40,
+        "eyes/l-eye-eyefold-down|up": -0.30,
+        "eyes/r-eye-eyefold-down|up": -0.30,
+        "eyes/l-eye-corner2-down|up": 0.30,
+        "eyes/r-eye-corner2-down|up": 0.30,
+        "eyes/l-eye-bag-decr|incr": -0.40,
+        "eyes/r-eye-bag-decr|incr": -0.40,
+        "nose/nose-greek-decr|incr": 0.45,
         "nose/nose-hump-decr|incr": -0.20,
-        "nose/nose-nostrils-width-decr|incr": -0.15,
-        "mouth/mouth-upperlip-volume-decr|incr": 0.35,
-        "mouth/mouth-lowerlip-volume-decr|incr": 0.35,
-        "mouth/mouth-angles-down|up": 0.30,
-        "mouth/mouth-cupidsbow-decr|incr": 0.30,
-        "mouth/mouth-scale-horiz-decr|incr": -0.10,
-        "chin/chin-bones-decr|incr": 0.30,
-        "chin/chin-prominent-decr|incr": 0.15,
-        "cheek/l-cheek-bones-decr|incr": 0.35,
-        "cheek/r-cheek-bones-decr|incr": 0.35,
-        "ears/l-ear-lobe-decr|incr": 0.60,
-        "ears/r-ear-lobe-decr|incr": 0.60,
+        "nose/nose-scale-depth-decr|incr": 0.20,
+        "nose/nose-nostrils-width-decr|incr": -0.20,
+        "nose/nose-base-down|up": -0.15,
+        # A mouth at rest, closed and level, with weight in the lips.
+        "mouth/mouth-upperlip-volume-decr|incr": 0.45,
+        "mouth/mouth-lowerlip-volume-decr|incr": 0.45,
+        "mouth/mouth-angles-down|up": 0.22,
+        "mouth/mouth-cupidsbow-decr|incr": 0.35,
+        "mouth/mouth-philtrum-volume-decr|incr": 0.30,
+        "mouth/mouth-scale-horiz-decr|incr": -0.14,
+        "mouth/mouth-laugh-lines-in|out": 0.20,
+        # Structure: jaw, chin and cheekbones a young face does not have.
+        "chin/chin-bones-decr|incr": 0.55,
+        "chin/chin-prominent-decr|incr": 0.30,
+        "chin/chin-height-decr|incr": 0.15,
+        "cheek/l-cheek-bones-decr|incr": 0.55,
+        "cheek/r-cheek-bones-decr|incr": 0.55,
+        "cheek/l-cheek-inner-decr|incr": -0.30,
+        "cheek/r-cheek-inner-decr|incr": -0.30,
+        "cheek/l-cheek-trans-down|up": 0.20,
+        "cheek/r-cheek-trans-down|up": 0.20,
+        "ears/l-ear-lobe-decr|incr": 0.70,
+        "ears/r-ear-lobe-decr|incr": 0.70,
     },
     # Ascetic: the tapasvin — spare, sinewy, no softness, the definition
     # coming from the absence of fat rather than from bulk.

@@ -983,12 +983,14 @@ function measure(positions) {
 
   const torsoTop = chestY + 0.03;
   const torsoBottom = pelvisY - 0.02;
-  // The torso splits halfway between the spine and chest joints: below is
-  // the hips/waist volume, above is the ribcage. They must not overlap, or
-  // the deep chest would report itself as the belly's depth too.
-  const splitY = (spineY + chestY) / 2;
+  // The torso splits at the measured waist: below is the hips volume,
+  // above is the ribcage. Both reach as far as the surface a garment or a
+  // necklace actually lies on — the upper one up to the base of the neck,
+  // since that is where a collar hangs from, and an ellipsoid that stops
+  // at the pectorals reports its own centre for everything above it.
+  const splitY = waist.y;
   const lowerTorso = bandVolume(positions, torsoBottom, splitY);
-  const upperTorso = bandVolume(positions, splitY, torsoTop);
+  const upperTorso = bandVolume(positions, splitY, neckY);
   return {
     lowerTorso,
     upperTorso,
@@ -1042,7 +1044,9 @@ function socketPositions(positions, m) {
   let eyeY = 0;
   for (let i = 1; i < finalEyes.neutral.length; i += 3) eyeY += finalEyes.neutral[i];
   eyeY /= finalEyes.neutral.length / 3;
-  const browY = eyeY + (headTop - eyeY) * 0.3;
+  // Just above the brow ridge, where a mark is worn — a third of the way
+  // up the forehead puts it at the hairline instead.
+  const browY = eyeY + (headTop - eyeY) * 0.13;
   const browBand = slice(positions, browY - 0.006, browY + 0.006, "head");
   const browZ = extent(
     browBand.filter((point) => Math.abs(point[0]) < 0.025),
@@ -1050,7 +1054,9 @@ function socketPositions(positions, m) {
   );
   return {
     "head.crown": localTo("head", new THREE.Vector3(0, headTop - 0.012, m.neckCentreZ)),
-    "head.forehead": localTo("head", new THREE.Vector3(0, browY, browZ.hi - 0.004)),
+    // On the surface, not inside it: what mounts here is a few
+    // millimetres of relief, and a socket sunk into the brow buries it.
+    "head.forehead": localTo("head", new THREE.Vector3(0, browY, browZ.hi)),
     "head.leftEar": localTo("head", new THREE.Vector3(earX.hi - 0.006, earY, earZ.mid - 0.004)),
     "head.rightEar": localTo("head", new THREE.Vector3(earX.lo + 0.006, earY, earZ.mid - 0.004)),
     "head.moon": localTo("head", new THREE.Vector3(0.04, headTop - 0.03, 0.01)),
@@ -1117,6 +1123,9 @@ function profileBlock(m) {
     shinLength: m.leg.shinLength,
     legSpreadX: m.leg.spreadX,
     thighSeatY: m.leg.seatY,
+    // The collar socket in the space the fitting code works in.
+    necklaceSocketY: sockets["chest.necklace"].y,
+    necklaceSocketZ: sockets["chest.necklace"].z,
   };
 }
 

@@ -163,6 +163,9 @@ export interface MeasuredBodySurfaces {
   shinLength: number;
   legSpreadX: number;
   thighSeatY: number;
+  /** Where the necklace socket sits on this body, chest-joint-local. */
+  necklaceSocketY: number;
+  necklaceSocketZ: number;
 }
 
 /** A body asset's measured surfaces, plus how each morph target moves them. */
