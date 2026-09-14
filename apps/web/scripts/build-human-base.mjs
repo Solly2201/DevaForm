@@ -1183,6 +1183,80 @@ function profileBlock(m) {
   };
 }
 
+/**
+ * The front of the torso, as a height field rather than an ellipsoid.
+ *
+ * Ornaments that lie ON the chest — a mala, a serpent's tail — need to
+ * know where the chest actually is. An ellipsoid fitted to the torso
+ * under-reports it wherever the real body is flatter or broader than the
+ * fit, and anything laid on that answer sinks into the mesh. So the build
+ * measures it: the frontmost surface on a grid across the chest, in the
+ * chest joint's own space, which the engine then interpolates.
+ */
+function torsoFrontSurface(positions) {
+  const chest = restFinal.get("chest");
+  const columns = 15;
+  const rows = 13;
+  const minX = -0.145;
+  const maxX = 0.145;
+  const minY = -0.24;
+  const maxY = 0.15;
+  const stepX = (maxX - minX) / (columns - 1);
+  const stepY = (maxY - minY) / (rows - 1);
+  const front = new Set(["chest", "spine", "pelvis", "neck"]);
+  const depth = new Float64Array(rows * columns).fill(-Infinity);
+  for (let i = 0; i < vertexCount; i += 1) {
+    if (!front.has(dominantGroup[i])) continue;
+    const x = positions[i * 3] - chest.x;
+    const y = positions[i * 3 + 1] - chest.y;
+    const z = positions[i * 3 + 2] - chest.z;
+    if (x < minX - stepX || x > maxX + stepX) continue;
+    if (y < minY - stepY || y > maxY + stepY) continue;
+    // A vertex informs the cells it falls between, so the field stays
+    // continuous with a mesh this coarse.
+    const cx = (x - minX) / stepX;
+    const cy = (y - minY) / stepY;
+    for (const col of [Math.floor(cx), Math.ceil(cx)]) {
+      for (const row of [Math.floor(cy), Math.ceil(cy)]) {
+        if (col < 0 || col >= columns || row < 0 || row >= rows) continue;
+        const index = row * columns + col;
+        if (z > depth[index]) depth[index] = z;
+      }
+    }
+  }
+  // Cells the mesh never reached (outside the silhouette) fall back to
+  // their nearest filled neighbour so the field has no holes in it.
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < columns; col += 1) {
+      const index = row * columns + col;
+      if (depth[index] > -Infinity) continue;
+      let best = 0;
+      let bestDistance = Infinity;
+      for (let r = 0; r < rows; r += 1) {
+        for (let c = 0; c < columns; c += 1) {
+          const other = depth[r * columns + c];
+          if (other === -Infinity) continue;
+          const distance = (r - row) ** 2 + (c - col) ** 2;
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            best = other;
+          }
+        }
+      }
+      depth[index] = best;
+    }
+  }
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    columns,
+    rows,
+    depth: Array.from(depth, (value) => round(value)),
+  };
+}
+
 const profileBase = profileBlock(measurements.neutral);
 // Per-morph deltas: the engine blends them by the same influences it feeds
 // the mesh, so a Powerful body's ornaments fit the Powerful body.
@@ -1269,6 +1343,7 @@ await writeFile(
       upAxis: "+Y",
       forwardAxis: "+Z",
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
+      torsoFront: torsoFrontSurface(finalMesh.neutral),
       printability: { printSourceAvailable: false },
     },
     null,
@@ -1308,6 +1383,7 @@ await writeFile(
       ),
       morphTargets: morphTargetNames,
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
+      torsoFront: torsoFrontSurface(finalMesh.neutral),
     },
     null,
     2,

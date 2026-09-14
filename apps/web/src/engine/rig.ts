@@ -256,7 +256,11 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     bodyParams,
     config.proportions,
     bodyAsset?.bodyProfile
-      ? { profile: bodyAsset.bodyProfile, morphs: config.morphs }
+      ? {
+          profile: bodyAsset.bodyProfile,
+          morphs: config.morphs,
+          torsoFront: bodyAsset.torsoFront,
+        }
       : undefined,
   );
 
