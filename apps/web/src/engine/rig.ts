@@ -38,6 +38,7 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import type { ZoneMaterials } from "./materials";
+import type { HeldItem } from "./pose";
 
 export interface CharacterRig {
   root: THREE.Group;
@@ -53,6 +54,12 @@ export interface CharacterRig {
    * rather than carrying the whole weapon into the air.
    */
   groundedAttachments: Array<{ object: THREE.Object3D; reach: number; baseTop: number }>;
+  /**
+   * What each hand is holding, and which way the item runs in the world.
+   * The hand has to be TURNED onto it — see applyGripOrientations — or
+   * the item ends up lying between the fingers instead of in the fist.
+   */
+  held: HeldItem[];
   /**
    * Torso surfaces this rig's body-fitted geometry was built against —
    * measured from a mesh body, or derived from a procedural one.
@@ -232,6 +239,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   const warnings: string[] = [];
   const uprightAttachments: THREE.Object3D[] = [];
   const groundedAttachments: CharacterRig["groundedAttachments"] = [];
+  const held: HeldItem[] = [];
   const root = new THREE.Group();
   root.name = "statueRoot";
   const { characterRoot, joints } = buildJointHierarchy(skeleton);
@@ -421,6 +429,17 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
     socket.add(renderable);
     if (asset.keepUpright || presentation.upright) uprightAttachments.push(renderable);
+    // A hand socket holding something that stands upright in the world
+    // tells the arm which way the fist has to face.
+    const heldBy = attachment.socket.match(/^arm\.([A-Za-z]+)\.hand\.item$/)?.[1];
+    if (heldBy && (asset.keepUpright || presentation.upright)) {
+      held.push({
+        slot: heldBy as HeldItem["slot"],
+        // Upright items present their own axis vertically, whatever the
+        // asset's local axis is; the engine has already turned them.
+        axis: [0, 1, 0],
+      });
+    }
     if (reach !== undefined) {
       groundedAttachments.push({
         object: renderable,
@@ -453,6 +472,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     sockets,
     uprightAttachments,
     groundedAttachments,
+    held,
     body: bodyProfile,
     warnings,
   };

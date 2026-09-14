@@ -24,7 +24,7 @@ import {
 } from "@devaform/character-schema";
 import { subscribeGlbCache } from "@/engine/glbCache";
 import { ZoneMaterials } from "@/engine/materials";
-import { applyGestureOrientations, applyPose } from "@/engine/pose";
+import { applyGestureOrientations, applyGripOrientations, applyPose } from "@/engine/pose";
 import {
   alignUprightAttachments,
   buildRig,
@@ -134,6 +134,9 @@ function Statue({
   useEffect(() => {
     applyPose(rig.joints, config.pose);
     applyGestureOrientations(rig.joints, config.hands);
+    // Hands that are holding something are turned onto it before the
+    // item is aligned, or the item lands between the fingers.
+    applyGripOrientations(rig.joints, rig.held);
     // Planted attributes are re-verticalised after posing, exactly as
     // the studio does it — without this the trishul follows the wrist.
     alignUprightAttachments(rig);

@@ -43,6 +43,17 @@ const D = Math.PI / 180;
  */
 export const HAND_FINGER_AXIS: Vec3 = [0, -1, 0];
 export const HAND_PALM_AXIS: Vec3 = [0, 0, 1];
+/**
+ * The channel a closed fist makes. Curl the fingers and the hole they
+ * leave runs ACROSS the knuckles — thumb side to little-finger side —
+ * which on a hand built to this contract is the local X.
+ *
+ * This is the third axis of the hand contract and the one that decides
+ * whether a held shaft is inside the fist or merely between the fingers.
+ * A shaft can lie either way along it, so it is a line, not a direction:
+ * the solver is free to choose the sign that the arm can actually reach.
+ */
+export const HAND_GRIP_AXIS: Vec3 = [1, 0, 0];
 
 export interface MudraArmPose {
   upper: Vec3;

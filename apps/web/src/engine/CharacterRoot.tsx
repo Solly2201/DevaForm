@@ -17,7 +17,7 @@ import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
-import { applyGestureOrientations, applyPose } from "./pose";
+import { applyGestureOrientations, applyGripOrientations, applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
 import { applyMorphInfluences } from "./skinning";
 import { morphInfluences } from "./morphs";
@@ -98,6 +98,9 @@ export function CharacterRoot() {
   useEffect(() => {
     applyPose(rig.joints, pose);
     applyGestureOrientations(rig.joints, hands);
+    // Hands that are holding something are turned onto it before the
+    // item is aligned, or the item lands between the fingers.
+    applyGripOrientations(rig.joints, rig.held);
     alignUprightAttachments(rig);
   }, [rig, pose, hands]);
 
