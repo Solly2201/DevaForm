@@ -49,7 +49,8 @@ export type FixedMaterialKey =
   | "ivory"
   | "tilak"
   | "mouthDark"
-  | "rudraksha";
+  | "rudraksha"
+  | "serpent";
 
 const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
   "eyeDark",
@@ -59,6 +60,7 @@ const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
   "tilak",
   "mouthDark",
   "rudraksha",
+  "serpent",
 ];
 
 export function isFixedMaterialKey(value: string): value is FixedMaterialKey {
@@ -95,6 +97,9 @@ export class ZoneMaterials {
       // Rudraksha seeds keep their natural color — declared texture-fixed
       // in the manifest rather than pretending to recolor.
       rudraksha: fixed("rudraksha", { color: "#6b4423", roughness: 0.85 }),
+      // A serpent is a serpent: its colour is not the customer's to pick,
+      // any more than an eye's is.
+      serpent: fixed("serpent", { color: "#5c6b3f", roughness: 0.45, clearcoat: 0.5 }),
     };
   }
 
