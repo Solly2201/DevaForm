@@ -152,13 +152,13 @@ function markHide(geometry: THREE.BufferGeometry, seed: number, density = 1): vo
     const angle = Math.atan2(z, x);
     // Cells roughly 2 cm across: big enough to read as markings on a
     // statue, small enough not to look like a pattern swatch.
-    const u = (angle / (Math.PI * 2) + 1) * 13 + seed;
-    const v = y * 42 + seed;
+    const u = (angle / (Math.PI * 2) + 1) * 22 + seed;
+    const v = y * 70 + seed;
     const cell = smoothNoise(u, v);
     const fine = smoothNoise(u * 2.2 + 5.1, v * 2.2 + 1.3);
     // A rosette is a dark ring with a lighter middle, not a blob.
-    const core = cell > 0.7 ? 1 : 0;
-    const ring = cell > 0.52 && cell <= 0.74 && fine > 0.3 ? 1 : 0;
+    const core = cell > 0.72 ? 1 : 0;
+    const ring = cell > 0.56 && cell <= 0.76 && fine > 0.34 ? 1 : 0;
     const ground = 1 - 0.1 * smoothNoise(u * 0.7, v * 0.5);
     const tint = ground - density * (0.62 * ring + 0.3 * core);
     // Markings are browner than the ground, not merely darker.
@@ -178,7 +178,8 @@ function ragHem(geometry: THREE.BufferGeometry, radial: number, depth: number): 
   const position = geometry.getAttribute("position");
   const rings = position.count / radial;
   for (let column = 0; column < radial; column += 1) {
-    const bite = depth * (0.3 + 0.7 * noise(column * 1.7, 3.3));
+    const bite =
+      depth * (0.2 + 0.5 * noise(column * 1.7, 3.3) + 0.3 * noise(column * 0.41, 8.7));
     for (let ring = rings - 2; ring < rings; ring += 1) {
       const index = ring * radial + column;
       position.setY(index, position.getY(index) + bite * (ring === rings - 1 ? 1 : 0.4));
@@ -220,38 +221,57 @@ function legCloth(
   // draped, and a wrap that follows every contour reads as a legging.
   const thighSections: ClothSection[] = [
     { y: 0.03, rx: top * 1.06, rz: top * 1.08 },
-    { y: -body.thighLength * 0.4, rx: mid * 1.22, rz: mid * 1.26 },
-    { y: -body.thighLength * 0.82, rx: knee * 1.62, rz: knee * 1.68 },
+    { y: -body.thighLength * 0.4, rx: mid * 1.14, rz: mid * 1.18 },
+    { y: -body.thighLength * 0.82, rx: knee * 1.42, rz: knee * 1.48 },
     // Reaches well past the knee: when the leg folds, the two pieces must
     // still overlap on the OUTSIDE of the bend, where they separate most.
-    { y: -body.thighLength * 1.18, rx: knee * 1.74, rz: knee * 1.8 },
+    { y: -body.thighLength * 1.18, rx: knee * 1.5, rz: knee * 1.56 },
   ];
   const thigh = clothPiece(thighSections, material, {
     seed,
     hem: 0.01,
-    density: 0.5,
-    folds: 0.075,
+    density: 0,
+    folds: 0.08,
   });
 
   if (length < 0.55) return { thigh, shin: null };
   const calf = fit(body.calfRadius);
-  // The dhoti stops at the calf: below it the leg and the anklet are
-  // bare, as the reference shows. It is a wrap, not a trouser leg.
-  const drop = body.shinLength * 0.52 * Math.min(1, (length - 0.45) * 1.9);
+  const ankle = fit(body.ankleBandRadius);
+  // Down to the ankle, as the reference shows, gathering in as it falls
+  // so the hem is a cuff of cloth rather than a flare.
+  const drop = body.shinLength * 0.94 * Math.min(1, (length - 0.4) * 1.7);
   const shinSections: ClothSection[] = [
-    { y: 0.075, rx: knee * 1.68, rz: knee * 1.74 },
-    { y: -drop * 0.5, rx: calf * 1.42, rz: calf * 1.48 },
-    { y: -drop, rx: calf * 1.2, rz: calf * 1.26 },
+    { y: 0.075, rx: knee * 1.46, rz: knee * 1.52 },
+    { y: -drop * 0.38, rx: calf * 1.24, rz: calf * 1.3 },
+    { y: -drop * 0.78, rx: calf * 1.12, rz: calf * 1.18 },
+    { y: -drop, rx: ankle * 1.62, rz: ankle * 1.68 },
   ];
   return {
     thigh,
     shin: clothPiece(shinSections, material, {
       seed: seed + 7,
-      hem: 0.018,
-      density: 0.5,
-      folds: 0.09,
+      hem: 0.015,
+      density: 0,
+      folds: 0.07,
     }),
   };
+}
+
+/**
+ * The hide worn OVER the cloth on the upper leg: a short wrap with a torn
+ * lower edge, sitting proud of the cream beneath it so the two layers
+ * read as two layers.
+ */
+function hideOverThigh(body: BodyProfile, material: THREE.Material, seed: number): THREE.Mesh {
+  const fit = (radius: number) => radius + CLEARANCE * 2.6;
+  const top = fit(body.thighTopRadius);
+  const mid = fit(body.thighMidRadius);
+  const sections: ClothSection[] = [
+    { y: 0.028, rx: top * 1.12, rz: top * 1.14 },
+    { y: -body.thighLength * 0.3, rx: mid * 1.32, rz: mid * 1.36 },
+    { y: -body.thighLength * 0.62, rx: mid * 1.44, rz: mid * 1.48 },
+  ];
+  return clothPiece(sections, material, { seed, hem: 0.032, density: 1, folds: 0.06 });
 }
 
 /**
@@ -306,7 +326,11 @@ function hidePanel(body: BodyProfile, material: THREE.Material, waistY: number):
 
 export const humanoidHideWrap: PartGenerator = (ctx) => {
   const body = ctx.body;
-  const hide = ctx.materials.getPatterned("garment");
+  // Two materials, two layers: plain cloth underneath, patterned hide
+  // over it. Both follow the palette the customer chose, so the hide is
+  // the accent colour with its markings tinted into the mesh.
+  const cloth = ctx.materials.get("garment");
+  const hide = ctx.materials.getPatterned("garmentAccent");
   const sashMaterial = ctx.materials.get("garmentAccent");
   const metal = ctx.materials.get("metal");
   // 0 = hip wrap only; 1 = cloth carried down to the ankles.
@@ -329,7 +353,8 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     { y: seat - 0.01, rx: hipRx * 1.06, rz: hipRz * 1.08 },
     { y: seat - skirt, rx: hipRx * 1.12, rz: hipRz * 1.14 },
   ];
-  wrap.add(clothPiece(wrapSections, hide, { seed: 1, hem: 0.014, density: 0.45 }));
+  // Cloth first, hide over it: two layers, as the reference wears them.
+  wrap.add(clothPiece(wrapSections, cloth, { seed: 1, hem: 0.014, density: 0, folds: 0.05 }));
   wrap.add(hidePanel(body, hide, waistY));
 
   // ---- sash and clasp at the waist --------------------------------------
@@ -380,13 +405,15 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   }
   wrap.add(fold);
 
-  const left = legCloth(body, hide, 11, ctx.seated ? 0.5 : length);
-  const right = legCloth(body, hide, 23, ctx.seated ? 0.5 : length);
+  const left = legCloth(body, cloth, 11, ctx.seated ? 0.5 : length);
+  const right = legCloth(body, cloth, 23, ctx.seated ? 0.5 : length);
 
   const pieces: Array<JointedPart[number]> = [
     { joint: "pelvis", object: wrap },
     { joint: "leg.left.thigh", object: left.thigh },
     { joint: "leg.right.thigh", object: right.thigh },
+    { joint: "leg.left.thigh", object: hideOverThigh(body, hide, 31) },
+    { joint: "leg.right.thigh", object: hideOverThigh(body, hide, 43) },
   ];
   if (left.shin) pieces.push({ joint: "leg.left.shin", object: left.shin });
   if (right.shin) pieces.push({ joint: "leg.right.shin", object: right.shin });
