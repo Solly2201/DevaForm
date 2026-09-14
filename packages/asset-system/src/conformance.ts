@@ -26,6 +26,7 @@ import {
   type SkeletonDefinition,
 } from "@devaform/character-schema";
 import { getAvailableDeity } from "./deities";
+import { isHandheld } from "./presentation";
 import type { AssetDefinition } from "./types";
 
 export interface ConformanceIssue {
@@ -115,6 +116,94 @@ export function validateSkeletonConformance(
     }
   }
 
+  // 5. A presentation must be reachable on this anatomy.
+  for (const presentation of asset.presentations ?? []) {
+    const where = `presentation "${presentation.id}"`;
+    if (presentation.anchor.kind === "socket" && !sockets.has(presentation.anchor.socket)) {
+      problem(`${where} anchors to ${presentation.anchor.socket}, which skeleton "${skeleton.id}" does not have`);
+    }
+    if (presentation.anchor.kind === "hand" && armSlots.size === 0) {
+      problem(`${where} needs a hand, and skeleton "${skeleton.id}" has no arms`);
+    }
+    if (presentation.anchor.kind === "ground" && !sockets.has("base.platform")) {
+      problem(`${where} stands on the base, and skeleton "${skeleton.id}" has no base.platform socket`);
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Checks that depend only on the asset, not on an anatomy.
+ *
+ * These are about a presentation agreeing WITH ITSELF: that a grounded one
+ * needs no hand, that a grip axis points somewhere, that a hand is not
+ * asked to slide onto a part of the object nobody grips. An unsupported
+ * combination is a loud error here rather than a silent oddity at render
+ * time.
+ */
+export function validatePresentations(asset: AssetDefinition): ConformanceIssue[] {
+  const issues: ConformanceIssue[] = [];
+  const problem = (message: string, severity: "error" | "warning" = "error") =>
+    issues.push({ assetId: asset.id, severity, message });
+
+  const presentations = asset.presentations ?? [];
+  const seen = new Set<string>();
+  for (const presentation of presentations) {
+    const where = `presentation "${presentation.id}"`;
+    if (seen.has(presentation.id)) problem(`declares ${where} twice`);
+    seen.add(presentation.id);
+
+    // A presentation that needs no hand must not claim one, and one that
+    // does must say which — this is the invariant that stopped a "grounded"
+    // trishul from quietly still requiring a fist.
+    if (presentation.mode === "grounded" && presentation.hand !== "none") {
+      problem(`${where} is grounded but requires a ${presentation.hand} hand`);
+    }
+    if (presentation.mode === "handheld" && presentation.hand === "none") {
+      problem(`${where} is handheld but requires no hand`);
+    }
+    if (presentation.mode === "grounded" && !presentation.stand) {
+      problem(`${where} is grounded but does not say how far clear of the figure it stands`);
+    }
+    if (presentation.mobile && !isHandheld(presentation)) {
+      problem(`${where} is marked mobile but is not held in a hand`, "warning");
+    }
+
+    const grip = presentation.grip;
+    if (grip) {
+      if (grip.axis) {
+        const length = Math.hypot(grip.axis[0], grip.axis[1], grip.axis[2]);
+        if (length < 1e-6) problem(`${where} declares a zero-length grip axis`);
+      }
+      if (grip.radius !== undefined && !(grip.radius > 0)) {
+        problem(`${where} declares a non-positive grip radius`);
+      }
+      for (const [direction, distance] of [
+        ["up", grip.travel?.up],
+        ["down", grip.travel?.down],
+      ] as const) {
+        if (distance !== undefined && !(distance >= 0)) {
+          problem(`${where} declares a negative ${direction} travel`);
+        }
+      }
+    }
+    if (isHandheld(presentation) && !grip?.radius) {
+      // Without it the hand closes to whatever diameter it was modelled
+      // at, which is how fingers end up through a drum head.
+      problem(`${where} is held but does not say how thick the asset is where the hand closes`, "warning");
+    }
+    if (presentation.orientation === "worldUpright" && presentation.mode === "bodyMounted") {
+      problem(`${where} is mounted on the body yet asks to stay world-upright`, "warning");
+    }
+  }
+
+  // Handheld presentations need hand sockets to have been offered.
+  if (asset.kind.type === "attachment" && presentations.some(isHandheld)) {
+    if (!asset.kind.sockets.some((socket) => socket.endsWith(".hand.item"))) {
+      problem(`declares a handheld presentation but offers no hand socket`);
+    }
+  }
   return issues;
 }
 
@@ -131,6 +220,10 @@ export function validateRegistryConformance(
 ): ConformanceIssue[] {
   const issues: ConformanceIssue[] = [];
   for (const asset of assets) {
+    // Self-consistency first: it does not depend on an anatomy, and an
+    // asset that disagrees with itself would otherwise be reported once
+    // per deity that can wear it.
+    issues.push(...validatePresentations(asset));
     if (asset.skeleton !== undefined) {
       const skeleton = getSkeleton(asset.skeleton);
       if (!skeleton) {

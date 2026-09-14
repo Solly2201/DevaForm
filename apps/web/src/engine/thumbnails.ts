@@ -91,6 +91,7 @@ export async function buildAssetObject(
     // A thumbnail shows one asset, not a character: every arm the count
     // asks for is rendered, because there is no body here to contradict it.
     armSlots: activeArmSlots(config.arms),
+    held: {},
     seated: false,
     // Thumbnails render against the canonical classic body measurements.
     body: deriveBodyProfile({ belly: 1 }, config.proportions),

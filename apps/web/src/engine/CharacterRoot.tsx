@@ -17,8 +17,7 @@ import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 import { subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
-import { applyGestureOrientations, applyGripOrientations, applyPose } from "./pose";
-import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
+import { buildRig, disposeRig, poseRig, rigWarnings, type CharacterRig } from "./rig";
 import { applyMorphInfluences } from "./skinning";
 import { morphInfluences } from "./morphs";
 import { activeRig } from "./rigHandle";
@@ -93,15 +92,10 @@ export function CharacterRoot() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pose: in-place joint rotation updates, gesture hands oriented from
-  // their mudra's meaning, then held shafts re-verticalized.
+  // Pose: in-place joint rotation updates — joints, gestures, grips and
+  // planted attributes, in the one order poseRig defines.
   useEffect(() => {
-    applyPose(rig.joints, pose);
-    applyGestureOrientations(rig.joints, rig.hands);
-    // Hands that are holding something are turned onto it before the
-    // item is aligned, or the item lands between the fingers.
-    applyGripOrientations(rig.joints, rig.held);
-    alignUprightAttachments(rig);
+    poseRig(rig);
   }, [rig, pose, hands]);
 
   // Morphs: in-place GPU influence updates (no geometry rebuild). Hand
@@ -117,8 +111,9 @@ export function CharacterRoot() {
   }, [zoneMaterials, materials]);
 
   useEffect(() => {
-    if (rig.warnings.length > 0) {
-      console.warn("Character rig warnings:", rig.warnings);
+    const warnings = rigWarnings(rig);
+    if (warnings.length > 0) {
+      console.warn("Character rig warnings:", warnings);
     }
     activeRig.current = rig;
     if (process.env.NODE_ENV !== "production") {

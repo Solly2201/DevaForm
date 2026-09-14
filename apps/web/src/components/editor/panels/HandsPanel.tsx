@@ -11,7 +11,7 @@ import {
   type MudraId,
   type SocketId,
 } from "@devaform/character-schema";
-import { getAsset, listAssets } from "@devaform/asset-system";
+import { getAsset, isHandheld, listAssets, presentationsOf } from "@devaform/asset-system";
 import { SegmentedControl } from "@/components/controls/SegmentedControl";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
@@ -84,8 +84,15 @@ export function HandsPanel() {
   const changeMudra = (slot: ArmSlot, m: MudraId) => {
     const held = attachments.find((a) => a.socket === `arm.${slot}.hand.item`);
     const heldAsset = held ? getAsset(held.asset.assetId) : undefined;
-    if (heldAsset?.grip && heldAsset.grip.mudra !== m) {
-      showStatus(`${heldAsset.name} unequipped — ${MUDRA_LABELS[m]} cannot hold it.`);
+    const ways = heldAsset ? presentationsOf(heldAsset) : [];
+    const canStillHold = ways.some((p) => isHandheld(p) && p.hand === m);
+    if (heldAsset && !canStillHold) {
+      const independent = ways.find((p) => !isHandheld(p));
+      showStatus(
+        independent
+          ? `${heldAsset.name} is ${independent.label.toLowerCase()} — ${MUDRA_LABELS[m]} cannot hold it.`
+          : `${heldAsset.name} released — ${MUDRA_LABELS[m]} cannot hold it.`,
+      );
     }
     setMudra(slot, m);
   };
@@ -96,7 +103,11 @@ export function HandsPanel() {
         const mudra = hands[slot]?.mudra ?? "open";
         const held = attachments.find((a) => a.socket === `arm.${slot}.hand.item`);
         const heldAsset = held ? getAsset(held.asset.assetId) : undefined;
-        const requiredMudra = heldAsset?.grip?.mudra;
+        const ways = heldAsset ? presentationsOf(heldAsset) : [];
+        const holdable = ways.filter(isHandheld);
+        const requiredMudra = holdable.some((p) => p.hand === mudra)
+          ? undefined
+          : (holdable[0]?.hand as MudraId | undefined);
         return (
           <section key={slot} className="rounded-lg border border-surface-800 bg-surface-850 p-3">
             <h3 className="mb-2 text-xs font-semibold text-stone-300">{HAND_LABELS[slot]}</h3>
@@ -107,14 +118,18 @@ export function HandsPanel() {
             />
             <p className="mt-2 text-[11px] text-stone-500">{MUDRA_DESCRIPTIONS[mudra]}</p>
             <HeldItemControl slot={slot} />
-            {heldAsset && requiredMudra && requiredMudra !== mudra && (
+            {heldAsset && requiredMudra && (
               <p className="mt-1 text-[11px] text-saffron-400">
                 {heldAsset.name} needs the {MUDRA_LABELS[requiredMudra]} grip.
               </p>
             )}
             {heldAsset && (
               <p className="mt-1 text-[11px] text-stone-500">
-                Choosing a different gesture releases the {heldAsset.name}.
+                {ways.some((p) => !isHandheld(p))
+                  ? `Choosing a gesture leaves the ${heldAsset.name} ${ways
+                      .filter((p) => !isHandheld(p))[0]!
+                      .label.toLowerCase()}.`
+                  : `Choosing a different gesture releases the ${heldAsset.name}.`}
               </p>
             )}
           </section>

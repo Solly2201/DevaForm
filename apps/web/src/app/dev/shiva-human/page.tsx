@@ -24,13 +24,7 @@ import {
 } from "@devaform/character-schema";
 import { subscribeGlbCache } from "@/engine/glbCache";
 import { ZoneMaterials } from "@/engine/materials";
-import { applyGestureOrientations, applyGripOrientations, applyPose } from "@/engine/pose";
-import {
-  alignUprightAttachments,
-  buildRig,
-  disposeRig,
-  type CharacterRig,
-} from "@/engine/rig";
+import { buildRig, disposeRig, poseRig, type CharacterRig } from "@/engine/rig";
 import { resolveAssetRef } from "@devaform/asset-system";
 import { applyMorphInfluences } from "@/engine/skinning";
 import { morphInfluences } from "@/engine/morphs";
@@ -140,14 +134,7 @@ function Statue({
   }, [rig]);
 
   useEffect(() => {
-    applyPose(rig.joints, config.pose);
-    applyGestureOrientations(rig.joints, rig.hands);
-    // Hands that are holding something are turned onto it before the
-    // item is aligned, or the item lands between the fingers.
-    applyGripOrientations(rig.joints, rig.held);
-    // Planted attributes are re-verticalised after posing, exactly as
-    // the studio does it — without this the trishul follows the wrist.
-    alignUprightAttachments(rig);
+    poseRig(rig);
     applyMorphInfluences(
       rig.root,
       morphInfluences(config.morphs, config.hands, resolveAssetRef(config.parts.body)),

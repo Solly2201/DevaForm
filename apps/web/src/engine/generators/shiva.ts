@@ -16,6 +16,12 @@ import {
   type JointedPart,
   type PartGenerator,
 } from "./types";
+import {
+  DAMARU_WAIST_HALF,
+  DAMARU_WAIST_RADIUS,
+  TRISHUL_SHAFT_RADIUS,
+  TRISHUL_TRAVEL,
+} from "@devaform/asset-system";
 import { chestZAtSocket } from "./ornaments";
 import { REFERENCE_SKULL, handFit, headFit } from "./bodyProfile";
 import { walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
@@ -896,11 +902,27 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
 // ---------------------------------------------------------------------------
 
 /**
- * How far the hand may slide up the shaft. Declared in the manifest as
- * grip.travel.up; repeated here because the geometry has to honour it,
- * and a test holds the two to each other.
+ * The trishul's own proportions, at the canonical 1 m figure scale.
+ *
+ * A weapon has a length. It used to be told how high the hand was and
+ * build a shaft to reach the ground from there, which meant the same
+ * trident was 0.87 m long beside a hanging arm and 1.11 m long beside a
+ * raised one. The ground is not the object's business: the object is one
+ * object, and the ENGINE slides it along its own axis until its butt meets
+ * the base — which is what the declared grip travel is for.
+ *
+ * Measured against `references/ref3.png`: butt at the floor, tip clearly
+ * above the crown, total a little over the figure's own height.
  */
-export const GRIP_TRAVEL_UP = 0.24;
+/** Shaft below the natural grip — roughly where a hanging hand falls. */
+export const TRISHUL_BUTT_BELOW_GRIP = 0.52;
+/**
+ * Where the trident begins, above the grip. Must clear the whole range a
+ * fist can slide along (grip.travel.up), with room to spare, or a raised
+ * arm carries the hand into the prongs. A test holds the geometry and the
+ * manifest to each other.
+ */
+const TRISHUL_HEAD_BASE = TRISHUL_TRAVEL + 0.09;
 
 export const itemTrishul: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
@@ -908,18 +930,12 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
 
   // A trishul is a planted staff, not a wand: its butt rests on the
   // ground and the hand grips the SHAFT, with the whole head above the
-  // fist. When the engine tells us how high above the base this hand is
-  // (see ItemPresentation.grounded) the shaft is built to reach down that
-  // far; without it the classic proportions stand.
-  const butt = ctx.reach !== undefined ? -ctx.reach : -0.304;
-  // The head sits above everywhere the hand can be, not at a fraction of
-  // wherever the hand happened to be when the rig was built. A planted
-  // staff slides through the fist as the arm moves — by a third of a
-  // metre between a hanging arm and a raised one — and tying the head to
-  // the starting position left the hand holding the prongs.
-  const headBase = GRIP_TRAVEL_UP + 0.075;
+  // fist, wherever along the shaft the fist happens to be.
+  const butt = -TRISHUL_BUTT_BELOW_GRIP;
+  const headBase = TRISHUL_HEAD_BASE;
 
-  // Tall shaft through the grip
+  // Tall shaft through the grip. Its girth is what the manifest says a
+  // hand closes on, so the fist and the shaft cannot disagree.
   group.add(
     new THREE.Mesh(
       taperedTube(
@@ -928,7 +944,7 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
           [0, (butt + headBase) / 2, 0],
           [0, headBase, 0],
         ],
-        [0.0086, 0.0072],
+        [TRISHUL_SHAFT_RADIUS, TRISHUL_SHAFT_RADIUS * 0.85],
         16,
         10,
       ),
@@ -1009,17 +1025,19 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   // be held. A waist of a few millimetres is a shape, not a handle: the
   // fingers have to close on SOMETHING, and if the heads flare inside the
   // hand they close through them instead.
+  const waist = DAMARU_WAIST_RADIUS;
+  const half = DAMARU_WAIST_HALF;
   held.add(
     mesh(
       lathe([
-        [0.0178, -0.038],
-        [0.0216, -0.0335],
-        [0.0084, -0.0155],
-        [0.0062, -0.009],
-        [0.0062, 0.009],
-        [0.0084, 0.0155],
-        [0.0216, 0.0335],
-        [0.0178, 0.038],
+        [waist * 2.87, -0.038],
+        [waist * 3.48, -0.0335],
+        [waist * 1.35, -half * 1.72],
+        [waist, -half],
+        [waist, half],
+        [waist * 1.35, half * 1.72],
+        [waist * 3.48, 0.0335],
+        [waist * 2.87, 0.038],
       ]),
       wood,
     ),

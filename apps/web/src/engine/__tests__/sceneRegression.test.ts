@@ -31,8 +31,7 @@ import {
   createDefaultShivaConfiguration,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
-import { alignUprightAttachments, buildRig } from "../rig";
-import { applyPose } from "../pose";
+import { buildRig, poseRig } from "../rig";
 import { ZoneMaterials } from "../materials";
 
 const round = (n: number): string => n.toFixed(6);
@@ -41,8 +40,7 @@ const round = (n: number): string => n.toFixed(6);
 function sceneRows(config: CharacterConfiguration): string[] {
   const materials = new ZoneMaterials();
   const rig = buildRig(config, materials);
-  applyPose(rig.joints, config.pose);
-  alignUprightAttachments(rig);
+  poseRig(rig);
   rig.root.updateWorldMatrix(true, true);
 
   const rows: string[] = [];
@@ -85,14 +83,25 @@ function digest(rows: readonly string[]): string {
 }
 
 const PINNED = {
-  ganesha: { nodes: 370, digest: "65100aec2a4dae90" },
-  // Re-pinned when the trishul's grip anchor moved onto the shaft. Its
-  // trident head used to sit at a fraction of however high the hand
-  // happened to be when the rig was built (reach * 0.78), which is not a
-  // property of the weapon at all; it now sits a declared distance above
-  // the whole range of shaft a hand can slide along. The node count is
-  // unchanged — same parts, one of them the right length.
-  shiva: { nodes: 314, digest: "a981ff6cbb4be3fc" },
+  // Re-pinned when the two transform pipelines became one. Ganesha's
+  // hands used to be left as the pose put them while the ITEM was rotated
+  // upright in world space — so an axe passed ACROSS a fist rather than
+  // through it, which is precisely what references/reference_mid.png
+  // objects to. Now the arm is solved onto what it holds: the shoulder
+  // rotates, the forearm pronates, the wrist trims, and the fist closes
+  // on a shaft whose thickness the asset declares.
+  //
+  // Verified before re-pinning, by capturing the same fifteen QA views
+  // from the previous commit and comparing: the silhouette, ornaments,
+  // garment, head, trunk and base are unchanged view for view. What moved
+  // is the back hands, and they moved from beside their attributes to
+  // around them.
+  ganesha: { nodes: 370, digest: "ced6cadb987a4329" },
+  // Shiva moved for the same reason, plus two of its own: the trishul is
+  // now one fixed length that slides to meet the ground rather than a
+  // shaft built to reach whatever height the hand started at, and the
+  // procedural fist closes onto the radius each attribute declares.
+  shiva: { nodes: 314, digest: "f59247888f3b1b30" },
 } as const;
 
 describe("protected characters do not move", () => {

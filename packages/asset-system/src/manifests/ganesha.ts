@@ -6,6 +6,7 @@
  * Replacing a procedural prototype with a production sculpt means changing
  * its `source` to a GLB path and bumping `version`; nothing else changes.
  */
+import { handheld } from "../presentation";
 import type { AssetDefinition } from "../types";
 
 const proto = { printSourceAvailable: false } as const;
@@ -656,7 +657,28 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["ganesha"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.modak" },
-    grip: { mudra: "hold" },
+    // Cradled, not gripped: an offering sits on an open palm and turns
+    // with it. Nothing about a modak is upright.
+    presentations: [
+      handheld({
+        id: "cradled",
+        label: "Cradled in the palm",
+        hand: "hold",
+        orientation: "anchor",
+        grip: { radius: 0.03 },
+      }),
+      // A trunk curls round an offering exactly as a palm cradles one,
+      // and it is the same sweet either way. Two relationships, one asset.
+      {
+        id: "trunkOffered",
+        label: "Curled in the trunk",
+        mode: "bodyMounted",
+        anchor: { kind: "socket", socket: "trunk.tip" },
+        hand: "none",
+        orientation: "anchor",
+        autoSelectable: true,
+      },
+    ],
     // Grip point is the item origin; the hand refines its item socket to
     // the actual palm/fist point, so no compensating offset is needed.
     // Per-socket calibration below nests the offering into the trunk curl.
@@ -682,8 +704,14 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["any"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.lotus" },
-    grip: { mudra: "pinch" },
-    keepUpright: true,
+    presentations: [
+      handheld({
+        id: "pinchHeld",
+        label: "Pinched by the stem",
+        hand: "pinch",
+        grip: { radius: 0.0038, travel: { up: 0.05, down: 0.05 } },
+      }),
+    ],
     materialZones: ["gem", "garmentAccent"],
     category: "attributes",
     printability: proto,
@@ -705,8 +733,14 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["ganesha"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.axe" },
-    grip: { mudra: "grip" },
-    keepUpright: true,
+    presentations: [
+      handheld({
+        id: "handheldHaft",
+        label: "Held by the haft",
+        hand: "grip",
+        grip: { radius: 0.0072, travel: { up: 0.09, down: 0.07 } },
+      }),
+    ],
     materialZones: ["metal"],
     category: "attributes",
     printability: proto,
@@ -728,8 +762,14 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["ganesha"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.noose" },
-    grip: { mudra: "grip" },
-    keepUpright: true,
+    presentations: [
+      handheld({
+        id: "handheldRope",
+        label: "Held by the rope",
+        hand: "grip",
+        grip: { radius: 0.0053, travel: { up: 0.02, down: 0.045 } },
+      }),
+    ],
     materialZones: ["metal"],
     category: "attributes",
     printability: proto,
@@ -751,8 +791,14 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["ganesha"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.ankush" },
-    grip: { mudra: "grip" },
-    keepUpright: true,
+    presentations: [
+      handheld({
+        id: "handheldShaft",
+        label: "Held by the shaft",
+        hand: "grip",
+        grip: { radius: 0.0066, travel: { up: 0.075, down: 0.065 } },
+      }),
+    ],
     materialZones: ["metal"],
     category: "attributes",
     printability: proto,

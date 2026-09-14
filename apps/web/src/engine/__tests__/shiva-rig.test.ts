@@ -26,9 +26,9 @@ import {
   createDefaultShivaConfiguration,
   getPosePreset,
 } from "@devaform/character-schema";
-import { alignUprightAttachments, assertRigIntegrity, buildRig } from "../rig";
-import { applyPose } from "../pose";
+import { assertRigIntegrity, buildRig, poseRig } from "../rig";
 import { ZoneMaterials } from "../materials";
+import { resolveCharacterPresentation } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
 
 function buildShivaRig(mutate?: (config: ReturnType<typeof createDefaultShivaConfiguration>) => void) {
@@ -36,8 +36,7 @@ function buildShivaRig(mutate?: (config: ReturnType<typeof createDefaultShivaCon
   mutate?.(config);
   const materials = new ZoneMaterials();
   const rig = buildRig(config, materials);
-  applyPose(rig.joints, config.pose);
-  alignUprightAttachments(rig);
+  poseRig(rig);
   rig.root.updateWorldMatrix(true, true);
   return { rig, config };
 }
@@ -155,7 +154,7 @@ describe("shiva semantic attachments", () => {
 });
 
 describe("shiva grip coherence (store)", () => {
-  it("releases the trishul when the hand can no longer grip", () => {
+  it("keeps an attribute that can present itself another way", () => {
     const store = useEditorStore.getState();
     store.newCharacter(createDefaultShivaConfiguration());
 
@@ -167,13 +166,38 @@ describe("shiva grip coherence (store)", () => {
     expect(held()).toBe("shiva.attribute.trishul");
     expect(useEditorStore.getState().config.hands.frontRight.mudra).toBe("grip");
 
-    // A mudra that cannot perform the trishul's declared grip releases it.
+    // A blessing hand cannot grip. The trishul is not thrown away for it:
+    // it has a grounded presentation, so the configuration keeps it and
+    // the resolver stands it beside the figure.
     useEditorStore.getState().setMudra("frontRight", "abhaya");
-    expect(held()).toBeUndefined();
+    expect(held()).toBe("shiva.attribute.trishul");
+    const resolved = resolveCharacterPresentation(useEditorStore.getState().config);
+    const trishul = resolved.attachments.find(
+      (a) => a.asset.id === "shiva.attribute.trishul",
+    );
+    expect(trishul?.presentation.mode).toBe("grounded");
+    expect(trishul?.handSlot).toBeUndefined();
 
-    // Re-attaching auto-applies the declared grip mudra.
+    // Re-attaching auto-applies the hand state its preferred presentation
+    // declares.
+    useEditorStore.getState().setMudra("frontRight", "grip");
     useEditorStore.getState().setAttachment("arm.frontRight.hand.item", "shiva.attribute.trishul");
     expect(held()).toBe("shiva.attribute.trishul");
     expect(useEditorStore.getState().config.hands.frontRight.mudra).toBe("grip");
+  });
+
+  it("releases an attribute that has no other way to be present", () => {
+    const store = useEditorStore.getState();
+    store.newCharacter(createDefaultShivaConfiguration());
+    const held = () =>
+      useEditorStore
+        .getState()
+        .config.attachments.find((a) => a.socket === "arm.frontLeft.hand.item")?.asset.assetId;
+
+    expect(held()).toBe("shiva.attribute.damaru");
+    // A damaru can only be held. A gesture hand cannot hold it, and it
+    // has nowhere else to be, so it leaves the configuration.
+    useEditorStore.getState().setMudra("frontLeft", "varada");
+    expect(held()).toBeUndefined();
   });
 });

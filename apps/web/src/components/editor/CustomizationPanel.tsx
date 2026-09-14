@@ -6,7 +6,7 @@
  * grids per socket, and hands/pose/materials/base render dedicated panels.
  */
 import { useState } from "react";
-import { getAsset, listAssets, type EditorCategory } from "@devaform/asset-system";
+import { presentationsOf, getAsset, listAssets, type EditorCategory } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
 import {
   FACE_MORPHS,
@@ -94,7 +94,11 @@ function AttachmentAdjust({ socket }: { socket: SocketId }) {
   const [open, setOpen] = useState(false);
   if (!attachment) return null;
   const asset = getAsset(attachment.asset.assetId);
-  const upright = asset?.keepUpright === true;
+  // A presentation that holds the item world-upright owns its own turn;
+  // the manual rotation slider would only fight it.
+  const upright =
+    asset !== undefined &&
+    presentationsOf(asset).some((p) => p.orientation === "worldUpright");
   const offset = attachment.offset ?? {};
   const position = offset.position ?? [0, 0, 0];
   const rotationY = offset.rotation?.[1] ?? 0;
