@@ -107,6 +107,8 @@ const HUMAN_SOCKET_POSITIONS: Partial<Record<SocketId, Vec3>> = {
   "head.moon": [0.04, 0.05271, -0.01274],
   "chest.necklace": [0, 0.10373, 0.03604],
   "waist.ornament": [0, 0.09, 0.0554],
+  "arm.frontLeft.hand.item": [0.00337, -0.05942, -0.00601],
+  "arm.frontRight.hand.item": [-0.00337, -0.05942, -0.00601],
   "leg.left.anklet": [0, 0.03, 0.005],
   "leg.right.anklet": [0, 0.03, 0.005],
 };

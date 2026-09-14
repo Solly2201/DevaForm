@@ -127,6 +127,22 @@ export function headFit(body: Pick<BodyProfile, "headRadius">): number {
   return body.headRadius / REFERENCE_SKULL.radius;
 }
 
+/**
+ * The wrist a held item was drawn around (the classic body's). Wrist
+ * girth is what scales with hand size, and unlike finger reach it is
+ * already measured on every body.
+ */
+export const REFERENCE_WRIST_RADIUS = 0.03;
+
+/**
+ * How much bigger or smaller the hand holding an item is than the one the
+ * item was drawn for. A damaru sized to a stylised fist is a barrel in a
+ * human one.
+ */
+export function handFit(body: Pick<BodyProfile, "wristBandRadius">): number {
+  return body.wristBandRadius / REFERENCE_WRIST_RADIUS;
+}
+
 /** spine joint sits this far below the chest joint (see skeleton.ts). */
 const SPINE_TO_CHEST_Y = 0.16;
 

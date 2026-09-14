@@ -17,7 +17,7 @@ import {
   type PartGenerator,
 } from "./types";
 import { chestZAtSocket } from "./ornaments";
-import { REFERENCE_SKULL, headFit } from "./bodyProfile";
+import { REFERENCE_SKULL, handFit, headFit } from "./bodyProfile";
 
 // ---------------------------------------------------------------------------
 // HEAD — serene divine face with human ears
@@ -568,7 +568,6 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
 export const ornamentNaga: AttachmentGenerator = (ctx) => {
   const scales = ctx.materials.fixed.serpent;
   const belly = ctx.materials.fixed.ivory;
-  const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
   // The torque's owner surface is the neck column: wrap the MEASURED neck
   // radius with a declared clearance, whatever body wears it. The front
@@ -620,13 +619,16 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
       scale: [1.15, 1.75, 0.34],
     }),
   );
-  // The pale underside a cobra shows when it spreads.
-  hood.add(
-    mesh(new THREE.SphereGeometry(0.0058, 16, 12), belly, {
-      position: [0, -0.009, 0.0035],
-      scale: [1.15, 1.3, 0.24],
-    }),
-  );
+  // The spectacle marking a cobra carries on the back of its hood — a
+  // thin pale band low on the spread, not a disc that reads as an eye.
+  for (const side of [1, -1]) {
+    hood.add(
+      mesh(new THREE.SphereGeometry(0.0034, 12, 10), belly, {
+        position: [side * 0.0052, -0.0125, 0.0028],
+        scale: [1.1, 0.5, 0.16],
+      }),
+    );
+  }
   // Snout, brow and eyes.
   // The snout comes forward from the top of the spread, where the head is.
   hood.add(
@@ -636,15 +638,18 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
     }),
   );
   for (const side of [1, -1]) {
+    // A brow ridge over a small dark eye recessed beneath it: a snake
+    // watches, it does not stare.
     hood.add(
-      mesh(new THREE.SphereGeometry(0.0019, 10, 8), scales, {
-        position: [side * 0.0042, 0.0165, 0.0072],
-        scale: [1, 0.8, 1],
+      mesh(new THREE.SphereGeometry(0.0024, 10, 8), scales, {
+        position: [side * 0.0044, 0.0158, 0.0055],
+        scale: [1.2, 0.55, 1.1],
       }),
     );
     hood.add(
-      mesh(new THREE.SphereGeometry(0.0011, 8, 6), ctx.materials.fixed.eyeDark, {
-        position: [side * 0.0045, 0.017, 0.0092],
+      mesh(new THREE.SphereGeometry(0.0009, 8, 6), ctx.materials.fixed.eyeDark, {
+        position: [side * 0.0047, 0.0146, 0.0072],
+        scale: [1, 0.85, 0.7],
       }),
     );
   }
@@ -748,8 +753,13 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   const wood = ctx.materials.get("garmentAccent");
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
+  // A drum is held: it is sized to the hand holding it, not to the hand
+  // it happened to be drawn for.
+  const held = new THREE.Group();
+  held.scale.setScalar(handFit(ctx.body));
+  group.add(held);
   // Hourglass body — two cones meeting at the gripped waist
-  group.add(
+  held.add(
     mesh(
       lathe([
         [0.0245, -0.042],
@@ -764,14 +774,14 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   );
   // Drum heads (hide membranes)
   for (const side of [1, -1]) {
-    group.add(
+    held.add(
       mesh(new THREE.CylinderGeometry(0.0265, 0.0265, 0.004, 20), ctx.materials.fixed.ivory, {
         position: [0, side * 0.041, 0],
       }),
     );
   }
   // Waist cord
-  group.add(
+  held.add(
     mesh(new THREE.TorusGeometry(0.0105, 0.0026, 8, 20), metal, {
       position: [0, 0, 0],
       rotation: [Math.PI / 2, 0, 0],
@@ -779,7 +789,7 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   );
   // Striker cords with knots
   for (const side of [1, -1]) {
-    group.add(
+    held.add(
       new THREE.Mesh(
         taperedTube(
           [
@@ -794,7 +804,7 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
         metal,
       ),
     );
-    group.add(
+    held.add(
       mesh(new THREE.SphereGeometry(0.0042, 10, 8), metal, {
         position: [side * 0.046, side * 0.024, 0.01],
       }),
