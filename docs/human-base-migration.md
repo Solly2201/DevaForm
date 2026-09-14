@@ -274,3 +274,38 @@ so a saved configuration naming either one still loads.
 
 Compare them directly: `/studio/shiva` is the current default,
 `/dev/shiva-human` is the candidate, `/dev/human` is the body on its own.
+
+---
+
+## Correction pass — visual review against ref3.png
+
+The Stage 6 result passed every gate and was still not acceptable to look
+at. This pass was driven by the reference sheet rather than by tests.
+
+**Fixed**
+
+| | |
+|---|---|
+| Trishul | Was following the wrist, because "how the hand meets the item" and "what the item does in the world" were one field. Assets now declare an `ItemPresentation`: `upright` holds it vertical, `grounded` plants it. The body measures its own grip point inside the closed fist, so the shaft passes through the hand instead of the forearm, and planted items are re-planted after every pose — raise the hand and it slides up the shaft. |
+| Lower garment | Was a lathed cylinder. Replaced by `humanoid.garment.hideWrap`: lofted from the wearer's own hip, thigh, knee and calf measurements, split at the hip and knee so each piece rides the bone beneath it, gathered into folds, torn at the hem, stopping at the calf. Markings are painted into vertex colours that tint the customer's garment colour. |
+| Face | Was a generic young male. Base matured; faceDivine now carries a forward, lowered brow over deep-set half-lidded eyes, a straight nose, a closed weighted mouth, and real cheek, jaw and chin structure. |
+| Third eye | Was buried: its socket sat 4 mm inside a brow surface, and the ornament is under 5 mm of relief. Socket moved onto the surface and down to the brow ridge. |
+| Tripundra | Did not exist for a mesh body — the procedural head drew it. Now its own ornament, sized from the head wearing it. |
+| Rudraksha | Front of the strand vanished into the chest: collars are drawn in socket space and fitted in chest space, and the offset between them was hardcoded to the stylised rig. Measured now, and the chest surface reaches the neck base instead of stopping at the pectorals. |
+| Jata | Was a skullcap after being scaled to the cranium. Now a mane: a shell that flares to the wearer's shoulders and falls to mid-back, frayed at its edge, with sixteen locks over it. |
+| Naga | Was a gold torque with a bump, and then a cartoon eye. Now a serpent in its own fixed material, with a spade hood, a spectacle marking low on the spread, and small dark recessed eyes. |
+| Damaru | Was sized for a stylised fist. Held items now give part of the way to the hand holding them, measured by wrist girth. |
+
+**Still divergent from the reference**
+
+- The dhoti is one tone where the reference layers cream cloth under the
+  hide, and stops at the calf where the reference reaches the ankle.
+- The mane falls behind the shoulders but not forward over them.
+- The hide's markings read at close range and wash out at full-figure
+  distance.
+- Seated poses still float the figure above the base — a pose-preset
+  issue that predates this work and is unrelated to the garment.
+
+**Unchanged:** Ganesha, pixel for pixel. The procedural Shiva keeps its
+own body, dhoti and jata; it gained only the planted trishul, which the
+reference shows and which its previous presentation already implied.
