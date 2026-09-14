@@ -202,76 +202,35 @@ function clothPiece(
 }
 
 /**
- * The cloth around one leg, in two pieces: one on the thigh, one on the
- * shin. Splitting at the knee is what lets the garment survive a fold —
- * each piece is carried by the bone beneath it, so no pose can push a leg
- * out through its own cloth.
+ * The hide's fall down one leg.
+ *
+ * This was a cream sleeve per leg with the skin laid over it, and two
+ * sleeves is a pair of trousers however they are coloured. A dhoti is one
+ * draped mass and a hide is a single skin, so there is only the hide now:
+ * it wraps the thigh, ends in a torn edge above the knee, and the leg
+ * continues bare below it, which is what the references show.
+ *
+ * It still rides the thigh joint, so a folded leg carries its own cloth
+ * and no pose can push a leg out through the garment.
  */
-function legCloth(
+function legHide(
   body: BodyProfile,
   material: THREE.Material,
   seed: number,
   length: number,
-): { thigh: THREE.Mesh; shin: THREE.Mesh | null } {
-  const fit = (radius: number) => radius + CLEARANCE;
+): THREE.Mesh {
+  const fit = (radius: number) => radius + CLEARANCE * 2.2;
   const top = fit(body.thighTopRadius);
   const mid = fit(body.thighMidRadius);
-  const knee = fit(body.kneeRadius);
-  // Cloth hangs away from the leg rather than sleeving it: the dhoti is
-  // draped, and a wrap that follows every contour reads as a legging.
-  const thighSections: ClothSection[] = [
-    { y: 0.03, rx: top * 1.06, rz: top * 1.08 },
-    { y: -body.thighLength * 0.4, rx: mid * 1.14, rz: mid * 1.18 },
-    { y: -body.thighLength * 0.82, rx: knee * 1.42, rz: knee * 1.48 },
-    // Reaches well past the knee: when the leg folds, the two pieces must
-    // still overlap on the OUTSIDE of the bend, where they separate most.
-    { y: -body.thighLength * 1.18, rx: knee * 1.5, rz: knee * 1.56 },
-  ];
-  const thigh = clothPiece(thighSections, material, {
-    seed,
-    hem: 0.01,
-    density: 0,
-    folds: 0.08,
-  });
-
-  if (length < 0.55) return { thigh, shin: null };
-  const calf = fit(body.calfRadius);
-  const ankle = fit(body.ankleBandRadius);
-  // Down to the ankle, as the reference shows, gathering in as it falls
-  // so the hem is a cuff of cloth rather than a flare.
-  const drop = body.shinLength * 0.94 * Math.min(1, (length - 0.4) * 1.7);
-  const shinSections: ClothSection[] = [
-    { y: 0.075, rx: knee * 1.46, rz: knee * 1.52 },
-    { y: -drop * 0.38, rx: calf * 1.24, rz: calf * 1.3 },
-    { y: -drop * 0.78, rx: calf * 1.12, rz: calf * 1.18 },
-    { y: -drop, rx: ankle * 1.62, rz: ankle * 1.68 },
-  ];
-  return {
-    thigh,
-    shin: clothPiece(shinSections, material, {
-      seed: seed + 7,
-      hem: 0.015,
-      density: 0,
-      folds: 0.07,
-    }),
-  };
-}
-
-/**
- * The hide worn OVER the cloth on the upper leg: a short wrap with a torn
- * lower edge, sitting proud of the cream beneath it so the two layers
- * read as two layers.
- */
-function hideOverThigh(body: BodyProfile, material: THREE.Material, seed: number): THREE.Mesh {
-  const fit = (radius: number) => radius + CLEARANCE * 2.6;
-  const top = fit(body.thighTopRadius);
-  const mid = fit(body.thighMidRadius);
+  // How far down the thigh the skin reaches before it is torn off.
+  const fall = body.thighLength * (0.5 + 0.42 * Math.min(1, Math.max(0, length)));
   const sections: ClothSection[] = [
-    { y: 0.028, rx: top * 1.12, rz: top * 1.14 },
-    { y: -body.thighLength * 0.3, rx: mid * 1.32, rz: mid * 1.36 },
-    { y: -body.thighLength * 0.62, rx: mid * 1.44, rz: mid * 1.48 },
+    { y: 0.032, rx: top * 1.1, rz: top * 1.13 },
+    { y: -fall * 0.42, rx: mid * 1.26, rz: mid * 1.3 },
+    { y: -fall * 0.84, rx: mid * 1.4, rz: mid * 1.45 },
+    { y: -fall, rx: mid * 1.44, rz: mid * 1.49 },
   ];
-  return clothPiece(sections, material, { seed, hem: 0.032, density: 1, folds: 0.06 });
+  return clothPiece(sections, material, { seed, hem: 0.04, density: 1, folds: 0.07 });
 }
 
 /**
@@ -346,15 +305,17 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // Seated poses fold the legs up in front of the hips, so the wrap is
   // short and the length goes onto the legs instead — which is how cloth
   // is actually gathered to sit down.
-  const skirt = ctx.seated ? 0.06 : 0.15;
+  const skirt = ctx.seated ? 0.05 : 0.095;
   const wrapSections: ClothSection[] = [
     { y: waistY + 0.012, rx: hipRx * 0.88, rz: hipRz * 0.9 },
     { y: waistY - 0.016, rx: hipRx * 0.97, rz: hipRz * 0.98 },
     { y: seat - 0.01, rx: hipRx * 1.06, rz: hipRz * 1.08 },
     { y: seat - skirt, rx: hipRx * 1.12, rz: hipRz * 1.14 },
   ];
-  // Cloth first, hide over it: two layers, as the reference wears them.
-  wrap.add(clothPiece(wrapSections, cloth, { seed: 1, hem: 0.014, density: 0, folds: 0.05 }));
+  // A turn of plain cloth at the waist, showing only where the skin does
+  // not cover it: enough to read as two layers, never as a garment of its
+  // own, and never down the leg.
+  wrap.add(clothPiece(wrapSections, cloth, { seed: 1, hem: 0.012, density: 0, folds: 0.04 }));
   wrap.add(hidePanel(body, hide, waistY));
 
   // ---- sash and clasp at the waist --------------------------------------
@@ -405,17 +366,12 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   }
   wrap.add(fold);
 
-  const left = legCloth(body, cloth, 11, ctx.seated ? 0.5 : length);
-  const right = legCloth(body, cloth, 23, ctx.seated ? 0.5 : length);
-
-  const pieces: Array<JointedPart[number]> = [
+  // Seated poses fold the thighs up in front, so the skin is gathered
+  // shorter — the same garment, worn the way you wear it to sit down.
+  const reach = ctx.seated ? length * 0.35 : length;
+  return [
     { joint: "pelvis", object: wrap },
-    { joint: "leg.left.thigh", object: left.thigh },
-    { joint: "leg.right.thigh", object: right.thigh },
-    { joint: "leg.left.thigh", object: hideOverThigh(body, hide, 31) },
-    { joint: "leg.right.thigh", object: hideOverThigh(body, hide, 43) },
+    { joint: "leg.left.thigh", object: legHide(body, hide, 11, reach) },
+    { joint: "leg.right.thigh", object: legHide(body, hide, 23, reach) },
   ];
-  if (left.shin) pieces.push({ joint: "leg.left.shin", object: left.shin });
-  if (right.shin) pieces.push({ joint: "leg.right.shin", object: right.shin });
-  return pieces;
 };
