@@ -981,6 +981,21 @@ function measure(positions) {
     seatY: restFinal.get("leg.left.thigh").y - restFinal.get("pelvis").y,
   };
 
+  // Mean reach of the hand from its wrist joint.
+  let handReach = 0;
+  let handCount = 0;
+  const wrist = restFinal.get("arm.frontLeft.hand");
+  for (let i = 0; i < vertexCount; i += 1) {
+    if (dominantGroup[i] !== "arm.frontLeft.hand") continue;
+    handReach += Math.hypot(
+      positions[i * 3] - wrist.x,
+      positions[i * 3 + 1] - wrist.y,
+      positions[i * 3 + 2] - wrist.z,
+    );
+    handCount += 1;
+  }
+  handReach /= handCount || 1;
+
   const torsoTop = chestY + 0.03;
   const torsoBottom = pelvisY - 0.02;
   // The torso splits at the measured waist: below is the hips volume,
@@ -994,6 +1009,7 @@ function measure(positions) {
   return {
     lowerTorso,
     upperTorso,
+    handReach,
     armBand,
     wristBand,
     ankleBand,
@@ -1068,6 +1084,39 @@ function socketPositions(positions, m) {
   };
 }
 const sockets = socketPositions(finalMesh.neutral, measurements.neutral);
+
+/**
+ * Where a held shaft passes through the fist.
+ *
+ * A hand socket placed on the wrist makes every weapon look welded to the
+ * forearm. The grip is inside the closed hand: on the axis the curled
+ * fingers wrap, which is found from the knuckles and the palm's own
+ * normal rather than guessed at.
+ */
+function gripPoint(prefix) {
+  const { fingers, normal } = palmNormal(prefix);
+  const knuckles = new THREE.Vector3();
+  let span = 0;
+  for (const finger of [2, 3, 4, 5]) {
+    knuckles.add(v3(`${prefix}-finger-${finger}-1`));
+    span += v3(`${prefix}-finger-${finger}-1`).distanceTo(v3(`${prefix}-finger-${finger}-4`));
+  }
+  knuckles.multiplyScalar(0.25);
+  span /= 4;
+  // Into the palm by a little over a third of the fingers' reach, and a
+  // touch along them: that is the middle of the tube a fist makes.
+  return knuckles
+    .addScaledVector(normal, span * 0.38)
+    .addScaledVector(fingers, span * 0.12);
+}
+
+for (const side of SIDES) {
+  const point = gripPoint(side.mh === "L" ? "l" : "r")
+    .sub(restFor("neutral").get(`arm.${side.arm}.hand`))
+    .applyQuaternion(rotation.get(`arm.${side.arm}.hand`));
+  point.multiplyScalar(scale * heightFix.neutral);
+  sockets[`arm.${side.arm}.hand.item`] = point;
+}
 
 /**
  * The BodyProfile block the engine consumes, in the exact local spaces its
@@ -1147,7 +1196,9 @@ for (const [socket, local] of Object.entries(sockets)) {
     ? "head"
     : socket.startsWith("chest.")
       ? "chest"
-      : "pelvis";
+      : socket.startsWith("arm.")
+        ? socket.split(".").slice(0, 3).join(".")
+        : "pelvis";
   const empty = new THREE.Object3D();
   empty.name = `SOCKET_${socket.replace(/\./g, "_")}`;
   empty.position.copy(restFinal.get(parentJoint)).add(local);

@@ -48,6 +48,12 @@ export interface CharacterRig {
   /** Attachments that must stay world-upright after every pose change. */
   uprightAttachments: THREE.Object3D[];
   /**
+   * Planted attachments: a staff stands on the ground whatever the hand
+   * does, so when a pose lifts the hand the hand slides up the shaft
+   * rather than carrying the whole weapon into the air.
+   */
+  groundedAttachments: Array<{ object: THREE.Object3D; reach: number; baseTop: number }>;
+  /**
    * Torso surfaces this rig's body-fitted geometry was built against —
    * measured from a mesh body, or derived from a procedural one.
    */
@@ -225,6 +231,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
   const warnings: string[] = [];
   const uprightAttachments: THREE.Object3D[] = [];
+  const groundedAttachments: CharacterRig["groundedAttachments"] = [];
   const root = new THREE.Group();
   root.name = "statueRoot";
   const { characterRoot, joints } = buildJointHierarchy(skeleton);
@@ -414,6 +421,13 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
     socket.add(renderable);
     if (asset.keepUpright || presentation.upright) uprightAttachments.push(renderable);
+    if (reach !== undefined) {
+      groundedAttachments.push({
+        object: renderable,
+        reach,
+        baseTop: BASE_TOP_HEIGHT[config.base.style] ?? 0,
+      });
+    }
   }
 
   // Base platform; the character stands on its top surface.
@@ -432,10 +446,20 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Procedural generators consumed the same weights parametrically above.
   applyMorphInfluences(root, config.morphs);
 
-  return { root, skeleton, joints, sockets, uprightAttachments, body: bodyProfile, warnings };
+  return {
+    root,
+    skeleton,
+    joints,
+    sockets,
+    uprightAttachments,
+    groundedAttachments,
+    body: bodyProfile,
+    warnings,
+  };
 }
 
 const worldQuaternion = new THREE.Quaternion();
+const groundedPoint = new THREE.Vector3();
 
 /**
  * Re-orient upright attachments after a pose change: the object's world
@@ -449,6 +473,20 @@ export function alignUprightAttachments(rig: CharacterRig): void {
     parent.updateWorldMatrix(true, false);
     parent.getWorldQuaternion(worldQuaternion);
     object.quaternion.copy(worldQuaternion.invert());
+  }
+  // Re-plant the staffs. Their butt belongs on the base whatever the pose
+  // did to the hand, so the offset is computed in the statue's own frame
+  // and then expressed in the socket's — which by now may be rotated any
+  // which way by the arm carrying it.
+  for (const { object, reach, baseTop } of rig.groundedAttachments) {
+    const parent = object.parent;
+    if (!parent) continue;
+    parent.updateWorldMatrix(true, false);
+    const socket = rig.root.worldToLocal(parent.getWorldPosition(groundedPoint));
+    parent.getWorldQuaternion(worldQuaternion);
+    object.position
+      .set(0, baseTop + reach - socket.y, 0)
+      .applyQuaternion(worldQuaternion.invert());
   }
 }
 

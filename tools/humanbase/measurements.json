@@ -201,6 +201,16 @@
       0,
       0.09,
       0.0554
+    ],
+    "arm.frontLeft.hand.item": [
+      0.00337,
+      -0.05942,
+      -0.00601
+    ],
+    "arm.frontRight.hand.item": [
+      -0.00337,
+      -0.05942,
+      -0.00601
     ]
   },
   "measurements": {
@@ -219,6 +229,7 @@
         "radiusY": 0.11146,
         "radiusZ": 0.06235
       },
+      "handReach": 0.07469,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02664
@@ -280,6 +291,7 @@
         "radiusY": 0.11246,
         "radiusZ": 0.0623
       },
+      "handReach": 0.07451,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.0254
@@ -341,6 +353,7 @@
         "radiusY": 0.10596,
         "radiusZ": 0.06201
       },
+      "handReach": 0.07452,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02623
@@ -402,6 +415,7 @@
         "radiusY": 0.11296,
         "radiusZ": 0.06722
       },
+      "handReach": 0.07454,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02984
@@ -463,6 +477,7 @@
         "radiusY": 0.11146,
         "radiusZ": 0.06587
       },
+      "handReach": 0.07452,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02883
@@ -524,6 +539,7 @@
         "radiusY": 0.11146,
         "radiusZ": 0.06218
       },
+      "handReach": 0.07486,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02679
@@ -585,6 +601,7 @@
         "radiusY": 0.11196,
         "radiusZ": 0.05907
       },
+      "handReach": 0.07452,
       "armBand": {
         "offsetY": -0.05037,
         "radius": 0.02279
