@@ -430,9 +430,18 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     socket.add(renderable);
     if (asset.keepUpright || presentation.upright) uprightAttachments.push(renderable);
     // A hand socket holding something that stands upright in the world
-    // tells the arm which way the fist has to face.
+    // tells the arm which way the fist has to face — but only a hand that
+    // is MODELLED needs turning. A procedural hand is generated in the
+    // mudra it was asked for, fingers already closed the right way round
+    // the item, so its wrist belongs to the pose. A mesh hand says which
+    // it is by declaring a grip morph for that arm.
     const heldBy = attachment.socket.match(/^arm\.([A-Za-z]+)\.hand\.item$/)?.[1];
-    if (heldBy && (asset.keepUpright || presentation.upright)) {
+    const modelledHand =
+      heldBy !== undefined &&
+      (bodyAsset?.morphTargets ?? []).includes(
+        `grip${heldBy[0]!.toUpperCase()}${heldBy.slice(1)}`,
+      );
+    if (heldBy && modelledHand && (asset.keepUpright || presentation.upright)) {
       held.push({
         slot: heldBy as HeldItem["slot"],
         // Upright items present their own axis vertically, whatever the

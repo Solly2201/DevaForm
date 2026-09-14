@@ -56,7 +56,7 @@ const VIEWS = {
   torso: [0, 0.75, 1.0],
   grip: [-0.45, 0.72, 0.52],
   drum: [0.40, 0.66, 0.40],
-  naga: [0.30, 0.93, 0.34],
+  naga: [-0.24, 0.95, 0.36],
 } as const;
 type ViewId = keyof typeof VIEWS;
 const TARGET: Record<ViewId, [number, number, number]> = {
@@ -68,7 +68,7 @@ const TARGET: Record<ViewId, [number, number, number]> = {
   torso: [0, 0.72, 0],
   grip: [-0.23, 0.66, 0.19],
   drum: [0.24, 0.6, 0.06],
-  naga: [0.05, 0.88, 0.03],
+  naga: [-0.03, 0.9, 0.07],
 };
 
 const POSES = ["shiva.standingStaff", "shiva.blessing", "shiva.meditation"] as const;
