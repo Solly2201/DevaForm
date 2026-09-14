@@ -38,6 +38,7 @@ import { morphInfluences } from "@/engine/morphs";
 const HUMAN_BODY = "humanoid.body.human";
 const HIDE_WRAP = "humanoid.garment.hideWrap";
 const TRIPUNDRA = "humanoid.tilak.tripundra";
+const NAGA = "shiva.ornament.naga";
 /** The build this candidate is judged at — heroic frame, ascetic spare. */
 const SHIVA_MORPHS = {
   bodyPowerful: 0.35,
@@ -82,6 +83,8 @@ function humanShiva(preset: string, morphs: Record<string, number>): CharacterCo
     attachments: [
       ...base.attachments,
       { socket: "head.forehead" as const, asset: { assetId: TRIPUNDRA, version: 1 } },
+      // The serpent is Shiva's, and an optional ornament like any other.
+      { socket: "chest.necklace" as const, asset: { assetId: NAGA, version: 1 } },
     ],
     pose: { preset, jointOverrides: {} },
     morphs,

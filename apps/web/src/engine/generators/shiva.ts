@@ -566,7 +566,8 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const ornamentNaga: AttachmentGenerator = (ctx) => {
-  const metal = ctx.materials.get("metal");
+  const scales = ctx.materials.fixed.serpent;
+  const belly = ctx.materials.fixed.ivory;
   const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
   // The torque's owner surface is the neck column: wrap the MEASURED neck
@@ -589,40 +590,61 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
       frontness > 0.05 ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.005)) : zNeck;
     coil.push([x, y, z]);
   }
-  group.add(new THREE.Mesh(taperedTube(coil, [0.008, 0.0095], 60, 12), metal));
+  group.add(new THREE.Mesh(taperedTube(coil, [0.008, 0.0095], 60, 12), scales));
   // Tail tapering down the chest from the coil's end
   const tail: V3[] = [
     coil[coil.length - 1] as V3,
     [-0.03, -0.05, chestZAtSocket(ctx, -0.03, -0.05, 0.006)],
     [-0.044, -0.078, chestZAtSocket(ctx, -0.044, -0.078, 0.006)],
   ];
-  group.add(new THREE.Mesh(taperedTube(tail, [0.008, 0.0025], 18, 8), metal));
+  group.add(new THREE.Mesh(taperedTube(tail, [0.008, 0.0025], 18, 8), scales));
   // Neck rising to the raised hood beside the head, tracking the coil
   const hoodX = neckR + 0.032;
   const rise: V3[] = [
     coil[0] as V3,
-    [hoodX - 0.006, collarY + 0.03, zBias + 0.012],
-    [hoodX, collarY + 0.062, zBias + 0.02],
+    [hoodX - 0.008, collarY + 0.008, zBias + 0.008],
+    [hoodX, collarY + 0.028, zBias + 0.016],
   ];
-  group.add(new THREE.Mesh(taperedTube(rise, [0.0095, 0.007], 18, 10), metal));
-  // Hood — flattened oval beside the head
-  group.add(
-    mesh(new THREE.SphereGeometry(0.015, 18, 14), metal, {
-      position: [hoodX, collarY + 0.07, zBias + 0.02],
-      scale: [1.5, 1.9, 0.5],
+  group.add(new THREE.Mesh(taperedTube(rise, [0.0095, 0.007], 18, 10), scales));
+  // The hood: a cobra's spread, flared and canted forward so it reads as
+  // a head turned toward the devotee rather than a leaf stuck to a neck.
+  // At the shoulder, not up by the ear: the hood rises from the coil.
+  const hoodY = collarY + 0.034;
+  const hood = new THREE.Group();
+  hood.position.set(hoodX, hoodY, zBias + 0.022);
+  hood.rotation.set(-0.25, -0.5, -0.18);
+  group.add(hood);
+  hood.add(
+    mesh(new THREE.SphereGeometry(0.0125, 20, 16), scales, {
+      // A cobra's spread is a spade: taller than it is wide, and thin.
+      scale: [1.15, 1.75, 0.34],
     }),
   );
-  // Head nub + gem eyes facing forward
-  group.add(
-    mesh(new THREE.SphereGeometry(0.008, 12, 10), metal, {
-      position: [hoodX, collarY + 0.074, zBias + 0.027],
-      scale: [1, 1.15, 0.8],
+  // The pale underside a cobra shows when it spreads.
+  hood.add(
+    mesh(new THREE.SphereGeometry(0.0058, 16, 12), belly, {
+      position: [0, -0.009, 0.0035],
+      scale: [1.15, 1.3, 0.24],
+    }),
+  );
+  // Snout, brow and eyes.
+  // The snout comes forward from the top of the spread, where the head is.
+  hood.add(
+    mesh(new THREE.SphereGeometry(0.0062, 14, 12), scales, {
+      position: [0, 0.012, 0.006],
+      scale: [1, 0.9, 1.7],
     }),
   );
   for (const side of [1, -1]) {
-    group.add(
-      mesh(new THREE.SphereGeometry(0.0021, 8, 6), gem, {
-        position: [hoodX + side * 0.004, collarY + 0.078, zBias + 0.032],
+    hood.add(
+      mesh(new THREE.SphereGeometry(0.0019, 10, 8), scales, {
+        position: [side * 0.0042, 0.0165, 0.0072],
+        scale: [1, 0.8, 1],
+      }),
+    );
+    hood.add(
+      mesh(new THREE.SphereGeometry(0.0011, 8, 6), ctx.materials.fixed.eyeDark, {
+        position: [side * 0.0045, 0.017, 0.0092],
       }),
     );
   }
