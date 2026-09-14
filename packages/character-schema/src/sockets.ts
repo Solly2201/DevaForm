@@ -51,27 +51,35 @@ const ARM_SLOT_LABELS: Record<ArmSlot, string> = {
   backRight: "Back Right",
 };
 
-const handSockets: SocketDefinition[] = ARM_SLOTS.flatMap((slot) => [
-  {
-    id: `arm.${slot}.hand.item` as SocketId,
-    joint: `arm.${slot}.hand` as JointId,
-    position: [0, -0.05, 0.02] as const,
-    rotation: [0, 0, 0] as const,
-    label: `${ARM_SLOT_LABELS[slot]} Hand`,
-  },
-  {
-    id: `arm.${slot}.wrist` as SocketId,
-    joint: `arm.${slot}.hand` as JointId,
-    position: [0, 0.01, 0] as const,
-    rotation: [0, 0, 0] as const,
-    label: `${ARM_SLOT_LABELS[slot]} Wrist`,
-  },
-]);
+const handSockets = (slots: readonly ArmSlot[]): SocketDefinition[] =>
+  slots.flatMap((slot) => [
+    {
+      id: `arm.${slot}.hand.item` as SocketId,
+      joint: `arm.${slot}.hand` as JointId,
+      position: [0, -0.05, 0.02] as const,
+      rotation: [0, 0, 0] as const,
+      label: `${ARM_SLOT_LABELS[slot]} Hand`,
+    },
+    {
+      id: `arm.${slot}.wrist` as SocketId,
+      joint: `arm.${slot}.hand` as JointId,
+      position: [0, 0.01, 0] as const,
+      rotation: [0, 0, 0] as const,
+      label: `${ARM_SLOT_LABELS[slot]} Wrist`,
+    },
+  ]);
+
+const FRONT_ARM_SLOTS = ["frontLeft", "frontRight"] as const;
+const BACK_ARM_SLOTS = ["backLeft", "backRight"] as const;
 
 /**
  * Sockets available on the shared humanoid core. The crescent-moon socket is
  * a hair ornament seat: assets that own the hair surface (a jata sculpt)
  * refine its position onto their generated geometry.
+ *
+ * Only the FRONT hands are here. A hand socket belongs to an arm, and the
+ * back arms are an extension — so a body with one pair of arms offers no
+ * back hand to hang anything from, rather than offering one that floats.
  */
 export const HUMANOID_CORE_SOCKETS: readonly SocketDefinition[] = [
   { id: "head.crown", joint: "head", position: [0, 0.172, -0.005], rotation: [0, 0, 0], label: "Crown" },
@@ -81,11 +89,14 @@ export const HUMANOID_CORE_SOCKETS: readonly SocketDefinition[] = [
   { id: "head.moon", joint: "head", position: [0.05, 0.15, 0.02], rotation: [0, 0, 0], label: "Crescent" },
   { id: "chest.necklace", joint: "chest", position: [0, 0.12, 0.01], rotation: [0, 0, 0], label: "Necklace" },
   { id: "waist.ornament", joint: "pelvis", position: [0, 0.04, 0.12], rotation: [0, 0, 0], label: "Waist" },
-  ...handSockets,
+  ...handSockets(FRONT_ARM_SLOTS),
   { id: "leg.left.anklet", joint: "leg.left.foot", position: [0, 0.04, 0], rotation: [0, 0, 0], label: "Left anklet" },
   { id: "leg.right.anklet", joint: "leg.right.foot", position: [0, 0.04, 0], rotation: [0, 0, 0], label: "Right anklet" },
   { id: "base.platform", joint: "root", position: [0, 0, 0], rotation: [0, 0, 0], label: "Base", anchor: "statue" },
 ] as const;
+
+/** Sockets that require the back arm joint chains. */
+export const BACK_ARM_SOCKETS: readonly SocketDefinition[] = handSockets(BACK_ARM_SLOTS);
 
 /** Sockets that require Ganesha's trunk joint chain. */
 export const TRUNK_SOCKETS: readonly SocketDefinition[] = [
@@ -95,8 +106,24 @@ export const TRUNK_SOCKETS: readonly SocketDefinition[] = [
 /** Union of every socket across all skeletons (validation + legacy export). */
 export const SOCKETS: readonly SocketDefinition[] = [
   ...HUMANOID_CORE_SOCKETS,
+  ...BACK_ARM_SOCKETS,
   ...TRUNK_SOCKETS,
 ] as const;
+
+/**
+ * Compose a humanoid socket set alongside `humanoidJoints` — the same
+ * extensions, so joints and the sockets hung off them cannot disagree.
+ */
+export function humanoidSockets(extensions: {
+  trunk?: boolean;
+  backArms?: boolean;
+} = {}): readonly SocketDefinition[] {
+  return [
+    ...HUMANOID_CORE_SOCKETS,
+    ...(extensions.backArms ? BACK_ARM_SOCKETS : []),
+    ...(extensions.trunk ? TRUNK_SOCKETS : []),
+  ];
+}
 
 const socketMap = new Map<SocketId, SocketDefinition>(SOCKETS.map((s) => [s.id, s]));
 

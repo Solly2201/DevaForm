@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 import type {
+  ArmSlot,
   ArmsConfiguration,
   HandsConfiguration,
   JointId,
@@ -24,6 +25,13 @@ export interface GeneratorContext {
   morphs: Record<string, number>;
   hands: HandsConfiguration;
   arms: ArmsConfiguration;
+  /**
+   * The arm chains that actually exist AND are rendered: the intersection
+   * of the configured arm count with the skeleton's own arms. A generator
+   * that builds per-arm geometry must read this rather than the arm count,
+   * or it builds a hand for a limb this body does not have.
+   */
+  armSlots: readonly ArmSlot[];
   /**
    * True when the active pose preset is seated. Clothing generators use
    * pose-compatible geometry (a draped lap instead of a full skirt).

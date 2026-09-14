@@ -8,7 +8,7 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { SKELETON, getSocket, type JointId } from "@devaform/character-schema";
+import { SKELETON, activeArmSlots, getSocket, type JointId } from "@devaform/character-schema";
 import { AVAILABLE_DEITIES, getAsset } from "@devaform/asset-system";
 
 /** Default configuration used for thumbnail materials/context. */
@@ -88,6 +88,9 @@ export async function buildAssetObject(
     morphs: {},
     hands: config.hands,
     arms: config.arms,
+    // A thumbnail shows one asset, not a character: every arm the count
+    // asks for is rendered, because there is no body here to contradict it.
+    armSlots: activeArmSlots(config.arms),
     seated: false,
     // Thumbnails render against the canonical classic body measurements.
     body: deriveBodyProfile({ belly: 1 }, config.proportions),
