@@ -285,12 +285,11 @@ function hidePanel(body: BodyProfile, material: THREE.Material, waistY: number):
 
 export const humanoidHideWrap: PartGenerator = (ctx) => {
   const body = ctx.body;
-  // Two materials, two layers: plain cloth underneath, patterned hide
-  // over it. Both follow the palette the customer chose, so the hide is
-  // the accent colour with its markings tinted into the mesh.
-  const cloth = ctx.materials.get("garment");
+  // One garment, one material: the hide, in the accent colour with its
+  // markings tinted into the mesh. The sash at the waist is the only
+  // other cloth, and it is a band rather than a layer.
   const hide = ctx.materials.getPatterned("garmentAccent");
-  const sashMaterial = ctx.materials.get("garmentAccent");
+  const sashMaterial = ctx.materials.get("garment");
   const metal = ctx.materials.get("metal");
   // 0 = hip wrap only; 1 = cloth carried down to the ankles.
   const length = num(ctx, "length", 1);
@@ -312,10 +311,14 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     { y: seat - 0.01, rx: hipRx * 1.06, rz: hipRz * 1.08 },
     { y: seat - skirt, rx: hipRx * 1.12, rz: hipRz * 1.14 },
   ];
-  // A turn of plain cloth at the waist, showing only where the skin does
-  // not cover it: enough to read as two layers, never as a garment of its
-  // own, and never down the leg.
-  wrap.add(clothPiece(wrapSections, cloth, { seed: 1, hem: 0.012, density: 0, folds: 0.04 }));
+  // The wrap round the hips is the SKIN, all the way round.
+  //
+  // It used to be plain cloth with the hide panel laid over its front,
+  // and a panel covers about two hundred degrees — so from behind, the
+  // cloth showed as a pale sheet down the centre back and read as a pair
+  // of trousers under the skin. A hide wraps a body; it does not have a
+  // front and a lining.
+  wrap.add(clothPiece(wrapSections, hide, { seed: 1, hem: 0.016, density: 1, folds: 0.05 }));
   wrap.add(hidePanel(body, hide, waistY));
 
   // ---- sash and clasp at the waist --------------------------------------

@@ -20,7 +20,7 @@ import type { Proportions } from "@devaform/character-schema";
 import type {
   MeasuredBodyProfile,
   MeasuredBodySurfaces,
-  MeasuredTorsoFront,
+  MeasuredTorsoSurface,
 } from "@devaform/asset-system";
 
 export interface BodyProfile {
@@ -117,6 +117,16 @@ export interface BodyProfile {
   torsoSurfaceZAt(x: number, chestLocalY: number): number;
   /** Rear counterpart of torsoSurfaceZAt (most negative z of the torso). */
   torsoBackZAt(x: number, chestLocalY: number): number;
+  /**
+   * A point on the torso's skin, chest-joint-local: `bearing` is measured
+   * from the front and turns toward the figure's left, `y` is the height.
+   *
+   * This is what lets an ornament WRAP rather than merely rest: a path
+   * can be authored in these two coordinates and evaluated onto whatever
+   * body is wearing it. Measured bodies answer from their own surface;
+   * others answer from the volume they were generated as.
+   */
+  surfaceAt(bearing: number, chestLocalY: number): { x: number; y: number; z: number };
 }
 
 /**
@@ -150,6 +160,67 @@ export function handFit(body: Pick<BodyProfile, "wristBandRadius">): number {
   return 0.68 + 0.32 * (body.wristBandRadius / REFERENCE_WRIST_RADIUS);
 }
 
+/**
+ * A point on a generated body's skin, by bearing and height. A body made
+ * of ellipsoids has no measured surface, so it answers from the volume it
+ * was built as — which for such a body is the truth.
+ */
+/**
+ * The two ellipsoids a procedural torso is generated as, plus the neck it
+ * runs up into. Enough to answer where the skin is at any bearing and
+ * height without the caller doing the arithmetic — which is the point:
+ * each caller used to pass ONE half-width for the whole body, so the
+ * surface reported chest width at the throat and anything walked round
+ * the neck stood a hand's breadth off it.
+ */
+interface GeneratedTorso {
+  chestCenterY: number;
+  chestCenterZ: number;
+  chestRadiusX: number;
+  chestRadiusY: number;
+  chestRadiusZ: number;
+  bellyCenterY: number;
+  bellyCenterZ: number;
+  bellyRadiusX: number;
+  bellyRadiusY: number;
+  bellyRadiusZ: number;
+  spineToChestY: number;
+  neckRadius: number;
+}
+
+function ellipseHalfWidth(y: number, centreY: number, rx: number, ry: number): number {
+  const t = 1 - ((y - centreY) / ry) ** 2;
+  return t <= 0 ? 0 : rx * Math.sqrt(t);
+}
+
+function generatedSurfaceAt(
+  bearing: number,
+  y: number,
+  torso: GeneratedTorso,
+): { x: number; y: number; z: number } {
+  const bellyY = y + torso.spineToChestY;
+  // Width and depth are both measured AT THIS HEIGHT, from whichever of
+  // the two volumes reaches further there, and never inside the neck.
+  const halfWidth = Math.max(
+    ellipseHalfWidth(y, torso.chestCenterY, torso.chestRadiusX, torso.chestRadiusY),
+    ellipseHalfWidth(bellyY, torso.bellyCenterY, torso.bellyRadiusX, torso.bellyRadiusY),
+    torso.neckRadius,
+  );
+  const frontZ = Math.max(
+    ellipseSliceZ(0, y, 0, torso.chestCenterY, torso.chestCenterZ,
+      torso.chestRadiusX, torso.chestRadiusY, torso.chestRadiusZ),
+    ellipseSliceZ(0, bellyY, 0, torso.bellyCenterY, torso.bellyCenterZ,
+      torso.bellyRadiusX, torso.bellyRadiusY, torso.bellyRadiusZ),
+  );
+  const centreZ = torso.chestCenterZ;
+  const halfDepth = Math.max(frontZ - centreZ, torso.neckRadius);
+  return {
+    x: Math.sin(bearing) * halfWidth,
+    y,
+    z: centreZ + Math.cos(bearing) * halfDepth,
+  };
+}
+
 /** spine joint sits this far below the chest joint (see skeleton.ts). */
 const SPINE_TO_CHEST_Y = 0.16;
 
@@ -179,11 +250,11 @@ export function deriveBodyProfile(
   measured?: {
     profile: MeasuredBodyProfile;
     morphs: Readonly<Record<string, number>>;
-    torsoFront?: MeasuredTorsoFront;
+    torsoSurface?: MeasuredTorsoSurface;
   },
 ): BodyProfile {
   if (measured) {
-    return deriveMeasuredProfile(measured.profile, measured.morphs, measured.torsoFront);
+    return deriveMeasuredProfile(measured.profile, measured.morphs, measured.torsoSurface);
   }
   // The athletic (masculine human) body declares itself via its params —
   // pure data, so the engine never asks WHICH deity wears it.
@@ -200,6 +271,10 @@ export function deriveBodyProfile(
   const bellyRadiusX = bellyR * bulk;
   const bellyRadiusY = bellyR * 0.98;
   const bellyRadiusZ = bellyR * 0.96 * bulk;
+
+  // Mirrors body.ts neck cylinder (r 0.062 top / 0.082 bottom): widest
+  // wrap point the collar ornaments actually sit on.
+  const neckRadius = 0.072;
 
   // Chest — mirrors body.ts: sphere r=0.148 at chest+[0,0.045,-0.005],
   // scaled [1.28*bulk*(0.94+0.06*chest), 0.92*chest, 0.9*bulk].
@@ -230,9 +305,7 @@ export function deriveBodyProfile(
     belly,
     chest,
     bulk,
-    // Mirrors body.ts neck cylinder (r 0.062 top / 0.082 bottom): widest
-    // wrap point the collar ornaments actually sit on.
-    neckRadius: 0.072,
+    neckRadius,
     neckBaseOffsetY: 0,
     // Mirrors the classic dhoti sizing: wide enough that knee/shin masses
     // stay inside the skirt in standing poses.
@@ -277,6 +350,21 @@ export function deriveBodyProfile(
     chestSurfaceZAt,
     torsoSurfaceZAt,
     torsoBackZAt,
+    surfaceAt: (bearing: number, y: number) =>
+      generatedSurfaceAt(bearing, y, {
+        chestCenterY,
+        chestCenterZ,
+        chestRadiusX,
+        chestRadiusY,
+        chestRadiusZ,
+        bellyCenterY,
+        bellyCenterZ,
+        bellyRadiusX,
+        bellyRadiusY,
+        bellyRadiusZ,
+        spineToChestY: SPINE_TO_CHEST_Y,
+        neckRadius,
+      }),
   };
 }
 
@@ -295,36 +383,41 @@ export function deriveBodyProfile(
  * deltas below describe.
  */
 /**
- * Read a measured torso-front field at a chest-local point, bilinearly.
- * Outside the grid it holds the edge value, which is what a surface does
- * at a silhouette: it stops, it does not fall away to the centre line.
+ * Read a measured torso surface on a bearing at a height, bilinearly.
+ * Bearings wrap; heights hold the edge row, which is what a surface does
+ * at its silhouette — it stops, it does not fall away to the centre line.
  */
-function sampleFront(field: MeasuredTorsoFront, x: number, y: number): number {
-  const cx = Math.min(
-    field.columns - 1,
-    Math.max(0, ((x - field.minX) / (field.maxX - field.minX)) * (field.columns - 1)),
+function sampleSurface(
+  map: MeasuredTorsoSurface,
+  bearing: number,
+  y: number,
+): { x: number; z: number } {
+  const rowAt = Math.min(
+    map.rows - 1,
+    Math.max(0, ((y - map.minY) / (map.maxY - map.minY)) * (map.rows - 1)),
   );
-  const cy = Math.min(
-    field.rows - 1,
-    Math.max(0, ((y - field.minY) / (field.maxY - field.minY)) * (field.rows - 1)),
-  );
-  const x0 = Math.floor(cx);
-  const y0 = Math.floor(cy);
-  const x1 = Math.min(field.columns - 1, x0 + 1);
-  const y1 = Math.min(field.rows - 1, y0 + 1);
-  const fx = cx - x0;
-  const fy = cy - y0;
-  const at = (row: number, col: number) => field.depth[row * field.columns + col] ?? 0;
-  return (
-    (at(y0, x0) * (1 - fx) + at(y0, x1) * fx) * (1 - fy) +
-    (at(y1, x0) * (1 - fx) + at(y1, x1) * fx) * fy
-  );
+  const r0 = Math.floor(rowAt);
+  const r1 = Math.min(map.rows - 1, r0 + 1);
+  const fr = rowAt - r0;
+
+  const turn = ((bearing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const colAt = (turn / (Math.PI * 2)) * map.columns;
+  const c0 = Math.floor(colAt) % map.columns;
+  const c1 = (c0 + 1) % map.columns;
+  const fc = colAt - Math.floor(colAt);
+
+  const radiusAt = (row: number, col: number) => map.radius[row * map.columns + col] ?? 0;
+  const radius =
+    (radiusAt(r0, c0) * (1 - fc) + radiusAt(r0, c1) * fc) * (1 - fr) +
+    (radiusAt(r1, c0) * (1 - fc) + radiusAt(r1, c1) * fc) * fr;
+  const centre = (map.centreZ[r0] ?? 0) * (1 - fr) + (map.centreZ[r1] ?? 0) * fr;
+  return { x: Math.sin(turn) * radius, z: centre + Math.cos(turn) * radius };
 }
 
 function deriveMeasuredProfile(
   measured: MeasuredBodyProfile,
   morphs: Readonly<Record<string, number>>,
-  torsoFront?: MeasuredTorsoFront,
+  torsoSurface?: MeasuredTorsoSurface,
 ): BodyProfile {
   const value = (key: keyof MeasuredBodySurfaces): number => {
     let total = measured.base[key];
@@ -355,13 +448,55 @@ function deriveMeasuredProfile(
     ellipseSliceZ(x, y, 0, bellyCenterY, bellyCenterZ, bellyRadiusX, bellyRadiusY, bellyRadiusZ);
   const chestSurfaceZAt = (x: number, y: number): number =>
     ellipseSliceZ(x, y, 0, chestCenterY, chestCenterZ, chestRadiusX, chestRadiusY, chestRadiusZ);
-  // The measured front wins where the body shipped one: an ellipsoid
+  // A point on the skin, by bearing and height. This is the primitive;
+  // everything else about the surface is asked through it.
+  const surfaceAt = (bearing: number, y: number) => {
+    if (torsoSurface) {
+      const { x, z } = sampleSurface(torsoSurface, bearing, y);
+      return { x, y, z };
+    }
+    // Without a measurement, the volume the body was generated as.
+    return generatedSurfaceAt(bearing, y, {
+      chestCenterY,
+      chestCenterZ,
+      chestRadiusX,
+      chestRadiusY,
+      chestRadiusZ,
+      bellyCenterY,
+      bellyCenterZ,
+      bellyRadiusX,
+      bellyRadiusY,
+      bellyRadiusZ,
+      spineToChestY,
+      neckRadius: value("neckRadius"),
+    });
+  };
+
+  // The measured surface wins where the body shipped one: an ellipsoid
   // describes a torso's volume well and its surface badly, and ornaments
-  // lie on the surface. Otherwise, this body's own spine->chest gap.
-  const torsoSurfaceZAt = (x: number, y: number): number =>
-    torsoFront
-      ? sampleFront(torsoFront, x, y)
-      : Math.max(chestSurfaceZAt(x, y), bellySurfaceZAt(x, y + spineToChestY));
+  // lie on the surface. The front is just the bearing that reaches a
+  // given x, found by walking in from the straight-ahead guess.
+  const torsoSurfaceZAt = (x: number, y: number): number => {
+    if (!torsoSurface) {
+      return Math.max(chestSurfaceZAt(x, y), bellySurfaceZAt(x, y + spineToChestY));
+    }
+    // Walk the front half and take the bearing that reaches this x. The
+    // surface is not a circle, so there is no closed form for it; a short
+    // sweep is exact enough and costs nothing at build-a-rig frequency.
+    const steps = 24;
+    let previous = surfaceAt(-Math.PI / 2, y);
+    for (let i = 1; i <= steps; i += 1) {
+      const bearing = -Math.PI / 2 + (i / steps) * Math.PI;
+      const point = surfaceAt(bearing, y);
+      if ((previous.x - x) * (point.x - x) <= 0) {
+        const span = point.x - previous.x;
+        const t = Math.abs(span) < 1e-9 ? 0 : (x - previous.x) / span;
+        return previous.z + (point.z - previous.z) * t;
+      }
+      previous = point;
+    }
+    return previous.z;
+  };
   const torsoBackZAt = (x: number, y: number): number =>
     Math.min(
       2 * chestCenterZ - chestSurfaceZAt(x, y),
@@ -414,6 +549,7 @@ function deriveMeasuredProfile(
     chestSurfaceZAt,
     torsoSurfaceZAt,
     torsoBackZAt,
+    surfaceAt,
   };
 }
 
@@ -467,13 +603,14 @@ function deriveAthleticProfile(
     );
 
   const pelvisHalfWidth = 0.108 * bulk;
+  // Mirrors the bodyAthletic neck loft (base rx 0.052 -> 0.037).
+  const neckRadius = 0.046 * bulk;
 
   return {
     belly: waist, // raw driver of the lower-torso volume
     chest,
     bulk,
-    // Mirrors the bodyAthletic neck loft (base rx 0.052 → 0.037).
-    neckRadius: 0.046 * bulk,
+    neckRadius,
     // The neck loft begins above the shoulder loft: collars wrap there
     // (necklace-socket-local; socket sits at chest+0.12, neck joint +0.16).
     neckBaseOffsetY: 0.045,
@@ -520,5 +657,20 @@ function deriveAthleticProfile(
     chestSurfaceZAt,
     torsoSurfaceZAt,
     torsoBackZAt,
+    surfaceAt: (bearing: number, y: number) =>
+      generatedSurfaceAt(bearing, y, {
+        chestCenterY,
+        chestCenterZ,
+        chestRadiusX,
+        chestRadiusY,
+        chestRadiusZ,
+        bellyCenterY,
+        bellyCenterZ,
+        bellyRadiusX,
+        bellyRadiusY,
+        bellyRadiusZ,
+        spineToChestY: SPINE_TO_CHEST_Y,
+        neckRadius,
+      }),
   };
 }

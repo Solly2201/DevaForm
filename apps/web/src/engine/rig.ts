@@ -259,7 +259,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       ? {
           profile: bodyAsset.bodyProfile,
           morphs: config.morphs,
-          torsoFront: bodyAsset.torsoFront,
+          torsoSurface: bodyAsset.torsoSurface,
         }
       : undefined,
   );

@@ -1222,76 +1222,93 @@ function profileBlock(m) {
 }
 
 /**
- * The front of the torso, as a height field rather than an ellipsoid.
+ * The torso and neck as a radial surface map, in the chest joint's space.
  *
- * Ornaments that lie ON the chest — a mala, a serpent's tail — need to
- * know where the chest actually is. An ellipsoid fitted to the torso
- * under-reports it wherever the real body is flatter or broader than the
- * fit, and anything laid on that answer sinks into the mesh. So the build
- * measures it: the frontmost surface on a grid across the chest, in the
- * chest joint's own space, which the engine then interpolates.
+ * Ornaments do not merely rest on the front of a body — they wrap it. A
+ * serpent goes round the neck, a sacred thread crosses a shoulder, a sash
+ * passes behind a waist, and none of them can be placed against a
+ * front-facing height field or an ellipsoid: the first has no back and the
+ * second has no truth. So the body measures itself all the way round.
+ *
+ * Each row is a horizontal slice at a height; the slice's own centre is
+ * recorded with it, because a neck does not sit above the middle of a
+ * chest. Each column is a bearing from that centre, measured from the
+ * front and turning toward the figure's left. The value is how far the
+ * skin is from the centre on that bearing.
  */
-function torsoFrontSurface(positions) {
+function torsoSurfaceMap(positions) {
   const chest = restFinal.get("chest");
-  const columns = 15;
-  const rows = 13;
-  const minX = -0.145;
-  const maxX = 0.145;
-  const minY = -0.24;
-  const maxY = 0.15;
-  const stepX = (maxX - minX) / (columns - 1);
+  const rows = 20;
+  const columns = 32;
+  const minY = -0.26;
+  const maxY = 0.2;
+  const region = new Set(["chest", "spine", "pelvis", "neck", "head"]);
   const stepY = (maxY - minY) / (rows - 1);
-  const front = new Set(["chest", "spine", "pelvis", "neck"]);
-  const depth = new Float64Array(rows * columns).fill(-Infinity);
-  for (let i = 0; i < vertexCount; i += 1) {
-    if (!front.has(dominantGroup[i])) continue;
-    const x = positions[i * 3] - chest.x;
-    const y = positions[i * 3 + 1] - chest.y;
-    const z = positions[i * 3 + 2] - chest.z;
-    if (x < minX - stepX || x > maxX + stepX) continue;
-    if (y < minY - stepY || y > maxY + stepY) continue;
-    // A vertex informs the cells it falls between, so the field stays
-    // continuous with a mesh this coarse.
-    const cx = (x - minX) / stepX;
-    const cy = (y - minY) / stepY;
-    for (const col of [Math.floor(cx), Math.ceil(cx)]) {
-      for (const row of [Math.floor(cy), Math.ceil(cy)]) {
-        if (col < 0 || col >= columns || row < 0 || row >= rows) continue;
-        const index = row * columns + col;
-        if (z > depth[index]) depth[index] = z;
-      }
-    }
-  }
-  // Cells the mesh never reached (outside the silhouette) fall back to
-  // their nearest filled neighbour so the field has no holes in it.
+
+  const centreZ = new Float64Array(rows);
+  const radius = new Float64Array(rows * columns);
   for (let row = 0; row < rows; row += 1) {
+    const y = minY + row * stepY;
+    // Everything within half a row of this height belongs to the slice.
+    const slice = [];
+    for (let i = 0; i < vertexCount; i += 1) {
+      if (!region.has(dominantGroup[i])) continue;
+      const vy = positions[i * 3 + 1] - chest.y;
+      if (Math.abs(vy - y) > stepY * 0.7) continue;
+      slice.push([positions[i * 3] - chest.x, positions[i * 3 + 2] - chest.z]);
+    }
+    if (!slice.length) {
+      centreZ[row] = row > 0 ? centreZ[row - 1] : 0;
+      for (let col = 0; col < columns; col += 1) {
+        radius[row * columns + col] =
+          row > 0 ? radius[(row - 1) * columns + col] : 0.05;
+      }
+      continue;
+    }
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const [, z] of slice) {
+      lo = Math.min(lo, z);
+      hi = Math.max(hi, z);
+    }
+    centreZ[row] = (lo + hi) / 2;
     for (let col = 0; col < columns; col += 1) {
-      const index = row * columns + col;
-      if (depth[index] > -Infinity) continue;
-      let best = 0;
-      let bestDistance = Infinity;
-      for (let r = 0; r < rows; r += 1) {
-        for (let c = 0; c < columns; c += 1) {
-          const other = depth[r * columns + c];
-          if (other === -Infinity) continue;
-          const distance = (r - row) ** 2 + (c - col) ** 2;
-          if (distance < bestDistance) {
-            bestDistance = distance;
-            best = other;
-          }
+      const bearing = (col / columns) * Math.PI * 2;
+      const dirX = Math.sin(bearing);
+      const dirZ = Math.cos(bearing);
+      let reach = 0;
+      for (const [x, z] of slice) {
+        const dz = z - centreZ[row];
+        const along = x * dirX + dz * dirZ;
+        if (along <= 0) continue;
+        // Only points near this bearing speak for it.
+        const across = Math.abs(x * dirZ - dz * dirX);
+        if (across > along * 0.35) continue;
+        reach = Math.max(reach, along);
+      }
+      radius[row * columns + col] = reach;
+    }
+    // A bearing that saw nothing takes the nearest one that did, so the
+    // map is closed all the way round.
+    for (let col = 0; col < columns; col += 1) {
+      if (radius[row * columns + col] > 0) continue;
+      for (let step = 1; step < columns; step += 1) {
+        const left = radius[row * columns + ((col - step + columns) % columns)];
+        const right = radius[row * columns + ((col + step) % columns)];
+        if (left > 0 || right > 0) {
+          radius[row * columns + col] = Math.max(left, right);
+          break;
         }
       }
-      depth[index] = best;
     }
   }
   return {
-    minX,
-    maxX,
     minY,
     maxY,
-    columns,
     rows,
-    depth: Array.from(depth, (value) => round(value)),
+    columns,
+    centreZ: Array.from(centreZ, (value) => round(value)),
+    radius: Array.from(radius, (value) => round(value)),
   };
 }
 
@@ -1382,7 +1399,7 @@ await writeFile(
       forwardAxis: "+Z",
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
-      torsoFront: torsoFrontSurface(finalMesh.neutral),
+      torsoSurface: torsoSurfaceMap(finalMesh.neutral),
       printability: { printSourceAvailable: false },
     },
     null,
@@ -1423,7 +1440,7 @@ await writeFile(
       morphTargets: morphTargetNames,
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
-      torsoFront: torsoFrontSurface(finalMesh.neutral),
+      torsoSurface: torsoSurfaceMap(finalMesh.neutral),
     },
     null,
     2,
