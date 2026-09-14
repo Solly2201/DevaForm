@@ -40,6 +40,7 @@ const VIEWS = {
   side: [1.9, 0.62, 0],
   back: [0, 0.62, -1.9],
   face: [0, 0.95, 0.55],
+  hand: [-0.44, 0.82, 0.44],
 } as const;
 type ViewId = keyof typeof VIEWS;
 
@@ -77,12 +78,22 @@ const POSES: ReadonlyArray<{ id: string; label: string; pose: PoseConfiguration 
   },
 ];
 
+const TARGETS: Record<ViewId, [number, number, number]> = {
+  front: [0, 0.55, 0],
+  threeQuarter: [0, 0.55, 0],
+  side: [0, 0.55, 0],
+  back: [0, 0.55, 0],
+  face: [0, 0.93, 0],
+  hand: [-0.2, 0.75, 0.14],
+};
+
 function CameraRig({ view }: { view: ViewId }) {
   const camera = useThree((s) => s.camera);
   useEffect(() => {
     const [x, y, z] = VIEWS[view];
     camera.position.set(x, y, z);
-    camera.lookAt(0, view === "face" ? 0.93 : 0.55, 0);
+    const target = TARGETS[view];
+    camera.lookAt(...target);
   }, [camera, view]);
   return null;
 }
@@ -258,7 +269,7 @@ export default function HumanBasePage() {
           </mesh>
           <CameraRig view={view} />
           <OrbitControls
-            target={view === "face" ? [0, 0.93, 0] : [0, 0.55, 0]}
+            target={TARGETS[view]}
             minDistance={0.2}
             maxDistance={6}
           />

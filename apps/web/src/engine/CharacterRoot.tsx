@@ -20,6 +20,7 @@ import { ZoneMaterials } from "./materials";
 import { applyGestureOrientations, applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig, type CharacterRig } from "./rig";
 import { applyMorphInfluences } from "./skinning";
+import { morphInfluences } from "./morphs";
 import { activeRig } from "./rigHandle";
 
 export function CharacterRoot() {
@@ -100,10 +101,12 @@ export function CharacterRoot() {
     alignUprightAttachments(rig);
   }, [rig, pose, hands]);
 
-  // Morphs: in-place GPU influence updates (no geometry rebuild).
+  // Morphs: in-place GPU influence updates (no geometry rebuild). Hand
+  // gestures contribute their own influences on bodies that can close
+  // their hands — see morphs.ts.
   useEffect(() => {
-    applyMorphInfluences(rig.root, morphs);
-  }, [rig, morphs]);
+    applyMorphInfluences(rig.root, morphInfluences(morphs, hands, resolveAssetRef(parts.body)));
+  }, [rig, morphs, hands, parts.body]);
 
   // Materials: in-place color/finish updates.
   useEffect(() => {

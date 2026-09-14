@@ -568,7 +568,9 @@
     "bodyPowerful",
     "bodyHeroic",
     "faceDivine",
-    "bodyAscetic"
+    "bodyAscetic",
+    "gripFrontLeft",
+    "gripFrontRight"
   ],
   "bodyProfile": {
     "base": {

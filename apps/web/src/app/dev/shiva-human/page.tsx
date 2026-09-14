@@ -26,7 +26,9 @@ import { subscribeGlbCache } from "@/engine/glbCache";
 import { ZoneMaterials } from "@/engine/materials";
 import { applyGestureOrientations, applyPose } from "@/engine/pose";
 import { buildRig, disposeRig, type CharacterRig } from "@/engine/rig";
+import { resolveAssetRef } from "@devaform/asset-system";
 import { applyMorphInfluences } from "@/engine/skinning";
+import { morphInfluences } from "@/engine/morphs";
 
 const HUMAN_BODY = "humanoid.body.human";
 /** The build this candidate is judged at — heroic frame, ascetic spare. */
@@ -104,7 +106,10 @@ function Statue({
   useEffect(() => {
     applyPose(rig.joints, config.pose);
     applyGestureOrientations(rig.joints, config.hands);
-    applyMorphInfluences(rig.root, config.morphs);
+    applyMorphInfluences(
+      rig.root,
+      morphInfluences(config.morphs, config.hands, resolveAssetRef(config.parts.body)),
+    );
     const box = new THREE.Box3().setFromObject(rig.root);
     let triangles = 0;
     rig.root.traverse((object) => {

@@ -13,7 +13,9 @@ import { getLightingPreset } from "./lighting";
 import { ZoneMaterials } from "./materials";
 import { applyGestureOrientations, applyPose } from "./pose";
 import { alignUprightAttachments, buildRig, disposeRig } from "./rig";
+import { resolveAssetRef } from "@devaform/asset-system";
 import { applyMorphInfluences } from "./skinning";
+import { morphInfluences } from "./morphs";
 import { SceneEnvironment } from "./SceneEnvironment";
 import { subscribeGlbCache } from "./glbCache";
 
@@ -28,7 +30,10 @@ function StaticCharacter({ config }: { config: CharacterConfiguration }) {
   const rig = useMemo(() => {
     const built = buildRig(config, materials);
     materials.applyConfiguration(config.materials);
-    applyMorphInfluences(built.root, config.morphs);
+    applyMorphInfluences(
+      built.root,
+      morphInfluences(config.morphs, config.hands, resolveAssetRef(config.parts.body)),
+    );
     applyPose(built.joints, config.pose);
     applyGestureOrientations(built.joints, config.hands);
     alignUprightAttachments(built);
