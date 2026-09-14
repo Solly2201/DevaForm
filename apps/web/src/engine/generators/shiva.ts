@@ -9,7 +9,13 @@
  */
 import * as THREE from "three";
 import { lathe, loft, mesh, taperedTube, type V3 } from "../geometry";
-import { num, type AttachmentGenerator, type PartGenerator } from "./types";
+import {
+  num,
+  type AttachmentGenerator,
+  type GeneratorContext,
+  type JointedPart,
+  type PartGenerator,
+} from "./types";
 import { chestZAtSocket } from "./ornaments";
 import { REFERENCE_SKULL, headFit } from "./bodyProfile";
 
@@ -165,6 +171,109 @@ export const shivaHead: PartGenerator = (ctx) => {
 // JATA — matted locks coiled into the ascetic's crown
 // ---------------------------------------------------------------------------
 
+/**
+ * The mane of matted hair.
+ *
+ * A few tubes hanging behind the ears read as strands stuck to a head.
+ * What the iconography shows is mass: a body of hair falling from the
+ * crown, spreading over the shoulders and down the back, with individual
+ * locks catching the light on top of it. So the mass is built first, as a
+ * shell that follows the skull and then flares to the shoulders of the
+ * body actually wearing it, and the locks are laid over that.
+ *
+ * Sized from the body, not from the jata's reference skull: how far hair
+ * falls is a fact about the wearer's back, not about the hairpiece.
+ */
+function jataMane(ctx: GeneratorContext, length: number): THREE.Group {
+  const hair = ctx.materials.get("hair");
+  const group = new THREE.Group();
+  const skull = ctx.body.headRadius;
+  const shoulder = ctx.body.chestRadiusX;
+  const top = ctx.body.headCenterY + skull * 0.35;
+  // Down to the middle of the back, as the iconography shows.
+  const fall = length * (skull * 1.4 + shoulder * 2.3);
+
+  // The face stays clear: the shell spans everything but a frontal arc.
+  const open = Math.PI * 0.42;
+  const from = Math.PI / 2 + open;
+  const span = Math.PI * 2 - open * 2;
+  const rows = 16;
+  const cols = 26;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let row = 0; row <= rows; row += 1) {
+    const t = row / rows;
+    // Hugs the skull, flares across the shoulders, then gathers again.
+    const width =
+      skull * 1.04 + (shoulder * 0.92 - skull * 1.04) * Math.min(1, Math.pow(t * 2.4, 1.2));
+    const taper = 1 - 0.22 * Math.pow(Math.max(0, t - 0.5) / 0.5, 2);
+    for (let col = 0; col <= cols; col += 1) {
+      const s = col / cols;
+      const angle = from + s * span;
+      // Matted hair is lumpy: vary the surface so it is not a helmet.
+      const lump = 1 + 0.05 * Math.cos(s * Math.PI * 9 + t * 4) + 0.03 * Math.cos(s * Math.PI * 17);
+      const r = width * taper * lump;
+      // The mass sits behind the head and leans further back as it falls.
+      const back = -0.012 - 0.055 * t * t;
+      // Hair does not end in a straight line: the mass frays where it
+      // stops, by a different amount around the head.
+      const fray =
+        t > 0.82
+          ? (Math.cos(s * Math.PI * 6.3) * 0.4 + Math.cos(s * Math.PI * 13.1) * 0.6) * 0.035
+          : 0;
+      positions.push(
+        Math.cos(angle) * r,
+        top - t * fall + Math.sin(s * Math.PI) * 0.01 + fray * ((t - 0.82) / 0.18),
+        Math.sin(angle) * r * 0.92 + back,
+      );
+    }
+  }
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const a = row * (cols + 1) + col;
+      const b = a + 1;
+      const c = a + cols + 1;
+      const d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+  const shell = new THREE.BufferGeometry();
+  shell.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  shell.setIndex(indices);
+  shell.computeVertexNormals();
+  const mass = new THREE.Mesh(shell, hair);
+  mass.material = hair;
+  group.add(mass);
+
+  // Locks over the mass: thick where they leave the crown, tapering, each
+  // with its own length and sway so the silhouette is not repeated.
+  for (let i = 0; i < 16; i += 1) {
+    const s = (i + 0.5) / 16;
+    const angle = from + s * span;
+    const wave = Math.sin(i * 2.399);
+    const len = fall * (0.5 + 0.55 * Math.abs(Math.sin(i * 1.7)));
+    const outer = skull * 1.06;
+    const wide = skull * 1.04 + (shoulder * 0.66 - skull * 1.04) * 0.8;
+    const path: V3[] = [
+      [Math.cos(angle) * outer * 0.9, top - fall * 0.02, Math.sin(angle) * outer * 0.85 - 0.014],
+      [
+        Math.cos(angle) * wide * 0.98,
+        top - len * 0.45,
+        Math.sin(angle) * wide * 0.9 - 0.03 + wave * 0.006,
+      ],
+      [
+        Math.cos(angle) * wide * (0.92 + 0.08 * wave),
+        top - len,
+        Math.sin(angle) * wide * 0.86 - 0.05 + wave * 0.01,
+      ],
+    ];
+    group.add(
+      new THREE.Mesh(taperedTube(path, [0.014 + 0.004 * wave, 0.0045], 16, 8), hair),
+    );
+  }
+  return group;
+}
+
 export const shivaJata: PartGenerator = (ctx) => {
   const hair = ctx.materials.get("hair");
   const flowing = num(ctx, "flowing", 0);
@@ -257,34 +366,14 @@ export const shivaJata: PartGenerator = (ctx) => {
     );
   }
 
-  if (flowing > 0) {
-    // Matted locks falling behind the ears to the shoulders
-    for (const side of [1, -1]) {
-      for (const [dx, dz, len, sway] of [
-        [0.048, -0.022, 0.19, 0.018],
-        [0.034, -0.042, 0.16, 0.008],
-        [0.058, -0.002, 0.15, 0.026],
-      ] as const) {
-        group.add(
-          new THREE.Mesh(
-            taperedTube(
-              [
-                [side * dx, 0.07, dz],
-                [side * (dx + sway), -0.01, dz - 0.01],
-                [side * (dx + sway + 0.006), 0.07 - len, dz + 0.004],
-              ],
-              [0.0095, 0.0045],
-              14,
-              8,
-            ),
-            hair,
-          ),
-        );
-      }
-    }
-  }
+  // Loose hair is its own mass, and it is built to the body rather than
+  // to the jata's reference skull: how far hair falls is a fact about the
+  // wearer's back, not about the hairpiece.
+  const mane = flowing > 0 ? jataMane(ctx, flowing) : null;
 
-  return [
+  const parts: JointedPart[number][] = [];
+  if (mane) parts.push({ joint: "head", object: mane });
+  parts.push(
     {
       joint: "head",
       object: seat,
@@ -298,7 +387,8 @@ export const shivaJata: PartGenerator = (ctx) => {
         },
       ],
     },
-  ];
+  );
+  return parts;
 };
 
 // ---------------------------------------------------------------------------
