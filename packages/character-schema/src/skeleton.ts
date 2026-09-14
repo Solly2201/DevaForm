@@ -92,6 +92,20 @@ export interface JointDefinition {
     y?: readonly [number, number];
     z?: readonly [number, number];
   };
+  /**
+   * How far this bone may rotate about its OWN length, in radians.
+   *
+   * Distinct from `limits`, which bounds the Euler components a pose may
+   * write. Euler y is axial twist only when the other two components are
+   * zero — for an arm raised and swung out it is not, and a solver that
+   * treats it as twist moves the elbow instead of turning the arm. Twist
+   * is therefore its own quantity, applied about the axis the child joint
+   * actually lies along.
+   *
+   * Declared on the joints that really have it: the shoulder (internal
+   * and external rotation) and the forearm (pronation and supination).
+   */
+  twist?: readonly [number, number];
   /** Human-readable label for pose UIs. */
   label: string;
   /**
@@ -115,6 +129,10 @@ const armJoints = (slot: ArmSlot, side: "left" | "right", row: "front" | "back")
       parent: "chest",
       position: [sideSign * 0.175, 0.11, z],
       limits: { x: [-PI, PI * 0.6], y: [-PI * 0.5, PI * 0.5], z: [-PI * 0.7, PI * 0.7] },
+      // Internal and external rotation of the whole arm about its length.
+      // This is what brings a fist onto a vertical staff at the side; a
+      // wrist cannot do it, and measuring showed a 46° miss without it.
+      twist: [-PI * 0.5, PI * 0.5],
       label: `${label} Upper Arm`,
       uiGroup,
     },
@@ -122,7 +140,13 @@ const armJoints = (slot: ArmSlot, side: "left" | "right", row: "front" | "back")
       id: `arm.${slot}.forearm`,
       parent: `arm.${slot}.upper`,
       position: [sideSign * 0.02, -0.16, 0],
-      limits: { x: [-PI * 0.85, 0.1], y: [-PI * 0.4, PI * 0.4], z: [-0.3, 0.3] },
+      // y is pronation and supination, and a real forearm has a lot of
+      // it — about 85° each way. It is the joint that brings a fist onto
+      // a vertical staff, so under-declaring it forces the work onto a
+      // wrist that cannot do it.
+      limits: { x: [-PI * 0.85, 0.1], y: [-PI * 0.47, PI * 0.47], z: [-0.3, 0.3] },
+      /** Pronation and supination — about 85° each way on a real arm. */
+      twist: [-PI * 0.47, PI * 0.47],
       label: `${label} Forearm`,
       uiGroup,
     },
@@ -130,7 +154,17 @@ const armJoints = (slot: ArmSlot, side: "left" | "right", row: "front" | "back")
       id: `arm.${slot}.hand`,
       parent: `arm.${slot}.forearm`,
       position: [0, -0.14, 0],
-      limits: { x: [-PI * 0.4, PI * 0.4], y: [-PI * 0.5, PI * 0.5], z: [-PI * 0.4, PI * 0.4] },
+      // A wrist is not a ball joint, and declaring it as one is how a
+      // solver ends up producing hands nobody has. Flexion and extension
+      // are its strong axis (~72°); radial and ulnar deviation its weak
+      // one (~45°, and real wrists manage rather less); axial rotation it
+      // has essentially none of — that is the forearm's job.
+      //
+      // y is not zero only because these are Euler XYZ components rather
+      // than anatomical axes, so a little of the forearm's rotation
+      // decomposes into it. 35° is the slack that allows, not a claim
+      // that a wrist twists that far.
+      limits: { x: [-PI * 0.4, PI * 0.4], y: [-PI * 0.195, PI * 0.195], z: [-PI * 0.25, PI * 0.25] },
       label: `${label} Hand`,
       uiGroup,
     },

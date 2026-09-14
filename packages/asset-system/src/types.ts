@@ -7,6 +7,7 @@
  * later resolve the same ref to the print-resolution source.
  */
 import type { DeityId, MaterialZone, PartSlot, SocketId } from "@devaform/character-schema";
+import { defaultPresentationFor, type AttributePresentation } from "./presentation";
 
 /** Lifecycle stage of an asset version. */
 export type AssetStage =
@@ -74,49 +75,6 @@ export interface AssetTransform {
   position?: readonly [number, number, number];
   rotation?: readonly [number, number, number];
   scale?: number;
-}
-
-/**
- * How a hand holds this item. Attaching the item to a hand socket
- * auto-applies the mudra so the default grip always looks intentional.
- */
-export interface GripMetadata {
-  mudra: "hold" | "pinch" | "grip";
-  /**
-   * Grip frame — how the asset meets the hand's grip socket. Lets an
-   * artist deliver a mesh in any local orientation and declare how it is
-   * held; the engine aligns the frame to the socket relationally.
-   *
-   * origin: asset-local point that lands exactly on the grip socket
-   *         (default: the asset origin — DevaForm's authoring convention).
-   * axis:   asset-local direction that runs along the grip channel — up
-   *         the shaft/stem (default [0, 1, 0]).
-   * roll:   rotation around the grip channel after alignment, radians
-   *         (default 0).
-   *
-   * Note: keepUpright items are re-verticalized in world space after
-   * posing, which supersedes the frame's world orientation by design.
-   */
-  origin?: readonly [number, number, number];
-  axis?: readonly [number, number, number];
-  roll?: number;
-  /**
-   * How far a hand may travel along the grip channel from the grip
-   * origin, in metres, before it reaches something no one grips.
-   *
-   * A planted item slides through the hand as the arm moves — that is the
-   * point of planting it — so the grip point is not one spot on the shaft
-   * but a RANGE of them, and the range ends where the shaft does. Without
-   * this the trishul had no way to say that the top of its shaft is a
-   * trident: raising the arm slid the hand 34 cm up and left it holding
-   * the prongs, which is not how anybody holds a trident.
-   *
-   * `up` is toward the item's head along its declared axis, `down` toward
-   * its butt. The asset's geometry must honour what it declares here —
-   * see the generator, which builds its head above the travel rather than
-   * at a fraction of wherever the hand happened to be.
-   */
-  travel?: { up?: number; down?: number };
 }
 
 export interface PrintabilityMetadata {
@@ -217,28 +175,6 @@ export interface MeasuredBodyProfile {
   morphs?: Readonly<Record<string, Partial<MeasuredBodySurfaces>>>;
 }
 
-/**
- * How an attribute presents itself once it is held.
- *
- * This is a different question from `grip`, which says how the hand meets
- * the item. Presentation says what the item does in the world: a trishul
- * stands vertically with its head up and its butt on the ground however
- * the wrist is posed, because that is how the icon is read — while a
- * modak simply follows the palm that cradles it. Keeping the two apart is
- * what lets the wrist be posed freely without the attribute going with it.
- */
-export interface ItemPresentation {
-  /** Hold the item world-upright, whatever the joint chain does. */
-  upright?: boolean;
-  /**
-   * A staff is planted: it reaches from the ground to above the figure,
-   * and the hand grips it somewhere along its length rather than at its
-   * end. The engine tells the generator how far the socket holding it
-   * stands above the base, and the generator builds a shaft that long.
-   */
-  grounded?: boolean;
-}
-
 export interface AssetDefinition {
   /** Stable id, dot-namespaced: `<deity|shared>.<category>.<name>` */
   id: string;
@@ -260,8 +196,15 @@ export interface AssetDefinition {
    * the trunk needs a different scale than in a palm.
    */
   socketTransforms?: Readonly<Record<string, AssetTransform>>;
-  /** Hand-grip behavior for hand-held attachments. */
-  grip?: GripMetadata;
+  /**
+   * Every relationship this attribute can have with the figure, in
+   * preference order — see presentation.ts. The resolver picks exactly one
+   * (resolveCharacterPresentation); the asset is never duplicated to
+   * express a second way of being worn or held.
+   *
+   * Attachments that are simply seated where they are put may omit this.
+   */
+  presentations?: readonly AttributePresentation[];
   /**
    * Features whose geometry is PHYSICALLY EMBEDDED in this part's mesh
    * (complete sculpts, AI or artist). Entries are part slots ("eyes",
@@ -278,17 +221,6 @@ export interface AssetDefinition {
    * asset.
    */
   integratedFeatures?: readonly string[];
-  /**
-   * Keep the attachment world-upright regardless of joint rotation —
-   * classical iconography holds shafted attributes (axe, noose, goad,
-   * lotus) vertical in any pose. Cradled items (modak) follow the palm.
-   *
-   * Shorthand for `presentation: { upright: true }`, which is the fuller
-   * statement of the same idea.
-   */
-  keepUpright?: boolean;
-  /** How this item presents itself once a hand holds it. */
-  presentation?: ItemPresentation;
   /**
    * Material zones this asset participates in. The engine colors the asset's
    * meshes from the configuration's zone materials via mesh naming
@@ -336,6 +268,19 @@ export interface AssetDefinition {
   supersedes?: string;
   printability: PrintabilityMetadata;
   tags?: readonly string[];
+}
+
+/**
+ * Every presentation this asset supports, in preference order.
+ *
+ * An attachment that declares none is simply seated where it is put, which
+ * is true of most ornaments — so this always answers, and no caller has to
+ * ask whether presentations exist.
+ */
+export function presentationsOf(asset: AssetDefinition): readonly AttributePresentation[] {
+  if (asset.presentations?.length) return asset.presentations;
+  const sockets = asset.kind.type === "attachment" ? asset.kind.sockets : [];
+  return [defaultPresentationFor(sockets)];
 }
 
 /** Provenance with a sensible default for procedural sources. */

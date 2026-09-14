@@ -7,6 +7,7 @@ import {
 import { GANESHA_ASSETS } from "../manifests/ganesha";
 import { GANESHA_EDITOR_CATEGORIES } from "../categories";
 import { getAsset, listAssets, resolveAssetRef } from "../registry";
+import { isHandheld } from "../presentation";
 
 describe("ganesha manifest integrity", () => {
   it("has unique asset ids", () => {
@@ -33,16 +34,18 @@ describe("ganesha manifest integrity", () => {
     }
   });
 
-  it("grip metadata uses valid mudras and only on hand-socket items", () => {
+  it("handheld presentations use real hand states, on hand-socket items", () => {
     for (const asset of GANESHA_ASSETS) {
-      if (!asset.grip) continue;
-      expect((MUDRAS as readonly string[]).includes(asset.grip.mudra), asset.id).toBe(true);
-      expect(asset.kind.type).toBe("attachment");
-      if (asset.kind.type !== "attachment") continue;
-      expect(
-        asset.kind.sockets.some((s) => s.endsWith(".hand.item")),
-        asset.id,
-      ).toBe(true);
+      for (const presentation of asset.presentations ?? []) {
+        if (!isHandheld(presentation)) continue;
+        expect((MUDRAS as readonly string[]).includes(presentation.hand), asset.id).toBe(true);
+        expect(asset.kind.type).toBe("attachment");
+        if (asset.kind.type !== "attachment") continue;
+        expect(
+          asset.kind.sockets.some((s) => s.endsWith(".hand.item")),
+          asset.id,
+        ).toBe(true);
+      }
     }
   });
 

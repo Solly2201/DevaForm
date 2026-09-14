@@ -33,7 +33,8 @@ import {
   type CharacterConfiguration,
   type MudraId,
 } from "@devaform/character-schema";
-import { buildRig } from "../rig";
+import { buildRig, poseRig } from "../rig";
+import { solveHand } from "../handSolve";
 import { applyGestureOrientations, applyPose } from "../pose";
 import { loft } from "../geometry";
 import { ZoneMaterials } from "../materials";
@@ -42,7 +43,9 @@ import { useEditorStore } from "@/state/editorStore";
 
 function worldOf(config: CharacterConfiguration, pick: (rig: ReturnType<typeof buildRig>) => THREE.Object3D | undefined) {
   const rig = buildRig(config, new ZoneMaterials());
-  applyPose(rig.joints, config.pose);
+  // Measure what is RENDERED: the gesture and grip solves move the arm,
+  // so a landmark read before them is a landmark nobody sees.
+  poseRig(rig);
   rig.root.updateWorldMatrix(true, true);
   const object = pick(rig);
   if (!object) return null;
@@ -51,7 +54,7 @@ function worldOf(config: CharacterConfiguration, pick: (rig: ReturnType<typeof b
 
 function bboxOf(config: CharacterConfiguration, name: string): THREE.Box3 | null {
   const rig = buildRig(config, new ZoneMaterials());
-  applyPose(rig.joints, config.pose);
+  poseRig(rig);
   rig.root.updateWorldMatrix(true, true);
   let target: THREE.Object3D | null = null;
   rig.root.traverse((o) => {
@@ -82,7 +85,9 @@ describe("gesture mudra arm semantics", () => {
     const config = useEditorStore.getState().config;
     const rig = buildRig(config, new ZoneMaterials());
     applyPose(rig.joints, config.pose);
-    const applied = applyGestureOrientations(rig.joints, config.hands);
+    const applied = applyGestureOrientations(rig.joints, rig.hands)
+      .filter((solution) => solution.applied)
+      .map((solution) => `arm.${solution.slot}.hand`);
     rig.root.updateMatrixWorld(true);
     const hand = rig.joints.get("arm.frontRight.hand")!;
     const elbow = rig.joints.get("arm.frontRight.forearm")!;
@@ -156,12 +161,51 @@ describe("gesture mudra arm semantics", () => {
     expect(danced.palm.z).toBeGreaterThan(0.9);
   });
 
-  it("leaves the pose's own wrist alone when an arm cannot present the gesture", () => {
-    // Dancing swings the right arm wide and clears the gesture's own arm
-    // overrides; a raised palm is unreachable there, so the gesture
-    // declines rather than snapping the wrist to a clamped angle.
+  it("carries a chosen gesture across a change of pose", () => {
+    // Choosing a pose clears joint overrides — they were tweaks on the
+    // previous preset. A gesture is not a tweak: a hand chosen to bless
+    // goes on blessing, and its arm has to come with it. Without that the
+    // mudra survived while its arm did not, and the blessing became an
+    // open hand pointing at the floor.
     const danced = gesture("abhaya", "dance", { presetLast: true });
-    expect(danced.applied).not.toContain("arm.frontRight.hand");
+    expect(danced.applied).toContain("arm.frontRight.hand");
+    expect(danced.palm.z).toBeGreaterThan(0.9);
+    expect(danced.fingers.y).toBeGreaterThan(0.9);
+  });
+
+  it("puts the arm back when it genuinely cannot present the gesture", () => {
+    // The solver is allowed to give up, and must leave no trace when it
+    // does: a hand turned three-quarters of the way toward a blessing is
+    // neither posed nor blessing. Asked here for something no arm can do
+    // — a palm facing straight down while the fingers also point down.
+    const config = createDefaultGaneshaConfiguration();
+    const rig = buildRig(config, new ZoneMaterials());
+    applyPose(rig.joints, config.pose);
+    const hand = rig.joints.get("arm.frontRight.hand")!;
+    const upper = rig.joints.get("arm.frontRight.upper")!;
+    const forearm = rig.joints.get("arm.frontRight.forearm")!;
+    const before = {
+      hand: hand.quaternion.clone(),
+      upper: upper.quaternion.clone(),
+      forearm: forearm.quaternion.clone(),
+    };
+    // A tolerance nothing can satisfy, so the give-up path is exercised
+    // deterministically rather than by hunting for an orientation this
+    // particular arm happens not to reach.
+    const target = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 0, 1),
+      Math.PI,
+    );
+    const solution = solveHand(
+      rig.joints,
+      "frontRight",
+      { kind: "orientation", world: target },
+      { revertBeyond: -1 },
+    );
+    expect(solution?.applied).toBe(false);
+    expect(hand.quaternion.angleTo(before.hand)).toBeLessThan(1e-6);
+    expect(upper.quaternion.angleTo(before.upper)).toBeLessThan(1e-6);
+    expect(forearm.quaternion.angleTo(before.forearm)).toBeLessThan(1e-6);
   });
 
   it("Ganesha's default blessing already presents a true abhaya", () => {
@@ -169,7 +213,9 @@ describe("gesture mudra arm semantics", () => {
     const config = createDefaultGaneshaConfiguration();
     const rig = buildRig(config, new ZoneMaterials());
     applyPose(rig.joints, config.pose);
-    const applied = applyGestureOrientations(rig.joints, config.hands);
+    const applied = applyGestureOrientations(rig.joints, rig.hands)
+      .filter((solution) => solution.applied)
+      .map((solution) => `arm.${solution.slot}.hand`);
     rig.root.updateMatrixWorld(true);
     expect(applied).toContain("arm.frontRight.hand");
     const hand = rig.joints.get("arm.frontRight.hand")!;

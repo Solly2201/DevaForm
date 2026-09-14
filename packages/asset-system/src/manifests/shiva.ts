@@ -9,9 +9,24 @@
  * with a production sculpt means switching its `source` to a GLB path and
  * bumping `version` — nothing else changes.
  */
+import { grounded, handheld, wearable } from "../presentation";
 import type { AssetDefinition } from "../types";
 
 const proto = { printSourceAvailable: false } as const;
+
+/**
+ * Geometry facts the attributes' generators build to, stated once so the
+ * manifest and the mesh cannot drift apart. The generators import these;
+ * tests hold the geometry to them.
+ */
+/** Half-thickness of the trishul's shaft where a hand closes on it. */
+export const TRISHUL_SHAFT_RADIUS = 0.008;
+/** How far a fist may slide along that shaft before reaching the trident. */
+export const TRISHUL_TRAVEL = 0.24;
+/** Half-thickness of the damaru at its waist — the only part a hand grips. */
+export const DAMARU_WAIST_RADIUS = 0.0062;
+/** Half-length of that waist, before the drum flares. */
+export const DAMARU_WAIST_HALF = 0.009;
 
 const HAND_SOCKETS = [
   "arm.frontLeft.hand.item",
@@ -248,6 +263,16 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.rudraksha" },
+    presentations: [
+      wearable({
+        id: "draped",
+        label: "Draped on the chest",
+        socket: "chest.necklace",
+        // A bead rests against the skin; the strand is checked to stay
+        // outside it by at least this much on every bearing it crosses.
+        clearanceM: 0.002,
+      }),
+    ],
     materialZones: ["metal"],
     category: "ornaments",
     printability: proto,
@@ -261,6 +286,17 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.naga" },
+    presentations: [
+      wearable({
+        id: "coiled",
+        label: "Coiled at the neck",
+        socket: "chest.necklace",
+        // The serpent's belly runs this far off the skin the whole way
+        // round — see walkSurface, which is given the gap PLUS the girth
+        // so it is the scales that clear the body, not the centre line.
+        clearanceM: 0.004,
+      }),
+    ],
     materialZones: ["metal", "gem"],
     category: "ornaments",
     printability: proto,
@@ -276,14 +312,40 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.trishul" },
-    // A hand grips the shaft and slides along it as the arm moves. It may
-    // go a quarter of a metre up before the shaft stops being shaft — the
-    // generator builds the trident head above exactly this, so the number
-    // and the geometry cannot disagree.
-    grip: { mudra: "grip", travel: { up: 0.24, down: 0.24 } },
-    // The icon's trishul stands: vertical, head up, butt on the ground,
-    // whatever the wrist is doing.
-    presentation: { upright: true, grounded: true },
+    // Two legitimate relationships, in preference order. The asset is one
+    // asset; only its relationship to the figure changes.
+    presentations: [
+      handheld({
+        id: "handheldShaft",
+        label: "Held by the shaft",
+        hand: "grip",
+        // Its butt is on the ground and the hand only steadies it — which
+        // is why raising the arm slides the hand UP the shaft instead of
+        // lifting the whole trident into the air.
+        support: "ground",
+        // The grip is ON THE SHAFT, and a planted staff slides through the
+        // fist as the arm moves, so the grip point is a RANGE of points
+        // along the shaft rather than one spot. The range ends where the
+        // shaft does: a quarter of a metre up is where the trident begins,
+        // and the generator builds its head above exactly this, so the
+        // declaration and the geometry cannot disagree.
+        grip: {
+          axis: [0, 1, 0],
+          travel: { up: TRISHUL_TRAVEL, down: TRISHUL_TRAVEL },
+          radius: TRISHUL_SHAFT_RADIUS,
+        },
+      }),
+      grounded({
+        id: "grounded",
+        label: "Planted beside the figure",
+        // It was already standing on the base while the hand rested on it,
+        // so when the hand is needed for a blessing it simply goes on
+        // standing — a finger's width clear of the figure's own silhouette.
+        stand: { clearanceM: 0.045 },
+        grip: { axis: [0, 1, 0], radius: TRISHUL_SHAFT_RADIUS },
+        notes: "Chosen automatically when the holding hand performs a gesture.",
+      }),
+    ],
     materialZones: ["metal"],
     category: "attributes",
     printability: proto,
@@ -297,14 +359,44 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "item.damaru" },
-    // Pinched at the waist, not fisted: a drum is held between thumb and
-    // fingers, and a hand closed all the way round it would have to close
-    // through the drum heads.
-    grip: { mudra: "pinch" },
-    // A damaru hangs from the fist that holds its waist: heads up and
-    // down, hourglass in profile. Without this it turns with the wrist
-    // and presents a drum head to the viewer like a medallion.
-    presentation: { upright: true },
+    // A damaru is a different interaction problem from a trishul and gets
+    // its own answer rather than a shared "make it fit the hand" pass.
+    // It is pinched at the WAIST — the only part of it a hand can close
+    // on — with the hourglass axis running through the ring the thumb and
+    // fingers make, so the heads are up and down and the profile reads as
+    // a drum rather than as a medallion facing the viewer.
+    presentations: [
+      handheld({
+        id: "pinchHeld",
+        label: "Pinched at the waist",
+        hand: "pinch",
+        grip: {
+          axis: [0, 1, 0],
+          // The waist is 18 mm long in total; a hand may not wander onto
+          // the flare, because a hand that closes on a drum head closes
+          // THROUGH it.
+          travel: { up: DAMARU_WAIST_HALF, down: DAMARU_WAIST_HALF },
+          radius: DAMARU_WAIST_RADIUS,
+        },
+        // Shiva carries the damaru in whichever hand the pose leaves free;
+        // in Nataraja it is an upper hand. Moving it is preferable to
+        // dropping it.
+        mobile: true,
+      }),
+      handheld({
+        id: "gripHeld",
+        label: "Held in a closed fist",
+        hand: "grip",
+        grip: {
+          axis: [0, 1, 0],
+          travel: { up: DAMARU_WAIST_HALF, down: DAMARU_WAIST_HALF },
+          radius: DAMARU_WAIST_RADIUS,
+        },
+        // Only if the customer asks: a fist round a damaru is legible but
+        // it is not how the drum is played.
+        autoSelectable: false,
+      }),
+    ],
     materialZones: ["garmentAccent", "metal"],
     category: "attributes",
     printability: proto,

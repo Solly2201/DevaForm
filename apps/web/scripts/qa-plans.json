@@ -1,0 +1,169 @@
+{
+  "ganesha": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "ganesha-blessing",
+        "params": { "deity": "ganesha", "pose": "blessing" },
+        "views": ["front", "threeQuarter", "side", "back"]
+      },
+      {
+        "name": "ganesha-standing",
+        "params": { "deity": "ganesha", "pose": "standing" },
+        "views": ["front", "threeQuarter"]
+      },
+      {
+        "name": "ganesha-meditation",
+        "params": { "deity": "ganesha", "pose": "meditation" },
+        "views": ["front", "threeQuarter"]
+      },
+      {
+        "name": "ganesha-royal",
+        "params": { "deity": "ganesha", "pose": "royal" },
+        "views": ["front", "threeQuarter"]
+      },
+      {
+        "name": "ganesha-dance",
+        "params": { "deity": "ganesha", "pose": "dance" },
+        "views": ["front", "threeQuarter"]
+      },
+      {
+        "name": "ganesha-hands",
+        "params": { "deity": "ganesha", "pose": "blessing", "focus": "hands" },
+        "views": ["front", "threeQuarter", "side"]
+      }
+    ]
+  },
+  "shiva": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "shiva-standing",
+        "params": { "deity": "shiva", "pose": "shiva.standing" },
+        "views": ["front", "threeQuarter", "side", "back"]
+      },
+      {
+        "name": "shiva-staff",
+        "params": { "deity": "shiva", "pose": "shiva.standingStaff" },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "shiva-blessing",
+        "params": { "deity": "shiva", "pose": "shiva.blessing" },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "shiva-meditation",
+        "params": { "deity": "shiva", "pose": "shiva.meditation" },
+        "views": ["front", "threeQuarter"]
+      },
+      {
+        "name": "shiva-tandava",
+        "params": { "deity": "shiva", "pose": "shiva.tandava" },
+        "views": ["front", "threeQuarter"]
+      },
+      {
+        "name": "shiva-grip",
+        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "hands" },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "shiva-neck",
+        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "torso" },
+        "views": ["front", "threeQuarter", "side", "back"]
+      },
+      {
+        "name": "shiva-head",
+        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "head" },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "shiva-waist",
+        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "waist" },
+        "views": ["front", "threeQuarter", "side", "back"]
+      }
+    ]
+  },
+  "shiva-human": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "human-standing",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "body": "humanoid.body.human",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side", "back"]
+      },
+      {
+        "name": "human-staff",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standingStaff",
+          "body": "humanoid.body.human",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "human-blessing",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.blessing",
+          "body": "humanoid.body.human",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "human-grip",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "body": "humanoid.body.human",
+          "focus": "hands",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "human-head",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "body": "humanoid.body.human",
+          "focus": "head",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side"]
+      },
+      {
+        "name": "human-torso",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "body": "humanoid.body.human",
+          "focus": "torso",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side", "back"]
+      },
+      {
+        "name": "human-waist",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "body": "humanoid.body.human",
+          "focus": "waist",
+          "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
+        },
+        "views": ["front", "threeQuarter", "side", "back"]
+      }
+    ]
+  }
+}

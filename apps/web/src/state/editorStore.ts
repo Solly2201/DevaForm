@@ -9,6 +9,7 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import {
+  ARM_SLOTS,
   armChainJoints,
   getPalette,
   mudraArmRotations,
@@ -25,7 +26,23 @@ import {
   type Vec3,
   type ZoneMaterial,
 } from "@devaform/character-schema";
-import { AVAILABLE_DEITIES, getAsset, latestRef } from "@devaform/asset-system";
+import {
+  AVAILABLE_DEITIES,
+  getAsset,
+  isHandheld,
+  latestRef,
+  presentationsOf,
+  type AssetDefinition,
+} from "@devaform/asset-system";
+
+/**
+ * The hand state an item asks for when it is first attached: the hand of
+ * its first handheld presentation, which is the one it prefers.
+ */
+function preferredHandState(asset: AssetDefinition): MudraId | undefined {
+  const held = presentationsOf(asset).find(isHandheld);
+  return held && held.hand !== "none" ? held.hand : undefined;
+}
 
 /** Bootstrap configuration: the first available deity's default. */
 function createBootstrapConfiguration(): CharacterConfiguration {
@@ -115,12 +132,16 @@ export const useEditorStore = create<EditorState>()(
               }
               attachments = [...attachments, { socket, asset: latestRef(assetId) }];
               // Items declare how a hand should hold them — auto-apply the
-              // grip mudra so the default always looks intentional.
+              // hand state of their preferred presentation so the default
+              // always looks intentional. The resolver reaches the same
+              // answer; setting it here keeps the Hands panel honest about
+              // what the hand is now doing.
               const handSlot = socket.match(/^arm\.(\w+)\.hand\.item$/)?.[1] as
                 | ArmSlot
                 | undefined;
-              if (handSlot && asset?.grip) {
-                hands = { ...hands, [handSlot]: { mudra: asset.grip.mudra } };
+              const preferred = asset ? preferredHandState(asset) : undefined;
+              if (handSlot && preferred) {
+                hands = { ...hands, [handSlot]: { mudra: preferred } };
               }
             }
             return { ...config, attachments, hands };
@@ -139,12 +160,21 @@ export const useEditorStore = create<EditorState>()(
 
       setPosePreset: (presetId) =>
         set((state) =>
-          mutateConfig(state, (config) => ({
-            ...config,
+          mutateConfig(state, (config) => {
             // Changing preset clears overrides — they were relative tweaks
             // on the previous preset and rarely make sense on the new one.
-            pose: { preset: presetId, jointOverrides: {} },
-          })),
+            // A GESTURE is not a tweak, though: a hand chosen to bless goes
+            // on blessing, and its arm has to come with it or the pose puts
+            // the hand somewhere no palm can be shown from.
+            const jointOverrides: Record<string, Vec3> = {};
+            for (const slot of ARM_SLOTS) {
+              Object.assign(
+                jointOverrides,
+                mudraArmRotations(config.hands[slot]?.mudra ?? "open", slot) ?? {},
+              );
+            }
+            return { ...config, pose: { preset: presetId, jointOverrides } };
+          }),
         ),
 
       setJointOverride: (joint, rotation) =>
@@ -206,8 +236,16 @@ export const useEditorStore = create<EditorState>()(
             const socket = `arm.${slot}.hand.item`;
             const attachments = config.attachments.filter((a) => {
               if (a.socket !== socket) return true;
-              const grip = getAsset(a.asset.assetId)?.grip;
-              return !grip || grip.mudra === mudra;
+              const asset = getAsset(a.asset.assetId);
+              // An item stays only if one of its presentations can be held
+              // this way; an attribute with an independent presentation
+              // (a trishul that can stand) is kept and the resolver moves
+              // it, rather than being discarded here.
+              if (!asset) return true;
+              return presentationsOf(asset).some(
+                (presentation) =>
+                  !isHandheld(presentation) || presentation.hand === mudra,
+              );
             });
             // A gesture mudra is a whole-arm gesture: articulate this arm's
             // chain via joint overrides (declared per-mudra in the schema,

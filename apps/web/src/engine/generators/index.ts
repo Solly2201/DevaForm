@@ -35,7 +35,14 @@ import {
   shivaJata,
 } from "./shiva";
 
-export type { AttachmentGenerator, GeneratorContext, JointedPart, PartGenerator } from "./types";
+export type {
+  AttachmentGenerator,
+  GeneratorContext,
+  HeldItemSpec,
+  JointedPart,
+  PartGenerator,
+  SocketRefinement,
+} from "./types";
 export { deriveBodyProfile, type BodyProfile } from "./bodyProfile";
 export { makeHand } from "./body";
 export { BASE_BUILDERS, BASE_TOP_HEIGHT } from "./bases";

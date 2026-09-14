@@ -5,6 +5,15 @@
  * the same articulation model a GLB skeleton maps onto), populates part
  * meshes onto joints, creates sockets and mounts attachments.
  *
+ * It DECIDES nothing. `resolveCharacterPresentation` has already reconciled
+ * the pose, the hands and every attachment into one deterministic answer;
+ * this module turns that answer into geometry. There used to be a second
+ * decision-maker here — an inline rule about which hands could hold, an
+ * inline grounded placement with its own clearance constant, and a fork
+ * between two transform pipelines based on whether the body was a mesh —
+ * and a renderer that decides is a renderer that will be asked to decide
+ * again for every new attribute.
+ *
  * The rig is rebuilt when structure changes (parts/attachments/morphs/
  * hands/arms); pose and materials are applied in place without rebuilding
  * (see pose.ts / materials.ts).
@@ -12,21 +21,26 @@
 import * as THREE from "three";
 import {
   ARM_SLOTS,
-  HAND_PALM_AXIS,
-  activeArmSlots,
-  getPosePreset,
-  isGestureMudra,
-  resolveHands,
-  getSkeleton,
   isJointId,
+  type ArmSlot,
   type CharacterConfiguration,
   type HandsConfiguration,
   type JointId,
-  type MudraId,
   type SkeletonDefinition,
   type SocketId,
+  type Vec3,
 } from "@devaform/character-schema";
-import { getAvailableDeity, resolveAssetRef, type AssetDefinition } from "@devaform/asset-system";
+import {
+  isHandheld,
+  resolveAssetRef,
+  resolveCharacterPresentation,
+  resolveGripFrame,
+  standsOnGround,
+  type AssetDefinition,
+  type AttributePresentation,
+  type ResolvedAttachment,
+  type ResolvedCharacter,
+} from "@devaform/asset-system";
 import {
   ATTACHMENT_GENERATORS,
   BASE_BUILDERS,
@@ -35,6 +49,7 @@ import {
   deriveBodyProfile,
   type BodyProfile,
   type GeneratorContext,
+  type HeldItemSpec,
 } from "./generators";
 import { getGlb, instantiateGlb } from "./glbCache";
 import {
@@ -44,7 +59,37 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import type { ZoneMaterials } from "./materials";
-import type { HeldItem } from "./pose";
+import {
+  applyGestureOrientations,
+  applyGripOrientations,
+  applyPose,
+  unreachableGrips,
+  type HandSolution,
+  type HeldItem,
+} from "./pose";
+
+/**
+ * An attribute whose weight is on the ground.
+ *
+ * It does not follow the hand: it stands, and the hand slides along its
+ * shaft as the arm moves. The slide is along the item's OWN axis, bounded
+ * by the travel the asset declares, and how far the butt currently falls
+ * short of the base is measured from the item's own geometry rather than
+ * from where the hand happened to be when the rig was built.
+ */
+export interface PlantedAttachment {
+  object: THREE.Object3D;
+  /** Where the attachment sits in its socket before any slide. */
+  rest: THREE.Vector3;
+  /** Distance from the socket down to the item's butt, along its own axis. */
+  buttBelowAnchor: number;
+  /** Height of the base's top surface, in statue-root space. */
+  baseTop: number;
+  /** World axis the item is presented along. */
+  axis: THREE.Vector3;
+  /** How far the hand may slide before it reaches something no one grips. */
+  travel: { up: number; down: number };
+}
 
 export interface CharacterRig {
   root: THREE.Group;
@@ -52,48 +97,23 @@ export interface CharacterRig {
   skeleton: SkeletonDefinition;
   joints: ReadonlyMap<JointId, THREE.Object3D>;
   sockets: ReadonlyMap<SocketId, THREE.Object3D>;
+  /** The resolution this rig was built from. The engine's single input. */
+  resolved: ResolvedCharacter;
   /**
-   * Attachments whose presentation is achieved by overriding their world
-   * rotation, because the hand holding them cannot be turned.
-   *
-   * A hand generated per mudra has its grip channel baked into geometry:
-   * the fist closes around a shaft lying across the palm, and rotating
-   * the wrist would move the fist off the very axis the fingers were
-   * built around. For those, the ITEM is turned. It is a real fallback,
-   * not the design — see `held` for the relational path — and naming it
-   * is what stops it silently superseding a declared grip frame.
+   * Attributes standing on the ground, held or not. See PlantedAttachment.
    */
-  worldAlignedAttachments: THREE.Object3D[];
-  /**
-   * Planted attachments: a staff stands on the ground whatever the hand
-   * does, so when a pose lifts the hand the hand slides up the shaft
-   * rather than carrying the whole weapon into the air. The slide is
-   * along the item's OWN axis, which for an upright item is world
-   * vertical and for anything else is not.
-   */
-  groundedAttachments: Array<{
-    object: THREE.Object3D;
-    reach: number;
-    baseTop: number;
-    axis: THREE.Vector3;
-    /**
-     * How far the hand may slide along the shaft before it reaches
-     * something no one grips. The asset declares it (GripMetadata.travel)
-     * because only the asset knows where its own head is.
-     */
-    travel: { up: number; down: number };
-  }>;
+  planted: PlantedAttachment[];
   /**
    * What each hand is holding, and which way the item runs in the world.
-   * The hand has to be TURNED onto it — see applyGripOrientations — or
-   * the item ends up lying between the fingers instead of in the fist.
+   * The hand is TURNED onto it — see applyGripOrientations — which is the
+   * only mechanism there is. The world-space override that used to sit
+   * beside it is gone: it forked the pipeline on whether the body was a
+   * mesh, and it overwrote the very grip frame the asset had declared.
    */
   held: HeldItem[];
   /**
-   * What each hand is doing, pose and configuration reconciled — see
-   * resolveHands. Consumers must read THIS rather than the configuration,
-   * or the wrist solver and the rig will disagree about whether a hand is
-   * blessing or gripping.
+   * What each hand is doing, pose and configuration reconciled by the
+   * resolver. Consumers read THIS, never the configuration.
    */
   hands: HandsConfiguration;
   /**
@@ -103,6 +123,18 @@ export interface CharacterRig {
   body: BodyProfile;
   /** Assets that failed to resolve or are still loading (not fatal). */
   warnings: string[];
+  /**
+   * What the last pose could not achieve — a hand that cannot present
+   * what it holds, a staff whose butt left the ground. Replaced on every
+   * pose, never appended to, so a hundred slider drags do not produce a
+   * hundred copies of the same sentence.
+   */
+  poseWarnings: string[];
+}
+
+/** Everything worth telling the developer about this rig, right now. */
+export function rigWarnings(rig: CharacterRig): string[] {
+  return [...rig.warnings, ...rig.poseWarnings];
 }
 
 export function buildJointHierarchy(skeleton: SkeletonDefinition): {
@@ -132,41 +164,52 @@ export function buildJointHierarchy(skeleton: SkeletonDefinition): {
 const socketBasis = new THREE.Matrix4();
 
 /**
- * Turn each hand's item socket so its +Y runs up the hand's GRIP CHANNEL.
+ * Turn a hand's item socket so its +Y runs up the hand's GRIP CHANNEL and
+ * its +Z faces the palm.
  *
- * This is the link that was missing, and without it the rest of the grip
- * chain could not close. An asset declares which of its own axes runs up
- * the shaft, and gripFrameTransform aligns that axis to the socket's +Y.
- * The solver, at the other end, turns the hand so its grip channel points
- * where the item must be presented. But the socket's +Y and the hand's
- * grip channel were never the same direction, so the two halves described
- * different things and only a world-space override made the result look
- * right.
+ * This is the link the whole grip chain hangs off. An asset declares which
+ * of its own axes runs up the shaft and `gripFrameTransform` aligns that
+ * axis to the socket's +Y; the solver, at the other end, turns the hand so
+ * its grip channel points where the item must be presented. If the
+ * socket's +Y and the hand's channel are not the same direction, the two
+ * halves describe different things — which is what happened, and only a
+ * world-space override made the result look acceptable while the shaft
+ * still crossed the fingers instead of passing through the fist.
  *
- * A closed fist's channel runs across the knuckles toward the thumb, so
- * the thumb axis IS the channel, and a body that measured its own hands
- * says where that is. Only such a body gets its sockets aimed: a hand
- * generated per mudra already refines this socket onto the grip its own
- * fingers were built around, and turning it would move items off the
- * cradle the geometry provides. The palm supplies the roll, so the turn
- * is fully determined.
+ * Both kinds of hand answer the same question here. A modelled mesh hand
+ * measures its own thumb and ships the axis; a procedural hand is drawn
+ * around a known axis and says so through a socket refinement. Neither
+ * gets a different pipeline for it.
  */
-function orientGripSockets(
+function aimSocket(
+  socket: THREE.Object3D,
+  channel: THREE.Vector3,
+  palmHint: THREE.Vector3,
+): void {
+  const c = channel.clone().normalize();
+  const palm = palmHint.clone().projectOnPlane(c);
+  if (palm.lengthSq() < 1e-10) return;
+  palm.normalize();
+  // Columns (x, y, z): the socket's +Y becomes the channel, its +Z the
+  // palm, so an item authored shaft-up lands shaft-along-the-channel.
+  socketBasis.makeBasis(c.clone().cross(palm), c, palm);
+  socket.quaternion.setFromRotationMatrix(socketBasis);
+}
+
+/** Palm direction in the hand's own frame — the shared hand contract. */
+const HAND_PALM = new THREE.Vector3(0, 0, 1);
+
+function orientMeasuredGripSockets(
   sockets: Map<SocketId, THREE.Object3D>,
   thumbAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
 ): void {
+  if (!thumbAxes) return;
   for (const slot of ARM_SLOTS) {
-    const measured = thumbAxes?.[slot];
+    const measured = thumbAxes[slot];
     if (!measured) continue;
     const socket = sockets.get(`arm.${slot}.hand.item` as SocketId);
     if (!socket) continue;
-    const channel = new THREE.Vector3(...measured).normalize();
-    const palm = new THREE.Vector3(...HAND_PALM_AXIS).projectOnPlane(channel).normalize();
-    if (palm.lengthSq() < 1e-8) continue;
-    // Columns (x, y, z): the socket's +Y becomes the channel, its +Z the
-    // palm, so an item authored shaft-up lands shaft-along-the-channel.
-    socketBasis.makeBasis(channel.clone().cross(palm), channel, palm);
-    socket.quaternion.setFromRotationMatrix(socketBasis);
+    aimSocket(socket, new THREE.Vector3(...measured), HAND_PALM);
   }
 }
 
@@ -226,8 +269,8 @@ function resolveRenderable(
 }
 
 /**
- * Resolve an asset's declared grip frame into the local transform that
- * puts its grip origin on the socket with its grip axis running up the
+ * Resolve a declared grip frame into the local transform that puts the
+ * asset's grip origin on the socket with its grip axis running up the
  * socket's grip channel (+Y). Identity for assets using the default
  * authoring convention (origin at grip, shaft along +Y).
  */
@@ -253,28 +296,22 @@ export function gripFrameTransform(grip: {
 
 function applyAttachmentTransforms(
   object: THREE.Object3D,
-  asset: AssetDefinition,
-  socketId: string,
-  offset:
-    | {
-        position?: readonly [number, number, number];
-        rotation?: readonly [number, number, number];
-        scale?: number;
-      }
-    | undefined,
+  presentation: AttributePresentation,
+  resolved: ResolvedAttachment,
 ): void {
   // Grip frame first: align the asset's declared grip origin/axis with
   // the socket's grip channel. Identity for assets authored in DevaForm's
   // default convention, so this only reorients assets that declare it.
-  if (asset.grip && (asset.grip.origin || asset.grip.axis || asset.grip.roll)) {
-    const frame = gripFrameTransform(asset.grip);
+  const grip = presentation.grip;
+  if (grip && (grip.origin || grip.axis || grip.roll)) {
+    const frame = gripFrameTransform(grip);
     object.quaternion.copy(frame.quaternion);
     object.position.copy(frame.position);
   }
   // Per-socket calibration wins over the default (a modak in the trunk
   // needs a different transform than a modak in a palm). Calibration is
   // ADDITIVE on top of the grip frame.
-  const dt = asset.socketTransforms?.[socketId] ?? asset.defaultTransform;
+  const dt = resolved.transform;
   if (dt?.position) {
     object.position.x += dt.position[0];
     object.position.y += dt.position[1];
@@ -286,6 +323,7 @@ function applyAttachmentTransforms(
     object.rotation.z += dt.rotation[2];
   }
   if (dt?.scale !== undefined) object.scale.setScalar(dt.scale);
+  const offset = resolved.offset;
   if (offset?.position) {
     object.position.x += offset.position[0];
     object.position.y += offset.position[1];
@@ -299,30 +337,63 @@ function applyAttachmentTransforms(
   if (offset?.scale !== undefined) object.scale.multiplyScalar(offset.scale);
 }
 
-export function buildRig(config: CharacterConfiguration, materials: ZoneMaterials): CharacterRig {
-  // The configuration names the deity; the deity's definition carries the
-  // skeleton. Pure data lookup — the engine never branches on WHICH deity.
-  const deity = getAvailableDeity(config.deity);
-  if (!deity) throw new Error(`No available deity definition for "${config.deity}"`);
+/**
+ * The object's extent in its PARENT's frame, from local matrices alone so
+ * it does not depend on where the rig currently happens to be.
+ */
+function boundsInParentFrame(object: THREE.Object3D): THREE.Box3 {
+  const box = new THREE.Box3();
+  const slice = new THREE.Box3();
+  object.updateMatrix();
+  const stack: Array<[THREE.Object3D, THREE.Matrix4]> = [[object, object.matrix.clone()]];
+  while (stack.length > 0) {
+    const [node, matrix] = stack.pop() as [THREE.Object3D, THREE.Matrix4];
+    const mesh = node as THREE.Mesh;
+    if (mesh.isMesh) {
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      slice.copy(mesh.geometry.boundingBox as THREE.Box3).applyMatrix4(matrix);
+      box.union(slice);
+    }
+    for (const child of node.children) {
+      child.updateMatrix();
+      stack.push([child, new THREE.Matrix4().multiplyMatrices(matrix, child.matrix)]);
+    }
+  }
+  return box;
+}
 
-  // The body IS the anatomy. A mesh body's bones sit where its own joints
-  // are, so it names the skeleton it was built for and the rig follows it;
-  // a procedural body is generated to whatever skeleton the deity brings.
-  // Pure data either way — the engine never asks which deity or which mesh.
-  const bodyAsset = resolveAssetRef(config.parts.body);
-  const bodySkeleton = bodyAsset?.skeleton ? getSkeleton(bodyAsset.skeleton) : undefined;
-  const skeleton = bodySkeleton ?? deity.skeleton;
+/**
+ * How far the item's butt sits below its socket, along the item's own axis.
+ *
+ * Measured from the geometry that was actually built, so an asset and its
+ * length cannot drift apart. This replaces telling the generator how high
+ * the hand is and having it build a shaft to suit: a weapon that changes
+ * length when the arm moves is not a weapon, and a hand that is told where
+ * the ground is has been given the object's job.
+ */
+function buttBelowAnchor(object: THREE.Object3D): number {
+  // The grip frame has already turned the item so its presented axis is
+  // the socket's +Y, which makes local -Y the butt.
+  return Math.max(0, -boundsInParentFrame(object).min.y);
+}
+
+export function buildRig(config: CharacterConfiguration, materials: ZoneMaterials): CharacterRig {
+  // ONE resolution. Everything below reads it; nothing below re-decides.
+  const resolved = resolveCharacterPresentation(config);
+  const { skeleton, armSlots, hands } = resolved;
 
   const warnings: string[] = [];
-  const worldAlignedAttachments: THREE.Object3D[] = [];
-  const groundedAttachments: CharacterRig["groundedAttachments"] = [];
+  const planted: PlantedAttachment[] = [];
   const held: HeldItem[] = [];
   const root = new THREE.Group();
   root.name = "statueRoot";
+  const baseTop = BASE_TOP_HEIGHT[config.base.style] ?? 0;
   const { characterRoot, joints } = buildJointHierarchy(skeleton);
   root.add(characterRoot);
-  const sockets = buildSockets(skeleton, joints, root, BASE_TOP_HEIGHT[config.base.style] ?? 0);
-  orientGripSockets(sockets, bodyAsset?.thumbAxes);
+  const sockets = buildSockets(skeleton, joints, root, baseTop);
+
+  const bodyAsset = resolveAssetRef(config.parts.body);
+  orientMeasuredGripSockets(sockets, bodyAsset?.thumbAxes);
 
   // Body-fit: torso surfaces for the configured body asset (pure data — no
   // asset-id conditionals). A mesh body ships measurements of itself and
@@ -342,19 +413,17 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       : undefined,
   );
 
-  // Which arms this character actually has: the count the customer chose,
-  // narrowed to the chains the skeleton carries. A body with one pair of
-  // arms cannot render four however the configuration is set — and saying
-  // so here, once, is what stops a hand socket existing where no hand does.
-  const armSlots = activeArmSlots(config.arms).filter((slot) =>
-    skeleton.armSlots.includes(slot),
-  );
-
-  // What each hand is actually doing, pose and configuration reconciled.
-  // A preset that raises a blessing arm means that hand blesses, whatever
-  // the configuration still says it grips.
-  const posePreset = config.pose.preset ? getPosePreset(config.pose.preset) : undefined;
-  const hands = resolveHands(config.hands, posePreset);
+  // What each hand will be closing on, known before any geometry exists —
+  // so a hand can be BUILT around what it holds rather than closed to a
+  // fixed diameter and hoped for.
+  const heldByHand: Partial<Record<string, HeldItemSpec>> = {};
+  for (const attachment of resolved.attachments) {
+    if (!attachment.handSlot) continue;
+    heldByHand[attachment.handSlot] = {
+      presentationId: attachment.presentation.id,
+      radius: attachment.presentation.grip?.radius,
+    };
+  }
 
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,
@@ -363,22 +432,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     hands,
     arms: config.arms,
     armSlots,
-    seated: posePreset?.seated === true,
+    held: heldByHand,
+    seated: resolved.pose.seated,
     body: bodyProfile,
   };
   const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
     ...baseCtx,
     params: asset.source.kind === "procedural" ? (asset.source.params ?? {}) : {},
   });
-
-  // Features baked into complete sculpts (e.g. an AI/artist head with its
-  // own ears and crown) suppress the corresponding standalone parts and
-  // attachments — data-driven, from asset metadata.
-  const integratedFeatures = new Set<string>();
-  for (const ref of Object.values(config.parts)) {
-    const asset = resolveAssetRef(ref);
-    for (const feature of asset?.integratedFeatures ?? []) integratedFeatures.add(feature);
-  }
 
   // Parts. Socket-mounted part entries (ear jewellery etc.) are deferred
   // until every joint entry has landed, so owner parts have already
@@ -391,7 +452,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       continue;
     }
     if (!asset) continue;
-    if (integratedFeatures.has(slot) && !asset.integratedFeatures?.includes(slot)) continue;
+    if (resolved.integratedFeatures.has(slot) && !asset.integratedFeatures?.includes(slot)) continue;
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
     if (!renderable) continue;
     if (renderable instanceof THREE.Object3D) {
@@ -471,9 +532,20 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         target.add(entry.object);
       }
       // The part owns the surface its sockets terminate on (e.g. the
-      // trunk's tip) — move those sockets onto the generated geometry.
+      // trunk's tip, or a hand's own grip) — move those sockets onto the
+      // generated geometry, and aim them if the part says which way a
+      // held shaft runs through them.
       for (const refinement of entry.socketRefinements ?? []) {
-        sockets.get(refinement.id)?.position.set(...refinement.position);
+        const socket = sockets.get(refinement.id);
+        if (!socket) continue;
+        socket.position.set(...refinement.position);
+        if (refinement.channel) {
+          aimSocket(
+            socket,
+            new THREE.Vector3(...refinement.channel),
+            new THREE.Vector3(...(refinement.palm ?? [0, 0, 1])),
+          );
+        }
       }
     }
   }
@@ -487,148 +559,69 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     socket.add(mount.object);
   }
 
-  // Attachments — skip hand sockets on arms that are not rendered. There
-  // are two reasons a hand may not be there, and they are not the same
-  // thing: the customer asked for two arms (ordinary, silent), or this
-  // BODY has only two (worth saying out loud, because the configuration
-  // asked for something its anatomy cannot provide).
-  const handSocketsOf = (slot: string): string[] => [
-    `arm.${slot}.hand.item`,
-    `arm.${slot}.wrist`,
-  ];
-  const inactiveHandSockets = new Set(
-    ARM_SLOTS.filter((slot) => !armSlots.includes(slot)).flatMap(handSocketsOf),
-  );
-  const absentHandSockets = new Set(
-    ARM_SLOTS.filter((slot) => !skeleton.armSlots.includes(slot)).flatMap(handSocketsOf),
-  );
-
-  for (const attachment of config.attachments) {
-    if (absentHandSockets.has(attachment.socket)) {
-      warnings.push(
-        `Attachment ${attachment.asset.assetId}: skeleton "${skeleton.id}" has no ${attachment.socket} — this body has ${skeleton.armSlots.length} arms`,
-      );
-      continue;
-    }
-    if (inactiveHandSockets.has(attachment.socket)) continue;
-    const socketSuffix = attachment.socket.split(".").pop() ?? attachment.socket;
-    if (integratedFeatures.has(attachment.socket) || integratedFeatures.has(socketSuffix)) continue;
-    const asset = resolveAssetRef(attachment.asset);
-    if (!asset) {
-      warnings.push(`Unknown attachment asset: ${attachment.asset.assetId}`);
-      continue;
-    }
-    const socket = sockets.get(attachment.socket as SocketId);
+  // Attachments — every decision about where these go and in what
+  // presentation was already made by the resolver.
+  for (const attachment of resolved.attachments) {
+    const { asset, presentation } = attachment;
+    const socket = sockets.get(attachment.socket);
     if (!socket) {
       warnings.push(`Attachment ${asset.id}: unknown socket ${attachment.socket}`);
       continue;
     }
-    // A hand that is blessing is not also gripping. Nobody shows a palm
-    // to a devotee with a trident in the same fist, and trying produced
-    // exactly that: the abhaya arm rose, the staff stayed planted, and
-    // the hand slid a third of a metre up the shaft into the prongs.
-    const handSlot = attachment.socket.match(/^arm\.([A-Za-z]+)\.hand\.item$/)?.[1];
-    const gesturing =
-      handSlot !== undefined && isGestureMudra(
-        (hands as Record<string, { mudra: MudraId } | undefined>)[handSlot]?.mudra ?? "open",
-      );
-    // A planted staff needs to know how high above the base it is being
-    // held, so it can be built long enough to stand on the ground. The
-    // character root has not been lifted onto the base yet, so the
-    // socket's height IS its clearance above it.
-    const presentation = asset.presentation ?? {};
-    let reach: number | undefined;
-    if (presentation.grounded) {
-      socket.updateWorldMatrix(true, false);
-      reach = socket.getWorldPosition(new THREE.Vector3()).y;
-    }
-    const renderable = resolveRenderable(asset, { ...ctxFor(asset), reach }, warnings);
+    const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
     if (!renderable || !(renderable instanceof THREE.Object3D)) continue;
     renderable.name = `attachment:${asset.id}`;
-    applyAttachmentTransforms(renderable, asset, attachment.socket, attachment.offset);
-
-    if (gesturing) {
-      // The hand has let go. A PLANTED item does not need holding — it
-      // was already standing on the base and the fist was only resting on
-      // it — so it stays exactly where it stood, beside the figure, while
-      // the hand gets on with blessing. Anything that needed a palm under
-      // it has nowhere to be, and says so rather than floating.
-      if (reach !== undefined) {
-        socket.updateWorldMatrix(true, false);
-        // The base lift and the height scale are applied to the roots
-        // later, so a socket's position here is already base-relative.
-        const stood = socket.getWorldPosition(new THREE.Vector3());
-        // Set down BESIDE the figure, not against it. The hand's own rest
-        // position is where a staff would be let go, but that is a hand's
-        // clearance from the hip, not a staff's — and with the arm raised
-        // out of the way the shaft had nothing to lean on and crossed the
-        // shoulder. The body says how wide it is; the staff stands clear
-        // of that.
-        const clear = bodyProfile.dhotiRadius + 0.045;
-        const side = stood.x < 0 ? -1 : 1;
-        root.add(renderable);
-        renderable.position.set(
-          side * Math.max(Math.abs(stood.x), clear),
-          (BASE_TOP_HEIGHT[config.base.style] ?? 0) + reach,
-          stood.z,
-        );
-      } else {
-        warnings.push(
-          `Attachment ${asset.id}: ${handSlot} is performing a gesture and cannot hold it`,
-        );
-      }
-      continue;
-    }
-
+    applyAttachmentTransforms(renderable, presentation, attachment);
     socket.add(renderable);
 
-    // How this item's presentation is achieved: by turning the HAND onto
-    // it, or by turning the ITEM in the world.
-    //
-    // Turning the hand is the design. The item then sits in the grip
-    // exactly as its declared grip frame says, and the relationship is
-    // rig-relative all the way down. That needs a hand whose grip channel
-    // the engine can actually aim — a modelled mesh hand, which says so
-    // by shipping a grip morph for that arm.
-    //
-    // A procedural hand is rebuilt per mudra with the shaft's channel
-    // baked into the geometry, so aiming the wrist would carry the fist
-    // off the axis its fingers were closed around. Those keep the world
-    // override, and it is recorded as such rather than applied to
-    // everything.
-    const upright = asset.keepUpright === true || presentation.upright === true;
-    const heldBy = attachment.socket.match(/^arm\.([A-Za-z]+)\.hand\.item$/)?.[1];
-    const modelledHand =
-      heldBy !== undefined &&
-      (bodyAsset?.morphTargets ?? []).includes(
-        `grip${heldBy[0]!.toUpperCase()}${heldBy.slice(1)}`,
-      );
-    const solvedByRig = upright && heldBy !== undefined && modelledHand;
-    if (solvedByRig) {
+    if (isHandheld(presentation) && attachment.handSlot && presentation.orientation === "worldUpright") {
+      // The hand is turned onto the item. That is the whole mechanism:
+      // the item then sits in the grip exactly as its declared frame says,
+      // and the relationship is rig-relative all the way down.
       held.push({
-        slot: heldBy as HeldItem["slot"],
-        // Upright items present their own axis vertically, whatever the
-        // asset's local axis is; the grip frame has already turned them.
+        slot: attachment.handSlot,
+        // The item's own axis has already been carried onto the socket's
+        // +Y by the grip frame, so what must be made vertical is the
+        // socket's channel.
         axis: [0, 1, 0],
-        // Where this body's thumb actually is, if it measured itself.
-        thumb: bodyAsset?.thumbAxes?.[heldBy] as HeldItem["thumb"],
       });
-    } else if (upright) {
-      worldAlignedAttachments.push(renderable);
     }
-    if (reach !== undefined) {
-      groundedAttachments.push({
+
+    if (standsOnGround(presentation)) {
+      if (!attachment.handSlot) {
+        // Standing on its own: beside the figure, clear of it. Where it
+        // stands comes from the body that is actually wearing this
+        // configuration and from the hand that would have held it; the
+        // only authored number is the gap.
+        const requested = sockets.get(attachment.requestedSocket);
+        requested?.updateWorldMatrix(true, false);
+        const wouldHaveBeen = requested?.getWorldPosition(new THREE.Vector3());
+        const silhouette = Math.max(
+          bodyProfile.dhotiRadius,
+          bodyProfile.pelvisHalfWidth,
+          bodyProfile.chestRadiusX,
+        );
+        const clear = silhouette + (presentation.stand?.clearanceM ?? 0.045);
+        const side =
+          wouldHaveBeen && wouldHaveBeen.x !== 0
+            ? Math.sign(wouldHaveBeen.x)
+            : presentation.stand?.side === "left"
+              ? 1
+              : -1;
+        renderable.position.x = side * clear;
+        renderable.position.z = wouldHaveBeen?.z ?? 0;
+      }
+      const frame = resolveGripFrame(presentation);
+      planted.push({
         object: renderable,
-        reach,
-        baseTop: BASE_TOP_HEIGHT[config.base.style] ?? 0,
-        // Upright is the only presentation that plants anything today, and
-        // it presents vertically. Stated as the item's axis so a future
-        // presentation that does not can slide along its own shaft.
+        rest: renderable.position.clone(),
+        buttBelowAnchor: buttBelowAnchor(renderable),
+        baseTop,
         axis: new THREE.Vector3(0, 1, 0),
-        travel: {
-          up: asset.grip?.travel?.up ?? Number.POSITIVE_INFINITY,
-          down: asset.grip?.travel?.down ?? Number.POSITIVE_INFINITY,
-        },
+        travel: attachment.handSlot
+          ? frame.travel
+          : // Nothing is holding it, so nothing limits where it stands.
+            { up: Number.POSITIVE_INFINITY, down: Number.POSITIVE_INFINITY },
       });
     }
   }
@@ -640,7 +633,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     base.name = `base:${config.base.style}`;
     root.add(base);
   }
-  characterRoot.position.y = BASE_TOP_HEIGHT[config.base.style] ?? 0;
+  characterRoot.position.y = baseTop;
 
   // Whole-statue height proportion (uniform so nothing distorts).
   root.scale.setScalar(config.proportions.height);
@@ -649,73 +642,65 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Procedural generators consumed the same weights parametrically above.
   applyMorphInfluences(root, config.morphs);
 
+  // What the resolver could not honour is a rig warning too — one list,
+  // so nothing is reported in a place nobody reads.
+  for (const issue of resolved.issues) {
+    if (issue.severity !== "note") warnings.push(issue.message);
+  }
+
   return {
     root,
     skeleton,
     joints,
     sockets,
-    worldAlignedAttachments,
-    groundedAttachments,
+    resolved,
+    planted,
     hands,
     held,
     body: bodyProfile,
     warnings,
+    poseWarnings: [],
   };
 }
 
 const worldQuaternion = new THREE.Quaternion();
-const groundedPoint = new THREE.Vector3();
+const plantedPoint = new THREE.Vector3();
 
 /**
- * Settle held attachments after a pose change.
+ * Settle planted attachments after a pose change.
  *
- * TWO things happen here, and only one of them is a world-space override.
+ * Nothing here is a world-space orientation override — that mechanism is
+ * gone. An item's orientation comes from the grip chain: the asset's frame
+ * onto the socket's channel, and the hand turned so that channel points
+ * where the presentation says the item must run.
  *
- * Orientation: an item whose hand could be turned onto it (see
- * `CharacterRig.held` and applyGripOrientations) is already correct — the
- * arm was solved to present it, and the item sits in the grip exactly as
- * its declared grip frame says. Nothing is done to it here. Only items
- * held by a hand that CANNOT be aimed — a procedural fist with its grip
- * channel baked into geometry — are turned in the world instead, and
- * those are the ones the rig recorded as world-aligned.
- *
- * This used to be applied to every upright item unconditionally, which
- * meant a declared grip frame was overwritten a moment after it was
- * honoured. GripMetadata's own documentation conceded the point.
- *
- * Position: a planted staff slides along its OWN axis until its butt
- * meets the base — the hand grips it further up rather than the whole
- * weapon rising. A slide along the shaft is a relationship between the
- * item and the ground, not a coordinate correction, and it survives the
- * item being presented along any axis rather than only vertically.
+ * What remains is a POSITION relationship, and a real one: a staff whose
+ * weight is on the ground slides along its OWN axis until its butt meets
+ * the base, so raising the arm carries the hand up the shaft rather than
+ * lifting the whole weapon. The slide is bounded by the travel the asset
+ * declares, because a shaft stops being shaft where the trident begins.
  */
-export function alignUprightAttachments(rig: CharacterRig): void {
-  for (const object of rig.worldAlignedAttachments) {
+export function settlePlantedAttachments(rig: CharacterRig): void {
+  for (const { object, rest, buttBelowAnchor: drop, baseTop, axis, travel } of rig.planted) {
     const parent = object.parent;
     if (!parent) continue;
     parent.updateWorldMatrix(true, false);
-    parent.getWorldQuaternion(worldQuaternion);
-    object.quaternion.copy(worldQuaternion.invert());
-  }
-  for (const { object, reach, baseTop, axis, travel } of rig.groundedAttachments) {
-    const parent = object.parent;
-    if (!parent) continue;
-    parent.updateWorldMatrix(true, false);
-    const socket = rig.root.worldToLocal(parent.getWorldPosition(groundedPoint));
+    const anchor = rig.root.worldToLocal(parent.getWorldPosition(plantedPoint));
     parent.getWorldQuaternion(worldQuaternion);
     // How far short of the base the butt currently falls, measured along
     // the axis the item is presented on.
-    const shortfall = (baseTop + reach - socket.y) / (axis.y !== 0 ? axis.y : 1);
-    // ...but a hand can only slide as far as there is shaft to slide on.
-    // Sliding the item DOWN carries the grip UP toward the head, so a
-    // negative shortfall is bounded by travel.up. Past that the butt
-    // leaves the ground, which is the honest failure: better a staff that
-    // hovers than a fist closed around a trident's prongs.
+    const shortfall = (baseTop + drop - anchor.y) / (axis.y !== 0 ? axis.y : 1);
+    // A hand can only slide as far as there is shaft to slide on. Sliding
+    // the item DOWN carries the grip UP toward the head, so a negative
+    // shortfall is bounded by travel.up. Past that the butt leaves the
+    // ground, which is the honest failure: better a staff that hovers than
+    // a fist closed around a trident's prongs.
     const slide = Math.min(travel.down, Math.max(-travel.up, shortfall));
     object.position
       .copy(axis)
       .multiplyScalar(slide)
-      .applyQuaternion(worldQuaternion.invert());
+      .applyQuaternion(worldQuaternion.invert())
+      .add(rest);
   }
 }
 
@@ -730,6 +715,61 @@ export function disposeRig(rig: CharacterRig): void {
       object.geometry.dispose();
     }
   });
+}
+
+/**
+ * Which way a hand's grip channel runs, in that hand's own frame.
+ *
+ * Read back off the socket the rig aimed, so there is exactly one
+ * statement of it in the system: the hand geometry aims its socket, and
+ * everything that needs the channel asks the socket.
+ */
+export function handGripChannel(rig: CharacterRig, slot: ArmSlot): THREE.Vector3 {
+  const socket = rig.sockets.get(`arm.${slot}.hand.item` as SocketId);
+  return new THREE.Vector3(0, 1, 0).applyQuaternion(
+    socket?.quaternion ?? new THREE.Quaternion(),
+  );
+}
+
+/**
+ * Pose the rig: joints, gestures, grips, and planted attributes settled.
+ *
+ * One ordering, in one place. It used to live in three call sites that
+ * each had to remember it — and a call site that forgot to settle the
+ * planted items left a trishul hanging in the air.
+ */
+export function poseRig(rig: CharacterRig): HandSolution[] {
+  applyPose(rig.joints, {
+    preset: rig.resolved.pose.presetId,
+    jointOverrides: rig.resolved.pose.joints as Record<string, Vec3>,
+  });
+  const degrees = (radians: number) => Math.round((radians * 180) / Math.PI);
+  rig.poseWarnings.length = 0;
+
+  const gestures = applyGestureOrientations(rig.joints, rig.hands);
+  for (const gesture of unreachableGrips(gestures)) {
+    rig.poseWarnings.push(
+      `Gesture: the ${gesture.slot} arm cannot show ${rig.hands[gesture.slot].mudra} ` +
+        `in this pose (${degrees(gesture.residual)}° out).`,
+    );
+  }
+
+  // Hands holding something are turned onto it before anything is settled,
+  // or the item lands between the fingers instead of through the fist.
+  const grips = applyGripOrientations(rig.joints, rig.held, (slot) =>
+    handGripChannel(rig, slot),
+  );
+  for (const grip of unreachableGrips(grips)) {
+    rig.poseWarnings.push(
+      `Grip: the ${grip.slot} hand cannot present its attribute upright in this pose ` +
+        `(${degrees(grip.residual)}° out).`,
+    );
+  }
+
+  // The arm has moved; only now is it known where a planted staff's hand
+  // ended up, and therefore how far it has to slide to reach the ground.
+  settlePlantedAttachments(rig);
+  return [...gestures, ...grips];
 }
 
 /** Verify every socket of the rig's skeleton exists on the built rig. */

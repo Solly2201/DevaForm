@@ -92,8 +92,14 @@ export default function AssetRegistryPage() {
                   </td>
                   <td className="px-3 py-1.5 text-stone-500">{asset.materialZones.join(", ")}</td>
                   <td className="px-3 py-1.5 text-stone-500">
-                    {asset.grip ? asset.grip.mudra : "—"}
-                    {asset.keepUpright ? " · upright" : ""}
+                    {(asset.presentations ?? [])
+                      .map(
+                        (presentation) =>
+                          `${presentation.id}:${presentation.mode}` +
+                          (presentation.hand === "none" ? "" : `/${presentation.hand}`) +
+                          (presentation.orientation === "worldUpright" ? " ↑" : ""),
+                      )
+                      .join(", ") || "—"}
                   </td>
                 </tr>
               ))}

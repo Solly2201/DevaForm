@@ -88,14 +88,21 @@ export function handThumbAxis(slot: ArmSlot): Vec3 {
  * What each hand is actually DOING, once the pose and the configuration
  * are reconciled.
  *
- * A pose preset that raises an abhaya arm is asserting that the hand
- * blesses; the configuration may still say it grips, because the two were
- * set at different times. The gesture wins for the hands the preset names
- * — it is the whole identity of that pose — and everything else keeps
- * what the customer chose.
+ * The division is: the POSE decides whether a hand gestures at all, and
+ * the CUSTOMER decides which gesture it is.
  *
- * Resolve once, here, and every consumer agrees: the wrist solver, the
- * hand generator, and the rig deciding whether a hand can hold anything.
+ * A preset that raises an abhaya arm is asserting that the hand blesses —
+ * it is the whole identity of that pose — so a configuration still saying
+ * that hand grips loses, and rightly: nobody shows a palm to a devotee
+ * with a trident in the same fist. But if the customer has chosen a
+ * DIFFERENT gesture for that hand, they have already agreed the hand
+ * blesses and are only saying how. Overriding that put a varada palm on
+ * an arm the editor had just swung into abhaya, and the two disagreed by
+ * thirty-six degrees.
+ *
+ * Resolve once, here, and every consumer agrees: the hand solver, the
+ * hand generator, and the resolver deciding whether a hand can hold
+ * anything.
  */
 export function resolveHands<T extends Record<string, { mudra: MudraId }>>(
   hands: T,
@@ -104,7 +111,10 @@ export function resolveHands<T extends Record<string, { mudra: MudraId }>>(
   if (!preset?.gestures) return hands;
   const resolved = { ...hands } as Record<string, { mudra: MudraId }>;
   for (const [slot, mudra] of Object.entries(preset.gestures)) {
-    if (mudra && resolved[slot]) resolved[slot] = { ...resolved[slot]!, mudra };
+    const current = resolved[slot];
+    if (!mudra || !current) continue;
+    if (isGestureMudra(current.mudra)) continue; // already a gesture: theirs
+    resolved[slot] = { ...current, mudra };
   }
   return resolved as T;
 }
@@ -154,7 +164,13 @@ export const GESTURE_MUDRAS: Partial<Record<MudraId, MudraGesture>> = {
     palm: [0, 0.174, 0.985],
   },
   varada: {
-    arm: { upper: [-6 * D, 24 * D, -46 * D], forearm: [-44 * D, -45 * D, 0] },
+    // The shoulder carries the arm FORWARD, which is what makes this an
+    // offering rather than a hand hanging by a hip. Re-measured when the
+    // wrist stopped being a ball joint: the hand's height comes from the
+    // arm now, and the solver supplies only the axial twist, so an arm
+    // authored to sit right on a slack wrist sat 4 cm too low on a real
+    // one. These place the arm; they are not its twist.
+    arm: { upper: [-30 * D, 24 * D, -46 * D], forearm: [-44 * D, -45 * D, 0] },
     fingers: [0, -0.94, 0.342],
     palm: [0, -0.342, 0.94],
   },

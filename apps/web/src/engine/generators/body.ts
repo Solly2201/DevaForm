@@ -16,9 +16,10 @@ import {
   type ArmSlot,
   type JointId,
   type MudraId,
+  type SocketId,
 } from "@devaform/character-schema";
 import { mesh, taperedTube, type V3 } from "../geometry";
-import { num, type GeneratorContext, type PartGenerator } from "./types";
+import { num, type GeneratorContext, type PartGenerator, type SocketRefinement } from "./types";
 
 export function jointOffset(child: JointId): V3 {
   return getJoint(child).position;
@@ -241,6 +242,17 @@ interface MudraShape {
   palmCup: number;
 }
 
+/**
+ * The tube a closed hand makes runs across the palm, from the little
+ * finger toward the thumb: every finger here curls about the hand's own
+ * local X, so that axis IS the grip channel. It is chiral only in
+ * direction — you grip a staff with the thumb toward its head — which is
+ * what `side` carries.
+ */
+const GRIP_CHANNEL_AXIS: V3 = [1, 0, 0];
+/** Which way the palm faces, in the same frame (the hand contract's +Z). */
+const PALM_AXIS: V3 = [0, 0, 1];
+
 const MUDRA_SHAPES: Record<MudraId, MudraShape> = {
   abhaya: { bends: [0.08, 0.07, 0.08, 0.1], splay: 0.04, thumbCurl: 0.22, thumbOppose: 0, palmCup: 0.05 },
   varada: { bends: [0.3, 0.28, 0.3, 0.34], splay: 0.09, thumbCurl: 0.32, thumbOppose: 0, palmCup: 0.1 },
@@ -253,13 +265,100 @@ const MUDRA_SHAPES: Record<MudraId, MudraShape> = {
   grip: { bends: [1.12, 1.16, 1.18, 1.2], splay: 0, thumbCurl: 0.95, thumbOppose: 0.55, palmCup: 0.28 },
 };
 
+/** The four fingers of a hand, rooted along the palm's lower edge. */
+const FINGERS: readonly FingerSpec[] = [
+  { root: [-0.0225, -0.058, 0.006], lengthScale: 0.85, radius: 0.0075 },
+  { root: [-0.0075, -0.062, 0.008], lengthScale: 1.0, radius: 0.008 },
+  { root: [0.0075, -0.062, 0.008], lengthScale: 0.93, radius: 0.0076 },
+  { root: [0.0215, -0.057, 0.006], lengthScale: 0.74, radius: 0.0066 },
+];
+
+/**
+ * How much room the fingers leave around the grip axis at a given bend.
+ *
+ * The axis runs along the hand's local X through the grip point, so the
+ * aperture is measured in the (y, z) plane the fingers curl in: the
+ * closest any finger's flesh comes to that line. Negative means the
+ * fingers have closed through it.
+ */
+function apertureAt(
+  shape: MudraShape,
+  grip: readonly [number, number, number],
+  closure: number,
+): number {
+  let clearance = Number.POSITIVE_INFINITY;
+  FINGERS.forEach((finger, i) => {
+    const splay = shape.splay * (finger.root[0] / 0.0225);
+    const points = fingerPoints(
+      finger.root,
+      finger.lengthScale,
+      (shape.bends[i] ?? 0.2) * closure,
+      splay,
+    );
+    // The root is where the finger leaves the palm; it is never what
+    // closes on anything. Sample the phalanges only.
+    for (let p = 1; p < points.length; p += 1) {
+      const point = points[p] as V3;
+      clearance = Math.min(
+        clearance,
+        Math.hypot(point[1] - grip[1], point[2] - grip[2]) - finger.radius,
+      );
+    }
+  });
+  return clearance;
+}
+
+/**
+ * The closure that brings the fingers onto an object of this radius.
+ *
+ * A hand closes until it meets what it is holding and then stops. The
+ * geometry is what it is, so the answer is found by scanning it rather
+ * than by a formula: the tightest closure whose fingers still clear the
+ * object. Past the point where a fingertip sweeps through the axis the
+ * clearance stops falling, so a scan is honest where a bisection would
+ * not be.
+ */
+function closureFor(
+  shape: MudraShape,
+  grip: readonly [number, number, number],
+  radius: number,
+): number {
+  const STEPS = 48;
+  let best = 1;
+  for (let i = 0; i <= STEPS; i += 1) {
+    // Never straighter than half the mudra's own shape — a grip is still
+    // a grip — and never more than half again, which would fold the
+    // fingers into the palm.
+    const closure = 0.5 + (i / STEPS) * 1.0;
+    if (apertureAt(shape, grip, closure) < radius) break;
+    best = closure;
+  }
+  return best;
+}
+
 export function makeHand(
   ctx: GeneratorContext,
   mudra: MudraId,
   side: 1 | -1, // 1 = left hand, -1 = right hand
+  /** Half-thickness of what this hand is closing on, if anything. */
+  closeOn?: number,
 ): THREE.Group {
   const skin = ctx.materials.get("skin");
-  const shape = MUDRA_SHAPES[mudra];
+  const base = MUDRA_SHAPES[mudra];
+  // A hand that is holding something closes onto THAT, not onto whatever
+  // diameter it happened to be drawn at.
+  const closure =
+    closeOn !== undefined && closeOn > 0
+      ? closureFor(base, gripPoint(mudra, side), closeOn)
+      : 1;
+  const shape: MudraShape =
+    closure === 1
+      ? base
+      : {
+          ...base,
+          bends: base.bends.map((b) => b * closure) as unknown as MudraShape["bends"],
+          thumbCurl: base.thumbCurl * (0.7 + 0.3 * closure),
+        };
   const g = new THREE.Group();
 
   // Palm — cupped slab with a knuckle ridge at the finger roots
@@ -283,15 +382,8 @@ export function makeHand(
     }),
   );
 
-  // Four fingers along the palm's lower edge
-  const fingers: FingerSpec[] = [
-    { root: [-0.0225, -0.058, 0.006], lengthScale: 0.85, radius: 0.0075 },
-    { root: [-0.0075, -0.062, 0.008], lengthScale: 1.0, radius: 0.008 },
-    { root: [0.0075, -0.062, 0.008], lengthScale: 0.93, radius: 0.0076 },
-    { root: [0.0215, -0.057, 0.006], lengthScale: 0.74, radius: 0.0066 },
-  ];
   // Mirror finger order so the index finger is on the thumb's side.
-  const indexFirst = side === 1 ? fingers : [...fingers].reverse();
+  const indexFirst = side === 1 ? FINGERS : [...FINGERS].reverse();
   indexFirst.forEach((f, i) => {
     const splay = shape.splay * (f.root[0] / 0.0225);
     const bend = shape.bends[i] ?? 0.2;
@@ -354,17 +446,32 @@ export const humanoidHands: PartGenerator = (ctx) => {
   const parts: Array<{
     joint: JointId;
     object: THREE.Object3D;
-    socketRefinements?: Array<{ id: `arm.${ArmSlot}.hand.item`; position: [number, number, number] }>;
+    socketRefinements?: SocketRefinement[];
   }> = [];
   for (const slot of ctx.armSlots) {
     const mudra = ctx.hands[slot]?.mudra ?? "open";
     const side: 1 | -1 = slot.endsWith("Left") ? 1 : -1;
-    const hand = makeHand(ctx, mudra, side);
+    const held = ctx.held[slot];
+    const hand = makeHand(ctx, mudra, side, held?.radius);
     parts.push({
       joint: `arm.${slot as ArmSlot}.hand`,
       object: hand,
       socketRefinements: [
-        { id: `arm.${slot as ArmSlot}.hand.item`, position: gripPoint(mudra, side) },
+        {
+          id: `arm.${slot as ArmSlot}.hand.item` as SocketId,
+          position: gripPoint(mudra, side),
+          // The hand owns its grip surface, so it also owns the DIRECTION
+          // a shaft runs through it. A cradle has no such direction —
+          // nothing passes through an open palm — so only the closing
+          // mudras state one, and an offering goes on following the palm
+          // exactly as it always did.
+          ...(mudra === "grip" || mudra === "pinch"
+            ? {
+                channel: [side * GRIP_CHANNEL_AXIS[0], GRIP_CHANNEL_AXIS[1], GRIP_CHANNEL_AXIS[2]] as V3,
+                palm: PALM_AXIS,
+              }
+            : {}),
+        },
       ],
     });
   }

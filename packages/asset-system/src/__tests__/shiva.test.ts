@@ -20,7 +20,7 @@ import {
   serializeConfiguration,
   validateConfiguration,
 } from "@devaform/character-schema";
-import { getAvailableDeity, getAsset, isAssetCompatible, listAssets } from "../index";
+import { getAvailableDeity, getAsset, isAssetCompatible, isHandheld, listAssets } from "../index";
 
 const shiva = getAvailableDeity("shiva");
 
@@ -122,13 +122,31 @@ describe("shiva skeleton", () => {
 });
 
 describe("shiva grips", () => {
-  it("held attributes declare grips using real mudras", () => {
+  it("held attributes declare a handheld presentation with a real hand state", () => {
     for (const id of ["shiva.attribute.trishul", "shiva.attribute.damaru"]) {
       const asset = getAsset(id);
-      expect(asset?.grip, id).toBeDefined();
-      expect(MUDRAS).toContain(asset!.grip!.mudra);
+      expect(asset?.presentations, id).toBeDefined();
+      const held = asset!.presentations!.filter(isHandheld);
+      expect(held.length, id).toBeGreaterThan(0);
+      for (const presentation of held) {
+        expect(MUDRAS).toContain(presentation.hand);
+        // A hand closes around something of a size; without the radius it
+        // closes to whatever diameter it was modelled at.
+        expect(presentation.grip?.radius, `${id}/${presentation.id}`).toBeGreaterThan(0);
+      }
       expect(asset?.kind.type).toBe("attachment");
     }
+  });
+
+  it("the trishul can stand as well as be held", () => {
+    const asset = getAsset("shiva.attribute.trishul");
+    const modes = asset!.presentations!.map((p) => p.mode);
+    expect(modes).toContain("handheld");
+    expect(modes).toContain("grounded");
+    const standing = asset!.presentations!.find((p) => p.mode === "grounded")!;
+    // Grounded means grounded: no hand may be required for it.
+    expect(standing.hand).toBe("none");
+    expect(standing.stand?.clearanceM).toBeGreaterThan(0);
   });
 });
 

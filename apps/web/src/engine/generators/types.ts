@@ -10,15 +10,17 @@ import type {
 import type { ZoneMaterials } from "../materials";
 import type { BodyProfile } from "./bodyProfile";
 
+/** What a hand is closing on, as the resolver decided it. */
+export interface HeldItemSpec {
+  /** The presentation chosen for it — diagnostics and generator hints. */
+  presentationId: string;
+  /** How thick the item is where the hand closes, metres. */
+  radius?: number;
+}
+
 export interface GeneratorContext {
   /** Static parameters from the asset manifest entry. */
   params: Record<string, number | string>;
-  /**
-   * For a planted attribute: how far its socket stands above the base,
-   * so a staff can be built long enough to reach the ground. Absent
-   * for everything that is not grounded.
-   */
-  reach?: number;
   materials: ZoneMaterials;
   proportions: Proportions;
   /** Live morph weights from the configuration (parametric morphs). */
@@ -32,6 +34,15 @@ export interface GeneratorContext {
    * or it builds a hand for a limb this body does not have.
    */
   armSlots: readonly ArmSlot[];
+  /**
+   * What each hand is holding, decided before any geometry exists.
+   *
+   * A hand generator needs this: a fist that closes to a fixed diameter
+   * whatever it holds is why fingers used to meet a drum head as readily
+   * as a staff's shaft. The item declares the radius it presents; the hand
+   * closes onto exactly that.
+   */
+  held: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>;
   /**
    * True when the active pose preset is seated. Clothing generators use
    * pose-compatible geometry (a draped lap instead of a full skirt).
@@ -58,14 +69,40 @@ export interface GeneratorContext {
  * entries are attached after all joint entries so owner refinements have
  * already landed.
  */
+/**
+ * A part's statement about a socket whose surface it owns.
+ *
+ * Position alone was not enough for a hand. A hand's item socket is not
+ * merely a point: it is a point plus the direction a held shaft runs
+ * through it — the axis of the tube a closed fist makes. The hand geometry
+ * is the only thing that knows where that is, so the hand says so here,
+ * and the whole grip chain hangs off the statement.
+ *
+ * Without it the socket kept the wrist joint's own orientation, whose +Y
+ * runs down the FINGERS, so an asset authored shaft-up landed lying along
+ * the fingers and had to be rotated back in world space afterwards — which
+ * is exactly how a trishul came to pass across a hand instead of through it.
+ */
+export interface SocketRefinement {
+  id: SocketId;
+  /** New socket position, local to the socket's parent joint. */
+  position: readonly [number, number, number];
+  /**
+   * The direction a held shaft runs, in the owning joint's frame. Becomes
+   * the socket's +Y. Omit for a socket nothing is gripped at.
+   */
+  channel?: readonly [number, number, number];
+  /**
+   * Which way the palm faces, in the same frame. Becomes the socket's +Z,
+   * which is what determines the roll once the channel is fixed.
+   */
+  palm?: readonly [number, number, number];
+}
+
 export type JointedPart = ReadonlyArray<
   {
     object: THREE.Object3D;
-    socketRefinements?: ReadonlyArray<{
-      id: SocketId;
-      /** New socket position, local to the socket's parent joint. */
-      position: readonly [number, number, number];
-    }>;
+    socketRefinements?: ReadonlyArray<SocketRefinement>;
   } & ({ joint: JointId; socket?: never } | { socket: SocketId; joint?: never })
 >;
 
