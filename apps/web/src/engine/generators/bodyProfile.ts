@@ -135,12 +135,15 @@ export function headFit(body: Pick<BodyProfile, "headRadius">): number {
 export const REFERENCE_WRIST_RADIUS = 0.03;
 
 /**
- * How much bigger or smaller the hand holding an item is than the one the
- * item was drawn for. A damaru sized to a stylised fist is a barrel in a
- * human one.
+ * How much a held item gives to the hand holding it.
+ *
+ * Not the raw ratio: a drum is the size a drum is, and a smaller hand
+ * holds the same drum rather than a miniature of it. So the item follows
+ * the hand only part of the way — enough that a stylised fist's props do
+ * not read as barrels in a human one, not so much that they become toys.
  */
 export function handFit(body: Pick<BodyProfile, "wristBandRadius">): number {
-  return body.wristBandRadius / REFERENCE_WRIST_RADIUS;
+  return 0.68 + 0.32 * (body.wristBandRadius / REFERENCE_WRIST_RADIUS);
 }
 
 /** spine joint sits this far below the chest joint (see skeleton.ts). */
