@@ -1,0 +1,119 @@
+/**
+ * Protected characters: a structural fingerprint of the rendered scene.
+ *
+ * Ganesha and the production Shiva must not move while the rig is being
+ * restructured beneath them. Screenshots cannot prove that — the capture
+ * harness is not deterministic run to run — but the scene itself is: the
+ * same configuration builds the same nodes, at the same world transforms,
+ * from the same geometry, every time.
+ *
+ * So the fingerprint is taken over what actually reaches the renderer —
+ * every node's world position, rotation and scale, and every mesh's vertex
+ * count and bounds — and pinned. If an architectural change moves one
+ * joint by a millimetre or swaps one generator's output, this fails, and
+ * the diff says which node.
+ *
+ * Updating a pinned digest is a deliberate act. Do it only when the change
+ * to that character is intended, and say so in the commit.
+ */
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("three/examples/jsm/loaders/GLTFLoader.js", () => ({
+  GLTFLoader: class {
+    load(): void {
+      /* never resolves in tests */
+    }
+  },
+}));
+import * as THREE from "three";
+import {
+  createDefaultGaneshaConfiguration,
+  createDefaultShivaConfiguration,
+  type CharacterConfiguration,
+} from "@devaform/character-schema";
+import { alignUprightAttachments, buildRig } from "../rig";
+import { applyPose } from "../pose";
+import { ZoneMaterials } from "../materials";
+
+const round = (n: number): string => n.toFixed(6);
+
+/** One line per node: what it is, where it ended up, and what it is made of. */
+function sceneRows(config: CharacterConfiguration): string[] {
+  const materials = new ZoneMaterials();
+  const rig = buildRig(config, materials);
+  applyPose(rig.joints, config.pose);
+  alignUprightAttachments(rig);
+  rig.root.updateWorldMatrix(true, true);
+
+  const rows: string[] = [];
+  const position = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3();
+  rig.root.traverse((object) => {
+    object.matrixWorld.decompose(position, quaternion, scale);
+    let geometry = "";
+    const mesh = object as THREE.Mesh;
+    if (mesh.isMesh) {
+      const vertices = mesh.geometry.getAttribute("position").count;
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      const box = mesh.geometry.boundingBox!;
+      geometry =
+        `|v${vertices}|${round(box.min.x)},${round(box.min.y)},${round(box.min.z)}` +
+        `,${round(box.max.x)},${round(box.max.y)},${round(box.max.z)}`;
+    }
+    rows.push(
+      `${object.name || object.type}` +
+        `@${round(position.x)},${round(position.y)},${round(position.z)}` +
+        `|${round(quaternion.x)},${round(quaternion.y)},${round(quaternion.z)},${round(quaternion.w)}` +
+        `|${round(scale.x)},${round(scale.y)},${round(scale.z)}${geometry}`,
+    );
+  });
+  materials.dispose();
+  // Traversal order is an implementation detail; the set of nodes is not.
+  return rows.sort();
+}
+
+function digest(rows: readonly string[]): string {
+  let a = 0x811c9dc5;
+  let b = 0x01000193;
+  const joined = rows.join("\n");
+  for (let i = 0; i < joined.length; i += 1) {
+    a = Math.imul(a ^ joined.charCodeAt(i), 0x01000193) >>> 0;
+    b = Math.imul(b + joined.charCodeAt(i), 0x85ebca6b) >>> 0;
+  }
+  return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
+}
+
+const PINNED = {
+  ganesha: { nodes: 370, digest: "65100aec2a4dae90" },
+  shiva: { nodes: 314, digest: "c17d22aa808af918" },
+} as const;
+
+describe("protected characters do not move", () => {
+  it.each([
+    ["ganesha", createDefaultGaneshaConfiguration],
+    ["shiva", createDefaultShivaConfiguration],
+  ] as const)("%s renders exactly as it did", (name, makeConfig) => {
+    const rows = sceneRows(makeConfig());
+    const expected = PINNED[name];
+    // Node count first: it localises "something appeared/vanished" before
+    // the digest can only say "something, somewhere, differs".
+    expect(rows.length, `${name} node count`).toBe(expected.nodes);
+    expect(digest(rows), `${name} scene digest`).toBe(expected.digest);
+  });
+
+  it("is deterministic, so a failure means a real change", () => {
+    const config = createDefaultGaneshaConfiguration();
+    expect(digest(sceneRows(config))).toBe(digest(sceneRows(config)));
+  });
+
+  it("would notice a change", () => {
+    // Proof the fingerprint has teeth: nudge one joint and it must move.
+    const config = createDefaultGaneshaConfiguration();
+    const moved = {
+      ...config,
+      pose: { ...config.pose, jointOverrides: { ...config.pose.jointOverrides, neck: [0.01, 0, 0] as const } },
+    } as CharacterConfiguration;
+    expect(digest(sceneRows(moved))).not.toBe(PINNED.ganesha.digest);
+  });
+});

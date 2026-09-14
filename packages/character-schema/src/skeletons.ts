@@ -14,21 +14,38 @@
  * engine code.
  */
 import {
-  HUMANOID_CORE_JOINTS,
-  SKELETON,
-  TRUNK_JOINTS,
+  ARM_SLOTS,
   computeJointUiGroups,
+  humanoidJoints,
+  type ArmSlot,
   type JointDefinition,
   type JointId,
   type JointUiGroup,
 } from "./skeleton";
-import {
-  HUMANOID_CORE_SOCKETS,
-  SOCKETS,
-  type SocketDefinition,
-  type SocketId,
-} from "./sockets";
+import { humanoidSockets, type SocketDefinition, type SocketId } from "./sockets";
 import type { Vec3 } from "./configuration";
+
+const withPosition = <T extends { id: string; position: readonly [number, number, number] }>(
+  items: readonly T[],
+  overrides: Record<string, Vec3 | undefined>,
+): T[] =>
+  items.map((item) =>
+    overrides[item.id] ? { ...item, position: overrides[item.id]! } : item,
+  );
+
+/**
+ * Anatomy beyond the humanoid core that a skeleton declares it has.
+ *
+ * An extension is not decoration: the joints and the sockets hung off
+ * them are built together or not at all, so nothing can be attached to a
+ * limb the body does not own.
+ */
+export interface SkeletonExtensions {
+  /** Ganesha's trunk chain and its tip socket. */
+  trunk?: boolean;
+  /** A second pair of arms, with their hand and wrist sockets. */
+  backArms?: boolean;
+}
 
 export interface SkeletonDefinition {
   /** Stable skeleton id (referenced by rigs/tooling, not persisted in configs). */
@@ -39,29 +56,44 @@ export interface SkeletonDefinition {
   sockets: readonly SocketDefinition[];
   /** User-posable joints grouped by semantic body part (pose UI). */
   uiGroups: readonly JointUiGroup[];
+  /** Which optional anatomy this skeleton carries. */
+  extensions: SkeletonExtensions;
+  /** Arm chains this skeleton actually has — front pair, plus back if declared. */
+  armSlots: readonly ArmSlot[];
 }
 
 function defineSkeleton(
   id: string,
-  joints: readonly JointDefinition[],
-  sockets: readonly SocketDefinition[],
+  extensions: SkeletonExtensions,
+  overrides: {
+    joints?: Record<string, Vec3 | undefined>;
+    sockets?: Record<string, Vec3 | undefined>;
+  } = {},
 ): SkeletonDefinition {
-  return { id, joints, sockets, uiGroups: computeJointUiGroups(joints) };
+  const joints = withPosition(humanoidJoints(extensions), overrides.joints ?? {});
+  const sockets = withPosition(humanoidSockets(extensions), overrides.sockets ?? {});
+  return {
+    id,
+    joints,
+    sockets,
+    uiGroups: computeJointUiGroups(joints),
+    extensions,
+    armSlots: ARM_SLOTS.filter(
+      (slot) => extensions.backArms || !slot.startsWith("back"),
+    ),
+  };
 }
 
-/** The shared humanoid rig: torso, head, four arm chains, two legs. */
-export const HUMANOID_SKELETON: SkeletonDefinition = defineSkeleton(
-  "humanoid",
-  HUMANOID_CORE_JOINTS,
-  HUMANOID_CORE_SOCKETS,
-);
+/** The shared humanoid rig: torso, head, two pairs of arms, two legs. */
+export const HUMANOID_SKELETON: SkeletonDefinition = defineSkeleton("humanoid", {
+  backArms: true,
+});
 
 /** Humanoid core + Ganesha's trunk chain and trunk-tip socket. */
-export const GANESHA_SKELETON: SkeletonDefinition = defineSkeleton(
-  "ganesha",
-  SKELETON, // core + trunk, in canonical build order
-  SOCKETS,
-);
+export const GANESHA_SKELETON: SkeletonDefinition = defineSkeleton("ganesha", {
+  backArms: true,
+  trunk: true,
+});
 
 // ---------------------------------------------------------------------------
 // Human-proportioned skeleton
@@ -113,19 +145,19 @@ const HUMAN_SOCKET_POSITIONS: Partial<Record<SocketId, Vec3>> = {
   "leg.right.anklet": [0, 0.03, 0.005],
 };
 
-const withPosition = <T extends { id: string; position: readonly [number, number, number] }>(
-  items: readonly T[],
-  overrides: Record<string, Vec3 | undefined>,
-): T[] => items.map((item) => (overrides[item.id] ? { ...item, position: overrides[item.id]! } : item));
-
 /**
  * Human-proportioned rig for continuous skinned bodies. Deities adopt it
  * by referencing it from their definition; nothing else changes.
+ *
+ * ONE pair of arms, because the mesh has one pair of arms. It used to
+ * carry four — the back pair keeping the stylised figure's offsets,
+ * because there was no second pair on the body to measure — and a hand
+ * socket seven centimetres from where any hand was still accepted items.
  */
 export const HUMAN_SKELETON: SkeletonDefinition = defineSkeleton(
   "human",
-  withPosition(HUMANOID_CORE_JOINTS, HUMAN_JOINT_POSITIONS),
-  withPosition(HUMANOID_CORE_SOCKETS, HUMAN_SOCKET_POSITIONS),
+  {},
+  { joints: HUMAN_JOINT_POSITIONS, sockets: HUMAN_SOCKET_POSITIONS },
 );
 
 /**

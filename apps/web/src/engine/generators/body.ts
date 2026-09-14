@@ -356,8 +356,7 @@ export const humanoidHands: PartGenerator = (ctx) => {
     object: THREE.Object3D;
     socketRefinements?: Array<{ id: `arm.${ArmSlot}.hand.item`; position: [number, number, number] }>;
   }> = [];
-  const armSlots = activeArmSlots(ctx.arms);
-  for (const slot of armSlots) {
+  for (const slot of ctx.armSlots) {
     const mudra = ctx.hands[slot]?.mudra ?? "open";
     const side: 1 | -1 = slot.endsWith("Left") ? 1 : -1;
     const hand = makeHand(ctx, mudra, side);

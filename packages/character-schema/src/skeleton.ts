@@ -10,10 +10,19 @@
  *
  * Skeletons are per-deity data: every deity references a SkeletonDefinition
  * (see skeletons.ts) built from the shared humanoid joint chain plus any
- * deity-specific extensions (Ganesha adds the trunk chain). The engine only
+ * deity-specific extensions (Ganesha adds the trunk chain; iconography
+ * with more than one pair of arms adds the back arms). The engine only
  * ever builds the joints of the active deity's skeleton — joint VALIDATION
  * accepts the union of all skeletons so a configuration schema stays
  * deity-agnostic.
+ *
+ * An extension is anatomy a body either HAS or does not. A skeleton that
+ * does not declare the back arms has no back arm joints and no back hand
+ * sockets, so nothing can be hung off a limb the body does not own. That
+ * matters: before the back arms were an extension they were built for
+ * every body, and a mesh body that had measured only its front pair kept
+ * the stylised figure's offsets for the back one — seven centimetres out,
+ * with no geometry on it and no warning raised.
  */
 
 export type ArmSlot = "frontLeft" | "frontRight" | "backLeft" | "backRight";
@@ -136,11 +145,8 @@ const legJoints = (slot: LegSlot): JointDefinition[] => {
   ];
 };
 
-/**
- * Shared humanoid core: torso, head, four arm chains, two legs. Every deity
- * skeleton starts from these joints. Order matters: parents precede children.
- */
-export const HUMANOID_CORE_JOINTS: readonly JointDefinition[] = [
+/** Torso and head — the spine every humanoid skeleton is built on. */
+const TORSO_JOINTS: readonly JointDefinition[] = [
   { id: "root", parent: null, position: [0, 0, 0], label: "Root" },
   { id: "pelvis", parent: "root", position: [0, 0.52, 0], limits: { x: [-PI * 0.3, PI * 0.3], y: [-PI * 0.4, PI * 0.4], z: [-PI * 0.25, PI * 0.25] }, label: "Pelvis", uiGroup: "Torso" },
   { id: "spine", parent: "pelvis", position: [0, 0.1, 0], limits: { x: [-0.6, 0.6], y: [-0.8, 0.8], z: [-0.5, 0.5] }, label: "Spine", uiGroup: "Torso" },
@@ -149,12 +155,22 @@ export const HUMANOID_CORE_JOINTS: readonly JointDefinition[] = [
   // Head sits high enough that the chin clears the shoulder line — murti
   // composition needs daylight between chin and chest.
   { id: "head", parent: "neck", position: [0, 0.115, 0], limits: { x: [-0.7, 0.7], y: [-1.2, 1.2], z: [-0.6, 0.6] }, label: "Head", uiGroup: "Head" },
+] as const;
+
+/** The arms every humanoid has. */
+const FRONT_ARM_JOINTS: readonly JointDefinition[] = [
   ...armJoints("frontLeft", "left", "front"),
   ...armJoints("frontRight", "right", "front"),
+] as const;
+
+/**
+ * The second pair of arms, for iconography that shows them. An EXTENSION:
+ * a skeleton that does not declare it has no back arm joints at all, which
+ * is the only honest answer for a body with one pair of arms.
+ */
+export const BACK_ARM_JOINTS: readonly JointDefinition[] = [
   ...armJoints("backLeft", "left", "back"),
   ...armJoints("backRight", "right", "back"),
-  ...legJoints("left"),
-  ...legJoints("right"),
 ] as const;
 
 /**
@@ -168,17 +184,45 @@ export const TRUNK_JOINTS: readonly JointDefinition[] = [
   { id: "trunkTip", parent: "trunkMid", position: [0, -0.085, 0.04], limits: { x: [-1.4, 1.4], y: [-1.2, 1.2], z: [-1.2, 1.2] }, label: "Trunk Tip", uiGroup: "Trunk" },
 ] as const;
 
+const LEG_JOINTS: readonly JointDefinition[] = [
+  ...legJoints("left"),
+  ...legJoints("right"),
+] as const;
+
+/**
+ * Compose a humanoid joint chain from the core plus whichever extensions
+ * the anatomy actually has, in canonical build order (parents before
+ * children, and the order the pose UI lists its groups in).
+ */
+export function humanoidJoints(extensions: {
+  trunk?: boolean;
+  backArms?: boolean;
+} = {}): readonly JointDefinition[] {
+  return [
+    ...TORSO_JOINTS,
+    ...(extensions.trunk ? TRUNK_JOINTS : []),
+    ...FRONT_ARM_JOINTS,
+    ...(extensions.backArms ? BACK_ARM_JOINTS : []),
+    ...LEG_JOINTS,
+  ];
+}
+
+/**
+ * Shared humanoid core: torso, head, ONE pair of arms, two legs. Every
+ * deity skeleton starts from these joints and adds what its anatomy needs.
+ */
+export const HUMANOID_CORE_JOINTS: readonly JointDefinition[] = humanoidJoints();
+
 /**
  * Union of every joint across all skeletons — used for validation and as
  * the legacy `SKELETON` export. Future joints (fingers, facial controls,
  * spine chains) extend the definitions — unknown joints in an old config
  * are ignored; missing joints default to rest.
  */
-export const SKELETON: readonly JointDefinition[] = [
-  ...HUMANOID_CORE_JOINTS.slice(0, 6), // root..head
-  ...TRUNK_JOINTS,
-  ...HUMANOID_CORE_JOINTS.slice(6), // arms + legs
-] as const;
+export const SKELETON: readonly JointDefinition[] = humanoidJoints({
+  trunk: true,
+  backArms: true,
+});
 
 export const JOINT_IDS: readonly JointId[] = SKELETON.map((j) => j.id);
 

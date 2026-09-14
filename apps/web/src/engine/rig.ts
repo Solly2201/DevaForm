@@ -11,6 +11,7 @@
  */
 import * as THREE from "three";
 import {
+  ARM_SLOTS,
   activeArmSlots,
   getPosePreset,
   getSkeleton,
@@ -264,12 +265,21 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       : undefined,
   );
 
+  // Which arms this character actually has: the count the customer chose,
+  // narrowed to the chains the skeleton carries. A body with one pair of
+  // arms cannot render four however the configuration is set — and saying
+  // so here, once, is what stops a hand socket existing where no hand does.
+  const armSlots = activeArmSlots(config.arms).filter((slot) =>
+    skeleton.armSlots.includes(slot),
+  );
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,
     proportions: config.proportions,
     morphs: config.morphs,
     hands: config.hands,
     arms: config.arms,
+    armSlots,
     seated:
       config.pose.preset !== null && getPosePreset(config.pose.preset)?.seated === true,
     body: bodyProfile,
@@ -395,15 +405,29 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     socket.add(mount.object);
   }
 
-  // Attachments — skip hand sockets on arms that are not rendered.
-  const activeSlots = activeArmSlots(config.arms);
+  // Attachments — skip hand sockets on arms that are not rendered. There
+  // are two reasons a hand may not be there, and they are not the same
+  // thing: the customer asked for two arms (ordinary, silent), or this
+  // BODY has only two (worth saying out loud, because the configuration
+  // asked for something its anatomy cannot provide).
+  const handSocketsOf = (slot: string): string[] => [
+    `arm.${slot}.hand.item`,
+    `arm.${slot}.wrist`,
+  ];
   const inactiveHandSockets = new Set(
-    (["frontLeft", "frontRight", "backLeft", "backRight"] as const)
-      .filter((slot) => !activeSlots.includes(slot))
-      .flatMap((slot) => [`arm.${slot}.hand.item`, `arm.${slot}.wrist`]),
+    ARM_SLOTS.filter((slot) => !armSlots.includes(slot)).flatMap(handSocketsOf),
+  );
+  const absentHandSockets = new Set(
+    ARM_SLOTS.filter((slot) => !skeleton.armSlots.includes(slot)).flatMap(handSocketsOf),
   );
 
   for (const attachment of config.attachments) {
+    if (absentHandSockets.has(attachment.socket)) {
+      warnings.push(
+        `Attachment ${attachment.asset.assetId}: skeleton "${skeleton.id}" has no ${attachment.socket} — this body has ${skeleton.armSlots.length} arms`,
+      );
+      continue;
+    }
     if (inactiveHandSockets.has(attachment.socket)) continue;
     const socketSuffix = attachment.socket.split(".").pop() ?? attachment.socket;
     if (integratedFeatures.has(attachment.socket) || integratedFeatures.has(socketSuffix)) continue;
