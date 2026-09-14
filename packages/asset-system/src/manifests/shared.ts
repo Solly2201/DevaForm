@@ -32,7 +32,7 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         "Characters exported through the export functionality of an official, unmodified MakeHuman build are CC0. The committed .mhm files reproduce this mesh in the MakeHuman GUI. MakeHuman is authoring-time only — no runtime dependency ships.",
     },
     geometry: { triangles: 27816, vertices: 14444, boundsM: [0.34979, 1.0, 0.16544] },
-    morphTargets: ["bodyLean", "bodyAthletic", "bodyPowerful", "bodyHeroic", "faceDivine", "bodyAscetic"],
+    morphTargets: ["bodyLean", "bodyAthletic", "bodyPowerful", "bodyHeroic", "faceDivine", "bodyAscetic", "gripFrontLeft", "gripFrontRight"],
     // One continuous human: the head, face, ears, eyes and hands are this
     // mesh, not parts bolted onto it. The engine skips the standalone
     // versions so a body does not wear a second head.

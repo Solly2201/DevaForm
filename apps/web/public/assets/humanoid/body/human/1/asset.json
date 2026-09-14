@@ -29,7 +29,9 @@
     "bodyPowerful",
     "bodyHeroic",
     "faceDivine",
-    "bodyAscetic"
+    "bodyAscetic",
+    "gripFrontLeft",
+    "gripFrontRight"
   ],
   "geometry": {
     "triangles": 27816,

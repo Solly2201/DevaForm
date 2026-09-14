@@ -391,6 +391,86 @@ function restFor(variant) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// 3b. Grip: a closed hand, built from the rig rather than exported as one
+// ---------------------------------------------------------------------------
+
+/**
+ * MakeHuman's rig has every finger joint, but DevaForm's does not: a
+ * statue rig with 15 bones per hand would make the pose UI unusable and
+ * would not match the stylised rig the pose presets are written against.
+ * So the fingers are articulated HERE, once, and shipped as a morph
+ * target — the engine closes the hand by dialling it, and the mudra
+ * system keeps deciding what the hand means.
+ *
+ * The curl is real forward kinematics on MakeHuman's own finger joints,
+ * skinned with its own weights: the same machinery the A-pose retarget
+ * uses, applied to three joints per finger instead of one per limb.
+ */
+const FINGER_CURL = {
+  // thumb wraps across rather than folding in
+  1: [0.5, 0.55, 0.45],
+  2: [1, 1, 0.9],
+  3: [1, 1, 0.95],
+  4: [1, 1, 0.95],
+  5: [0.95, 1, 0.9],
+};
+// A grip closes around a shaft, so the fingers make a C rather than a
+// fist: curl them all the way and they drive through the palm.
+const CURL_ANGLES = [0.5, 0.62, 0.45]; // radians at full grip, per segment
+
+function curledHand(positions, prefix) {
+  const { normal } = palmNormal(prefix);
+  const lateral = v3(`${prefix}-finger-2-1`).sub(v3(`${prefix}-finger-5-1`)).normalize();
+  const out = new Float32Array(positions);
+  const side = prefix === "l" ? "L" : "R";
+  const point = new THREE.Vector3();
+  const moved = new THREE.Vector3();
+
+  for (const finger of [1, 2, 3, 4, 5]) {
+    // Forward kinematics down the finger: each segment's transform is its
+    // own rotation about its (already moved) joint, after its parents'.
+    let chain = new THREE.Matrix4();
+    for (let segment = 1; segment <= 3; segment += 1) {
+      const joint = v3(`${prefix}-finger-${finger}-${segment}`).applyMatrix4(chain);
+      const angle = CURL_ANGLES[segment - 1] * FINGER_CURL[finger][segment - 1];
+      // Curl toward the palm; which sign that is depends on the hand.
+      const tip = v3(`${prefix}-finger-${finger}-4`).applyMatrix4(chain);
+      const trial = new THREE.Matrix4()
+        .makeTranslation(joint.x, joint.y, joint.z)
+        .multiply(new THREE.Matrix4().makeRotationAxis(lateral, angle))
+        .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
+      const towardPalm = tip.clone().applyMatrix4(trial).sub(tip).dot(normal) > 0;
+      const rotation = towardPalm
+        ? trial
+        : new THREE.Matrix4()
+            .makeTranslation(joint.x, joint.y, joint.z)
+            .multiply(new THREE.Matrix4().makeRotationAxis(lateral, -angle))
+            .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
+      chain = rotation.multiply(chain);
+
+      const bone = rigWeights[`finger${finger}-${segment}.${side}`];
+      if (!bone) throw new Error(`no rig weights for finger${finger}-${segment}.${side}`);
+      for (const [baseIndex, weight] of bone) {
+        const vertex = inverseParentMap[baseIndex];
+        if (vertex < 0 || weight <= 0) continue;
+        point.set(positions[vertex * 3], positions[vertex * 3 + 1], positions[vertex * 3 + 2]);
+        moved.copy(point).applyMatrix4(chain).sub(point).multiplyScalar(weight);
+        out[vertex * 3] += moved.x;
+        out[vertex * 3 + 1] += moved.y;
+        out[vertex * 3 + 2] += moved.z;
+      }
+    }
+  }
+  return out;
+}
+
+/** morph target name -> the A-pose mesh with that hand closed. */
+const GRIPS = {
+  gripFrontLeft: curledHand(meshes.neutral.positions, "l"),
+  gripFrontRight: curledHand(meshes.neutral.positions, "r"),
+};
+
 const retargeted = {};
 for (const variant of VARIANTS) {
   retargeted[variant] = retarget(meshes[variant].positions, restFor(variant));
@@ -442,6 +522,15 @@ for (const variant of VARIANTS) {
   heightFix[variant] = normalizeHeight(placed);
   for (let i = 0; i < placed.length; i += 1) placed[i] *= heightFix[variant];
   finalMesh[variant] = placed;
+}
+
+// The closed hands travel the same road as the variants: retargeted into
+// the rest pose and normalised, so their deltas describe fingers only.
+const finalGrips = {};
+for (const [name, posed] of Object.entries(GRIPS)) {
+  const placed = toDevaform(retarget(posed, restFor("neutral")));
+  for (let i = 0; i < placed.length; i += 1) placed[i] *= heightFix.neutral;
+  finalGrips[name] = placed;
 }
 
 // The eyes ride the head with full weight, so they need that one bone's
@@ -603,6 +692,14 @@ for (const [variant, morphName] of Object.entries(MORPHS)) {
   morphTargetNames.push(morphName);
 }
 
+// Hand grips are morph targets too, and only the fingers move in them.
+for (const [name, posed] of Object.entries(finalGrips)) {
+  const delta = new Float32Array(finalMesh.neutral.length);
+  for (let i = 0; i < delta.length; i += 1) delta[i] = posed[i] - finalMesh.neutral[i];
+  geometry.morphAttributes.position.push(new THREE.BufferAttribute(delta, 3));
+  morphTargetNames.push(name);
+}
+
 const material = new THREE.MeshStandardMaterial({ name: "zone:skin", roughness: 0.62 });
 const skinnedMesh = new THREE.SkinnedMesh(geometry, material);
 skinnedMesh.name = "humanBody";
@@ -677,6 +774,13 @@ const eyeMesh = new THREE.SkinnedMesh(
   ),
 );
 eyeMesh.name = "humanEyes";
+// The eyes take the shape morphs (they must follow the face) but not
+// the hand grips. Names travel with them so the engine can address
+// each target by name rather than by index.
+eyeMesh.morphTargetDictionary = Object.fromEntries(
+  Object.values(MORPHS).map((name, index) => [name, index]),
+);
+eyeMesh.morphTargetInfluences = Object.values(MORPHS).map(() => 0);
 skinnedMesh.morphTargetDictionary = Object.fromEntries(morphTargetNames.map((n, i) => [n, i]));
 skinnedMesh.morphTargetInfluences = morphTargetNames.map(() => 0);
 
