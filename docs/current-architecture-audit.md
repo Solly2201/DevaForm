@@ -356,6 +356,7 @@ than assumes:
 | `thumbAxes` | which way a grip socket is aimed |
 | `gripApertures` | how far a fist closes on a given radius |
 | `gripSeats` | where a held object rests: `point + normal × radius` |
+| `torsoSurface.morphs` | how each morph moves the skin ornaments walk over |
 | `morphTargets` | the shapes the customer can blend |
 
 The grip seat is the newest and the one that changed the most: a held
@@ -401,13 +402,31 @@ a socket. Three tests hold that.
 
 - `MIGRATIONS` is empty. `SCHEMA_VERSION` is still 1 and nothing in this
   run needed it to change.
-- The torso surface map carries no per-morph deltas, unlike the scalar
-  profile. `morphSafety.test.ts` covers every combination the editor can
-  produce — the named variants, each morph alone at full, the default,
-  nothing, and two degenerate corners — and the ornaments stay on the
-  surface in all of them. The map should gain deltas before the morph
-  range is widened beyond what those variants reach.
+- ~~The torso surface map carries no per-morph deltas~~ — it does now.
+  `morphSafety.test.ts` deforms the body it measures against (morphs and
+  skinning both, via `deformedVertex`) and found that it did not: at the
+  default weights a strand of rudraksha sat twelve millimetres inside a
+  Heroic chest. Every combination the editor can produce now keeps its
+  ornaments on the surface.
 - 65 of 73 registry entries have no `provenance`. They are procedural, and
   the field is optional for that reason; a GLB-sourced asset has one.
 - Hair and cloth detail is bounded by tessellation where no texture
   applies. The jata is forty-six lofted locks, not shaded strands.
+
+### The physical relationships, and how each is held to account
+
+| Relationship | Mechanism | Test |
+|---|---|---|
+| hand ↔ object | grip seat + declared grip frame | `gripChain`, `handReach` |
+| finger ↔ grip | grip morph, closure from the declared radius, bounded by the mudra | `gripChain` |
+| ornament ↔ body surface | `walkSurface` over the measured, morph-blended skin | `morphSafety`, `correction` |
+| garment ↔ body | sections cut to the measured leg envelope | `garmentFit` |
+| attribute ↔ pose | the resolver's presentation choice | `resolve` (pose × attribute matrix) |
+| attachment ↔ anatomy | sockets that cannot exist without their limb | `resolve`, `conformance` |
+| figure ↔ base | lowest point of the posed body on the support | `support` |
+
+Two of these were measured wrongly for a long time and looked fine: a
+band fitted to a limb's MEAN radius, and a surface map that never morphed.
+Both were found by making a test deform the body it measures rather than
+compare against the shape the body would have if nobody had chosen
+anything.
