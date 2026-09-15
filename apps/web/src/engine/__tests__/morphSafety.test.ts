@@ -43,7 +43,7 @@ import {
   createDefaultShivaConfiguration,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
-import { getDeity } from "@devaform/asset-system";
+import { getAvailableDeity } from "@devaform/asset-system";
 import { buildRig, poseRig } from "../rig";
 import { ZoneMaterials } from "../materials";
 
@@ -57,7 +57,7 @@ import { ZoneMaterials } from "../materials";
  * which the schema permits even though no picker produces them.
  */
 function combinations(): Array<{ name: string; morphs: Record<string, number> }> {
-  const shiva = getDeity("shiva");
+  const shiva = getAvailableDeity("shiva");
   const targets = ["bodyLean", "bodyAthletic", "bodyPowerful", "bodyHeroic", "bodyAscetic"];
   const cases: Array<{ name: string; morphs: Record<string, number> }> = [
     { name: "default", morphs: createDefaultShivaConfiguration().morphs },

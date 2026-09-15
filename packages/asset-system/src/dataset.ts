@@ -68,6 +68,7 @@ export const assetSidecarSchema = z.object({
   upAxis: z.literal("+Y").default("+Y"),
   forwardAxis: z.literal("+Z").default("+Z"),
   supersedes: z.string().optional(),
+  supersededBy: z.string().optional(),
   printability: z
     .object({
       printSourceAvailable: z.boolean(),

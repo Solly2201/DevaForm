@@ -324,6 +324,16 @@ export interface AssetDefinition {
   geometry?: GeometryMetadata;
   /** Asset id this version supersedes/replaces (e.g. the prototype). */
   supersedes?: string;
+  /**
+   * Asset id that replaced this one — the other direction, and the one a
+   * deprecated asset needs.
+   *
+   * Seven stylised Shiva parts carried `supersedes: humanoid.body.human`,
+   * which reads as the retired body replacing the mesh that retired it.
+   * They are kept resolvable so old saves still load, and what a customer
+   * opening such a save has to be told is where the asset WENT.
+   */
+  supersededBy?: string;
   printability: PrintabilityMetadata;
   tags?: readonly string[];
 }
