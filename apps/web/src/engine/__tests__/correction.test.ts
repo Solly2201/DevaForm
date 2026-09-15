@@ -28,6 +28,7 @@ import {
   HAND_FINGER_AXIS,
   HAND_PALM_AXIS,
   createDefaultGaneshaConfiguration,
+  SHIVA_POSE_PRESETS,
   createDefaultShivaConfiguration,
   mudraArmRotations,
   type CharacterConfiguration,
@@ -433,6 +434,68 @@ describe("naga lies on the body it is worn by", () => {
     // ...and the coil is a coil, not a hoop floating clear of the body.
     expect(against / total).toBeGreaterThan(0.5);
   });
+
+  /**
+   * And it stays out of the head, in every pose.
+   *
+   * The coil is judged against the torso in the chest joint's own space,
+   * which the serpent rides — so posing the spine cannot push it into the
+   * chest, and that test says nothing about what the HEAD does. A head
+   * turns and tips; a serpent worn at the throat and reared beside the jaw
+   * is the one ornament that can end up inside a face.
+   *
+   * The skull is an ellipsoid the body measures for itself, so this is the
+   * same question asked of a different surface.
+   */
+  it.each(SHIVA_POSE_PRESETS.map((preset) => preset.id))(
+    "keeps the serpent out of the skull — %s",
+    (presetId) => {
+      const config = createDefaultShivaConfiguration();
+      config.pose = { preset: presetId, jointOverrides: {} };
+      const materials = new ZoneMaterials();
+      const rig = buildRig(config, materials);
+      poseRig(rig);
+      rig.root.updateWorldMatrix(true, true);
+
+      const head = rig.joints.get("head")!;
+      head.updateWorldMatrix(true, false);
+      const toHead = new THREE.Matrix4().copy(head.matrixWorld).invert();
+      const body = rig.body;
+      // The cranium, as the body measures it, minus a couple of
+      // millimetres: skin touching skin is not an intersection.
+      const radius = body.headRadius - 0.002;
+
+      let naga: THREE.Object3D | null = null;
+      rig.root.traverse((o) => {
+        if (o.name === "attachment:shiva.ornament.naga") naga = o;
+      });
+      expect(naga, presetId).not.toBeNull();
+
+      let inside = 0;
+      let total = 0;
+      const point = new THREE.Vector3();
+      (naga as unknown as THREE.Object3D).traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        m.updateWorldMatrix(true, false);
+        const local = new THREE.Matrix4().multiplyMatrices(toHead, m.matrixWorld);
+        const position = m.geometry.getAttribute("position");
+        for (let i = 0; i < position.count; i += 3) {
+          point.fromBufferAttribute(position, i).applyMatrix4(local);
+          total += 1;
+          // The cranium is taller than it is wide; the measured radius is
+          // its width, and the jaw hangs below its centre.
+          const dx = point.x / radius;
+          const dy = (point.y - body.headCenterY) / (radius * 1.45);
+          const dz = (point.z - body.headCenterZ) / (radius * 1.15);
+          if (dx * dx + dy * dy + dz * dz < 1) inside += 1;
+        }
+      });
+      expect(total, presetId).toBeGreaterThan(100);
+      expect(inside, `${presetId}: serpent vertices inside the skull`).toBe(0);
+      materials.dispose();
+    },
+  );
 });
 
 describe("kamarband wraps the dressed waist", () => {
