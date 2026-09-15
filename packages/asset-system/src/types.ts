@@ -128,6 +128,13 @@ export interface MeasuredBodySurfaces {
   ankleBandRadius: number;
   /** Cranium the hair and crown must fit, head-joint-local. */
   headCenterY: number;
+  /**
+   * Where the cranium sits front to back, in the head joint's own space.
+   * The joint is at the base of the skull and behind it, so hair and
+   * crowns seated on a cranium assumed to be centred on the joint land
+   * half a skull too far back.
+   */
+  headCenterZ: number;
   headRadius: number;
   /** The leg a wrapped garment has to follow, joint to joint. */
   thighTopRadius: number;

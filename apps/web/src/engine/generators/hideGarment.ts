@@ -32,6 +32,7 @@
  */
 import * as THREE from "three";
 import { mesh } from "../geometry";
+import { clothWeave, hideMarkings } from "../textures";
 import { num, type GeneratorContext, type PartGenerator } from "./types";
 import type { JointId } from "@devaform/character-schema";
 import type { BodyProfile } from "./bodyProfile";
@@ -196,6 +197,7 @@ function sleeve(
 
   const rings = (sections.length - 1) * perSpan;
   const positions: number[] = [];
+  const uvs: number[] = [];
   const indices: number[] = [];
   for (let ring = 0; ring <= rings; ring += 1) {
     const t = ring / rings;
@@ -209,6 +211,8 @@ function sleeve(
       const outline = outlineAt(column / radial, rx, rz, flat);
       const pleat = foldAt(angle, t, folds);
       positions.push(outline.x * pleat, y, outline.z * pleat + zOffset);
+      // Round the piece and down it: a texture on cloth follows the cloth.
+      uvs.push(column / radial, t);
     }
   }
   // Sections run downward, so the ring order is reversed relative to an
@@ -224,6 +228,7 @@ function sleeve(
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
@@ -560,6 +565,7 @@ function hideWrap(
   const RADIAL = 72;
   const ROWS = 26;
   const positions: number[] = [];
+  const uvs: number[] = [];
   const indices: number[] = [];
   for (let row = 0; row <= ROWS; row += 1) {
     const t = row / ROWS;
@@ -582,6 +588,7 @@ function hideWrap(
       const outline = outlineAt(column / RADIAL, section.rx, section.rz, section.flat ?? 0);
       const pleat = foldAt(angle, t * drop, 0.07);
       positions.push(outline.x * pleat, y, outline.z * pleat + (section.z ?? 0));
+      uvs.push(column / RADIAL, t * drop);
     }
   }
   for (let row = 0; row < ROWS; row += 1) {
@@ -595,9 +602,10 @@ function hideWrap(
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  markHide(geometry, seed, 1);
+  markHide(geometry, seed, 0);
   return new THREE.Mesh(geometry, material);
 }
 
@@ -867,8 +875,11 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   const body = ctx.body;
   // The hide takes the accent colour with its markings tinted into the
   // mesh; the cloth under it takes the customer's garment colour plain.
-  const hide = ctx.materials.getPatterned("garmentAccent");
-  const cloth = ctx.materials.get("garment");
+  // The hide's markings are a TEXTURE now: rosettes on a few hundred
+  // quads of cloth cannot be vertex colours, which is why every note
+  // written about this garment called the pattern mottling.
+  const hide = ctx.materials.getMapped("garmentAccent", hideMarkings());
+  const cloth = ctx.materials.getMapped("garment", clothWeave());
   const sashMaterial = ctx.materials.get("garmentAccent");
   const metal = ctx.materials.get("metal");
   // 0 = hip wrap only; 1 = cloth carried down to the ankles.

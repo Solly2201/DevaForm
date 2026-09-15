@@ -145,7 +145,15 @@ const PINNED = {
   // the others, so it is built that way now in a frame that is aimed
   // once. The body is thinner, tapers along its whole length, and carries
   // counter-shading taken from which way its skin faces.
-  shiva: { nodes: 281, digest: "8d6f572cb093905a" },
+  //
+  // Fifty-three nodes more, for hair and for a serpent's head. The jata
+  // was eighteen locks three tenths of a skull-radius thick — eighteen
+  // rods five centimetres across, which is what every look at this head
+  // called them — and is forty-six a quarter that thickness now, with a
+  // fringe along the hairline. The serpent's head is a hood, a skull, a
+  // snout, two eyes and a stone rather than one swept form. The ash on
+  // the brow is drawn in two strokes a side, parted round the third eye.
+  shiva: { nodes: 334, digest: "9e507a88f25e028e" },
 } as const;
 
 describe("protected characters do not move", () => {

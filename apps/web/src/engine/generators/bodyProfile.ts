@@ -83,6 +83,13 @@ export interface BodyProfile {
    * body's own head generator draws.
    */
   headCenterY: number;
+  /**
+   * Where the cranium sits front to back, head-joint-local. Zero on a
+   * body whose generator draws the skull around its own head joint; a
+   * measured head reports where its skull actually is, because the joint
+   * is at the base of it and behind it.
+   */
+  headCenterZ: number;
   headRadius: number;
   /**
    * The leg a wrapped garment has to follow: girths down its length,
@@ -198,7 +205,7 @@ function generatedLegExtent(
  * drawn against. Dividing a body's measured cranium by this gives the
  * factor those pieces need to sit on it.
  */
-export const REFERENCE_SKULL = { radius: 0.067, centerY: 0.055 };
+export const REFERENCE_SKULL = { radius: 0.067, centerY: 0.055, centerZ: -0.007 };
 
 /** How much bigger or smaller this body's skull is than the reference. */
 export function headFit(body: Pick<BodyProfile, "headRadius">): number {
@@ -418,6 +425,7 @@ export function deriveBodyProfile(
     necklaceSocketY: 0.12,
     necklaceSocketZ: 0.01,
     headCenterY: 0.063,
+    headCenterZ: 0,
     headRadius: 0.067,
     bellyHalfWidthAt,
     bellySurfaceZAt,
@@ -619,6 +627,7 @@ function deriveMeasuredProfile(
     necklaceSocketY: value("necklaceSocketY"),
     necklaceSocketZ: value("necklaceSocketZ"),
     headCenterY: value("headCenterY"),
+    headCenterZ: value("headCenterZ"),
     headRadius: value("headRadius"),
     bellyHalfWidthAt,
     bellySurfaceZAt,
@@ -747,6 +756,7 @@ function deriveAthleticProfile(
     necklaceSocketY: 0.12,
     necklaceSocketZ: 0.01,
     headCenterY: 0.063,
+    headCenterZ: 0,
     headRadius: 0.067,
     bellyHalfWidthAt,
     bellySurfaceZAt,
