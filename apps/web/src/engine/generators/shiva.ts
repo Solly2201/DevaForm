@@ -24,6 +24,7 @@ import {
 } from "@devaform/asset-system";
 import { REFERENCE_SKULL, handFit, headFit } from "./bodyProfile";
 import { pushOutsideBody, walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
+import { serpentScales } from "../textures";
 
 // ---------------------------------------------------------------------------
 // HEAD — serene divine face with human ears
@@ -316,15 +317,31 @@ function jataMane(ctx: GeneratorContext, length: number): THREE.Group {
   const from = Math.PI / 2 + open;
   const span = Math.PI * 2 - open * 2;
 
-  // Locks over the mass: thick where they leave the crown, tapering, each
-  // with its own length and sway so the silhouette is not repeated.
-  for (let i = 0; i < 18; i += 1) {
-    const s = (i + 0.5) / 18;
+  // Locks over the mass.
+  //
+  // Eighteen of them at three tenths of a skull-radius each is eighteen
+  // rods five centimetres thick, and that is what every look at this head
+  // has called it: tubes stuck around a wig. Matted hair is MANY strands —
+  // it reads as hair because of their number and their disagreement with
+  // each other, not because any one of them is shaped well. So: four
+  // times as many, a quarter as thick, each with its own length, its own
+  // sway, and its own twist away from its neighbours.
+  const LOCKS = 46;
+  for (let i = 0; i < LOCKS; i += 1) {
+    const s = (i + 0.5) / LOCKS;
     const angle = from + s * span;
+    // Three incommensurable waves, so no two locks agree and none of them
+    // line up into a pattern.
     const wave = Math.sin(i * 2.399);
+    const sway = Math.sin(i * 1.07 + 0.7);
+    const curl = Math.sin(i * 3.83 + 1.4);
     const edge = Math.min(s, 1 - s) * 2;
-    const own = (0.28 + 0.72 * Math.min(1, edge * 1.4)) * (0.55 + 0.5 * Math.abs(Math.sin(i * 1.7)));
+    const own =
+      (0.3 + 0.7 * Math.min(1, edge * 1.4)) * (0.62 + 0.42 * Math.abs(Math.sin(i * 1.7)));
     const len = fall * own;
+    // Each lock leaves the crown a little off its own bearing and drifts
+    // further off as it falls, which is what stops them reading as a comb.
+    const drift = sway * 0.16;
     const path: V3[] = [
       [
         Math.cos(angle) * width(0.04) * 1.02,
@@ -332,19 +349,24 @@ function jataMane(ctx: GeneratorContext, length: number): THREE.Group {
         Math.sin(angle) * width(0.04) * 0.96 - skull * 0.3,
       ],
       [
-        Math.cos(angle) * width(0.45) * 1.02,
-        top - len * 0.48,
-        Math.sin(angle) * width(0.45) * 0.96 - skull * 0.7 + wave * skull * 0.12,
+        Math.cos(angle + drift * 0.5) * width(0.45) * 1.03,
+        top - len * 0.46,
+        Math.sin(angle + drift * 0.5) * width(0.45) * 0.96 - skull * 0.7 + wave * skull * 0.1,
       ],
       [
-        Math.cos(angle) * width(0.9) * (0.96 + 0.08 * wave),
+        Math.cos(angle + drift) * width(0.82) * (0.98 + 0.06 * curl),
+        top - len * 0.82,
+        Math.sin(angle + drift) * width(0.82) * 0.93 - skull * 1.1 + curl * skull * 0.16,
+      ],
+      [
+        Math.cos(angle + drift * 1.35) * width(0.95) * (0.96 + 0.08 * wave),
         top - len,
-        Math.sin(angle) * width(0.9) * 0.92 - skull * 1.35 + wave * skull * 0.2,
+        Math.sin(angle + drift * 1.35) * width(0.95) * 0.9 - skull * 1.35 + wave * skull * 0.22,
       ],
     ];
     group.add(
       new THREE.Mesh(
-        taperedTube(path, [skull * (0.3 + 0.08 * wave), skull * 0.1], 16, 8),
+        taperedTube(path, [skull * (0.105 + 0.035 * wave), skull * 0.03], 20, 7),
         hair,
       ),
     );
@@ -355,9 +377,11 @@ function jataMane(ctx: GeneratorContext, length: number): THREE.Group {
   // wig hung on the back of the skull. They start at the SIDE of the head,
   // not the front: hair frames a face, it does not hang over it.
   for (const side of [1, -1]) {
-    for (const [turn, len, thick] of [
-      [1.05, 0.62, 0.3],
-      [1.32, 0.46, 0.24],
+    for (const [turn, len, thick, out] of [
+      [0.98, 0.72, 0.14, 1.04],
+      [1.14, 0.58, 0.115, 0.96],
+      [1.3, 0.66, 0.1, 0.88],
+      [1.46, 0.44, 0.085, 0.82],
     ] as const) {
       const angle = Math.PI / 2 + side * turn;
       const near = width(0.08);
@@ -368,19 +392,24 @@ function jataMane(ctx: GeneratorContext, length: number): THREE.Group {
             [
               [Math.cos(angle) * near, top - fall * 0.05, Math.sin(angle) * near * 0.94 - skull * 0.2],
               [
-                Math.cos(angle) * far * 1.0,
-                top - fall * len * 0.45,
-                Math.sin(angle) * far * 0.8,
+                Math.cos(angle) * far * out,
+                top - fall * len * 0.4,
+                Math.sin(angle) * far * 0.74,
               ],
               [
-                Math.cos(angle) * far * 0.9,
+                Math.cos(angle) * far * out * 0.92,
+                top - fall * len * 0.78,
+                Math.sin(angle) * far * 0.58 + skull * 0.28,
+              ],
+              [
+                Math.cos(angle) * far * out * 0.84,
                 top - fall * len,
-                Math.sin(angle) * far * 0.7 + skull * 0.2,
+                Math.sin(angle) * far * 0.5 + skull * 0.42,
               ],
             ],
-            [skull * thick, skull * 0.09],
-            16,
-            8,
+            [skull * thick, skull * 0.03],
+            20,
+            7,
           ),
           hair,
         ),
@@ -399,6 +428,13 @@ export const shivaJata: PartGenerator = (ctx) => {
   const fit = headFit(ctx.body);
   const seat = new THREE.Group();
   seat.position.y = ctx.body.headCenterY - REFERENCE_SKULL.centerY * fit;
+  // …and where it is front to back. The head joint is at the base of the
+  // skull and behind it, so hair seated as though the cranium were
+  // centred on the joint sits half a skull too far back: the hairline
+  // ended up behind the crown and the whole forehead was bare to the top
+  // of the head. A stylised body whose generator draws its skull around
+  // its own joint reports zero here and does not move.
+  seat.position.z = ctx.body.headCenterZ - REFERENCE_SKULL.centerZ * fit;
   seat.scale.setScalar(fit);
   const group = new THREE.Group();
   seat.add(group);
@@ -418,6 +454,35 @@ export const shivaJata: PartGenerator = (ctx) => {
       scale: [1.1, 1.0, 1.08],
     }),
   );
+  // A fringe along that edge.
+  //
+  // Where a scalp cap crosses a forehead it draws one clean arc, and a
+  // clean arc across a forehead is a swimming cap. Hair ends in strands:
+  // a handful of short ones, each starting a little further down than the
+  // last and none of them agreeing, is the whole difference between a
+  // hairline and a rim.
+  for (let i = 0; i < 11; i += 1) {
+    const s = (i + 0.5) / 11;
+    const turn = (s - 0.5) * Math.PI * 1.34;
+    const wave = Math.sin(i * 2.399);
+    const drop = 0.012 + 0.009 * Math.abs(Math.sin(i * 1.7)) - Math.abs(turn) * 0.004;
+    const r = 0.052 + 0.004 * wave;
+    group.add(
+      new THREE.Mesh(
+        taperedTube(
+          [
+            [Math.sin(turn) * r * 0.86, 0.072, Math.cos(turn) * r * 1.06],
+            [Math.sin(turn) * r * 0.96, 0.058, Math.cos(turn) * r * 1.12],
+            [Math.sin(turn) * r * (1 + 0.06 * wave), 0.058 - drop, Math.cos(turn) * r * 1.08],
+          ],
+          [0.0075 + 0.002 * wave, 0.0016],
+          14,
+          7,
+        ),
+        hair,
+      ),
+    );
+  }
 
   // Gathered matted strands — irregular tapered locks swept from the
   // hairline up into the gather point (golden-angle spacing, alternating
@@ -524,21 +589,41 @@ export const ornamentTripundra: AttachmentGenerator = (ctx) => {
   const ash = ctx.materials.fixed.ivory;
   const group = new THREE.Group();
   const fit = headFit(ctx.body);
-  const half = 0.032 * fit;
-  for (const [index, lift] of [0.019, 0.007, -0.005].entries()) {
-    // Each band is one smooth stroke, shorter than the one above it as
-    // the brow narrows, and bowed so it lies along the forehead rather
-    // than cutting across it.
+  // Across the forehead, temple to temple, the way ash is actually drawn.
+  const half = 0.052 * fit;
+  // Each band is drawn in two strokes, left and right, with the middle
+  // left bare for the eye.
+  //
+  // Drawn as one unbroken stroke, the ash ran behind the trinetra — which
+  // sits on the same brow — and what showed was the ENDS of the top band
+  // rising away from the eye on either side. Three horizontal lines came
+  // out as a white staple pinned to the forehead. A devotee drawing the
+  // tripundra parts the ash around the eye; so does this.
+  const GAP = 0.3;
+  // Across the forehead, not across the eyebrows: the socket sits at the
+  // brow ridge, so bands measured down from it land on the brows
+  // themselves and read as one thick bar.
+  for (const [index, lift] of [0.03, 0.018, 0.006].entries()) {
     const reach = half * (1 - index * 0.09);
-    const path: V3[] = [];
-    for (let i = 0; i <= 8; i += 1) {
-      const t = i / 8 - 0.5;
-      path.push([t * 2 * reach, lift * fit, -Math.pow(Math.abs(t) * 2, 2) * 0.013 * fit]);
+    for (const side of [1, -1] as const) {
+      const path: V3[] = [];
+      for (let i = 0; i <= 6; i += 1) {
+        const t = GAP + (i / 6) * (1 - GAP);
+        path.push([
+          side * t * reach,
+          lift * fit,
+          -Math.pow(t, 2) * 0.013 * fit,
+        ]);
+      }
+      // Ash thins out towards the temple, the way a drawn stroke does.
+      const band = new THREE.Mesh(
+        taperedTube(path, [0.005 * fit, 0.0028 * fit], 16, 8),
+        ash,
+      );
+      // Ash is a stroke of powder, not a rod: flatten it onto the skin.
+      band.scale.set(1, 0.85, 0.4);
+      group.add(band);
     }
-    const band = new THREE.Mesh(taperedTube(path, [0.0038 * fit, 0.0038 * fit], 20, 8), ash);
-    // Ash is a stroke of powder, not a rod: flatten it onto the skin.
-    band.scale.set(1, 0.85, 0.4);
-    group.add(band);
   }
   group.rotation.x = -0.18; // the forehead's upward tilt, as the third eye
   return group;
@@ -558,10 +643,8 @@ export const ornamentTrinetraTripundra: AttachmentGenerator = (ctx) => {
   const group = new THREE.Group();
   group.add(ornamentTripundra(ctx));
   const eye = ornamentThirdEye(ctx);
-  // The eye sits in the gap the ash leaves: the bands run either side of
-  // it, so it is lifted to the middle band's line rather than laid over
-  // the lowest one.
-  eye.position.y += 0.007 * headFit(ctx.body);
+  // The eye sits in the gap the ash leaves, on the middle band's line.
+  eye.position.y += 0.018 * headFit(ctx.body);
   group.add(eye);
   return group;
 };
@@ -609,6 +692,12 @@ export const ornamentThirdEye: AttachmentGenerator = (ctx) => {
   // that follows the forehead plane (total relief under 5mm), not a jewel
   // resting on it.
   group.rotation.x = -0.18; // match the forehead's upward-facing tilt
+  // Drawn against the reference skull, worn on this one — as everything
+  // else on this brow already was. Unscaled, a two-centimetre almond on a
+  // head whose cranium measures four across is not an eye set into the
+  // brow: it is a pair of pale prongs rising out of the forehead, which
+  // is what every render of this face has shown.
+  group.scale.setScalar(headFit(ctx.body));
 
   // Skin lids — vertical almond rims that blend into the brow
   for (const side of [1, -1] as const) {
@@ -778,6 +867,7 @@ function sweptForm(
     0.5,
   );
   const positions: number[] = [];
+  const uvs: number[] = [];
   const indices: number[] = [];
   const tangent = new THREE.Vector3();
   const side = new THREE.Vector3();
@@ -807,6 +897,8 @@ function sweptForm(
         centre.y + Math.cos(angle) * halfWidth * side.y + Math.sin(angle) * halfHeight * lift.y,
         centre.z + Math.cos(angle) * halfWidth * side.z + Math.sin(angle) * halfHeight * lift.z,
       );
+      // Along the form and round it: a skin follows the thing it is on.
+      uvs.push(j / around, t);
     }
   }
   for (let i = 0; i < along; i += 1) {
@@ -820,6 +912,7 @@ function sweptForm(
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
@@ -854,20 +947,34 @@ function serpentSkin(geometry: THREE.BufferGeometry, bands = 0): void {
     const up = normal.getY(i);
     // Quick across the flank, so the change reads as counter-shading
     // rather than as a gradient.
-    const back = 0.5 + 0.5 * Math.tanh(up * 2.6);
+    const back = 0.5 + 0.5 * Math.tanh(up * 2.2);
     const belly = 1 - back;
     const at = ([position.getX(i), position.getY(i), position.getZ(i)][axis]! - origin) / span;
     const ring = bands === 0 ? 0 : 0.5 + 0.5 * Math.cos(at * Math.PI * 2 * bands);
-    const shade = (1 - 0.2 * ring * back) * (0.78 + 0.32 * belly);
-    colors[i * 3] = shade * (0.9 + 0.55 * belly);
-    colors[i * 3 + 1] = shade * (1.0 + 0.36 * belly);
-    colors[i * 3 + 2] = shade * (0.82 + 0.5 * belly);
+    // Multiplying a warm bronze: the back darkens to a deep copper-brown,
+    // the flanks keep the bronze, and the belly stays near the material's
+    // own colour — a warm gold-cream, which is where ref4's serpent is
+    // lightest. Nothing brightens past the material, so nothing blows out
+    // under the studio key light.
+    const shade = (1 - 0.14 * ring) * (0.4 + 0.6 * belly);
+    colors[i * 3] = shade * 1.0;
+    // Less green on the back than under the belly: that difference is
+    // what turns a brown into a copper.
+    colors[i * 3 + 1] = shade * (0.82 + 0.16 * belly);
+    colors[i * 3 + 2] = shade * (0.66 + 0.26 * belly);
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 }
 
 export const ornamentNaga: AttachmentGenerator = (ctx) => {
-  const scales = ctx.materials.getPatternedFixed("serpent");
+  // Scales, not a smooth tube. Along the body they run fine and close; on
+  // the head they are larger, which is what a cobra's are.
+  // One tile of the sheet is twenty-six scales across, so these are
+  // fractions: about ninety rows down the body and fifteen round it,
+  // which at this girth is a scale the size of a grain of rice — legible
+  // at statue distance, where a hundred-times-finer weave read as cloth.
+  const scales = ctx.materials.getMappedFixed("serpent", serpentScales(3.4, 0.62));
+  const headScales = ctx.materials.getMappedFixed("serpent", serpentScales(0.85, 0.5));
   const belly = ctx.materials.fixed.ivory;
   const group = new THREE.Group();
   const body = ctx.body;
@@ -1003,9 +1110,16 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   const outward = walk.normals[last] ?? new THREE.Vector3(0, 0, 1);
   // Looking the way it was going, leaned out from the throat so the head
   // clears the jaw and is seen in profile rather than end-on.
+  // Mostly along the coil, leaned out just enough to clear the throat.
+  //
+  // Leaned out hard, the head points at whoever is looking at the statue
+  // from the front and is seen end-on: what reads then is the hood, a
+  // scaled disc with a bump on it. A snake's head is unmistakable in
+  // PROFILE and almost nothing from in front, so the head continues the
+  // journey the body was making, which is across the figure.
   const facing = travel
     .clone()
-    .addScaledVector(new THREE.Vector3(outward.x, 0, outward.z).normalize(), 1.4)
+    .addScaledVector(new THREE.Vector3(outward.x, 0, outward.z).normalize(), 0.42)
     .normalize();
 
   // How far the head rears off the shoulder.
@@ -1035,7 +1149,7 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
     scale: V3,
     rotation?: V3,
   ): void => {
-    const geometry = new THREE.SphereGeometry(radius, 18, 14);
+    const geometry = new THREE.SphereGeometry(radius, 20, 16);
     serpentSkin(geometry);
     const piece = mesh(geometry, material, { position, scale, rotation });
     parent.add(piece);
@@ -1066,32 +1180,60 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
 
   // The hood: a plate standing behind the skull, wide across and thin
   // front to back, which is what makes it read as a hood from the front
-  // instead of as a fin from the side.
-  scaled(head, g, scales, [0, g * 0.25, -g * 0.34], [1.85, 1.62, 0.3]);
+  // instead of as a fin from the side. It rises from the neck rather than
+  // sitting on it — the transition is a second, smaller plate under the
+  // first, so the hood grows out of the body instead of being stuck to it.
+  // Narrower than it is tall, and standing BEHIND the skull rather than
+  // around it: a hood as wide as the head is long reads as a disc with a
+  // bump on it, whichever way the head is turned.
+  scaled(head, g, headScales, [0, g * 0.42, -g * 0.34], [1.42, 1.72, 0.28]);
+  scaled(head, g, headScales, [0, -g * 0.18, -g * 0.24], [1.02, 1.0, 0.44]);
   // …with the spectacle marking a cobra carries on it.
-  scaled(head, g, belly, [0, g * 0.34, -g * 0.52], [1.0, 0.72, 0.06]);
+  scaled(head, g, belly, [0, g * 0.5, -g * 0.5], [0.72, 0.62, 0.06]);
 
-  // Skull, snout and jaw: a wedge that narrows forward.
-  scaled(head, g, scales, [0, 0, g * 0.28], [0.82, 0.66, 1.12]);
-  scaled(head, g, scales, [0, -g * 0.05, g * 1.12], [0.56, 0.44, 0.62]);
-  // Eyes on the sides, under a brow ridge, small enough to be a glint.
+  // Skull, snout and jaw: a wedge that narrows forward, with the jaw
+  // shown pale underneath the way a cobra's is.
+  scaled(head, g, headScales, [0, 0, g * 0.34], [0.8, 0.62, 1.22]);
+  scaled(head, g, headScales, [0, -g * 0.05, g * 1.3], [0.54, 0.4, 0.78]);
+  scaled(head, g * 0.4, headScales, [0, -g * 0.04, g * 1.9], [0.78, 0.6, 0.86]);
+  // Brow ridges and the eyes under them: small, dark, with a pale rim —
+  // ref4's serpent watches rather than stares.
   for (const side of [1, -1]) {
-    scaled(head, g * 0.3, scales, [side * g * 0.52, g * 0.2, g * 0.5], [1.1, 0.75, 1.5]);
+    scaled(head, g * 0.3, headScales, [side * g * 0.46, g * 0.2, g * 0.6], [1.1, 0.7, 1.5]);
+    scaled(head, g * 0.15, belly, [side * g * 0.52, g * 0.06, g * 0.72], [0.95, 1, 1]);
     scaled(
       head,
-      g * 0.15,
+      g * 0.11,
       ctx.materials.fixed.eyeDark,
-      [side * g * 0.56, g * 0.08, g * 0.62],
+      [side * g * 0.56, g * 0.06, g * 0.76],
       [0.9, 0.95, 1],
     );
   }
-  // The mouth, set into the wedge rather than drawn on it.
+  // The mouth closed, a line set into the wedge rather than drawn on it.
   scaled(
     head,
-    g * 0.45,
+    g * 0.4,
     ctx.materials.fixed.mouthDark,
-    [0, -g * 0.24, g * 0.82],
-    [1.0, 0.16, 1.15],
+    [0, -g * 0.22, g * 1.1],
+    [0.98, 0.09, 1.25],
+  );
+
+  // The nagamani: one small stone on the brow, in a plain bezel. It is
+  // what a naga carries in the iconography, and at this size it reads as
+  // an ornament the serpent wears rather than as a jewel on a toy.
+  const gem = new THREE.Group();
+  gem.position.set(0, g * 0.36, g * 0.26);
+  gem.rotation.x = -0.42;
+  head.add(gem);
+  gem.add(
+    mesh(new THREE.TorusGeometry(g * 0.2, g * 0.055, 8, 18), ctx.materials.get("metal"), {
+      rotation: [Math.PI / 2, 0, 0],
+    }),
+  );
+  gem.add(
+    mesh(new THREE.SphereGeometry(g * 0.2, 14, 12), ctx.materials.fixed.nagamani, {
+      scale: [1, 0.55, 1],
+    }),
   );
 
   // The pale throat, under the jaw where a snake shows it.

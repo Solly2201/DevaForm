@@ -50,7 +50,8 @@ export type FixedMaterialKey =
   | "tilak"
   | "mouthDark"
   | "rudraksha"
-  | "serpent";
+  | "serpent"
+  | "nagamani";
 
 const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
   "eyeDark",
@@ -61,6 +62,7 @@ const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
   "mouthDark",
   "rudraksha",
   "serpent",
+  "nagamani",
 ];
 
 export function isFixedMaterialKey(value: string): value is FixedMaterialKey {
@@ -78,6 +80,7 @@ export class ZoneMaterials {
    */
   private readonly patterned = new Map<MaterialZone, THREE.MeshPhysicalMaterial>();
   private readonly patternedFixed = new Map<FixedMaterialKey, THREE.MeshPhysicalMaterial>();
+  private readonly mapped = new Map<string, THREE.MeshPhysicalMaterial>();
 
   constructor() {
     this.zones = Object.fromEntries(
@@ -98,14 +101,96 @@ export class ZoneMaterials {
       // Rudraksha seeds keep their natural color — declared texture-fixed
       // in the manifest rather than pretending to recolor.
       rudraksha: fixed("rudraksha", { color: "#6b4423", roughness: 0.85 }),
+      // The stone a naga carries on its brow. Deep and warm rather than
+      // bright: it is an ornament the serpent wears, not a lamp.
+      nagamani: fixed("nagamani", {
+        color: "#7c2f3a",
+        roughness: 0.14,
+        clearcoat: 0.9,
+        clearcoatRoughness: 0.1,
+        envMapIntensity: 1.3,
+      }),
       // A serpent is a serpent: its colour is not the customer's to pick,
       // any more than an eye's is.
-      serpent: fixed("serpent", { color: "#55613a", roughness: 0.72, clearcoat: 0.18 }),
+      // Copper and dark bronze, the way ref4.png shows it: a regal
+      // serpent, not a green one. The colour here is the LIGHTEST the
+      // skin goes — its belly — because vertex colours multiply, so the
+      // dark of the back is painted by darkening this rather than by
+      // brightening past it.
+      serpent: fixed("serpent", {
+        color: "#c08a4e",
+        roughness: 0.42,
+        clearcoat: 0.35,
+        clearcoatRoughness: 0.35,
+        envMapIntensity: 1.15,
+      }),
     };
   }
 
   get(zone: MaterialZone): THREE.MeshPhysicalMaterial {
     return this.zones[zone];
+  }
+
+  /**
+   * The same zone, wearing a texture.
+   *
+   * The map is greyscale and multiplies the zone's colour, so the
+   * customer still chooses what the garment is dyed and the texture only
+   * says where the marking falls. Vertex colours stay live on top of it:
+   * a piece can still shade its own hem.
+   *
+   * This is the answer to a pattern that cannot be carried by geometry. A
+   * vertex colour is no smaller than the triangles under it, and a
+   * tiger's rosettes on a few hundred quads of cloth came out as mottling
+   * however the cells were set.
+   */
+  getMapped(zone: MaterialZone, texture: THREE.Texture): THREE.MeshPhysicalMaterial {
+    const key = `${zone}:${texture.name}`;
+    let material = this.mapped.get(key);
+    if (!material) {
+      material = this.zones[zone].clone();
+      material.name = `zone:${zone}`;
+      material.vertexColors = true;
+      material.side = THREE.DoubleSide;
+      material.map = texture;
+      this.mapped.set(key, material);
+      this.syncMapped(zone);
+    }
+    return material;
+  }
+
+  private syncMapped(zone: MaterialZone): void {
+    const source = this.zones[zone];
+    for (const [key, material] of this.mapped) {
+      if (!key.startsWith(`${zone}:`)) continue;
+      material.color.copy(source.color);
+      material.roughness = source.roughness;
+      material.metalness = source.metalness;
+      material.clearcoat = source.clearcoat;
+      material.clearcoatRoughness = source.clearcoatRoughness;
+      material.envMapIntensity = source.envMapIntensity;
+      material.sheen = source.sheen;
+      material.sheenColor.copy(source.sheenColor);
+    }
+  }
+
+  /**
+   * A fixed material wearing a texture, with vertex colours live on top.
+   *
+   * The map says where a scale is; the vertex colours say which way the
+   * skin faces, so one serpent can be dark along its back and pale under
+   * its belly without either being painted in.
+   */
+  getMappedFixed(key: FixedMaterialKey, texture: THREE.Texture): THREE.MeshPhysicalMaterial {
+    const id = `${key}:${texture.name}`;
+    let material = this.mapped.get(id);
+    if (!material) {
+      material = this.fixed[key].clone();
+      material.vertexColors = true;
+      material.map = texture;
+      this.mapped.set(id, material);
+    }
+    return material;
   }
 
   /**
@@ -140,6 +225,7 @@ export class ZoneMaterials {
       material.side = THREE.DoubleSide;
       this.patterned.set(zone, material);
       this.syncPatterned(zone);
+      this.syncMapped(zone);
     }
     return material;
   }
@@ -176,6 +262,7 @@ export class ZoneMaterials {
         target.sheenRoughness = 0.55;
       }
       this.syncPatterned(zone);
+      this.syncMapped(zone);
     }
   }
 
@@ -186,5 +273,7 @@ export class ZoneMaterials {
     this.patterned.clear();
     for (const material of this.patternedFixed.values()) material.dispose();
     this.patternedFixed.clear();
+    for (const material of this.mapped.values()) material.dispose();
+    this.mapped.clear();
   }
 }

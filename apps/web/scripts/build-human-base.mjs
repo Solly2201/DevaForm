@@ -728,6 +728,53 @@ for (let i = 0; i < vertexCount; i += 1) {
   }
 }
 
+/**
+ * Neelkanth: the halahala under the skin of the throat.
+ *
+ * Shiva drank the poison of the churning and held it in his throat, and
+ * every murti shows it — a bluish-violet under the pale skin, darkest at
+ * the windpipe, gone before the jaw and before the collarbones. It is a
+ * property of this BODY, not a decal laid on it, so it is painted into
+ * the mesh as vertex colours and multiplies whatever skin colour the
+ * customer chooses. Choose a darker skin and the throat stays a shade
+ * deeper than the rest of it, which is what a discoloration does.
+ *
+ * Reference: ref4.png. Tasteful and soft — not a collar, not a neon ring.
+ */
+function halahala(positions, neckBaseY) {
+  // The throat runs from the base of the neck up to the jaw. On this rig
+  // the neck JOINT is at the shoulder line — the base measures a few
+  // millimetres ABOVE it — so the span is taken from the measured base to
+  // the head joint rather than from any joint pair that looks plausible.
+  const jawY = restFinal.get("head").y;
+  const colors = new Float32Array(positions.length);
+  // The tint at its strongest: less green than red, and blue left alone,
+  // which is a violet shadow rather than purple paint.
+  const TINT = [0.85, 0.66, 1.0];
+  // Centred a little below the neck joint — the joint is at the top of
+  // the neck, where the head turns, and the poison is held at the throat.
+  const centreY = neckBaseY + (jawY - neckBaseY) * 0.44;
+  const spanY = (jawY - neckBaseY) * 1.15;
+  for (let i = 0; i < vertexCount; i += 1) {
+    const x = positions[i * 3];
+    const y = positions[i * 3 + 1];
+    const z = positions[i * 3 + 2];
+    // Down the neck: strongest at the throat, gone by the jaw and by the
+    // collarbones.
+    const height = Math.max(0, 1 - Math.pow(Math.abs(y - centreY) / spanY, 1.7));
+    // Round it: the front and the sides carry it, the nape barely.
+    const bearing = Math.atan2(x, z - restFinal.get("neck").z);
+    const front = Math.pow(Math.max(0, Math.cos(bearing * 0.62)), 1.4);
+    // And it does not reach out onto the shoulders.
+    const near = Math.max(0, 1 - Math.pow(Math.abs(x) / 0.075, 2.2));
+    const strength = Math.min(1, height * front * near);
+    for (let k = 0; k < 3; k += 1) {
+      colors[i * 3 + k] = 1 + (TINT[k] - 1) * strength;
+    }
+  }
+  return colors;
+}
+
 const geometry = new THREE.BufferGeometry();
 geometry.setAttribute("position", new THREE.BufferAttribute(finalMesh.neutral, 3));
 geometry.setAttribute("skinIndex", new THREE.BufferAttribute(skinIndices, 4));
@@ -1058,6 +1105,12 @@ function measure(positions) {
   const craniumZ = extent(craniumPoints, 2);
   const cranium = {
     centerY: (craniumY.lo + craniumY.hi) / 2 - headY,
+    // Where the skull is, front to back, as well as how high it is. The
+    // head joint sits at the BASE of the skull and behind it: anything
+    // seated on a cranium centred at the joint ends up half a skull too
+    // far back, which is where the hairline was — behind the crown, with
+    // the whole forehead bare to the top of the head.
+    centerZ: (craniumZ.lo + craniumZ.hi) / 2 - restFinal.get("head").z,
     radius: (craniumX.half + craniumZ.half) / 2,
   };
 
@@ -1140,6 +1193,18 @@ function measure(positions) {
 
 const measurements = {};
 for (const variant of VARIANTS) measurements[variant] = measure(finalMesh[variant]);
+
+// Painted here rather than at assembly: the throat is between the neck
+// joint and the neck BASE, and where the base is, is a measurement. Taken
+// from the chest joint instead — which is buried in the ribcage — the
+// tint centred half a neck too low and faded to nothing by the windpipe.
+geometry.setAttribute(
+  "color",
+  new THREE.BufferAttribute(
+    halahala(finalMesh.neutral, measurements.neutral.neckBaseY),
+    3,
+  ),
+);
 
 /** Socket positions, in the parent joint's local space. */
 function socketPositions(positions, m) {
@@ -1395,6 +1460,7 @@ function profileBlock(m) {
       m.ankleBand.offsetY + (restFinal.get("leg.left.shin").y - restFinal.get("leg.left.foot").y),
     ankleBandRadius: m.ankleBand.radius,
     headCenterY: m.cranium.centerY,
+    headCenterZ: m.cranium.centerZ,
     headRadius: m.cranium.radius,
     // The leg a wrapped garment has to follow.
     thighTopRadius: m.leg.thighTopRadius,

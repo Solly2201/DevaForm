@@ -97,9 +97,18 @@ export function instantiateGlb(scene: THREE.Group, materials: ZoneMaterials): TH
     object.userData.glbShared = true;
     object.castShadow = true;
     object.receiveShadow = true;
+    // A mesh that ships vertex colours gets the variant that renders them.
+    //
+    // This is how a body says something about itself that the customer's
+    // colour choice must survive: Shiva's throat carries the halahala as
+    // a tint painted into the mesh, and it has to darken whatever skin
+    // colour is chosen rather than replace it. A mesh with no colours
+    // takes the plain zone material exactly as before.
+    const patterned = object.geometry.getAttribute("color") !== undefined;
     const remap = (material: THREE.Material): THREE.Material => {
       if (isZoneName(material.name)) {
-        return materials.get(material.name.slice("zone:".length) as MaterialZone);
+        const zone = material.name.slice("zone:".length) as MaterialZone;
+        return patterned ? materials.getPatterned(zone) : materials.get(zone);
       }
       const fixed = fixedMaterialKey(material.name);
       if (fixed) return materials.fixed[fixed];
