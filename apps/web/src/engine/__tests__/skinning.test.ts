@@ -347,7 +347,6 @@ describe("export bakes the deformed state", () => {
       skeleton: HUMANOID_SKELETON,
       joints,
       sockets: new Map(),
-      worldAlignedAttachments: [],
       warnings: [],
     } as unknown as Parameters<typeof exportRigStl>[0];
 
