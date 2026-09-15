@@ -136,7 +136,16 @@ const PINNED = {
   // became a ribbon whose spine is read off the column at every height: a
   // lofted tube carries one x for its whole length, and the cloth it
   // hangs on is not the same width at the waist as at the thigh.
-  shiva: { nodes: 279, digest: "3c6c59e694337168" },
+  //
+  // Two nodes more, and a new digest, for the serpent. Its head was one
+  // swept form with a six-stage profile ladder, and a sweep carries its
+  // own idea of which way is up: the skull came out as a flat paddle
+  // lying across the throat with its mouth on top of its head. A head is
+  // a hood, a skull, a snout and two eyes, each with a place relative to
+  // the others, so it is built that way now in a frame that is aimed
+  // once. The body is thinner, tapers along its whole length, and carries
+  // counter-shading taken from which way its skin faces.
+  shiva: { nodes: 281, digest: "8d6f572cb093905a" },
 } as const;
 
 describe("protected characters do not move", () => {

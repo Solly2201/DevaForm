@@ -15,14 +15,20 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const PUBLIC_DIR = join(__dirname, "..", "..", "..", "public");
 
 // The real loader, fed from disk. GLTFLoader.parse needs no network, so a
 // test can have the actual asset instead of a stand-in for it.
 vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {
-  const actual = await vi.importActual<typeof import("three/examples/jsm/loaders/GLTFLoader.js")>(
+  interface RealLoader {
+    parse(
+      data: ArrayBuffer,
+      path: string,
+      onLoad: (gltf: { scene: THREE.Group }) => void,
+    ): void;
+  }
+  const actual = await vi.importActual<{ GLTFLoader: new () => RealLoader }>(
     "three/examples/jsm/loaders/GLTFLoader.js",
   );
   return {
@@ -37,7 +43,7 @@ vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {
         try {
           const file = readFileSync(join(PUBLIC_DIR, path.replace(/^\//, "")));
           const buffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
-          this.real.parse(buffer as ArrayBuffer, "", (gltf) => onLoad(gltf as { scene: THREE.Group }));
+          this.real.parse(buffer as ArrayBuffer, "", onLoad);
         } catch (error) {
           onError?.(error);
         }
