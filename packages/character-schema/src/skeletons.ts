@@ -211,15 +211,38 @@ export const HUMAN_SKELETON: SkeletonDefinition = defineSkeleton(
 );
 
 /**
+ * The same measured human anatomy with a second pair of arms.
+ *
+ * Declared before any body claims it, and that is the point: a four-armed
+ * deity is not a different engine, it is this skeleton plus a body asset
+ * that has the geometry for it. Vishnu's iconography asks for four arms;
+ * the mesh body in the repository has two, so `armOptionsFor` offers two
+ * — and the day a four-armed body is modelled it names this skeleton and
+ * the option appears, with the same sockets, the same grip channels and
+ * the same resolver.
+ *
+ * The back pair takes the stylised rig's offsets, because there is no
+ * measured body to take them from yet. A body that claims this skeleton
+ * must ship its own rest positions, exactly as the two-armed one does.
+ */
+export const HUMAN_FOUR_ARM_SKELETON: SkeletonDefinition = defineSkeleton(
+  "human4",
+  { fingers: true, backArms: true },
+  { joints: HUMAN_JOINT_POSITIONS, sockets: HUMAN_SOCKET_POSITIONS },
+);
+
+/**
  * Every skeleton the engine can build, by id. A body asset names the
  * anatomy it was authored for; the deity supplies the default for bodies
  * that are generated rather than measured.
  */
 const SKELETONS: Record<string, SkeletonDefinition> = Object.fromEntries(
-  [HUMANOID_SKELETON, GANESHA_SKELETON, HUMAN_SKELETON].map((skeleton) => [
-    skeleton.id,
-    skeleton,
-  ]),
+  [HUMANOID_SKELETON, GANESHA_SKELETON, HUMAN_SKELETON, HUMAN_FOUR_ARM_SKELETON].map(
+    (skeleton) => [
+      skeleton.id,
+      skeleton,
+    ],
+  ),
 );
 
 export function getSkeleton(id: string): SkeletonDefinition | undefined {

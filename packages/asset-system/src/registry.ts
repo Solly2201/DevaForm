@@ -5,7 +5,7 @@
  * served from the database/asset service without changing consumers.
  */
 import type { AssetRef, DeityId, PartSlot, SocketId } from "@devaform/character-schema";
-import { AVAILABLE_DEITIES } from "./deities";
+import { DEITIES } from "./deities";
 import { SHARED_ASSETS } from "./manifests/shared";
 import type { AssetDefinition } from "./types";
 
@@ -13,7 +13,9 @@ import type { AssetDefinition } from "./types";
 // anyone's private property). Compatibility still decides who is offered
 // what — see listAssets/isAssetCompatible.
 const ALL_ASSETS: readonly AssetDefinition[] = [
-  ...AVAILABLE_DEITIES.flatMap((d) => d.assets),
+  ...DEITIES.flatMap((deity) =>
+    deity.available ? deity.assets : (deity.preparing?.assets ?? []),
+  ),
   ...SHARED_ASSETS,
 ];
 

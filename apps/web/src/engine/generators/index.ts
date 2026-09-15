@@ -8,6 +8,14 @@ import { humanoidBody, humanoidHands } from "./body";
 import { athleticBody } from "./bodyAthletic";
 import { ganeshaEars, classicEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
 import { humanoidHideWrap } from "./hideGarment";
+import {
+  itemChakra,
+  itemGada,
+  itemPadma,
+  itemShankha,
+  ornamentKirita,
+  ornamentVaijayanti,
+} from "./vishnu";
 import { humanoidDhoti, humanoidShawl } from "./clothing";
 import {
   ankletsPayal,
@@ -93,5 +101,14 @@ export const ATTACHMENT_GENERATORS: Record<string, AttachmentGenerator> = {
   "item.noose": itemPasha,
   "item.ankush": itemAnkush,
   "item.trishul": itemTrishul,
+  // Vishnu — prepared, not offered. Shapes only: how each is held is the
+  // manifest's business and the resolver's.
+  "vishnu.gada": itemGada,
+  "vishnu.chakra": itemChakra,
+  "vishnu.shankha": itemShankha,
+  "vishnu.padma": itemPadma,
+  "vishnu.crown": ornamentKirita,
+  "vishnu.garland": ornamentVaijayanti,
+
   "item.damaru": itemDamaru,
 };

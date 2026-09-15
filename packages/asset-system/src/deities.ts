@@ -19,13 +19,19 @@ import {
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
   getSkeleton,
+  VISHNU_POSE_PRESETS,
   type CharacterConfiguration,
   type PosePreset,
   type SkeletonDefinition,
 } from "@devaform/character-schema";
-import { GANESHA_EDITOR_CATEGORIES, SHIVA_EDITOR_CATEGORIES } from "./categories";
+import {
+  GANESHA_EDITOR_CATEGORIES,
+  SHIVA_EDITOR_CATEGORIES,
+  VISHNU_EDITOR_CATEGORIES,
+} from "./categories";
 import { GANESHA_ASSETS } from "./manifests/ganesha";
 import { SHIVA_ASSETS } from "./manifests/shiva";
+import { VISHNU_ASSETS } from "./manifests/vishnu";
 import type { AssetDefinition, EditorCategory } from "./types";
 
 interface DeityDefinitionBase {
@@ -76,6 +82,24 @@ export interface AvailableDeity extends DeityDefinitionBase {
 
 export interface UpcomingDeity extends DeityDefinitionBase {
   available: false;
+  /**
+   * Work already done on a deity that is not offered yet.
+   *
+   * A deity arrives in pieces — its iconography is decided long before
+   * its body is modelled — and the pieces have to live somewhere that the
+   * asset system checks. This is that place: assets here are registered
+   * and validated like any others, so a presentation with no grip axis or
+   * a socket the skeleton lacks fails the build rather than waiting to be
+   * discovered on the day someone tries to render it. Nothing here is
+   * offered to a customer, because `available` is false.
+   */
+  preparing?: {
+    skeleton: SkeletonDefinition;
+    assets: readonly AssetDefinition[];
+    categories: readonly EditorCategory[];
+    posePresets: readonly PosePreset[];
+    armOptions: readonly (2 | 4)[];
+  };
 }
 
 export type DeityDefinition = AvailableDeity | UpcomingDeity;
@@ -139,6 +163,38 @@ const shiva: AvailableDeity = {
   createDefaultConfiguration: createDefaultShivaConfiguration,
 };
 
+/**
+ * Vishnu — prepared, not offered.
+ *
+ * The first deity added since the engine became a deity-agnostic one, and
+ * therefore its first real test. Everything below is declaration:
+ * iconography, poses, the four attributes and how each may be held. No
+ * engine code was written for him, which is the result being tested for.
+ *
+ * He is not `available` because he has no body, face or crown of
+ * production quality, and a rushed one would be worse than none. See
+ * docs/vishnu-direction.md and references/ref_vishnu.png.
+ */
+const vishnu: UpcomingDeity = {
+  id: "vishnu",
+  name: "Vishnu",
+  epithet: "The Preserver",
+  description:
+    "The serene king of cosmic order — conch, discus, mace and lotus in four hands, crowned and garlanded.",
+  accent: "#7dd3fc",
+  available: false,
+  preparing: {
+    // Four arms by iconography. What a configuration can actually render
+    // is this narrowed to the arms its chosen body has, which is why the
+    // measured two-armed mesh is offered two — see armOptionsFor.
+    skeleton: HUMANOID_SKELETON,
+    assets: VISHNU_ASSETS,
+    categories: VISHNU_EDITOR_CATEGORIES,
+    posePresets: VISHNU_POSE_PRESETS,
+    armOptions: [4],
+  },
+};
+
 const upcoming = (
   id: string,
   name: string,
@@ -150,6 +206,7 @@ const upcoming = (
 export const DEITIES: readonly DeityDefinition[] = [
   ganesha,
   shiva,
+  vishnu,
   upcoming("durga", "Durga", "The Invincible", "The fierce mother astride the lion.", "#f87171"),
   upcoming("krishna", "Krishna", "The All-Attractive", "The divine cowherd with the flute.", "#818cf8"),
   upcoming("hanuman", "Hanuman", "The Devoted", "The mighty devotee of Rama.", "#fb923c"),
@@ -166,6 +223,39 @@ export function getDeity(id: string): DeityDefinition | undefined {
 export function getAvailableDeity(id: string): AvailableDeity | undefined {
   const deity = deityMap.get(id);
   return deity?.available ? deity : undefined;
+}
+
+/**
+ * What a deity brings to a configuration, offered or not.
+ *
+ * Resolution needs three things from a deity — a skeleton, a set of
+ * assets and a set of poses — and a deity under preparation has all
+ * three long before it has a body worth selling. Keeping the resolver on
+ * `getAvailableDeity` meant a prepared deity could be described, and
+ * validated, and then not resolved, which made the preparation
+ * unverifiable: the whole point of declaring Vishnu's attributes in the
+ * existing vocabulary is to find out whether the existing resolver
+ * places them.
+ *
+ * So resolution asks here instead. Nothing about what the customer is
+ * OFFERED changes: the editor lists `AVAILABLE_DEITIES`, and a deity
+ * with `available: false` is still absent from every picker.
+ */
+export interface DeityRuntime {
+  id: string;
+  skeleton: SkeletonDefinition;
+  assets: readonly AssetDefinition[];
+  categories: readonly EditorCategory[];
+  posePresets: readonly PosePreset[];
+  armOptions: readonly (2 | 4)[];
+}
+
+export function deityRuntime(id: string): DeityRuntime | undefined {
+  const deity = deityMap.get(id);
+  if (!deity) return undefined;
+  if (deity.available) return deity;
+  const prepared = deity.preparing;
+  return prepared ? { id: deity.id, ...prepared } : undefined;
 }
 
 export const AVAILABLE_DEITIES: readonly AvailableDeity[] = DEITIES.filter(

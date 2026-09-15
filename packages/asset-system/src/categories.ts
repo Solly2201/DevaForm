@@ -168,3 +168,95 @@ export const SHIVA_EDITOR_CATEGORIES: readonly EditorCategory[] = [
     content: { type: "base" },
   },
 ] as const;
+
+/**
+ * Vishnu's editor, prepared.
+ *
+ * Nothing renders this yet — he is not offered — but the panel is where a
+ * deity's iconography meets the UI, and writing it now is what proves the
+ * UI needs nothing new to show him. It doesn't: four attributes in four
+ * hand sockets, a crown and a garland on sockets the skeleton already
+ * has, and the same parts, hands, pose, colour and base screens every
+ * deity gets. The only line here that is Vishnu's rather than the
+ * system's is the wording.
+ */
+export const VISHNU_EDITOR_CATEGORIES: readonly EditorCategory[] = [
+  {
+    id: "head",
+    label: "Head",
+    icon: "head",
+    description: "Head and hair",
+    content: { type: "parts", slots: ["head", "hair"] },
+  },
+  {
+    id: "face",
+    label: "Face",
+    icon: "face",
+    description: "Eyes, tilaka and face shaping",
+    content: { type: "mixed", slots: ["eyes"], sockets: ["head.forehead"], allowNone: true },
+  },
+  {
+    id: "body",
+    label: "Body",
+    icon: "body",
+    description: "Build, proportions and arm count",
+    content: { type: "parts", slots: ["body"] },
+  },
+  {
+    id: "hands",
+    label: "Hands",
+    icon: "hands",
+    description: "Mudra for each hand",
+    content: { type: "hands" },
+  },
+  {
+    id: "clothing",
+    label: "Clothing",
+    icon: "clothing",
+    description: "The golden dhoti and its border",
+    content: { type: "parts", slots: ["lowerGarment", "upperGarment"] },
+  },
+  {
+    id: "ornaments",
+    label: "Ornaments",
+    icon: "ornaments",
+    description: "Crown, garland and jewellery",
+    content: {
+      type: "mixed",
+      slots: ["earrings", "armlets", "bracelets", "anklets"],
+      sockets: ["head.crown", "chest.necklace", "chest.mala", "waist.ornament"],
+      allowNone: true,
+    },
+  },
+  {
+    id: "attributes",
+    label: "Attributes",
+    icon: "attributes",
+    // Which hand takes which is the customer's: the iconography fixes the
+    // set of four, not their arrangement, and the resolver will refuse a
+    // combination the body cannot hold rather than the picker hiding it.
+    description: "Conch, discus, mace and lotus in each hand",
+    content: { type: "sockets", sockets: [...HAND_ITEM_SOCKETS], allowNone: true },
+  },
+  {
+    id: "pose",
+    label: "Pose",
+    icon: "pose",
+    description: "Pose presets and joint control",
+    content: { type: "pose" },
+  },
+  {
+    id: "color",
+    label: "Color",
+    icon: "color",
+    description: "Palettes, colors and finishes",
+    content: { type: "materials" },
+  },
+  {
+    id: "base",
+    label: "Base",
+    icon: "base",
+    description: "Statue base / platform",
+    content: { type: "base" },
+  },
+] as const;

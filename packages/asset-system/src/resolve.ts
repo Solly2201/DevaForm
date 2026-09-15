@@ -41,7 +41,7 @@ import {
   type SocketId,
   type Vec3,
 } from "@devaform/character-schema";
-import { getAvailableDeity } from "./deities";
+import { deityRuntime } from "./deities";
 import { resolveAssetRef } from "./registry";
 import { isHandheld, type AttributePresentation } from "./presentation";
 import { presentationsOf, type AssetDefinition, type AssetTransform } from "./types";
@@ -188,8 +188,11 @@ function transformFor(asset: AssetDefinition, socket: SocketId): AssetTransform 
 export function resolveCharacterPresentation(
   config: CharacterConfiguration,
 ): ResolvedCharacter {
-  const deity = getAvailableDeity(config.deity);
-  if (!deity) throw new Error(`No available deity definition for "${config.deity}"`);
+  // Offered or merely prepared: resolution needs a skeleton and a set of
+  // assets, and both kinds of deity have them. Whether a customer may
+  // CHOOSE this deity is the editor's question, not this one's.
+  const deity = deityRuntime(config.deity);
+  if (!deity) throw new Error(`No deity definition for "${config.deity}"`);
 
   const issues: ResolutionIssue[] = [];
   const note = (severity: ResolutionSeverity, message: string, about?: { assetId?: string; socket?: SocketId }) =>
