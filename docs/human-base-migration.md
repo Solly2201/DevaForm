@@ -357,3 +357,75 @@ What that entails, and what was done about it:
 **Unchanged:** Ganesha. Its pinned scene digest moved once, for one empty
 socket node (`chest.mala`) and for fists that now genuinely close on what
 they hold; every QA view was compared before and after.
+
+---
+
+## Stage 8 — the statue, finished to a standard
+
+The work after the mesh became the body. Each item here is a correction
+to a REPRESENTATION, not a number that was moved until a screenshot
+improved.
+
+**A statue rests on its base.** Every seated preset carried
+`rootOffset: [0, -0.2, 0]`, a height typed against the body those presets
+were written for; on the mesh body the meditating figure levitated a
+hand's breadth above its own lotus seat. Offsets deleted. The lowest
+point of the body, in the pose it is actually in, is placed on the
+support — skinned vertices included, because a padmasana ankle takes its
+weight on the side of the foot and no offset below a joint can say that.
+Ganesha's soles had been hovering thirteen millimetres above its seat
+disc in every pose; they touch now.
+
+**A seated figure wears cloth.** A wrapped column is a statement about
+two legs standing side by side. Fold them and the statement is false, so
+the garment dropped everything but the hip wrap and the figure sat in
+what read as underwear. Each thigh carries its own cloth, riding the
+bone, with a fall from the waist between the knees.
+
+**The seat itself was solved, not typed.** From the directions the limbs
+have to run in: thighs carrying the knees out to the sides, shins
+crossing back under the body, the knee left as the hinge it is.
+
+**A held object rests on the palm.** See section 8 of the architecture
+audit. The trishul and the damaru both read as held now; before, both
+were held in the fingertips at arm's length from the palm.
+
+**The serpent.** Rebuilt as a hood, a skull, a snout and two eyes in a
+frame that is aimed once — a sweep carries its own idea of which way is
+up, and the head had come out as a paddle lying across the throat with
+its mouth on top. Then, following `references/ref4.png`, re-materialised:
+copper and dark bronze with a pale gold belly, scale texture, a small
+nagamani, and counter-shading from the surface normals. It is a fifth of
+the neck's radius thick and tapers along its whole length.
+
+**The throat holds the halahala.** A bluish-violet under the skin,
+strongest at the windpipe, gone before the jaw and the collarbones,
+painted into the body mesh so it multiplies whatever skin the customer
+chooses.
+
+**The head.** The hairline had been behind the crown, leaving the whole
+forehead bare: hair was seated as though the cranium were centred on the
+head joint, and that joint is at the base of the skull and behind it. The
+body reports `headCenterZ` now. The jata is forty-six locks a quarter of
+the old thickness, with a fringe. The trinetra was drawn against the
+reference skull and never scaled to this one — a two-centimetre almond on
+a head four across — and the ash bands part around it instead of running
+behind it.
+
+**The hide has markings.** Rosettes from a generated texture rather than
+vertex-colour mottling, which is what every note about this garment had
+asked for.
+
+**Still divergent from the reference**
+
+- The jata reads as matted locks rather than as hair: no strand shading,
+  and the silhouette is lofted tubes.
+- The face is serene and adult but flat — there is no subsurface or pore
+  detail, and it reads as a sculpture rather than as skin. That is the
+  intended register, but it is the limit of the current material set.
+- The hood's spectacle marking is subtle at statue distance.
+- Procedural assets carry no provenance records.
+
+**Unchanged:** Ganesha. Its pinned digest moved twice in this run — once
+for an empty socket node, once for the thirteen-millimetre drop onto its
+own base — and both were verified view by view.

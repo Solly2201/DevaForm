@@ -321,3 +321,93 @@ QA page's unsuspended `useSearchParams`.
 - Four-armed Shiva on the mesh body still needs a modelled second pair.
 - Finger-bone-driven mudras for procedural hands remain deferred, for the
   reason given in section 5.
+
+---
+
+## 8. The engine as it stands
+
+Written at the end of the production run, describing what is actually in
+the repository rather than what was intended. Sections 1–6 remain the
+audit taken before any of it; section 7 records the first pass.
+
+### One resolution, one pipeline
+
+`resolveCharacterPresentation(config)` is the only place a configuration
+is interpreted. It returns the skeleton, the arm slots that exist, what
+each hand is doing, every attachment with the presentation it resolved
+to, the features a selected part already embeds, and the issues a
+customer needs to be told about. `buildRig` consumes that and decides
+nothing; the editor renders `customerFacingIssues(resolved)` above the
+panel.
+
+Everything reaches the scene through the socket hierarchy. There is no
+second transform path.
+
+### What a body knows about itself
+
+A body asset ships measurements, and everything worn on it asks rather
+than assumes:
+
+| Measurement | What reads it |
+|---|---|
+| `bodyProfile` (scalars, per-morph deltas) | every fitted generator |
+| `torsoSurface` (20×32 radius map) | `walkSurface` — naga, mala |
+| `legEnvelope` (14 rows) | the lower garment's sections |
+| `thumbAxes` | which way a grip socket is aimed |
+| `gripApertures` | how far a fist closes on a given radius |
+| `gripSeats` | where a held object rests: `point + normal × radius` |
+| `morphTargets` | the shapes the customer can blend |
+
+The grip seat is the newest and the one that changed the most: a held
+object used to sit at the centre of the hole a fist makes, which is a
+third of a finger's length off the knuckles, so a staff was pinched in
+the fingertips with daylight behind it. Objects rest on the palm now.
+
+### Where the figure stands
+
+`settleOnSupport` puts the lowest point of the body — in the pose it is
+actually in, skinned vertices included — on the base. No pose carries a
+height. `support.test.ts` holds every pose of both deities to half a
+millimetre and loads the real body meshes to do it.
+
+### Materials and pattern
+
+`textures.ts` generates greyscale DataTextures from a seeded field: hide
+rosettes, cloth weave, serpent scales. They multiply the zone colour, so
+the customer still chooses what a garment is dyed while the texture says
+only where the marking falls. `ZoneMaterials` grew `getMapped`,
+`getMappedFixed` and `getPatternedFixed` for the three combinations of
+(customer colour | fixed colour) × (texture | vertex colours).
+
+This exists because a vertex colour is no smaller than the triangles
+carrying it. A tiger's rosettes on a few hundred quads of cloth were
+mottling however finely the cells were set.
+
+Vertex colours still carry what geometry knows and a texture cannot: the
+serpent's counter-shading (dark along the back, pale beneath, taken from
+which way each face points) and the halahala on Shiva's throat, which is
+painted into the body mesh and multiplies whatever skin colour is chosen.
+
+### Extensions
+
+`humanoidJoints({ trunk, backArms, fingers })` composes the skeleton, and
+a socket cannot exist without the limb it hangs from. Four-armed Shiva is
+offered only on a body whose skeleton declares `backArms` — the measured
+human mesh does not, so it is not offered there, and a configuration that
+asks for four arms on a two-armed body resolves to two without inventing
+a socket. Three tests hold that.
+
+### Still open
+
+- `MIGRATIONS` is empty. `SCHEMA_VERSION` is still 1 and nothing in this
+  run needed it to change.
+- The torso surface map carries no per-morph deltas, unlike the scalar
+  profile. `morphSafety.test.ts` covers every combination the editor can
+  produce — the named variants, each morph alone at full, the default,
+  nothing, and two degenerate corners — and the ornaments stay on the
+  surface in all of them. The map should gain deltas before the morph
+  range is widened beyond what those variants reach.
+- 65 of 73 registry entries have no `provenance`. They are procedural, and
+  the field is optional for that reason; a GLB-sourced asset has one.
+- Hair and cloth detail is bounded by tessellation where no texture
+  applies. The jata is forty-six lofted locks, not shaded strands.
