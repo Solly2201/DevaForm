@@ -153,7 +153,14 @@ const PINNED = {
   // fringe along the hairline. The serpent's head is a hood, a skull, a
   // snout, two eyes and a stone rather than one swept form. The ash on
   // the brow is drawn in two strokes a side, parted round the third eye.
-  shiva: { nodes: 334, digest: "9e507a88f25e028e" },
+  //
+  // Same nodes, new digest: what each hand holds moved onto the palm. The
+  // grip point the body measures is the middle of the tube a fist makes,
+  // a third of a finger's length off the knuckles, and an object centred
+  // there is pinched in the fingertips with daylight behind it. The body
+  // ships the SEAT now — the skin over its knuckles and the way its
+  // fingers close — and an object of radius r rests at seat + normal × r.
+  shiva: { nodes: 334, digest: "37091d25268c3737" },
 } as const;
 
 describe("protected characters do not move", () => {
