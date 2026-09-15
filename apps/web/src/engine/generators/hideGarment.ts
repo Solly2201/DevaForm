@@ -40,6 +40,15 @@ import type { BodyProfile } from "./bodyProfile";
 const CLEARANCE = 0.008;
 
 /**
+ * How far the dhoti's folds stand out, as a fraction of its radius at the
+ * hem. Named because two things need it: the column that has them, and
+ * anything hanging on the column, which has to clear them. A pleat hung a
+ * centimetre off a surface that gathers by rather more than a centimetre
+ * comes through it in steps.
+ */
+const DHOTI_FOLDS = 0.14;
+
+/**
  * One ring of a cloth sleeve.
  *
  * `rx`/`rz` are the half-widths, and `flat` is how much of the width is a
@@ -559,6 +568,8 @@ function onCloth(
   y: number,
   bearing: number,
   clearance: number,
+  /** Fraction of the radius the surface's own folds add here. */
+  bulge = 0,
 ): { x: number; z: number } {
   const section = profile(y);
   // Hanging pieces are placed by BEARING — they hang where they are tied,
@@ -579,10 +590,8 @@ function onCloth(
   }
   const at = best;
   const length = Math.max(1e-6, Math.hypot(at.x, at.z));
-  return {
-    x: at.x * (1 + clearance / length),
-    z: at.z * (1 + clearance / length) + (section.z ?? 0),
-  };
+  const out = 1 + bulge + clearance / length;
+  return { x: at.x * out, z: at.z * out + (section.z ?? 0) };
 }
 
 function dhotiColumn(
@@ -593,7 +602,7 @@ function dhotiColumn(
   const body = ctx.body;
   const sections = dhotiSections(body, reach);
   const RADIAL = 44;
-  const geometry = sleeve(sections, RADIAL, 5, 0.14);
+  const geometry = sleeve(sections, RADIAL, 5, DHOTI_FOLDS);
 
   /**
    * Curve the hem.
@@ -655,12 +664,19 @@ function dhotiCascade(
   cloth: THREE.Material,
   edge: THREE.Material,
   reach: number,
-  fall: boolean,
 ): THREE.Group {
   const body = ctx.body;
   const group = new THREE.Group();
   const waistY = body.waistSeatY;
-  const profile = profileOf(dhotiSections(body, reach));
+  const sections = dhotiSections(body, reach);
+  const profile = profileOf(sections);
+  // Where the column's folds are deepest, so a pleat hanging on it clears
+  // them instead of coming through in steps.
+  const columnTop = sections[0]!.y;
+  const columnHem = sections[sections.length - 1]!.y;
+  const gathered = (y: number) =>
+    DHOTI_FOLDS *
+    Math.min(1, Math.max(0, (columnTop - y) / Math.max(1e-6, columnTop - columnHem)));
   const drop = (body.thighLength + body.shinLength * reach) * 0.82;
   // Bearings just off the centre front, so the three pleats overlap the
   // way gathered cloth does instead of standing side by side.
@@ -669,14 +685,6 @@ function dhotiCascade(
     [Math.PI * 0.5 - 0.02, 0.032, 1, cloth],
     [Math.PI * 0.5 + 0.2, 0.026, 0.86, edge],
   ];
-  // The sash's own end, falling from the tie at the hip.
-  //
-  // It was a flat sheet of its own, twice the width of these and hung
-  // from a remembered radius, and it read as a curtain drawn across the
-  // front of the figure. It is cloth of the same kind as the pleats it
-  // falls beside, so it is built the same way and differs only in where
-  // it hangs, how far, and what colour it is.
-  if (fall) panels.push([Math.PI * 0.5 + 0.62, 0.03, 1.12, edge]);
   for (const [bearing, width, share, material] of panels) {
     const panel: ClothSection[] = [];
     // Thin and flush where it is tucked in, thickening as it falls free.
@@ -692,14 +700,82 @@ function dhotiCascade(
       [1, 0.9, 0.01, 0.006],
     ] as const) {
       const y = waistY - 0.012 - drop * share * t;
-      const at = onCloth(profile, y, bearing, air);
+      const at = onCloth(profile, y, bearing, air, gathered(y));
       panel.push({ y, rx: width * widen, rz: thick, z: at.z });
     }
     const piece = new THREE.Mesh(sleeve(panel, 14, 4, 0.06), material);
-    piece.position.x = onCloth(profile, waistY - 0.012, bearing, 0.004).x;
+    piece.position.x = onCloth(profile, waistY - 0.012, bearing, 0.004, gathered(waistY)).x;
     group.add(piece);
   }
   return group;
+}
+
+/**
+ * The sash's end, falling from the tie at the hip.
+ *
+ * A ribbon rather than a lofted tube, because a tube carries ONE x for
+ * its whole length and the column it falls over is not the same width at
+ * the waist as it is at the thigh: placed at the waist's width it cut
+ * into the leg, and placed at the widest it floated off the waist as a
+ * rectangle halfway down the cloth. A ribbon has a spine, and the spine
+ * is read off the surface at every height — including how far that
+ * surface's own folds stand out there.
+ */
+function sashFall(
+  body: BodyProfile,
+  material: THREE.Material,
+  reach: number,
+  side: 1 | -1,
+): THREE.Mesh {
+  const rows = 20;
+  const cols = 6;
+  const waistY = body.waistSeatY;
+  const sections = dhotiSections(body, reach);
+  const profile = profileOf(sections);
+  const columnTop = sections[0]!.y;
+  const columnHem = sections[sections.length - 1]!.y;
+  const gathered = (y: number) =>
+    DHOTI_FOLDS *
+    Math.min(1, Math.max(0, (columnTop - y) / Math.max(1e-6, columnTop - columnHem)));
+  const drop = body.thighLength * 1.5;
+  const bearing = side * (Math.PI * 0.5 - 0.5);
+  // Across the bearing: the direction the ribbon's width runs in.
+  const across = { x: -Math.sin(bearing), z: Math.cos(bearing) };
+  const outward = { x: Math.cos(bearing), z: Math.sin(bearing) };
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let row = 0; row <= rows; row += 1) {
+    const t = row / rows;
+    const y = waistY - 0.014 - t * drop;
+    const spine = onCloth(profile, y, bearing, 0.006 + 0.012 * t, gathered(y));
+    // Widening as it falls, then drawn to a point at the end.
+    const taper = t < 0.84 ? 1 : 1 - ((t - 0.84) / 0.16) ** 1.5 * 0.82;
+    const width = (0.026 + 0.012 * t) * taper;
+    for (let col = 0; col <= cols; col += 1) {
+      const u = col / cols - 0.5;
+      // A hanging strip curls around its own fall.
+      const curl = Math.cos(u * Math.PI) * 0.01 * (0.35 + t);
+      positions.push(
+        spine.x + across.x * u * width * 2 + outward.x * curl,
+        y,
+        spine.z + across.z * u * width * 2 + outward.z * curl,
+      );
+    }
+  }
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const a = row * (cols + 1) + col;
+      const b = a + 1;
+      const c = a + cols + 1;
+      const d = c + 1;
+      indices.push(a, c, b, b, c, d, a, b, c, b, d, c);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return new THREE.Mesh(geometry, material);
 }
 
 export const humanoidHideWrap: PartGenerator = (ctx) => {
@@ -748,7 +824,8 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     // figure, above the knee when the pose has a leg out.
     const reach = ctx.garment === "short" ? 0 : dhotiReach;
     wrap.add(dhotiColumn(ctx, cloth, reach));
-    wrap.add(dhotiCascade(ctx, cloth, sashMaterial, reach, drape > 0 && !ctx.seated));
+    wrap.add(dhotiCascade(ctx, cloth, sashMaterial, reach));
+    if (drape > 0 && !ctx.seated) wrap.add(sashFall(body, sashMaterial, reach, 1));
   }
 
   // The kamarbandh is CLOTH wound round the waist, not a metal hoop.
