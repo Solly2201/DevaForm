@@ -124,7 +124,12 @@ const PINNED = {
   // sized from mean limb radii. Fourteen nodes more than the count above,
   // all of them the pieces the hide split into. Judged against
   // references/ref3.png; the QA sheet is screenshots/shiva.
-  shiva: { nodes: 279, digest: "1076688c9cdc33c0" },
+  //
+  // The digest moved once more, at the same node count, when the sash end
+  // became a ribbon whose spine is read off the column at every height: a
+  // lofted tube carries one x for its whole length, and the cloth it
+  // hangs on is not the same width at the waist as at the thigh.
+  shiva: { nodes: 279, digest: "3c6c59e694337168" },
 } as const;
 
 describe("protected characters do not move", () => {
