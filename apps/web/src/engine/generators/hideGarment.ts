@@ -47,7 +47,7 @@ const CLEARANCE = 0.008;
  * centimetre off a surface that gathers by rather more than a centimetre
  * comes through it in steps.
  */
-const DHOTI_FOLDS = 0.14;
+const DHOTI_FOLDS = 0.2;
 
 /**
  * One ring of a cloth sleeve.
@@ -660,10 +660,16 @@ function dhotiSections(body: BodyProfile, reach: number): ClothSection[] {
     // outside the cream. The hide covered that until the hide stopped
     // being a full tube, which is how it came to light.
     overHips(body, seat - 0.012, 3, hipRx * 1.05, hipRz * 1.08),
-    around(seat - body.thighLength * 0.45, 3),
-    around(knee + body.shinLength * 0.06, 3.4),
-    around((knee + hem) / 2, 3),
-    around(hem, 2.4),
+    // Below the hip the cloth follows the leg in rather than standing off
+    // it. A constant allowance all the way down is what makes a dhoti
+    // read as a drum: the silhouette leaves the hip and comes straight
+    // down to the floor, because the legs happen to splay by about as
+    // much as the cloth stands clear. Cloth hanging on a leg takes the
+    // leg's own taper and gathers again at the hem.
+    around(seat - body.thighLength * 0.45, 2.8),
+    around(knee + body.shinLength * 0.06, 2.4),
+    around((knee + hem) / 2, 1.9),
+    around(hem, 2.2),
   ];
 }
 
@@ -715,7 +721,10 @@ function dhotiColumn(
 ): THREE.Mesh {
   const body = ctx.body;
   const sections = dhotiSections(body, reach);
-  const RADIAL = 44;
+  // Fine enough for the folds to survive being sampled. At forty-four
+  // columns the deeper of the two fold frequencies lands on barely two
+  // samples a cycle and washes out into a smooth tube.
+  const RADIAL = 68;
   const geometry = sleeve(sections, RADIAL, 5, DHOTI_FOLDS);
 
   /**

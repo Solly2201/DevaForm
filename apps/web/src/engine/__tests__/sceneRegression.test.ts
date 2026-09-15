@@ -174,7 +174,13 @@ const PINNED = {
   // CONTAINS a limb rather than its mean (a bangle no longer sunk in a
   // forearm), the hips centred where the body actually is rather than on
   // the pelvis joint, and a torso surface that carries per-morph deltas.
-  shiva: { nodes: 340, digest: "26bd5d62c5ff8d68" },
+  //
+  // And once more for the cloth: the dhoti follows the leg in below the
+  // knee instead of standing the same distance off it all the way down,
+  // which is what made the silhouette leave the hip and come straight to
+  // the floor. Sixty-eight columns rather than forty-four, so the deeper
+  // of its two fold frequencies survives being sampled.
+  shiva: { nodes: 340, digest: "9c34469091524a8a" },
 } as const;
 
 describe("protected characters do not move", () => {
