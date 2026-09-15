@@ -17,6 +17,12 @@ export interface HeldItemSpec {
   presentationId: string;
   /** How thick the item is where the hand closes, metres. */
   radius?: number;
+  /**
+   * What kind of hold the presentation asks for. A staff is gripped, a
+   * drum is pinched at its waist, a lotus is cradled — and a hand that
+   * treats all three the same is a hand that holds none of them.
+   */
+  grip?: "grip" | "pinch" | "hold";
 }
 
 export interface GeneratorContext {

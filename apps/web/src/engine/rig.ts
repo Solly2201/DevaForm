@@ -59,6 +59,7 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import { morphInfluences } from "./morphs";
+import { solveGrip } from "./fingerSolve";
 import type { ZoneMaterials } from "./materials";
 import {
   applyGestureOrientations,
@@ -134,6 +135,11 @@ export interface CharacterRig {
   bodyMeshes: THREE.Mesh[];
   /** What each hand is closing on — the radius it must close onto. */
   heldByHand: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>;
+  /**
+   * Hands whose FINGERS were solved onto what they hold. Those hands must
+   * not also be curled by the body's grip morph, or they close twice.
+   */
+  solvedGrips: Set<ArmSlot>;
   /** Assets that failed to resolve (not fatal). */
   warnings: string[];
   /**
@@ -163,7 +169,8 @@ export function rigMorphInfluences(
   rig: CharacterRig,
   configured: Readonly<Record<string, number>>,
 ): Record<string, number> {
-  return morphInfluences(configured, rig.hands, rig.bodyAsset, rig.heldByHand);
+  const asked = morphInfluences(configured, rig.hands, rig.bodyAsset, rig.heldByHand);
+  return asked;
 }
 
 /** Everything worth telling the developer about this rig, right now. */
@@ -496,6 +503,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     heldByHand[attachment.handSlot] = {
       presentationId: attachment.presentation.id,
       radius: attachment.presentation.grip?.radius,
+      grip:
+        attachment.presentation.hand === "none" ? undefined : attachment.presentation.hand,
     };
   }
 
@@ -753,6 +762,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     root,
     baseTop,
     bodyMeshes,
+    solvedGrips: new Set<ArmSlot>(),
     skeleton,
     joints,
     sockets,
@@ -917,6 +927,47 @@ export function poseRig(rig: CharacterRig): HandSolution[] {
       `Grip: the ${grip.slot} hand cannot present its attribute upright in this pose ` +
         `(${degrees(grip.residual)}° out).`,
     );
+  }
+
+  // The hand is aimed; now the fingers close on what is in it.
+  //
+  // This is the one place a held object and a hand meet as geometry
+  // rather than as a parenting relationship. Everything above decides
+  // WHAT is held and which way it runs; this decides what the hand does
+  // about it, and it does so from the object's own radius and axis, so
+  // the next attribute — of any deity — needs no new code.
+  rig.solvedGrips.clear();
+  // Which joints this body's mesh is actually skinned to. A body whose
+  // hands are geometry rather than bones keeps the hands its own
+  // generator built — they are made closed, around the same declared
+  // radius, which is how the stylised hands have always worked.
+  const boned = new Set<string>();
+  for (const mesh of rig.bodyMeshes) {
+    const skinned = mesh as THREE.SkinnedMesh;
+    if (!skinned.isSkinnedMesh) continue;
+    for (const bone of skinned.skeleton.bones) {
+      boned.add(bone.name.replace(/^joint:/, "").replace(/_/g, "."));
+    }
+  }
+  for (const slot of ARM_SLOTS) {
+    const held = rig.heldByHand[slot];
+    const socket = rig.sockets.get(`arm.${slot}.hand.item` as SocketId);
+    if (!held?.radius || !held.grip || !socket) continue;
+    socket.updateWorldMatrix(true, false);
+    const solved = solveGrip(
+      rig.joints,
+      slot,
+      {
+        origin: socket.getWorldPosition(new THREE.Vector3()),
+        axis: new THREE.Vector3(0, 1, 0).applyQuaternion(
+          socket.getWorldQuaternion(new THREE.Quaternion()),
+        ),
+        radius: held.radius,
+        shape: held.grip,
+      },
+      (id) => boned.has(id),
+    );
+    if (solved) rig.solvedGrips.add(slot);
   }
 
   // The figure meets its base before anything else is settled against the
