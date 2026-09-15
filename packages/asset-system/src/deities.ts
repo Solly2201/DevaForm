@@ -18,6 +18,7 @@ import {
   SHIVA_POSE_PRESETS,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
+  getSkeleton,
   type CharacterConfiguration,
   type PosePreset,
   type SkeletonDefinition,
@@ -37,6 +38,23 @@ interface DeityDefinitionBase {
   accent: string;
 }
 
+/**
+ * A silhouette, expressed as morph weights rather than as another mesh.
+ *
+ * `references/ref3.png` shows Classic, Ascetic and Mahayogi as three
+ * builds of ONE figure, which is what they are: the same anatomy at
+ * different girths. Shipping them as three body assets would be three
+ * copies of one mesh's measurements, and §20 of the brief is explicit
+ * that the registry does not duplicate an asset to express a variation.
+ */
+export interface BodyVariant {
+  id: string;
+  label: string;
+  description: string;
+  /** Morph weights this variant sets. Keys are the body's own targets. */
+  morphs: Readonly<Record<string, number>>;
+}
+
 export interface AvailableDeity extends DeityDefinitionBase {
   available: true;
   assets: readonly AssetDefinition[];
@@ -44,8 +62,15 @@ export interface AvailableDeity extends DeityDefinitionBase {
   /** The skeleton (joints + sockets) this deity's rig is built from. */
   skeleton: SkeletonDefinition;
   posePresets: readonly PosePreset[];
-  /** Arm configurations this deity supports (rendered pairs). */
+  /**
+   * Arm configurations this deity's ICONOGRAPHY supports. What a given
+   * configuration can actually render is this narrowed to the arms the
+   * selected body has — see `armOptionsFor`, which the editor uses, so a
+   * two-armed body is never offered a second pair.
+   */
   armOptions: readonly (2 | 4)[];
+  /** Builds offered for this deity, as morph presets on one body. */
+  bodyVariants?: readonly BodyVariant[];
   createDefaultConfiguration: () => CharacterConfiguration;
 }
 
@@ -71,6 +96,32 @@ const ganesha: AvailableDeity = {
   createDefaultConfiguration: createDefaultGaneshaConfiguration,
 };
 
+/**
+ * The three builds the reference sheet shows, as weights on the human
+ * body's own morph targets. Judged at these values against ref3: heroic
+ * at 0.85 is strong and tapered, and at 1.0 the deltoids read inflated.
+ */
+const SHIVA_BODY_VARIANTS: readonly BodyVariant[] = [
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Well-proportioned — broad shoulders, taut waist.",
+    morphs: { bodyHeroic: 0.85, bodyPowerful: 0.35, bodyAscetic: 0.3, faceDivine: 1 },
+  },
+  {
+    id: "ascetic",
+    label: "Ascetic",
+    description: "The lean tapasvin of the mountain.",
+    morphs: { bodyHeroic: 0.5, bodyPowerful: 0, bodyAscetic: 1, bodyLean: 0.5, faceDivine: 1 },
+  },
+  {
+    id: "mahayogi",
+    label: "Mahayogi",
+    description: "More defined and muscular.",
+    morphs: { bodyHeroic: 1, bodyPowerful: 0.8, bodyAscetic: 0.1, faceDivine: 1 },
+  },
+];
+
 const shiva: AvailableDeity = {
   id: "shiva",
   name: "Shiva",
@@ -84,6 +135,7 @@ const shiva: AvailableDeity = {
   skeleton: HUMANOID_SKELETON,
   posePresets: SHIVA_POSE_PRESETS,
   armOptions: [2, 4],
+  bodyVariants: SHIVA_BODY_VARIANTS,
   createDefaultConfiguration: createDefaultShivaConfiguration,
 };
 
@@ -119,3 +171,29 @@ export function getAvailableDeity(id: string): AvailableDeity | undefined {
 export const AVAILABLE_DEITIES: readonly AvailableDeity[] = DEITIES.filter(
   (d): d is AvailableDeity => d.available,
 );
+
+/**
+ * Arm counts this deity can actually render on this body.
+ *
+ * Iconography is one question and anatomy is another. Shiva is shown with
+ * two arms and with four; the human mesh has two. Offering the customer a
+ * second pair that the body cannot grow is how an attribute ends up on a
+ * hand seven centimetres from where any hand is — so the editor asks
+ * here, and the answer comes from the body's own skeleton.
+ */
+export function armOptionsFor(
+  deity: AvailableDeity,
+  body: AssetDefinition | undefined,
+): readonly (2 | 4)[] {
+  const skeleton = body?.skeleton ? getSkeleton(body.skeleton) : undefined;
+  const available = (skeleton ?? deity.skeleton).armSlots.length;
+  return deity.armOptions.filter((count) => count <= available);
+}
+
+/** The morph weights a named body variant sets, if the deity has one. */
+export function bodyVariantMorphs(
+  deity: AvailableDeity,
+  variantId: string,
+): Readonly<Record<string, number>> | undefined {
+  return deity.bodyVariants?.find((variant) => variant.id === variantId)?.morphs;
+}

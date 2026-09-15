@@ -26,11 +26,13 @@ import {
   ARM_SLOTS,
   activeArmSlots,
   getPosePreset,
+  garmentFitOf,
   getSkeleton,
   isGestureMudra,
   resolveHands,
   type ArmSlot,
   type CharacterConfiguration,
+  type GarmentFit,
   type HandsConfiguration,
   type JointId,
   type MudraId,
@@ -74,6 +76,8 @@ export interface ResolvedPose {
   joints: Readonly<Partial<Record<JointId, Vec3>>>;
   rootOffset: Vec3;
   seated: boolean;
+  /** How cloth is worn in this pose — the pose's own statement. */
+  garment: GarmentFit;
 }
 
 export interface ResolvedAttachment {
@@ -230,6 +234,7 @@ export function resolveCharacterPresentation(
     joints,
     rootOffset: preset?.rootOffset ?? [0, 0, 0],
     seated: preset?.seated === true,
+    garment: garmentFitOf(preset),
   };
 
   // A preset that raises a blessing arm is asserting that the hand
@@ -376,6 +381,30 @@ export function resolveCharacterPresentation(
     integratedFeatures,
     issues,
   };
+}
+
+/**
+ * Part slots and sockets this configuration's own parts already provide.
+ *
+ * A body that is one continuous mesh brings its head, face, eyes and
+ * hands with it. Offering the customer a Head picker in front of a figure
+ * whose head is not swappable is not a customisation — it is an empty
+ * grid — so the editor asks this and leaves the slot out, saying why.
+ */
+export function coveredFeatures(config: CharacterConfiguration): {
+  features: ReadonlySet<string>;
+  /** Which selected part provides them, for the explanation. */
+  provider: AssetDefinition | undefined;
+} {
+  const features = new Set<string>();
+  let provider: AssetDefinition | undefined;
+  for (const ref of Object.values(config.parts)) {
+    const asset = resolveAssetRef(ref);
+    if (!asset?.integratedFeatures?.length) continue;
+    provider ??= asset;
+    for (const feature of asset.integratedFeatures) features.add(feature);
+  }
+  return { features, provider };
 }
 
 /** Issues the editor should show the customer. */

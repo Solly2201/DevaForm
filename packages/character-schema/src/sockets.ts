@@ -20,6 +20,7 @@ export type SocketId =
   | "head.moon"
   | "trunk.tip"
   | "chest.necklace"
+  | "chest.mala"
   | "waist.ornament"
   | `arm.${ArmSlot}.hand.item`
   | `arm.${ArmSlot}.wrist`
@@ -88,6 +89,15 @@ export const HUMANOID_CORE_SOCKETS: readonly SocketDefinition[] = [
   { id: "head.forehead", joint: "head", position: [0, 0.07, 0.1], rotation: [0, 0, 0], label: "Forehead" },
   { id: "head.moon", joint: "head", position: [0.05, 0.15, 0.02], rotation: [0, 0, 0], label: "Crescent" },
   { id: "chest.necklace", joint: "chest", position: [0, 0.12, 0.01], rotation: [0, 0, 0], label: "Necklace" },
+  // A torque at the throat and a mala hanging on the chest are worn
+  // TOGETHER — references/ref3.png shows a naga at the collar with
+  // rudraksha strands below it — and one socket holds one thing. So there
+  // are two seats at the same joint-local point, and each ornament hangs
+  // to its own depth from there. Sharing the point is deliberate: what
+  // separates a collar from a mala is the drop of the ornament, not the
+  // height of its anchor, and every generator that drapes in socket space
+  // already works in that frame.
+  { id: "chest.mala", joint: "chest", position: [0, 0.12, 0.01], rotation: [0, 0, 0], label: "Mala" },
   { id: "waist.ornament", joint: "pelvis", position: [0, 0.04, 0.12], rotation: [0, 0, 0], label: "Waist" },
   ...handSockets(FRONT_ARM_SLOTS),
   { id: "leg.left.anklet", joint: "leg.left.foot", position: [0, 0.04, 0], rotation: [0, 0, 0], label: "Left anklet" },

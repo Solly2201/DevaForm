@@ -289,7 +289,7 @@ describe("earrings hang from refined ear sockets", () => {
       config.attachments = config.attachments.filter((a) => a.socket !== "base.platform");
       return config;
     }],
-    ["shiva", () => createDefaultShivaConfiguration()],
+    ["shiva", () => stylisedShiva()],
   ] as const)("%s", (_deity, makeConfig) => {
     const config = makeConfig();
     const rig = buildRig(config, new ZoneMaterials());
@@ -308,9 +308,30 @@ describe("earrings hang from refined ear sockets", () => {
   });
 });
 
+/**
+ * Shiva on the superseded stylised body.
+ *
+ * Some invariants are about PROCEDURAL fitting — the bulk proportion
+ * scaling primitives, a part refining a socket onto geometry it drew — and
+ * a mesh body answers none of them: it ignores bulk by design (its girth
+ * travels through morph targets) and its sockets are refined by SOCKET_
+ * nodes in a GLB the unit-test loader never resolves. So these run on the
+ * body that does the thing being tested. The mesh body's own fit is
+ * covered in humanBase.test.ts, which reads the shipped file.
+ */
+function stylisedShiva(): CharacterConfiguration {
+  const config = createDefaultShivaConfiguration();
+  config.parts.body = { assetId: "shiva.body.classic", version: 1 };
+  config.parts.head = { assetId: "shiva.head.classic", version: 1 };
+  config.parts.eyes = { assetId: "shiva.eyes.serene", version: 1 };
+  config.parts.hands = { assetId: "shiva.hands.classic", version: 1 };
+  config.parts.lowerGarment = { assetId: "shiva.garment.dhoti", version: 2 };
+  return config;
+}
+
 describe("naga lies on the body it is worn by", () => {
   const nagaConfig = (bulk: number): CharacterConfiguration => {
-    const config = createDefaultShivaConfiguration();
+    const config = stylisedShiva();
     config.proportions.bulk = bulk;
     config.attachments = [
       ...config.attachments.filter((a) => a.socket !== "chest.necklace"),
@@ -337,10 +358,17 @@ describe("naga lies on the body it is worn by", () => {
    *
    * This is what a bounding-box test could never say. A coil can have
    * exactly the right width and still run through the sternum.
+   *
+   * Measured RADIALLY, on the bearing each point actually sits at. An
+   * earlier version normalised the point against an ellipse and converted
+   * back to metres using the smaller of the two radii — which under-reports
+   * a clearance achieved across the wide axis by nearly half, and reported
+   * a serpent sitting four millimetres off the skin as buried in it. The
+   * surface answers by bearing and height; so does this.
    */
-  it("keeps its coil outside the skin, and against it", () => {
-    const rig = buildRig(nagaConfig(1), new ZoneMaterials());
-    applyPose(rig.joints, nagaConfig(1).pose);
+  const coilClearance = (config: CharacterConfiguration) => {
+    const rig = buildRig(config, new ZoneMaterials());
+    poseRig(rig);
     rig.root.updateWorldMatrix(true, true);
     let naga: THREE.Object3D | null = null;
     rig.root.traverse((o) => {
@@ -371,23 +399,34 @@ describe("naga lies on the body it is worn by", () => {
         // The reared hood stands off the shoulder on purpose; only the
         // part of the serpent lying along the figure is being judged.
         if (y > body.necklaceSocketY + 0.06) continue;
-        // The slice of the body at this height. It is an ellipse, not a
-        // circle, so "how far out is this point" has to be asked in the
-        // slice's own terms — comparing bare radii puts a point above the
-        // sternum next to a measurement taken at the shoulder.
-        const front = body.surfaceAt(0, y);
-        const back = body.surfaceAt(Math.PI, y);
-        const halfWidth = Math.max(1e-4, body.surfaceAt(Math.PI / 2, y).x);
-        const centreZ = (front.z + back.z) / 2;
-        const halfDepth = Math.max(1e-4, front.z - centreZ);
-        const out = Math.hypot(p.x / halfWidth, (z - centreZ) / halfDepth);
-        // Back into metres, along the smaller of the two radii, so the
-        // figure quoted is never flattering.
-        const gap = (out - 1) * Math.min(halfWidth, halfDepth);
+        // Which way round the body this point lies, and how far the skin
+        // is in that direction. Bearings run from the front toward the
+        // figure's left, which is the convention the surface uses.
+        const centreZ = (body.surfaceAt(0, y).z + body.surfaceAt(Math.PI, y).z) / 2;
+        const bearing = Math.atan2(p.x, z - centreZ);
+        const skin = body.surfaceAt(bearing, y);
+        const here = Math.hypot(p.x, z - centreZ);
+        const there = Math.hypot(skin.x, skin.z - centreZ);
+        const gap = here - there;
         if (gap < -0.004) inside += 1;
         else if (gap < 0.05) against += 1;
       }
     });
+    return { inside, against, total };
+  };
+
+  it.each([
+    ["stylised body", () => nagaConfig(1)],
+    ["mesh body", () => {
+      const config = createDefaultShivaConfiguration();
+      config.attachments = [
+        ...config.attachments.filter((a) => a.socket !== "chest.necklace"),
+        { socket: "chest.necklace", asset: { assetId: "shiva.ornament.naga", version: 1 } },
+      ];
+      return config;
+    }],
+  ])("keeps its coil outside the skin, and against it — %s", (_name, makeConfig) => {
+    const { inside, against, total } = coilClearance(makeConfig());
     expect(total).toBeGreaterThan(50);
     // Nothing of consequence buried in the chest...
     expect(inside / total).toBeLessThan(0.02);
@@ -398,7 +437,7 @@ describe("naga lies on the body it is worn by", () => {
 
 describe("kamarband wraps the dressed waist", () => {
   const beltWidth = (bulk: number): number => {
-    const config = createDefaultShivaConfiguration();
+    const config = stylisedShiva();
     config.proportions.bulk = bulk;
     config.attachments = [
       ...config.attachments,

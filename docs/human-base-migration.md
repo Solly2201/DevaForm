@@ -309,3 +309,51 @@ at. This pass was driven by the reference sheet rather than by tests.
 **Unchanged:** Ganesha, pixel for pixel. The procedural Shiva keeps its
 own body, dhoti and jata; it gained only the planted trishul, which the
 reference shows and which its previous presentation already implied.
+
+---
+
+## Stage 7 — the mesh becomes Shiva's body
+
+The decision this stage records: **`createDefaultShivaConfiguration()` now
+returns the measured human mesh.** Up to Stage 6 the mesh was a dev-page
+subject and the shipped Shiva was a primitive assembly; the mesh was better
+in every respect a customer can see, and keeping the assembly as the default
+meant maintaining two figures and improving the one nobody was shown.
+
+What that entails, and what was done about it:
+
+- **Head, eyes and hands are `null` in the default.** The mesh has its own;
+  the stylised parts existed to build a figure that no longer exists. They
+  remain in the registry and remain resolvable, so a saved character that
+  names them still loads.
+- **Body variants are morph presets, not assets.** Classic, Ascetic and
+  Mahayogi are weights on one mesh — which is what the reference sheet's
+  "Body Variants" row shows — so an ornament fitted to one is fitted to all
+  three by the same blend the mesh uses.
+- **The superseded procedural Shiva bodies are `deprecated`.** Not deleted:
+  `deprecated` is documented as "kept only so old saved characters still
+  resolve", and that is exactly their job now.
+- **The garment was rebuilt rather than re-tuned.** The Stage 6 hide was a
+  cloth tube with a curved sheet laid over its front; it could not be made
+  right by moving numbers, because a sheet covering three hundred degrees
+  has a hole in it by construction. The hide is now ONE closed skin round
+  the hips whose lower edge carries the shape — slung high over one hip,
+  deepest over the opposite thigh, torn — with the cream dhoti under it
+  reaching the ankle and the kamarbandh wound over both.
+- **The cloth is cut to a measured leg envelope.** The body ships one; the
+  garment asks for it. This closed the "dhoti is one tone / stops at the
+  calf" and "cloth read as a moulded tube" divergences listed under Stage 6.
+
+**Still divergent from the reference**
+
+- The jata falls behind the shoulders and only partly forward over them.
+- The naga is thicker than the reference's torque.
+- Hair and cloth are vertex-coloured geometry, so their fine detail is
+  limited by tessellation rather than by shading. A texture pipeline is the
+  structural answer and is not in this stage.
+- Seated poses still float the figure above the base — a pose-preset issue
+  that predates this work.
+
+**Unchanged:** Ganesha. Its pinned scene digest moved once, for one empty
+socket node (`chest.mala`) and for fists that now genuinely close on what
+they hold; every QA view was compared before and after.

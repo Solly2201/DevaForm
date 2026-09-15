@@ -550,8 +550,11 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     id: "ganesha.necklace.mala",
     version: 1,
     name: "Bead Mala",
-    description: "Two strands of beads with gem accents.",
-    kind: { type: "attachment", sockets: ["chest.necklace"] },
+    description: "Two strands of beads with gem accents, worn below a collar.",
+    // A mala hangs BELOW a collar and is worn with it, so it sits on the
+    // mala seat. Both sockets are offered: a saved character that put it
+    // on the collar still resolves and still renders there.
+    kind: { type: "attachment", sockets: ["chest.mala", "chest.necklace"] },
     deityCompatibility: ["any"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.mala" },

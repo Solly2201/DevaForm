@@ -126,8 +126,15 @@ export interface CharacterRig {
   bodyAsset: AssetDefinition | undefined;
   /** What each hand is closing on — the radius it must close onto. */
   heldByHand: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>;
-  /** Assets that failed to resolve or are still loading (not fatal). */
+  /** Assets that failed to resolve (not fatal). */
   warnings: string[];
+  /**
+   * GLB-sourced assets whose file has not arrived yet. Empty means the
+   * scene is everything the configuration asked for; non-empty means a
+   * rebuild is coming. Anything that captures or exports the scene must
+   * wait for this to empty, or it records a figure with pieces missing.
+   */
+  pending: string[];
   /**
    * What the last pose could not achieve — a hand that cannot present
    * what it holds, a staff whose butt left the ground. Replaced on every
@@ -264,12 +271,19 @@ function resolveRenderable(
   asset: AssetDefinition,
   ctx: GeneratorContext,
   warnings: string[],
+  pending: string[],
 ): THREE.Object3D | { jointed: ReturnType<(typeof PART_GENERATORS)[string]> } | null {
   if (asset.source.kind === "glb") {
     const entry = getGlb(asset.source.path);
     if (entry.status === "loaded") return instantiateGlb(entry.scene, ctx.materials);
     if (entry.status === "error") warnings.push(`Asset ${asset.id}: ${entry.message}`);
-    return null; // still loading — a cache subscriber rebuild will pick it up
+    // Still loading — a cache subscriber rebuild will pick it up. Say so:
+    // a rig that is missing its body is not the same thing as a rig that
+    // has none, and anything capturing or exporting the scene needs to
+    // know the difference. A QA render taken during this window is a
+    // picture of a figure with no body in it.
+    else pending.push(asset.id);
+    return null;
   }
   if (asset.kind.type === "part") {
     const generator = PART_GENERATORS[asset.source.generatorId];
@@ -402,6 +416,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   const { skeleton, armSlots, hands } = resolved;
 
   const warnings: string[] = [];
+  const pending: string[] = [];
   const planted: PlantedAttachment[] = [];
   const held: HeldItem[] = [];
   const root = new THREE.Group();
@@ -428,6 +443,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           profile: bodyAsset.bodyProfile,
           morphs: config.morphs,
           torsoSurface: bodyAsset.torsoSurface,
+          legEnvelope: bodyAsset.legEnvelope,
         }
       : undefined,
   );
@@ -453,6 +469,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     armSlots,
     held: heldByHand,
     seated: resolved.pose.seated,
+    garment: resolved.pose.garment,
     body: bodyProfile,
   };
   const ctxFor = (asset: AssetDefinition): GeneratorContext => ({
@@ -472,7 +489,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     }
     if (!asset) continue;
     if (resolved.integratedFeatures.has(slot) && !asset.integratedFeatures?.includes(slot)) continue;
-    const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
+    const renderable = resolveRenderable(asset, ctxFor(asset), warnings, pending);
     if (!renderable) continue;
     if (renderable instanceof THREE.Object3D) {
       // Asset-spec socket contract: SOCKET_<id> empties inside the GLB
@@ -587,7 +604,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       warnings.push(`Attachment ${asset.id}: unknown socket ${attachment.socket}`);
       continue;
     }
-    const renderable = resolveRenderable(asset, ctxFor(asset), warnings);
+    const renderable = resolveRenderable(asset, ctxFor(asset), warnings, pending);
     if (!renderable || !(renderable instanceof THREE.Object3D)) continue;
     renderable.name = `attachment:${asset.id}`;
     applyAttachmentTransforms(renderable, presentation, attachment);
@@ -608,10 +625,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
     if (standsOnGround(presentation)) {
       if (!attachment.handSlot) {
-        // Standing on its own: beside the figure, clear of it. Where it
-        // stands comes from the body that is actually wearing this
-        // configuration and from the hand that would have held it; the
-        // only authored number is the gap.
+        // Standing on its own: beside the figure, clear of it.
+        //
+        // Clear of the BODY, at the gap the presentation declares — not
+        // wherever the hand that used to hold it has since travelled. The
+        // hand only chooses the side. Following the hand's own position
+        // put the staff through a raised abhaya arm, because a blessing
+        // hand is a third of a metre further out than a hanging one and a
+        // set-down staff does not follow it there.
         const requested = sockets.get(attachment.requestedSocket);
         requested?.updateWorldMatrix(true, false);
         const wouldHaveBeen = requested?.getWorldPosition(new THREE.Vector3());
@@ -628,7 +649,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
               ? 1
               : -1;
         renderable.position.x = side * clear;
-        renderable.position.z = wouldHaveBeen?.z ?? 0;
+        renderable.position.z = 0;
       }
       const frame = resolveGripFrame(presentation);
       planted.push({
@@ -685,6 +706,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     bodyAsset,
     heldByHand,
     warnings,
+    pending,
     poseWarnings: [],
   };
 }

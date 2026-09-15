@@ -249,3 +249,75 @@ blockers, of which three are now tractable and one is honest metadata:
 | Shiva's body variants become morph presets, not separate assets | One mesh, three silhouettes — which is what `references/ref3.png` shows |
 | Superseded procedural Shiva bodies become `deprecated`, not deleted | `deprecated` is documented as "kept only so old saved characters still resolve" |
 | `armOptions` is intersected with the body's skeleton | §4: it must be impossible to offer a limb the body does not have |
+
+---
+
+## 7. What changed since this audit
+
+This section is the outcome, kept with the audit so the two can be read
+together. Section 1–6 above remain as they were written at `6209fbd`; they
+are the fixed starting point, not a live document.
+
+**Gates now:** 257 tests green (29 schema, 70 asset-system, 158 web),
+`typecheck` clean across all three packages, `lint` clean, `validate-assets`
+0 errors / 0 warnings, and `next build` completes — a production build that
+had never been run during the audit and which turned out to be broken by the
+QA page's unsuspended `useSearchParams`.
+
+### Closed
+
+- **One resolution step.** `resolveCharacterPresentation(config)` in
+  `asset-system/src/resolve.ts` returns pose, hands, attachments,
+  presentations, warnings, conflicts and rejections. `buildRig` calls it
+  once and decides nothing itself.
+- **Presentations are first class.** `asset-system/src/presentation.ts`
+  models mode, anchor, hand relationship, orientation, support, grip frame,
+  stand and mobility. Trishul has `grounded` and `handheldShaft`; damaru has
+  `pinchHeld` and `gripHeld`; lotus has `pinchHeld` and `palmHeld`.
+- **One transform pipeline.** `worldAlignedAttachments` is gone; every
+  attachment reaches the scene through the socket hierarchy.
+- **The fist closes on what it holds.** `humanoidHands` builds each hand
+  around the radius the held item's presentation declares, measured from
+  the body's own `gripApertures`.
+- **Anatomical hand solving.** `handSolve.ts` distributes a wrist target
+  over shoulder twist, forearm pronation and wrist rotation, with `twist`
+  declared per joint and applied about the bone's own axis. A gesture the
+  arm cannot show is reverted rather than forced.
+- **Conformance has grip and presentation teeth.** `validatePresentations`
+  rejects a grounded presentation that names a hand, a handheld one that
+  does not, a zero axis, a non-positive radius and negative travel.
+- **Clearance and containment are machine-checked.** `shiva-rig.test.ts`
+  measures the naga radially on each point's own bearing;
+  `garmentFit.test.ts` reads the shipped body GLB, selects leg vertices by
+  SKIN WEIGHT, and requires that none stands outside the cloth on its own
+  bearing, above the hem on that bearing.
+- **The measured body drives the clothes.** A body asset now ships a
+  `legEnvelope` (14 rows of half-width, front and back) and the garment is
+  cut to it.
+
+### Found while closing it
+
+- `deriveBodyProfile` was never handed the leg envelope, so every wrap was
+  still being sized from mean limb radii — a calf came through the back of
+  the dhoti in the render while the measurement sat unused in the manifest.
+- The neck base was measured at the neck JOINT, which put the collar under
+  the jaw. It is now a slab scan downward from above the joint.
+- The manifest's copy of the measured numbers had drifted two builds behind
+  the asset. `sync-measured-manifest.mjs` rewrites it mechanically and a
+  test holds the two together.
+- A cloth section is not an ellipse. A lower garment goes round two legs,
+  and an ellipse through the same extents cuts the diagonals off.
+- Folds that multiply a fitted radius can pull cloth INSIDE the body. They
+  only ever add now.
+
+### Still open
+
+- `MIGRATIONS` is still empty — the mechanism is exercised by a test, not by
+  a real schema change.
+- The torso surface map carries no per-morph deltas (the scalar profile
+  does). At the default morph weights the largest body delta is 8 mm on
+  `chestRadiusX`, which the ornaments' clearance covers; a body variant
+  pushed further would need the map to blend like the profile does.
+- Four-armed Shiva on the mesh body still needs a modelled second pair.
+- Finger-bone-driven mudras for procedural hands remain deferred, for the
+  reason given in section 5.

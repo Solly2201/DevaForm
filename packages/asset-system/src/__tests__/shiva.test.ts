@@ -20,7 +20,14 @@ import {
   serializeConfiguration,
   validateConfiguration,
 } from "@devaform/character-schema";
-import { getAvailableDeity, getAsset, isAssetCompatible, isHandheld, listAssets } from "../index";
+import {
+  coveredFeatures,
+  getAvailableDeity,
+  getAsset,
+  isAssetCompatible,
+  isHandheld,
+  listAssets,
+} from "../index";
 
 const shiva = getAvailableDeity("shiva");
 
@@ -54,11 +61,17 @@ describe("shiva definition", () => {
     }
   });
 
-  it("every category slot/socket offers at least one Shiva-compatible option", () => {
+  it("every category slot either offers an option or is part of the body", () => {
+    // A slot with nothing in it is a dead corner of the editor — unless
+    // the selected body already provides it, which a continuous mesh
+    // does for its head, face, eyes and hands. Those are declared, and
+    // the panel says so instead of showing an empty grid.
+    const covered = coveredFeatures(createDefaultShivaConfiguration()).features;
     for (const category of shiva?.categories ?? []) {
       const content = category.content;
       if (content.type === "parts" || content.type === "mixed") {
         for (const slot of content.slots) {
+          if (covered.has(slot)) continue;
           expect(
             listAssets({ deity: "shiva", slot }).length,
             `category ${category.id}, slot ${slot}`,
@@ -73,6 +86,44 @@ describe("shiva definition", () => {
           ).toBeGreaterThan(0);
         }
       }
+    }
+  });
+
+  it("offers a build for every variant the body can take", () => {
+    const body = getAsset("humanoid.body.human")!;
+    const exposed = new Set(body.morphTargets ?? []);
+    expect(shiva?.bodyVariants?.length ?? 0).toBeGreaterThan(1);
+    for (const variant of shiva?.bodyVariants ?? []) {
+      for (const name of Object.keys(variant.morphs)) {
+        expect(exposed.has(name), `${variant.id} needs ${name}`).toBe(true);
+      }
+    }
+    // ...and the default configuration IS one of them, rather than a
+    // fourth build nobody chose.
+    const defaults = createDefaultShivaConfiguration().morphs;
+    const matching = shiva?.bodyVariants?.find((variant) =>
+      Object.entries(variant.morphs).every(
+        ([name, value]) => Math.abs((defaults[name] ?? 0) - value) < 1e-9,
+      ),
+    );
+    expect(matching, "the default build is an offered variant").toBeDefined();
+  });
+
+  it("keeps every superseded asset resolvable, and out of the pickers", () => {
+    // `deprecated` is documented as "kept only so old saved characters
+    // still resolve". A share link naming the stylised body must load.
+    for (const id of [
+      "shiva.body.classic",
+      "shiva.body.ascetic",
+      "shiva.body.mahayogi",
+      "shiva.head.classic",
+      "shiva.eyes.serene",
+      "shiva.hands.classic",
+    ]) {
+      const asset = getAsset(id);
+      expect(asset, id).toBeDefined();
+      expect(asset!.stage, id).toBe("deprecated");
+      expect(listAssets({ deity: "shiva" }).map((a) => a.id)).not.toContain(id);
     }
   });
 

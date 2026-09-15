@@ -37,14 +37,20 @@ const HAND_SOCKETS = [
 
 export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   // ---- BODY -------------------------------------------------------------
+  // The three procedural builds below are SUPERSEDED by humanoid.body.human
+  // plus its body variants — one mesh at three girths, which is what
+  // references/ref3.png actually shows. They stay registered because
+  // `deprecated` means exactly that: kept so a saved character naming one
+  // still loads, share links included. They are not offered.
   {
     id: "shiva.body.classic",
     version: 1,
-    name: "Classic Body",
-    description: "Balanced athletic build — broad shoulders, taut waist.",
+    name: "Classic Body (stylised)",
+    description: "Balanced athletic build — the earlier primitive-assembled figure.",
     kind: { type: "part", slot: "body" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.athletic", params: { form: "athletic", chest: 1, waist: 1, shoulder: 1 } },
     materialZones: ["skin", "skinSecondary"],
     category: "body",
@@ -53,11 +59,12 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   {
     id: "shiva.body.ascetic",
     version: 1,
-    name: "Ascetic Body",
+    name: "Ascetic Body (stylised)",
     description: "Lean tapasvin build of the mountain yogi.",
     kind: { type: "part", slot: "body" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.athletic", params: { form: "athletic", chest: 0.88, waist: 0.88, shoulder: 0.94 } },
     materialZones: ["skin", "skinSecondary"],
     category: "body",
@@ -66,11 +73,12 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   {
     id: "shiva.body.mahayogi",
     version: 1,
-    name: "Mahayogi Body",
+    name: "Mahayogi Body (stylised)",
     description: "Powerful broad-chested form.",
     kind: { type: "part", slot: "body" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.athletic", params: { form: "athletic", chest: 1.18, waist: 1.08, shoulder: 1.12 } },
     materialZones: ["skin", "skinSecondary"],
     category: "body",
@@ -85,7 +93,9 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     description: "Serene divine face with human ears; jata is a separate hair asset.",
     kind: { type: "part", slot: "head" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    // Superseded: the mesh body carries its own head.
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "shiva.head", params: {} },
     // The sculpt physically includes its ears — standalone ear parts (if a
     // configuration ever carried them) are suppressed, same rule as
@@ -104,7 +114,9 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     description: "Half-lidded meditative gaze with kohl lining.",
     kind: { type: "part", slot: "eyes" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    // Superseded: the mesh body carries its own eyes.
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: {
       kind: "procedural",
       generatorId: "humanoid.eyes",
@@ -126,7 +138,9 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     description: "Open, direct gaze.",
     kind: { type: "part", slot: "eyes" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    // Superseded: the mesh body carries its own eyes.
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: {
       kind: "procedural",
       generatorId: "humanoid.eyes",
@@ -159,7 +173,8 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     id: "shiva.jata.flowing",
     version: 1,
     name: "Flowing Jata",
-    description: "Jata crown with matted strands falling to the shoulders.",
+    description:
+      "The reference silhouette: the ascetic's coiled crown with the mane falling down the back and locks brought forward over each shoulder.",
     kind: { type: "part", slot: "hair" },
     deityCompatibility: ["shiva"],
     stage: "prototype",
@@ -177,7 +192,9 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     description: "Sculpted hands; per-hand mudras set in the Hands panel.",
     kind: { type: "part", slot: "hands" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
+    // Superseded: the mesh body carries its own hands.
+    stage: "deprecated",
+    supersedes: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.hands" },
     materialZones: ["skin"],
     category: "hands",
@@ -186,30 +203,73 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
 
   // ---- CLOTHING ---------------------------------------------------------
   {
-    id: "shiva.garment.dhoti",
+    id: "shiva.garment.tigerHide",
     version: 1,
-    name: "Pleated Dhoti",
-    description: "Full-length pleated dhoti.",
+    name: "Dhoti and Tiger Hide",
+    description:
+      "The reference dress: cream dhoti to the ankle, the spotted hide slung over the hips and thighs, ochre sash with a long hanging panel.",
     kind: { type: "part", slot: "lowerGarment" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
-    source: { kind: "procedural", generatorId: "humanoid.dhoti", params: { length: 1, layered: 0 } },
-    materialZones: ["garment", "garmentAccent"],
+    stage: "integration",
+    source: {
+      kind: "procedural",
+      generatorId: "humanoid.hideWrap",
+      params: { length: 1, hide: 1, dhoti: 1, drape: 1 },
+    },
+    provenance: {
+      type: "procedural",
+      tool: "apps/web/src/engine/generators/hideGarment.ts",
+      references: ["references/ref3.png", "references/reference_mid.png"],
+      notes:
+        "Every surface is lofted from the wearer's own measured hips, thighs, knees and calves. Split at the hip and the knee so each piece rides the bone beneath it, which is what keeps a folded leg inside its cloth.",
+    },
+    materialZones: ["garment", "garmentAccent", "metal"],
     category: "clothing",
-    printability: proto,
+    printability: {
+      printSourceAvailable: false,
+      minStatueHeightMm: 150,
+      notes: "Torn hems and folds are 3-8 mm of relief at 1 m scale.",
+    },
+  },
+  {
+    id: "shiva.garment.dhoti",
+    version: 2,
+    name: "Pleated Dhoti",
+    description: "Cream dhoti to the ankle with an ochre sash — no hide.",
+    kind: { type: "part", slot: "lowerGarment" },
+    deityCompatibility: ["shiva"],
+    stage: "integration",
+    source: {
+      kind: "procedural",
+      generatorId: "humanoid.hideWrap",
+      params: { length: 1, hide: 0, dhoti: 1, drape: 1 },
+    },
+    materialZones: ["garment", "garmentAccent", "metal"],
+    category: "clothing",
+    printability: {
+      printSourceAvailable: false,
+      minStatueHeightMm: 150,
+    },
   },
   {
     id: "shiva.garment.dhotiShort",
-    version: 1,
+    version: 2,
     name: "Short Dhoti",
-    description: "Knee-length ascetic wrap. A true tiger-skin drape awaits a production asset.",
+    description: "Knee-length ascetic wrap over the hips.",
     kind: { type: "part", slot: "lowerGarment" },
     deityCompatibility: ["shiva"],
-    stage: "prototype",
-    source: { kind: "procedural", generatorId: "humanoid.dhoti", params: { length: 0.5, layered: 0 } },
-    materialZones: ["garment", "garmentAccent"],
+    stage: "integration",
+    source: {
+      kind: "procedural",
+      generatorId: "humanoid.hideWrap",
+      params: { length: 0.6, hide: 1, dhoti: 0.55, drape: 0 },
+    },
+    materialZones: ["garment", "garmentAccent", "metal"],
     category: "clothing",
-    printability: proto,
+    printability: {
+      printSourceAvailable: false,
+      minStatueHeightMm: 150,
+    },
   },
   {
     id: "shiva.garment.uttariya",
@@ -253,13 +313,57 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     printability: proto,
   },
 
+  {
+    id: "shiva.forehead.trinetra",
+    version: 1,
+    name: "Third Eye and Tripundra",
+    description:
+      "The reference brow: three horizontal bands of vibhuti with the vertical trinetra set between them.",
+    kind: { type: "attachment", sockets: ["head.forehead"] },
+    deityCompatibility: ["shiva"],
+    stage: "integration",
+    source: { kind: "procedural", generatorId: "ornament.trinetraTripundra" },
+    provenance: {
+      type: "procedural",
+      tool: "apps/web/src/engine/generators/shiva.ts",
+      references: ["references/ref3.png"],
+    },
+    materialZones: [],
+    category: "face",
+    printability: {
+      printSourceAvailable: false,
+      minStatueHeightMm: 150,
+      notes: "Ash relief under 2 mm at 1 m scale; needs a minimum print size to survive.",
+    },
+  },
+  {
+    id: "shiva.tilak.tripundra",
+    version: 1,
+    name: "Tripundra",
+    description:
+      "The three horizontal bands of vibhuti across the brow. Ash on skin: millimetres of relief, curved to the forehead it lies on.",
+    kind: { type: "attachment", sockets: ["head.forehead"] },
+    deityCompatibility: ["shiva"],
+    stage: "integration",
+    source: { kind: "procedural", generatorId: "ornament.tripundra" },
+    materialZones: [],
+    category: "face",
+    printability: {
+      printSourceAvailable: false,
+      minStatueHeightMm: 150,
+      notes: "Relief under 2 mm at 1 m scale; needs a minimum print size to survive.",
+    },
+  },
+
   // ---- NECK ORNAMENTS (attachments) ---------------------------------------
   {
     id: "shiva.mala.rudraksha",
     version: 1,
     name: "Rudraksha Mala",
     description: "Twin strands of rudraksha beads draped on the chest. Bead color is the seed's own (not zone-recolorable).",
-    kind: { type: "attachment", sockets: ["chest.necklace"] },
+    // The mala seat, not the collar: a naga torque wraps the throat and
+    // the beads hang below it, and the reference wears both.
+    kind: { type: "attachment", sockets: ["chest.mala"] },
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.rudraksha" },
@@ -267,7 +371,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
       wearable({
         id: "draped",
         label: "Draped on the chest",
-        socket: "chest.necklace",
+        socket: "chest.mala",
         // A bead rests against the skin; the strand is checked to stay
         // outside it by at least this much on every bearing it crosses.
         clearanceM: 0.002,
