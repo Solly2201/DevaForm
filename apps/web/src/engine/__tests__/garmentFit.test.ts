@@ -279,54 +279,14 @@ function bodyLegVertices(hipY: number): Float32Array {
 describe("the lower garment contains the legs", () => {
   const full = SHIVA_POSE_PRESETS.filter((preset) => garmentFitOf(preset) === "full");
 
-  it.each(full.map((preset) => preset.id))("%s", (presetId) => {
-    const config = shiva(presetId);
-    const materials = new ZoneMaterials();
-    const rig = buildRig(config, materials);
-    poseRig(rig);
-    rig.root.updateWorldMatrix(true, true);
-
-    const garment = garmentOf(rig);
-    const body = rig.body;
-    // Down each leg, from just below the hip to just above the ankle.
-    const thigh = rig.joints.get("leg.left.thigh")!;
-    const shin = rig.joints.get("leg.left.shin")!;
-    const foot = rig.joints.get("leg.left.foot")!;
-    const hipY = thigh.getWorldPosition(new THREE.Vector3()).y;
-    const kneeY = shin.getWorldPosition(new THREE.Vector3()).y;
-    const ankleY = foot.getWorldPosition(new THREE.Vector3()).y;
-
-    let checked = 0;
-    for (let step = 1; step <= 8; step += 1) {
-      const t = step / 9;
-      // Height, and the limb that is at that height.
-      const y = hipY + (ankleY - hipY) * t;
-      const aboveKnee = y > kneeY;
-      const limb = aboveKnee
-        ? body.thighTopRadius + (body.thighMidRadius - body.thighTopRadius) *
-          ((hipY - y) / Math.max(1e-6, hipY - kneeY))
-        : body.kneeRadius + (body.calfRadius - body.kneeRadius) *
-          ((kneeY - y) / Math.max(1e-6, kneeY - ankleY));
-      // Where the leg's own axis is, so the check is against this pose.
-      const axis = (aboveKnee ? thigh : shin).getWorldPosition(new THREE.Vector3());
-
-      const outline = outlineOf(garment, y, 0.012);
-      if (outline.wrapped < BEARINGS - 2) continue; // above the hem or below it
-      checked += 1;
-      const where = `${presetId} at y=${y.toFixed(3)}`;
-      // The whole limb, all the way round it — not merely its extremes.
-      for (let turn = 0; turn < 16; turn += 1) {
-        const a = (turn / 16) * Math.PI * 2;
-        const onLimb = { x: axis.x + Math.sin(a) * limb, z: axis.z + Math.cos(a) * limb };
-        expect(
-          insideCloth(outline, onLimb.x, onLimb.z, 0),
-          `${where}: leg through the cloth at bearing ${Math.round((a * 180) / Math.PI)}°`,
-        ).toBe(true);
-      }
-    }
-    expect(checked, `${presetId}: nothing was checked`).toBeGreaterThan(3);
-    materials.dispose();
-  });
+  // There was a second test here, comparing the cloth against the body
+  // profile's limb radii. It is gone: those radii are now the radius that
+  // CONTAINS a limb about its own axis — which is what a band ornament
+  // needs — and the garment is cut to the measured leg ENVELOPE, the
+  // outer reach of both legs at a height. The two are different
+  // descriptions of a leg and they disagree by a few millimetres over the
+  // upper thigh, so the proxy was failing a garment the mesh itself says
+  // is correct. What follows judges the cloth against the actual body.
 
   it.each(full.map((preset) => preset.id))(
     "%s: no part of the real leg mesh stands outside the cloth",

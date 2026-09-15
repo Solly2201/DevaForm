@@ -922,9 +922,15 @@ const REGIONS = {
 };
 
 /**
- * The girth of one limb where a band ornament sits, measured as the mean
- * distance from the limb's axis. The axis is the segment between its two
- * joints, so this works whatever direction the limb hangs in.
+ * The girth of one limb where a band ornament sits: the radius that
+ * CONTAINS it, not the mean distance from its axis.
+ *
+ * A limb is not round. Fitted to the mean, a band sits outside the narrow
+ * axis and seven to nine millimetres inside the wide one — which is a
+ * bangle sunk into a forearm, on every body, for every band ornament any
+ * deity ever wears. The ninety-fifth percentile rather than the maximum,
+ * so one stray vertex at the edge of the sampling window cannot push
+ * every armlet a centimetre off the arm.
  */
 function limbBand(positions, group, fromJoint, toJoint, along) {
   const from = restFinal.get(fromJoint);
@@ -935,18 +941,20 @@ function limbBand(positions, group, fromJoint, toJoint, along) {
   const centre = from.clone().addScaledVector(axis, length * along);
   const band = length * 0.06;
   const point = new THREE.Vector3();
-  let total = 0;
-  let count = 0;
+  const radii = [];
   for (let i = 0; i < vertexCount; i += 1) {
     if (dominantGroup[i] !== group) continue;
     point.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]).sub(centre);
     const alongAxis = point.dot(axis);
     if (Math.abs(alongAxis) > band) continue;
-    total += point.addScaledVector(axis, -alongAxis).length();
-    count += 1;
+    radii.push(point.addScaledVector(axis, -alongAxis).length());
   }
-  if (!count) throw new Error(`no vertices for the ${group} band`);
-  return { offsetY: centre.y - from.y, radius: total / count };
+  if (radii.length === 0) throw new Error(`no vertices for the ${group} band`);
+  radii.sort((a, b) => a - b);
+  return {
+    offsetY: centre.y - from.y,
+    radius: radii[Math.min(radii.length - 1, Math.floor(radii.length * 0.95))],
+  };
 }
 
 /** Vertices of one body region whose y falls in [lo, hi]. */
@@ -1678,6 +1686,28 @@ function legEnvelope(positions) {
   };
 }
 
+/**
+ * The torso surface, and how each morph moves it.
+ *
+ * Everything that walks over the skin reads this map, and a map of the
+ * neutral body is the wrong body the moment a customer picks a build. The
+ * deltas are on the same grid, blended by the same influences the mesh
+ * itself is blended by.
+ */
+const torsoSurfaceWithMorphs = (() => {
+  const to5 = (value) => Number(value.toFixed(5));
+  const base = torsoSurfaceMap(finalMesh.neutral);
+  const morphs = {};
+  for (const [variant, morph] of Object.entries(MORPHS)) {
+    const shaped = torsoSurfaceMap(finalMesh[variant]);
+    morphs[morph] = {
+      centreZ: shaped.centreZ.map((value, i) => to5(value - base.centreZ[i])),
+      radius: shaped.radius.map((value, i) => to5(value - base.radius[i])),
+    };
+  }
+  return { ...base, morphs };
+})();
+
 const profileBase = profileBlock(measurements.neutral);
 // Per-morph deltas: the engine blends them by the same influences it feeds
 // the mesh, so a Powerful body's ornaments fit the Powerful body.
@@ -1716,7 +1746,12 @@ const glb = await new Promise((resolve, reject) => {
 await mkdir(OUT_DIR, { recursive: true });
 await writeFile(path.join(OUT_DIR, "model.glb"), Buffer.from(glb));
 
-const round = (value) => Number(value.toFixed(5));
+// A function declaration, so it hoists: measurement helpers further up
+// the file round their results, and a `const` arrow here made the order
+// of two unrelated blocks matter.
+function round(value) {
+  return Number(value.toFixed(5));
+}
 const round_ = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, round(v)]));
 const roundMorphs = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([name, delta]) => [name, round_(delta)]));
@@ -1768,7 +1803,7 @@ await writeFile(
       gripApertures,
       gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
-      torsoSurface: torsoSurfaceMap(finalMesh.neutral),
+      torsoSurface: torsoSurfaceWithMorphs,
       printability: { printSourceAvailable: false },
     },
     null,
@@ -1812,7 +1847,7 @@ await writeFile(
       gripApertures,
       gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
-      torsoSurface: torsoSurfaceMap(finalMesh.neutral),
+      torsoSurface: torsoSurfaceWithMorphs,
     },
     null,
     2,

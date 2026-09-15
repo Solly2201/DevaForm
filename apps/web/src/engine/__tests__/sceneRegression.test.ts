@@ -166,7 +166,15 @@ const PINNED = {
   // a hole cut through the dhoti in every three-quarter view. Every cloth
   // piece carries vertex colours now, and vertexColours.test.ts holds
   // every mesh of every pose of both deities to that.
-  shiva: { nodes: 334, digest: "10523c1e599cf110" },
+  //
+  // Six nodes more, for a damaru whose waist is long enough to be held —
+  // eighteen millimetres of straight is gripped by fingers that span
+  // thirty, so the outer two ran into the flare. And a new digest for
+  // three measurements the body got right this time: the radius that
+  // CONTAINS a limb rather than its mean (a bangle no longer sunk in a
+  // forearm), the hips centred where the body actually is rather than on
+  // the pelvis joint, and a torso surface that carries per-morph deltas.
+  shiva: { nodes: 340, digest: "26bd5d62c5ff8d68" },
 } as const;
 
 describe("protected characters do not move", () => {

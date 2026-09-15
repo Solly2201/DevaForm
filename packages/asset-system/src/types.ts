@@ -173,6 +173,16 @@ export interface MeasuredTorsoSurface {
   columns: number;
   centreZ: readonly number[];
   radius: readonly number[];
+  /**
+   * How each morph target moves that surface, as deltas on the same grid.
+   *
+   * The scalar profile has carried per-morph deltas from the start; this
+   * map did not, so everything routed over the skin — a serpent, a mala —
+   * was laid on the NEUTRAL body while the body itself was a Heroic one.
+   * At the default weights that buried a strand of rudraksha twelve
+   * millimetres in the chest.
+   */
+  morphs?: Readonly<Record<string, { centreZ: readonly number[]; radius: readonly number[] }>>;
 }
 
 /**

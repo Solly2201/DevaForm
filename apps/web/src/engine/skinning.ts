@@ -223,3 +223,45 @@ export function bakeSceneForExport(root: THREE.Object3D): {
     },
   };
 }
+
+/**
+ * Where one vertex of a deformed mesh actually IS, on the CPU.
+ *
+ * `SkinnedMesh.applyBoneTransform` skins a vertex but ignores morph
+ * targets, and this engine closes its hands with a morph: a fist measured
+ * with bone transforms alone is an open hand, so anything that asks the
+ * geometry a question — does this finger reach the object, does this
+ * ornament sit on the skin — has to add the morphs itself.
+ *
+ * The result is in the mesh's LOCAL space; apply `matrixWorld` for more.
+ */
+export function deformedVertex(
+  mesh: THREE.Mesh | THREE.SkinnedMesh,
+  index: number,
+  target: THREE.Vector3,
+): THREE.Vector3 {
+  const position = mesh.geometry.getAttribute("position");
+  target.fromBufferAttribute(position, index);
+  const morphs = mesh.geometry.morphAttributes.position;
+  const influences = mesh.morphTargetInfluences;
+  if (morphs && influences) {
+    const relative = mesh.geometry.morphTargetsRelative;
+    for (let m = 0; m < morphs.length; m += 1) {
+      const influence = influences[m] ?? 0;
+      if (influence === 0) continue;
+      const delta = morphs[m]!;
+      if (relative) {
+        target.x += delta.getX(index) * influence;
+        target.y += delta.getY(index) * influence;
+        target.z += delta.getZ(index) * influence;
+      } else {
+        target.x += (delta.getX(index) - position.getX(index)) * influence;
+        target.y += (delta.getY(index) - position.getY(index)) * influence;
+        target.z += (delta.getZ(index) - position.getZ(index)) * influence;
+      }
+    }
+  }
+  const skinned = mesh as THREE.SkinnedMesh;
+  if (skinned.isSkinnedMesh) skinned.applyBoneTransform(index, target);
+  return target;
+}

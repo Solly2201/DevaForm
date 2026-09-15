@@ -60,6 +60,7 @@ import {
   type CharacterConfiguration,
 } from "@devaform/character-schema";
 import { buildRig, poseRig } from "../rig";
+import { deformedVertex } from "../skinning";
 import { ZoneMaterials } from "../materials";
 
 /** The lowest point of the body itself, in the statue's own space. */
@@ -69,13 +70,8 @@ function lowestFlesh(rig: ReturnType<typeof buildRig>): number {
   for (const mesh of rig.bodyMeshes) {
     const position = mesh.geometry.getAttribute("position");
     mesh.updateWorldMatrix(true, false);
-    const skinned = (mesh as THREE.SkinnedMesh).isSkinnedMesh
-      ? (mesh as THREE.SkinnedMesh)
-      : null;
     for (let i = 0; i < position.count; i += 1) {
-      point.fromBufferAttribute(position, i);
-      if (skinned) skinned.applyBoneTransform(i, point);
-      point.applyMatrix4(mesh.matrixWorld);
+      deformedVertex(mesh, i, point).applyMatrix4(mesh.matrixWorld);
       lowest = Math.min(lowest, rig.root.worldToLocal(point).y);
     }
   }
