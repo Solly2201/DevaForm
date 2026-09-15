@@ -20,7 +20,7 @@
  * full-figure thumbnail.
  */
 import { Canvas, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as THREE from "three";
 import {
@@ -128,7 +128,7 @@ function Figure({
 }: {
   config: CharacterConfiguration;
   focus: readonly string[] | null;
-  onReady: (report: { warnings: string[]; height: number; centre: number }) => void;
+  onReady: (report: { warnings: string[]; height: number; centre: number; pending: string[] }) => void;
 }) {
   const [glbVersion, setGlbVersion] = useState(0);
   useEffect(() => subscribeGlbCache(() => setGlbVersion((v) => v + 1)), []);
@@ -158,7 +158,7 @@ function Figure({
       found.length > 0
         ? found.reduce((total, y) => total + y, 0) / found.length
         : box.max.y * 0.5;
-    onReady({ warnings: rigWarnings(rig), height: box.max.y, centre });
+    onReady({ warnings: rigWarnings(rig), height: box.max.y, centre, pending: rig.pending });
   }, [rig, focus, onReady]);
 
   useEffect(() => {
@@ -208,7 +208,20 @@ function Frame({
   return null;
 }
 
+/**
+ * The page reads its subject from the query string, which a prerender
+ * cannot know, so the part that reads it is suspended: without this the
+ * production build stops on /dev/qa rather than shipping the app.
+ */
 export default function QaCapturePage() {
+  return (
+    <Suspense fallback={null}>
+      <QaCapture />
+    </Suspense>
+  );
+}
+
+function QaCapture() {
   const params = useSearchParams();
   const config = useMemo(() => configFor(new URLSearchParams(params.toString())), [params]);
   const view = VIEWS[params.get("view") ?? "front"] ?? 0;
@@ -217,6 +230,7 @@ export default function QaCapturePage() {
     warnings: string[];
     height: number;
     centre: number;
+    pending: string[];
   } | null>(null);
   const preset = getLightingPreset("studio");
 
@@ -231,7 +245,9 @@ export default function QaCapturePage() {
   const onFramed = useMemo(() => () => setFramed(true), []);
 
   useEffect(() => {
-    if (!report || !framed) return;
+    // A GLB that has not arrived yet means a rebuild is coming, and a
+    // capture taken now is a picture of a figure with no body in it.
+    if (!report || !framed || report.pending.length > 0) return;
     // Let the framed camera render, then read the buffer: the canvas is
     // created with preserveDrawingBuffer so the last frame survives.
     const timer = setTimeout(() => {

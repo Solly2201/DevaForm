@@ -117,6 +117,53 @@ export function walkSurface(
 }
 
 /**
+ * Push every vertex of a finished piece of geometry out of the body.
+ *
+ * `walkSurface` guarantees the clearance for a path that IS a walk. Not
+ * everything is: a serpent's hood and head are a form built off the end of
+ * the route, and nothing about hand-placed control points keeps them
+ * outside a shoulder. Measured, the head of the naga had a tenth of its
+ * surface inside the figure — invisible from the front, and unarguable
+ * from the side.
+ *
+ * So the guarantee is made structural instead of hoped for: any vertex
+ * closer to the slice's own centre than the skin plus the clearance is
+ * moved radially out to exactly that. Vertices already clear are left
+ * alone, so a reared hood keeps its shape and only what was buried moves.
+ *
+ * `toChest` maps the geometry's own space into the chest-joint space the
+ * body's surface answers in.
+ */
+export function pushOutsideBody(
+  geometry: THREE.BufferGeometry,
+  body: BodyProfile,
+  toChest: { y: number; z: number },
+  clearance: number,
+): void {
+  const position = geometry.getAttribute("position");
+  let moved = 0;
+  for (let i = 0; i < position.count; i += 1) {
+    const x = position.getX(i);
+    const y = position.getY(i) + toChest.y;
+    const z = position.getZ(i) + toChest.z;
+    const centreZ = (body.surfaceAt(0, y).z + body.surfaceAt(Math.PI, y).z) / 2;
+    const bearing = Math.atan2(x, z - centreZ);
+    const skin = body.surfaceAt(bearing, y);
+    const here = Math.hypot(x, z - centreZ);
+    const there = Math.hypot(skin.x, skin.z - centreZ) + clearance;
+    if (here >= there || here < 1e-6) continue;
+    const scale = there / here;
+    position.setX(i, x * scale);
+    position.setZ(i, (z - centreZ) * scale + centreZ - toChest.z);
+    moved += 1;
+  }
+  if (moved > 0) {
+    position.needsUpdate = true;
+    geometry.computeVertexNormals();
+  }
+}
+
+/**
  * Smooth cubic interpolation through knotted values, with overshoot
  * limited (Fritsch–Carlson).
  *

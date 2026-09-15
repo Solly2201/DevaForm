@@ -961,7 +961,56 @@ function measure(positions) {
   const neckBand = slice(positions, neckY + 0.01, neckY + 0.05, "neck");
   const neckX = extent(neckBand, 0);
   const neckZ = extent(neckBand, 2);
-  const neckRadius = Math.max(neckX.half, neckZ.half);
+  const neckTopRadius = Math.max(neckX.half, neckZ.half);
+
+  /**
+   * Where the neck actually MEETS THE SHOULDERS.
+   *
+   * The neck joint is at the top of the neck, just under the skull — it
+   * is where the head turns, not where a collar rests. Taking it as the
+   * neck base put the necklace socket under the jaw, and every ornament
+   * hung from it sat on the chin: a naga torque round the throat, a mala
+   * across the windpipe. Nothing downstream could correct that, because
+   * every generator that drapes in socket space trusts this number.
+   *
+   * So it is found rather than assumed: scan down from the neck joint and
+   * stop where the column stops being a column — where the trapezius
+   * flares the girth past half again the neck's own width.
+   */
+  const FLARE = 1.45;
+  /**
+   * A slab through the neck, front to back: above the shoulders it holds
+   * only the neck, and the moment the trapezius arrives it widens. The
+   * slab is what lets the scan cross the bone-group boundary — below the
+   * neck joint the vertices belong to the chest, so a scan restricted to
+   * the neck's own group stops at the first step and learns nothing.
+   */
+  const columnHalfWidth = (y) => {
+    let half = 0;
+    let found = 0;
+    for (const region of ["neck", "torso"]) {
+      for (const point of slice(positions, y - 0.004, y + 0.004, region)) {
+        if (Math.abs(point[2] - neckZ.mid) > neckTopRadius * 1.3) continue;
+        half = Math.max(half, Math.abs(point[0]));
+        found += 1;
+      }
+    }
+    return found >= 6 ? half : null;
+  };
+  // Scan DOWNWARD from well up the neck. The neck joint is not above the
+  // shoulders on this rig — it sits at the line where the trapezius
+  // arrives — so a scan that starts there has already left the column and
+  // stops at once, which is how the base came out equal to the joint.
+  let neckBaseY = neckY + 0.04;
+  for (let step = 1; step <= 40; step += 1) {
+    const y = neckY + 0.04 - step * 0.002;
+    const half = columnHalfWidth(y);
+    if (half === null || half > neckTopRadius * FLARE) break;
+    neckBaseY = y;
+  }
+  // The column at its widest, which is what a torque wraps.
+  const neckRadius = columnHalfWidth(neckBaseY) ?? neckTopRadius;
+  const neckBaseZ = neckZ.mid;
 
   // Waist: the narrowest torso girth between pelvis and chest. Scanned
   // finely — a coarse scan quantises the waist height, and the morph
@@ -1068,8 +1117,8 @@ function measure(positions) {
     cranium,
     leg,
     neckRadius,
-    neckCentreZ: neckZ.mid,
-    neckBaseY: neckY,
+    neckCentreZ: neckBaseZ,
+    neckBaseY,
     waistY: waist.y,
     waistHalfWidth: waist.x.half,
     waistHalfDepth: waist.z.half,
@@ -1128,7 +1177,16 @@ function socketPositions(positions, m) {
     "head.leftEar": localTo("head", new THREE.Vector3(earX.hi - 0.006, earY, earZ.mid - 0.004)),
     "head.rightEar": localTo("head", new THREE.Vector3(earX.lo + 0.006, earY, earZ.mid - 0.004)),
     "head.moon": localTo("head", new THREE.Vector3(0.04, headTop - 0.03, 0.01)),
-    "chest.necklace": localTo("chest", new THREE.Vector3(0, m.neckBaseY - 0.01, m.neckCentreZ)),
+    // A collar rests ON the base of the neck, so the socket sits there —
+    // not ten millimetres under the neck JOINT, which is at the top of
+    // the neck and put every ornament on the chin.
+    "chest.necklace": localTo("chest", new THREE.Vector3(0, m.neckBaseY, m.neckCentreZ)),
+    // The mala seat shares the collar's point by design — what separates a
+    // torque from a hanging strand is the drop of the ornament, not the
+    // height of its anchor. It still has to be MEASURED: a socket the GLB
+    // does not carry keeps the schema default, and on this body that put
+    // the beads sixteen millimetres up and inside the chest.
+    "chest.mala": localTo("chest", new THREE.Vector3(0, m.neckBaseY, m.neckCentreZ)),
     "waist.ornament": localTo(
       "pelvis",
       new THREE.Vector3(0, m.waistY, m.waistCentreZ + m.waistHalfDepth),
@@ -1305,6 +1363,10 @@ function profileBlock(m) {
     // the stylised rig's spacing.
     spineToChestY: chest.y - spine.y,
     neckRadius: m.neckRadius,
+    // The necklace socket now sits exactly at the neck base, so this is
+    // zero — kept as a measurement rather than a constant because a body
+    // that seats its collar elsewhere still has to say where its neck
+    // begins.
     neckBaseOffsetY: m.neckBaseY - necklaceY,
     pelvisHalfWidth: m.hipHalfWidth,
     // Where a dhoti ties: on the hips, below the natural waist, which is
@@ -1440,6 +1502,52 @@ function torsoSurfaceMap(positions) {
   };
 }
 
+/**
+ * The envelope a wrapped lower garment has to contain: how far the legs
+ * reach, at a stack of heights from the hip to the ankle.
+ *
+ * A mean limb radius about the joint axis is not enough, and a garment
+ * built from one is not a fit — it is a guess that happens to be right at
+ * the front. A calf bulges backward by half again its mean, and both of
+ * this figure's calves stood outside a dhoti that looked perfectly well
+ * fitted from every angle but the back.
+ *
+ * So the garment gets a measurement, in the pelvis joint's own space, the
+ * way the torso already has one. Nothing here knows what will be worn
+ * over it.
+ */
+function legEnvelope(positions) {
+  const pelvis = restFinal.get("pelvis");
+  const hipY = restFinal.get("leg.left.thigh").y;
+  const ankleY = restFinal.get("leg.left.foot").y;
+  const ROWS = 14;
+  const halfWidth = [];
+  const frontZ = [];
+  const backZ = [];
+  for (let row = 0; row < ROWS; row += 1) {
+    const y = hipY + ((ankleY - hipY) * row) / (ROWS - 1);
+    const band = slice(positions, y - 0.012, y + 0.012, "legs");
+    if (band.length < 8) {
+      halfWidth.push(halfWidth[row - 1] ?? 0.05);
+      frontZ.push(frontZ[row - 1] ?? 0.05);
+      backZ.push(backZ[row - 1] ?? -0.05);
+      continue;
+    }
+    const x = extent(band, 0);
+    const z = extent(band, 2);
+    halfWidth.push(Math.max(Math.abs(x.lo), Math.abs(x.hi)));
+    frontZ.push(z.hi - pelvis.z);
+    backZ.push(z.lo - pelvis.z);
+  }
+  return {
+    topY: round(hipY - pelvis.y),
+    bottomY: round(ankleY - pelvis.y),
+    halfWidth: halfWidth.map(round),
+    frontZ: frontZ.map(round),
+    backZ: backZ.map(round),
+  };
+}
+
 const profileBase = profileBlock(measurements.neutral);
 // Per-morph deltas: the engine blends them by the same influences it feeds
 // the mesh, so a Powerful body's ornaments fit the Powerful body.
@@ -1528,6 +1636,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
       gripApertures,
+      legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceMap(finalMesh.neutral),
       printability: { printSourceAvailable: false },
     },
@@ -1570,6 +1679,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
       gripApertures,
+      legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceMap(finalMesh.neutral),
     },
     null,

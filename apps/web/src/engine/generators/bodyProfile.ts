@@ -20,6 +20,7 @@ import type { Proportions } from "@devaform/character-schema";
 import type {
   MeasuredBodyProfile,
   MeasuredBodySurfaces,
+  MeasuredLegEnvelope,
   MeasuredTorsoSurface,
 } from "@devaform/asset-system";
 
@@ -127,6 +128,69 @@ export interface BodyProfile {
    * others answer from the volume they were generated as.
    */
   surfaceAt(bearing: number, chestLocalY: number): { x: number; y: number; z: number };
+  /**
+   * How far the legs reach at a pelvis-local height: sideways, forward
+   * and back. What a wrapped lower garment has to contain.
+   *
+   * A measured body reports its own; a generated one answers from the
+   * limbs it was drawn with. Either way the garment asks rather than
+   * assuming a limb is a cylinder around its joint — a calf is not, and a
+   * dhoti lofted from a mean radius leaves both calves outside the cloth
+   * from behind while looking perfectly fitted from the front.
+   */
+  legExtentAt(pelvisLocalY: number): { halfWidth: number; frontZ: number; backZ: number };
+}
+
+/** Read a measured leg envelope at a height, linearly between rows. */
+function sampleLegEnvelope(
+  envelope: MeasuredLegEnvelope,
+  y: number,
+): { halfWidth: number; frontZ: number; backZ: number } {
+  const rows = envelope.halfWidth.length;
+  const span = envelope.bottomY - envelope.topY;
+  const at = Math.min(
+    rows - 1,
+    Math.max(0, (Math.abs(span) < 1e-9 ? 0 : (y - envelope.topY) / span) * (rows - 1)),
+  );
+  const low = Math.floor(at);
+  const high = Math.min(rows - 1, low + 1);
+  const t = at - low;
+  const mix = (values: readonly number[]) =>
+    (values[low] ?? 0) * (1 - t) + (values[high] ?? 0) * t;
+  return {
+    halfWidth: mix(envelope.halfWidth),
+    frontZ: mix(envelope.frontZ),
+    backZ: mix(envelope.backZ),
+  };
+}
+
+/**
+ * The leg extent a body without a measured envelope reports: the limbs
+ * its own generator drew, as cylinders about their joints. Honest for a
+ * body that IS cylinders.
+ */
+function generatedLegExtent(
+  profile: Pick<
+    BodyProfile,
+    "legSpreadX" | "thighTopRadius" | "thighMidRadius" | "kneeRadius" | "calfRadius" | "thighLength" | "shinLength" | "thighSeatY"
+  >,
+  y: number,
+): { halfWidth: number; frontZ: number; backZ: number } {
+  const below = profile.thighSeatY - y;
+  const radius =
+    below <= 0
+      ? profile.thighTopRadius
+      : below < profile.thighLength
+        ? profile.thighTopRadius +
+          (profile.kneeRadius - profile.thighTopRadius) * (below / profile.thighLength)
+        : profile.kneeRadius +
+          (profile.calfRadius - profile.kneeRadius) *
+            Math.min(1, (below - profile.thighLength) / Math.max(1e-6, profile.shinLength));
+  return {
+    halfWidth: profile.legSpreadX + radius,
+    frontZ: radius,
+    backZ: -radius,
+  };
 }
 
 /**
@@ -251,10 +315,16 @@ export function deriveBodyProfile(
     profile: MeasuredBodyProfile;
     morphs: Readonly<Record<string, number>>;
     torsoSurface?: MeasuredTorsoSurface;
+    legEnvelope?: MeasuredLegEnvelope;
   },
 ): BodyProfile {
   if (measured) {
-    return deriveMeasuredProfile(measured.profile, measured.morphs, measured.torsoSurface);
+    return deriveMeasuredProfile(
+      measured.profile,
+      measured.morphs,
+      measured.torsoSurface,
+      measured.legEnvelope,
+    );
   }
   // The athletic (masculine human) body declares itself via its params —
   // pure data, so the engine never asks WHICH deity wears it.
@@ -301,6 +371,18 @@ export function deriveBodyProfile(
       2 * bellyCenterZ - bellySurfaceZAt(x, y + SPINE_TO_CHEST_Y),
     );
 
+  // The legs the classic body generator draws (see body.ts).
+  const legs = {
+    thighTopRadius: 0.062 * bulk,
+    thighMidRadius: 0.056 * bulk,
+    kneeRadius: 0.042 * bulk,
+    calfRadius: 0.046 * bulk,
+    thighLength: 0.2,
+    shinLength: 0.19,
+    legSpreadX: 0.075 * bulk,
+    thighSeatY: -0.05,
+  };
+
   return {
     belly,
     chest,
@@ -331,15 +413,7 @@ export function deriveBodyProfile(
     wristBandRadius: 0.03 * bulk,
     ankleBandOffsetY: 0.018,
     ankleBandRadius: 0.043,
-    // The legs the classic body generator draws (see body.ts).
-    thighTopRadius: 0.062 * bulk,
-    thighMidRadius: 0.056 * bulk,
-    kneeRadius: 0.042 * bulk,
-    calfRadius: 0.046 * bulk,
-    thighLength: 0.2,
-    shinLength: 0.19,
-    legSpreadX: 0.075 * bulk,
-    thighSeatY: -0.05,
+    ...legs,
     // The socket the stylised skeleton declares (see sockets.ts).
     necklaceSocketY: 0.12,
     necklaceSocketZ: 0.01,
@@ -365,6 +439,7 @@ export function deriveBodyProfile(
         spineToChestY: SPINE_TO_CHEST_Y,
         neckRadius,
       }),
+    legExtentAt: (y: number) => generatedLegExtent(legs, y),
   };
 }
 
@@ -418,6 +493,7 @@ function deriveMeasuredProfile(
   measured: MeasuredBodyProfile,
   morphs: Readonly<Record<string, number>>,
   torsoSurface?: MeasuredTorsoSurface,
+  legEnvelope?: MeasuredLegEnvelope,
 ): BodyProfile {
   const value = (key: keyof MeasuredBodySurfaces): number => {
     let total = measured.base[key];
@@ -550,6 +626,22 @@ function deriveMeasuredProfile(
     torsoSurfaceZAt,
     torsoBackZAt,
     surfaceAt,
+    legExtentAt: (y: number) =>
+      legEnvelope
+        ? sampleLegEnvelope(legEnvelope, y)
+        : generatedLegExtent(
+            {
+              legSpreadX: value("legSpreadX"),
+              thighTopRadius: value("thighTopRadius"),
+              thighMidRadius: value("thighMidRadius"),
+              kneeRadius: value("kneeRadius"),
+              calfRadius: value("calfRadius"),
+              thighLength: value("thighLength"),
+              shinLength: value("shinLength"),
+              thighSeatY: value("thighSeatY"),
+            },
+            y,
+          ),
   };
 }
 
@@ -606,6 +698,18 @@ function deriveAthleticProfile(
   // Mirrors the bodyAthletic neck loft (base rx 0.052 -> 0.037).
   const neckRadius = 0.046 * bulk;
 
+  // The legs the classic body generator draws (see body.ts).
+  const legs = {
+    thighTopRadius: 0.062 * bulk,
+    thighMidRadius: 0.056 * bulk,
+    kneeRadius: 0.042 * bulk,
+    calfRadius: 0.046 * bulk,
+    thighLength: 0.2,
+    shinLength: 0.19,
+    legSpreadX: 0.075 * bulk,
+    thighSeatY: -0.05,
+  };
+
   return {
     belly: waist, // raw driver of the lower-torso volume
     chest,
@@ -638,15 +742,7 @@ function deriveAthleticProfile(
     wristBandRadius: 0.03 * bulk,
     ankleBandOffsetY: 0.018,
     ankleBandRadius: 0.043,
-    // The legs the classic body generator draws (see body.ts).
-    thighTopRadius: 0.062 * bulk,
-    thighMidRadius: 0.056 * bulk,
-    kneeRadius: 0.042 * bulk,
-    calfRadius: 0.046 * bulk,
-    thighLength: 0.2,
-    shinLength: 0.19,
-    legSpreadX: 0.075 * bulk,
-    thighSeatY: -0.05,
+    ...legs,
     // The socket the stylised skeleton declares (see sockets.ts).
     necklaceSocketY: 0.12,
     necklaceSocketZ: 0.01,
@@ -672,5 +768,6 @@ function deriveAthleticProfile(
         spineToChestY: SPINE_TO_CHEST_Y,
         neckRadius,
       }),
+    legExtentAt: (y: number) => generatedLegExtent(legs, y),
   };
 }

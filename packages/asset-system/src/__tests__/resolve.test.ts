@@ -124,7 +124,13 @@ describe("a gesture hand holds nothing", () => {
 
   it("moves a mobile attribute to a free hand when there is one", () => {
     const config = createDefaultShivaConfiguration();
-    const fourArmed = { ...withPose(config, "shiva.blessing"), arms: { count: 4 as const } };
+    const fourArmed = {
+      ...withPose(config, "shiva.blessing"),
+      // A four-armed body, because that is the question: the default mesh
+      // body has two, and two gesturing hands leave nowhere to move to.
+      parts: { ...config.parts, body: { assetId: "shiva.body.classic", version: 1 } },
+      arms: { count: 4 as const },
+    };
     const resolved = resolveCharacterPresentation(fourArmed);
     const damaru = attachmentFor(resolved, "shiva.attribute.damaru");
     expect(damaru, "a free back hand can take it").toBeDefined();

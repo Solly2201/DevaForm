@@ -2,6 +2,7 @@ import type * as THREE from "three";
 import type {
   ArmSlot,
   ArmsConfiguration,
+  GarmentFit,
   HandsConfiguration,
   JointId,
   Proportions,
@@ -48,6 +49,13 @@ export interface GeneratorContext {
    * pose-compatible geometry (a draped lap instead of a full skirt).
    */
   seated: boolean;
+  /**
+   * How cloth is worn in this pose — full, gathered or short. Declared by
+   * the pose itself (see PosePreset.garment) rather than inferred, so a
+   * dancing figure's wrap is short because the pose says a leg is out,
+   * not because the renderer noticed a leg through a skirt.
+   */
+  garment: GarmentFit;
   /**
    * Measured torso surfaces of the configured body — clothing and
    * ornaments fit themselves against these instead of absolute

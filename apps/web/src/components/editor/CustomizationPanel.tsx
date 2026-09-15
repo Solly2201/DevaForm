@@ -6,7 +6,14 @@
  * grids per socket, and hands/pose/materials/base render dedicated panels.
  */
 import { useState } from "react";
-import { presentationsOf, getAsset, listAssets, type EditorCategory } from "@devaform/asset-system";
+import {
+  armOptionsFor,
+  coveredFeatures,
+  getAsset,
+  listAssets,
+  presentationsOf,
+  type EditorCategory,
+} from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
 import {
   FACE_MORPHS,
@@ -62,10 +69,25 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 function PartSlotSection({ slot }: { slot: PartSlot }) {
-  const deity = useEditorStore((s) => s.config.deity);
-  const selected = useEditorStore((s) => s.config.parts[slot]);
+  const config = useEditorStore((s) => s.config);
+  const selected = config.parts[slot];
   const setPart = useEditorStore((s) => s.setPart);
-  const assets = listAssets({ deity, slot });
+  const assets = listAssets({ deity: config.deity, slot });
+  // A body that is one continuous mesh brings its own head, face, eyes
+  // and hands. An empty picker in front of a figure whose head is part of
+  // its body is not a customisation, so the slot says what has it instead.
+  const covered = coveredFeatures(config);
+  if (covered.features.has(slot)) {
+    return (
+      <section>
+        <SectionHeading>{SLOT_LABELS[slot]}</SectionHeading>
+        <p className="text-[11px] text-stone-500">
+          Part of {covered.provider?.name ?? "the selected body"} — choose a different
+          body to swap it.
+        </p>
+      </section>
+    );
+  }
   if (assets.length === 0 && !selected) return null;
   return (
     <section>
@@ -76,6 +98,62 @@ function PartSlotSection({ slot }: { slot: PartSlot }) {
         allowNone={OPTIONAL_SLOTS.includes(slot)}
         onSelect={(assetId) => setPart(slot, assetId)}
       />
+    </section>
+  );
+}
+
+const BODY_VARIANT_MORPHS = new Set([
+  "bodyLean",
+  "bodyAthletic",
+  "bodyPowerful",
+  "bodyHeroic",
+  "bodyAscetic",
+]);
+
+/**
+ * Build, as a choice between silhouettes rather than a row of sliders.
+ *
+ * `references/ref3.png` shows Classic, Ascetic and Mahayogi as three
+ * builds of one figure — which is what they are, morph weights on one
+ * mesh. The customer chooses the silhouette; the weights are an
+ * implementation detail they should never have to assemble by hand.
+ */
+function BodyVariantSection() {
+  const deity = useDeity();
+  const morphs = useEditorStore((s) => s.config.morphs);
+  const parts = useEditorStore((s) => s.config.parts);
+  const setMorph = useEditorStore((s) => s.setMorph);
+  const variants = deity.bodyVariants ?? [];
+  const exposed = new Set(resolveAssetRef(parts.body)?.morphTargets ?? []);
+  // Only offer builds the selected body can actually take.
+  const available = variants.filter((variant) =>
+    Object.keys(variant.morphs).some((name) => exposed.has(name)),
+  );
+  if (available.length < 2) return null;
+  const matches = (variant: (typeof available)[number]) =>
+    [...BODY_VARIANT_MORPHS].every(
+      (name) => Math.abs((morphs[name] ?? 0) - (variant.morphs[name] ?? 0)) < 1e-6,
+    );
+  const active = available.find(matches);
+  return (
+    <section>
+      <SectionHeading>Build</SectionHeading>
+      <SegmentedControl<string>
+        options={available.map((variant) => ({ value: variant.id, label: variant.label }))}
+        value={active?.id ?? ""}
+        onChange={(id) => {
+          const chosen = available.find((variant) => variant.id === id);
+          if (!chosen) return;
+          // Clear the build morphs this deity knows about, then set the
+          // variant's — so switching builds cannot leave a trace of the
+          // previous one behind.
+          for (const name of BODY_VARIANT_MORPHS) setMorph(name, 0);
+          for (const [name, value] of Object.entries(chosen.morphs)) setMorph(name, value);
+        }}
+      />
+      <p className="mt-2 text-[11px] text-stone-500">
+        {active?.description ?? "Custom build."}
+      </p>
     </section>
   );
 }
@@ -248,13 +326,16 @@ const ARM_OPTION_LABELS: Record<number, string> = {
 function ArmCountSection() {
   const deity = useDeity();
   const arms = useEditorStore((s) => s.config.arms);
+  const body = useEditorStore((s) => s.config.parts.body);
   const setArmCount = useEditorStore((s) => s.setArmCount);
-  if (deity.armOptions.length < 2) return null;
+  // What this BODY can render, not merely what the iconography allows.
+  const options = armOptionsFor(deity, resolveAssetRef(body));
+  if (options.length < 2) return null;
   return (
     <section>
       <SectionHeading>Arms</SectionHeading>
       <SegmentedControl<"2" | "4">
-        options={deity.armOptions.map((count) => ({
+        options={options.map((count) => ({
           value: String(count) as "2" | "4",
           label: ARM_OPTION_LABELS[count] ?? `${count} Arms`,
         }))}
@@ -391,6 +472,7 @@ function useSubsections(category: EditorCategory): Subsection[] {
           label: "Arms & Build",
           node: (
             <>
+              <BodyVariantSection />
               <ArmCountSection />
               <ProportionsSection />
             </>

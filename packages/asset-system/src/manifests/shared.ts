@@ -19,8 +19,10 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
     description:
       "Continuous skinned human male body: one mesh, canonical rest pose, GPU morph targets for build. Derived from an official MakeHuman export (CC0) and retargeted by apps/web/scripts/build-human-base.mjs.",
     kind: { type: "part", slot: "body" },
-    deityCompatibility: [],
-    stage: "experimental",
+    // Offered to Shiva, who is human-formed. Not "any": this mesh brings
+    // its own head, and a deity with an elephant one would wear two.
+    deityCompatibility: ["shiva"],
+    stage: "integration",
     source: { kind: "glb", path: "/assets/foundations/bodies/human/1/model.glb" },
     skeleton: "human",
     provenance: {
@@ -59,8 +61,8 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
     bodyProfile: {
       base: {
         spineToChestY: 0.11374,
-        neckRadius: 0.03246,
-        neckBaseOffsetY: 0.01,
+        neckRadius: 0.04491,
+        neckBaseOffsetY: 0,
         pelvisHalfWidth: 0.08453,
         waistSeatY: 0.057,
         dhotiRadius: 0.11172,
@@ -90,14 +92,14 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         shinLength: 0.246,
         legSpreadX: 0.06121,
         thighSeatY: -0.00683,
-        necklaceSocketY: 0.10373,
+        necklaceSocketY: 0.11773,
         necklaceSocketZ: 0.03604,
       },
       morphs: {
         bodyLean: {
           spineToChestY: 0,
-          neckRadius: -0.00121,
-          neckBaseOffsetY: 0,
+          neckRadius: -0.00114,
+          neckBaseOffsetY: -0.002,
           pelvisHalfWidth: -0.00169,
           waistSeatY: 0.00185,
           dhotiRadius: -0.00299,
@@ -132,8 +134,8 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
         bodyAthletic: {
           spineToChestY: 0,
-          neckRadius: -0.00029,
-          neckBaseOffsetY: 0,
+          neckRadius: -0.00062,
+          neckBaseOffsetY: -0.002,
           pelvisHalfWidth: 0.0019,
           waistSeatY: 0.00495,
           dhotiRadius: -0.00124,
@@ -168,8 +170,8 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
         bodyPowerful: {
           spineToChestY: 0,
-          neckRadius: 0.00574,
-          neckBaseOffsetY: 0,
+          neckRadius: 0.00594,
+          neckBaseOffsetY: 0.004,
           pelvisHalfWidth: 0.00363,
           waistSeatY: -0.00135,
           dhotiRadius: 0.00229,
@@ -204,7 +206,7 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
         bodyHeroic: {
           spineToChestY: 0,
-          neckRadius: 0.00185,
+          neckRadius: 0.00388,
           neckBaseOffsetY: 0,
           pelvisHalfWidth: -0.00295,
           waistSeatY: 0,
@@ -240,8 +242,8 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
         faceDivine: {
           spineToChestY: 0,
-          neckRadius: -0.00112,
-          neckBaseOffsetY: 0,
+          neckRadius: -0.00011,
+          neckBaseOffsetY: -0.002,
           pelvisHalfWidth: -0.00021,
           waistSeatY: 0,
           dhotiRadius: -0.00017,
@@ -276,7 +278,7 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
         bodyAscetic: {
           spineToChestY: 0,
-          neckRadius: -0.00057,
+          neckRadius: -0.00022,
           neckBaseOffsetY: 0,
           pelvisHalfWidth: -0.00159,
           waistSeatY: -0.00045,
@@ -348,12 +350,26 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
       centreZ: [0.03628, 0.04243, 0.04251, 0.04433, 0.04491, 0.04829, 0.05007, 0.04779, 0.04526, 0.04447, 0.04512, 0.04479, 0.04152, 0.03706, 0.03545, 0.04114, 0.06315, 0.06564, 0.06095, 0.05642],
       radius: [0.03257, 0.03254, 0.03155, 0.00764, 0.00764, 0.00764, 0.00764, 0.00764, 0.00764, 0.00764, 0.00764, 0.00505, 0.00517, 0.0262, 0.03327, 0.03357, 0.03257, 0.0335, 0.03323, 0.03169, 0.00517, 0.00508, 0.00508, 0.00508, 0.00508, 0.00508, 0.00508, 0.00508, 0.00764, 0.00764, 0.03155, 0.03254, 0.04772, 0.04777, 0.04796, 0.04698, 0.00266, 0.00269, 0.00262, 0.00262, 0.00262, 0.00262, 0.00262, 0.00262, 0.0102, 0.0102, 0.03897, 0.04724, 0.04772, 0.04724, 0.03897, 0.01019, 0.01019, 0.01019, 0.01019, 0.01019, 0.01019, 0.01019, 0.00262, 0.00269, 0.00266, 0.04698, 0.04796, 0.04781, 0.05582, 0.05773, 0.06042, 0.06128, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05979, 0.05517, 0.05582, 0.05517, 0.05517, 0.05517, 0.05517, 0.05517, 0.05517, 0.05517, 0.05517, 0.05517, 0.05517, 0.05979, 0.05979, 0.06128, 0.06042, 0.05773, 0.05885, 0.06078, 0.06357, 0.06631, 0.06651, 0.06415, 0.06415, 0.06415, 0.06415, 0.06415, 0.06415, 0.06415, 0.06415, 0.06415, 0.05565, 0.05837, 0.05885, 0.05837, 0.05565, 0.05565, 0.05565, 0.05565, 0.05565, 0.05565, 0.05565, 0.05565, 0.06415, 0.06415, 0.06651, 0.06631, 0.06357, 0.06078, 0.0596, 0.06227, 0.0656, 0.06939, 0.07613, 0.07978, 0.08234, 0.08462, 0.08453, 0.08363, 0.08145, 0.07845, 0.07479, 0.07036, 0.06321, 0.06093, 0.0596, 0.06093, 0.06321, 0.07036, 0.07479, 0.07845, 0.08145, 0.08363, 0.08453, 0.08463, 0.08235, 0.07977, 0.07612, 0.06939, 0.0656, 0.06227, 0.0561, 0.05909, 0.06247, 0.06658, 0.07374, 0.07701, 0.07919, 0.08102, 0.08204, 0.08207, 0.08074, 0.07779, 0.07367, 0.06829, 0.06363, 0.06091, 0.05549, 0.06092, 0.06363, 0.06829, 0.07367, 0.07779, 0.08074, 0.08207, 0.08204, 0.08102, 0.07919, 0.07701, 0.07373, 0.06658, 0.06247, 0.05909, 0.05384, 0.05577, 0.05805, 0.06289, 0.06944, 0.07429, 0.07687, 0.07837, 0.07858, 0.07724, 0.07637, 0.07423, 0.07017, 0.06489, 0.06078, 0.05697, 0.05352, 0.05697, 0.06078, 0.06489, 0.07017, 0.07423, 0.07637, 0.07724, 0.07858, 0.07837, 0.07688, 0.07429, 0.06944, 0.06289, 0.05805, 0.05577, 0.05529, 0.05898, 0.06259, 0.06603, 0.07119, 0.07379, 0.07495, 0.07621, 0.07595, 0.07574, 0.07484, 0.07452, 0.07156, 0.06811, 0.06329, 0.05951, 0.05494, 0.05951, 0.06329, 0.06811, 0.07156, 0.07452, 0.07484, 0.07574, 0.07595, 0.07621, 0.07495, 0.07379, 0.07119, 0.06603, 0.06259, 0.05898, 0.05816, 0.06177, 0.06706, 0.07093, 0.07469, 0.07663, 0.07767, 0.07955, 0.0795, 0.07989, 0.07954, 0.07885, 0.07593, 0.07072, 0.06744, 0.06263, 0.05626, 0.06263, 0.06744, 0.07072, 0.07593, 0.07885, 0.07954, 0.07989, 0.0795, 0.07955, 0.07767, 0.07663, 0.07469, 0.07093, 0.06706, 0.06177, 0.05946, 0.06564, 0.07214, 0.0759, 0.07779, 0.08032, 0.08225, 0.08407, 0.08478, 0.08598, 0.08598, 0.08268, 0.07922, 0.07469, 0.06974, 0.06478, 0.05721, 0.06478, 0.06974, 0.07469, 0.07922, 0.08268, 0.08598, 0.08598, 0.08478, 0.08407, 0.08226, 0.08033, 0.07779, 0.0759, 0.07214, 0.06564, 0.05916, 0.06771, 0.07519, 0.0809, 0.08856, 0.09101, 0.09223, 0.09872, 0.09987, 0.09717, 0.08991, 0.08811, 0.08668, 0.07786, 0.07298, 0.06721, 0.06021, 0.06721, 0.07298, 0.07786, 0.08668, 0.08811, 0.08991, 0.09717, 0.09987, 0.09872, 0.09223, 0.09107, 0.08861, 0.0809, 0.07519, 0.06771, 0.05807, 0.06742, 0.07565, 0.08311, 0.09393, 0.10331, 0.11035, 0.11417, 0.11359, 0.10866, 0.09053, 0.08927, 0.08801, 0.08464, 0.07622, 0.0668, 0.05988, 0.0668, 0.07621, 0.08463, 0.08801, 0.08927, 0.09053, 0.10866, 0.11359, 0.11417, 0.11035, 0.10333, 0.09393, 0.08311, 0.07565, 0.06742, 0.05736, 0.06383, 0.07171, 0.0832, 0.09624, 0.11242, 0.12158, 0.12395, 0.12156, 0.10473, 0.08855, 0.08838, 0.08764, 0.08212, 0.07272, 0.06048, 0.05598, 0.06048, 0.07272, 0.08212, 0.08764, 0.08838, 0.08855, 0.10473, 0.12156, 0.12395, 0.12158, 0.11245, 0.09624, 0.0832, 0.07171, 0.06383, 0.05237, 0.05581, 0.06209, 0.07372, 0.10262, 0.1149, 0.1194, 0.11932, 0.11465, 0.08505, 0.08438, 0.08539, 0.08313, 0.07637, 0.06236, 0.05399, 0.04676, 0.05399, 0.06236, 0.07637, 0.08313, 0.08539, 0.08438, 0.08505, 0.1147, 0.11937, 0.11944, 0.11493, 0.09781, 0.07372, 0.0621, 0.05581, 0.04131, 0.04445, 0.05526, 0.05776, 0.07943, 0.10613, 0.11041, 0.11045, 0.10625, 0.08246, 0.08065, 0.07676, 0.06314, 0.05953, 0.04969, 0.04238, 0.03848, 0.04238, 0.04969, 0.05953, 0.06314, 0.07676, 0.08065, 0.08246, 0.10625, 0.11045, 0.11041, 0.10613, 0.07943, 0.05789, 0.05535, 0.04445, 0.03937, 0.03927, 0.03832, 0.03401, 0.04204, 0.0622, 0.08683, 0.08925, 0.08825, 0.07723, 0.07678, 0.07337, 0.06432, 0.05321, 0.04623, 0.03718, 0.03577, 0.03718, 0.04623, 0.05321, 0.06432, 0.07337, 0.07678, 0.07723, 0.08772, 0.08875, 0.08637, 0.06225, 0.04205, 0.03401, 0.03832, 0.03927, 0.0501, 0.0494, 0.04744, 0.04389, 0.04126, 0.03766, 0.0345, 0.0332, 0.03176, 0.05947, 0.06185, 0.06186, 0.0595, 0.05752, 0.05289, 0.05176, 0.0501, 0.05176, 0.05289, 0.05752, 0.05949, 0.06186, 0.06185, 0.05946, 0.03176, 0.0332, 0.0345, 0.03766, 0.04126, 0.04389, 0.04744, 0.0494, 0.05595, 0.05497, 0.05213, 0.04465, 0.04406, 0.04278, 0.04077, 0.03829, 0.04497, 0.04678, 0.04678, 0.04507, 0.04548, 0.04915, 0.05262, 0.05488, 0.05595, 0.05488, 0.05262, 0.04915, 0.04548, 0.04507, 0.04678, 0.04678, 0.04497, 0.03829, 0.04077, 0.04278, 0.04406, 0.04465, 0.05213, 0.05497, 0.06064, 0.05957, 0.05646, 0.05117, 0.0496, 0.04658, 0.04319, 0.04303, 0.04803, 0.04989, 0.04995, 0.0481, 0.05179, 0.05517, 0.05778, 0.0597, 0.06064, 0.0597, 0.05778, 0.05517, 0.05179, 0.0481, 0.04995, 0.04989, 0.04803, 0.04303, 0.04319, 0.04658, 0.0496, 0.05117, 0.05646, 0.05957, 0.05613, 0.05677, 0.05675, 0.05553, 0.05309, 0.04882, 0.04438, 0.04502, 0.04803, 0.049, 0.04822, 0.04656, 0.0499, 0.05246, 0.05434, 0.05531, 0.05613, 0.05531, 0.05434, 0.05246, 0.0499, 0.04656, 0.04822, 0.049, 0.04803, 0.04502, 0.04438, 0.04882, 0.05309, 0.05553, 0.05675, 0.05677],
     },
+    legEnvelope: {
+      topY: -0.00683,
+      bottomY: -0.5115,
+      halfWidth: [0.09182, 0.09688, 0.09927, 0.09857, 0.09682, 0.09038, 0.08953, 0.09191, 0.09895, 0.09826, 0.09366, 0.08755, 0.08071, 0.08257],
+      frontZ: [0.06207, 0.05704, 0.05634, 0.05543, 0.05032, 0.03904, 0.02983, 0.01923, 0.01506, 0.01356, 0.01224, 0.011, 0.01324, 0.00531],
+      backZ: [-0.0561, -0.04663, -0.03784, -0.03713, -0.03805, -0.03494, -0.0389, -0.0462, -0.05175, -0.04983, -0.04372, -0.03659, -0.03443, -0.03408],
+    },
     // </measured humanoid.body.human>
     materialZones: ["skin"],
     category: "body",
     printability: {
       printSourceAvailable: false,
-      notes: "Evaluation asset: not validated for manufacturing.",
+      // Honest: this is the render mesh. A print run needs a
+      // watertight, decimation-checked source at print resolution, and
+      // there is not one yet. Recorded here rather than implied by
+      // silence, because the configuration is meant to be manufacturable
+      // and the data model has to say when it is not.
+      minStatueHeightMm: 150,
+      notes:
+        "Render-resolution mesh. No watertight print source yet; the face and hands carry detail that needs at least 150 mm to survive.",
     },
   },
   {
@@ -363,11 +379,15 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
     description:
       "Shiva's animal-hide lower cloth, cut to a measured body: wrapped over the hips, carried down each leg by the leg itself, torn at the hem and marked in its own vertex colours.",
     kind: { type: "part", slot: "lowerGarment" },
-    // Offered to no deity yet: it is only sound on a body that reports
-    // real measurements, and the mesh body is still a candidate.
-    deityCompatibility: [],
-    stage: "experimental",
-    source: { kind: "procedural", generatorId: "humanoid.hideWrap", params: { length: 1 } },
+    // Only sound on a body that reports real measurements. The mesh body
+    // does; the stylised ones do not, and they keep their own dhoti.
+    deityCompatibility: ["shiva"],
+    stage: "integration",
+    source: {
+      kind: "procedural",
+      generatorId: "humanoid.hideWrap",
+      params: { length: 1, hide: 1, dhoti: 0, drape: 0 },
+    },
     provenance: {
       type: "procedural",
       tool: "apps/web/src/engine/generators/hideGarment.ts",

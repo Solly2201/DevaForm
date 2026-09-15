@@ -22,9 +22,8 @@ import {
   TRISHUL_SHAFT_RADIUS,
   TRISHUL_TRAVEL,
 } from "@devaform/asset-system";
-import { chestZAtSocket } from "./ornaments";
 import { REFERENCE_SKULL, handFit, headFit } from "./bodyProfile";
-import { walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
+import { pushOutsideBody, walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
 
 // ---------------------------------------------------------------------------
 // HEAD — serene divine face with human ears
@@ -181,134 +180,205 @@ export const shivaHead: PartGenerator = (ctx) => {
 /**
  * The mane of matted hair.
  *
- * A few tubes hanging behind the ears read as strands stuck to a head.
- * What the iconography shows is mass: a body of hair falling from the
- * crown, spreading over the shoulders and down the back, with individual
- * locks catching the light on top of it. So the mass is built first, as a
- * shell that follows the skull and then flares to the shoulders of the
- * body actually wearing it, and the locks are laid over that.
+ * Built twice before. A few tubes hanging behind the ears read as strands
+ * stuck to a head; an open shell that flared to the shoulders read as two
+ * flat planks standing beside the face, because an open surface has no
+ * thickness and its cut edge is a straight vertical line — exactly the
+ * silhouette hair never has.
  *
- * Sized from the body, not from the jata's reference skull: how far hair
- * falls is a fact about the wearer's back, not about the hairpiece.
+ * So the mass is a CLOSED volume with an outer and an inner surface joined
+ * at the rim, and how far it falls depends on the bearing: long down the
+ * back, short where it comes forward past the ears, which is what gives a
+ * head of hair its curved outline. Locks are laid over the volume, and a
+ * few are brought forward over each shoulder, because hair falls where the
+ * head is and not only behind it.
+ *
+ * Every dimension comes from the body wearing it: how wide a skull, how
+ * broad a back. The same jata sits on a stylised figure and on a measured
+ * human one without a constant changing.
  */
+function hairMass(
+  ctx: GeneratorContext,
+  length: number,
+): { geometry: THREE.BufferGeometry; top: number; fall: number; width: (t: number) => number } {
+  const skull = ctx.body.headRadius;
+  const shoulder = ctx.body.chestRadiusX;
+  const top = ctx.body.headCenterY + skull * 0.5;
+  // To the middle of the back, as the iconography shows.
+  const fall = length * (skull * 1.5 + shoulder * 2.1);
+
+  // The face stays clear: the volume spans everything but a frontal arc.
+  const open = Math.PI * 0.34;
+  const from = Math.PI / 2 + open;
+  const span = Math.PI * 2 - open * 2;
+  const rows = 22;
+  const cols = 34;
+
+  /** Half-width of the mass at depth t: hugs the skull, then broadens. */
+  const width = (t: number): number =>
+    skull * 1.07 + (Math.min(shoulder * 0.76, skull * 2.35) - skull * 1.07) *
+      Math.min(1, Math.pow(t * 2.1, 1.15));
+
+  /**
+   * How far the hair falls on a given bearing. Full length down the back,
+   * a quarter of it where the mass comes forward past the ear — a head of
+   * hair is longest behind and shortest at the temples, and it is that
+   * curve, not the length, that makes the outline read as hair.
+   */
+  const reach = (s: number): number => {
+    const edge = Math.min(s, 1 - s) * 2; // 0 at the open edges, 1 at the back
+    return 0.24 + 0.76 * Math.pow(Math.min(1, edge * 1.35), 0.85);
+  };
+
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const surface = (inner: boolean) => {
+    const base = positions.length / 3;
+    for (let row = 0; row <= rows; row += 1) {
+      const t = row / rows;
+      for (let col = 0; col <= cols; col += 1) {
+        const s = col / cols;
+        const angle = from + s * span;
+        // Matted hair is lumpy; the outer face carries it, the inner one
+        // stays smooth because nobody sees inside a head of hair.
+        const lump = inner
+          ? 1
+          : 1 + 0.045 * Math.cos(s * Math.PI * 9 + t * 4) + 0.028 * Math.cos(s * Math.PI * 17);
+        // Thickness grows as the mass leaves the skull and has to hold
+        // its own shape.
+        const thickness = (0.1 + 0.16 * t) * skull;
+        const r = width(t * reach(s)) * lump - (inner ? thickness : 0);
+        const back = -skull * (0.3 + 1.35 * t * t);
+        positions.push(
+          Math.cos(angle) * r,
+          top - t * fall * reach(s) + Math.sin(s * Math.PI) * skull * 0.25,
+          Math.sin(angle) * r * 0.94 + back,
+        );
+      }
+    }
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const a = base + row * (cols + 1) + col;
+        const b = a + 1;
+        const c = a + cols + 1;
+        const d = c + 1;
+        // The inner surface faces the other way.
+        if (inner) indices.push(a, b, c, b, d, c);
+        else indices.push(a, c, b, b, c, d);
+      }
+    }
+  };
+  surface(false);
+  surface(true);
+
+  // Stitch the two surfaces along every open edge, so the mass has a rim
+  // rather than a paper edge you can see through.
+  const ring = cols + 1;
+  const outerAt = (row: number, col: number) => row * ring + col;
+  const innerAt = (row: number, col: number) => (rows + 1) * ring + row * ring + col;
+  for (let col = 0; col < cols; col += 1) {
+    // the hem
+    const a = outerAt(rows, col);
+    const b = outerAt(rows, col + 1);
+    const c = innerAt(rows, col);
+    const d = innerAt(rows, col + 1);
+    indices.push(a, b, c, b, d, c);
+  }
+  for (let row = 0; row < rows; row += 1) {
+    // the two vertical edges beside the face
+    const a = outerAt(row, 0);
+    const b = outerAt(row + 1, 0);
+    const c = innerAt(row, 0);
+    const d = innerAt(row + 1, 0);
+    indices.push(a, c, b, b, c, d);
+    const e = outerAt(row, cols);
+    const f = outerAt(row + 1, cols);
+    const g = innerAt(row, cols);
+    const h = innerAt(row + 1, cols);
+    indices.push(e, f, g, f, h, g);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return { geometry, top, fall, width };
+}
+
 function jataMane(ctx: GeneratorContext, length: number): THREE.Group {
   const hair = ctx.materials.get("hair");
   const group = new THREE.Group();
   const skull = ctx.body.headRadius;
-  const shoulder = ctx.body.chestRadiusX;
-  const top = ctx.body.headCenterY + skull * 0.35;
-  // Down to the middle of the back, as the iconography shows.
-  const fall = length * (skull * 1.4 + shoulder * 2.3);
+  const { geometry, top, fall, width } = hairMass(ctx, length);
+  group.add(new THREE.Mesh(geometry, hair));
 
-  // The face stays clear: the shell spans everything but a frontal arc.
-  const open = Math.PI * 0.38;
+  const open = Math.PI * 0.34;
   const from = Math.PI / 2 + open;
   const span = Math.PI * 2 - open * 2;
-  const rows = 16;
-  const cols = 26;
-  const positions: number[] = [];
-  const indices: number[] = [];
-  for (let row = 0; row <= rows; row += 1) {
-    const t = row / rows;
-    // Hugs the skull, flares across the shoulders, then gathers again.
-    const width =
-      skull * 1.04 + (shoulder * 0.92 - skull * 1.04) * Math.min(1, Math.pow(t * 2.4, 1.2));
-    const taper = 1 - 0.22 * Math.pow(Math.max(0, t - 0.5) / 0.5, 2);
-    for (let col = 0; col <= cols; col += 1) {
-      const s = col / cols;
-      const angle = from + s * span;
-      // Matted hair is lumpy: vary the surface so it is not a helmet.
-      const lump = 1 + 0.05 * Math.cos(s * Math.PI * 9 + t * 4) + 0.03 * Math.cos(s * Math.PI * 17);
-      const r = width * taper * lump;
-      // The mass sits behind the head and leans further back as it falls.
-      const back = -0.012 - 0.055 * t * t;
-      // Hair does not end in a straight line: the mass frays where it
-      // stops, by a different amount around the head.
-      const fray =
-        t > 0.82
-          ? (Math.cos(s * Math.PI * 6.3) * 0.4 + Math.cos(s * Math.PI * 13.1) * 0.6) * 0.035
-          : 0;
-      positions.push(
-        Math.cos(angle) * r,
-        top - t * fall + Math.sin(s * Math.PI) * 0.01 + fray * ((t - 0.82) / 0.18),
-        Math.sin(angle) * r * 0.92 + back,
-      );
-    }
-  }
-  for (let row = 0; row < rows; row += 1) {
-    for (let col = 0; col < cols; col += 1) {
-      const a = row * (cols + 1) + col;
-      const b = a + 1;
-      const c = a + cols + 1;
-      const d = c + 1;
-      indices.push(a, c, b, b, c, d);
-    }
-  }
-  const shell = new THREE.BufferGeometry();
-  shell.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  shell.setIndex(indices);
-  shell.computeVertexNormals();
-  const mass = new THREE.Mesh(shell, hair);
-  mass.material = hair;
-  group.add(mass);
 
   // Locks over the mass: thick where they leave the crown, tapering, each
   // with its own length and sway so the silhouette is not repeated.
-  for (let i = 0; i < 16; i += 1) {
-    const s = (i + 0.5) / 16;
+  for (let i = 0; i < 18; i += 1) {
+    const s = (i + 0.5) / 18;
     const angle = from + s * span;
     const wave = Math.sin(i * 2.399);
-    const len = fall * (0.5 + 0.55 * Math.abs(Math.sin(i * 1.7)));
-    const outer = skull * 1.06;
-    const wide = skull * 1.04 + (shoulder * 0.66 - skull * 1.04) * 0.8;
+    const edge = Math.min(s, 1 - s) * 2;
+    const own = (0.28 + 0.72 * Math.min(1, edge * 1.4)) * (0.55 + 0.5 * Math.abs(Math.sin(i * 1.7)));
+    const len = fall * own;
     const path: V3[] = [
-      [Math.cos(angle) * outer * 0.9, top - fall * 0.02, Math.sin(angle) * outer * 0.85 - 0.014],
       [
-        Math.cos(angle) * wide * 0.98,
-        top - len * 0.45,
-        Math.sin(angle) * wide * 0.9 - 0.03 + wave * 0.006,
+        Math.cos(angle) * width(0.04) * 1.02,
+        top - fall * 0.02,
+        Math.sin(angle) * width(0.04) * 0.96 - skull * 0.3,
       ],
       [
-        Math.cos(angle) * wide * (0.92 + 0.08 * wave),
+        Math.cos(angle) * width(0.45) * 1.02,
+        top - len * 0.48,
+        Math.sin(angle) * width(0.45) * 0.96 - skull * 0.7 + wave * skull * 0.12,
+      ],
+      [
+        Math.cos(angle) * width(0.9) * (0.96 + 0.08 * wave),
         top - len,
-        Math.sin(angle) * wide * 0.86 - 0.05 + wave * 0.01,
+        Math.sin(angle) * width(0.9) * 0.92 - skull * 1.35 + wave * skull * 0.2,
       ],
     ];
     group.add(
-      new THREE.Mesh(taperedTube(path, [0.014 + 0.004 * wave, 0.0045], 16, 8), hair),
+      new THREE.Mesh(
+        taperedTube(path, [skull * (0.3 + 0.08 * wave), skull * 0.1], 16, 8),
+        hair,
+      ),
     );
   }
 
   // Locks brought forward over each shoulder. Hair falls where the head
   // is, not only behind it, and this is what stops the mane reading as a
-  // wig hung on the back of the skull.
+  // wig hung on the back of the skull. They start at the SIDE of the head,
+  // not the front: hair frames a face, it does not hang over it.
   for (const side of [1, -1]) {
-    // At the sides of the head, not the front: hair frames a face, it
-    // does not hang over it.
     for (const [turn, len, thick] of [
-      [1.12, 0.72, 0.0125],
-      [1.36, 0.55, 0.0105],
+      [1.05, 0.62, 0.3],
+      [1.32, 0.46, 0.24],
     ] as const) {
       const angle = Math.PI / 2 + side * turn;
-      const outer = skull * 1.04;
-      const wide = skull * 1.02 + (shoulder * 0.72 - skull * 1.02) * 0.85;
+      const near = width(0.08);
+      const far = width(0.55);
       group.add(
         new THREE.Mesh(
           taperedTube(
             [
-              [Math.cos(angle) * outer, top - fall * 0.03, Math.sin(angle) * outer * 0.9 - 0.008],
+              [Math.cos(angle) * near, top - fall * 0.05, Math.sin(angle) * near * 0.94 - skull * 0.2],
               [
-                Math.cos(angle) * wide * 1.02,
+                Math.cos(angle) * far * 1.0,
                 top - fall * len * 0.45,
-                Math.sin(angle) * wide * 0.86 + 0.004,
+                Math.sin(angle) * far * 0.8,
               ],
               [
-                Math.cos(angle) * wide * 0.94,
+                Math.cos(angle) * far * 0.9,
                 top - fall * len,
-                Math.sin(angle) * wide * 0.8 + 0.012,
+                Math.sin(angle) * far * 0.7 + skull * 0.2,
               ],
             ],
-            [thick, 0.0042],
+            [skull * thick, skull * 0.09],
             16,
             8,
           ),
@@ -474,6 +544,28 @@ export const ornamentTripundra: AttachmentGenerator = (ctx) => {
   return group;
 };
 
+/**
+ * The brow as the reference actually shows it: three bands of ash with the
+ * vertical third eye set between them.
+ *
+ * They are one mark, not two ornaments competing for one socket. A
+ * devotee draws the tripundra and the trinetra together, and splitting
+ * them across two assets meant a customer could only ever have one —
+ * which is not a customisation, it is a missing feature with a picker
+ * attached.
+ */
+export const ornamentTrinetraTripundra: AttachmentGenerator = (ctx) => {
+  const group = new THREE.Group();
+  group.add(ornamentTripundra(ctx));
+  const eye = ornamentThirdEye(ctx);
+  // The eye sits in the gap the ash leaves: the bands run either side of
+  // it, so it is lifted to the middle band's line rather than laid over
+  // the lowest one.
+  eye.position.y += 0.007 * headFit(ctx.body);
+  group.add(eye);
+  return group;
+};
+
 // ---------------------------------------------------------------------------
 // CRESCENT MOON — seats on the jata's moon socket
 // ---------------------------------------------------------------------------
@@ -559,49 +651,90 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const bead = ctx.materials.fixed.rudraksha;
   const group = new THREE.Group();
-  // Strand collar wraps the measured neck; the front drapes onto the chest.
-  const neckR = ctx.body.neckRadius + 0.005;
-  const collarY = ctx.body.neckBaseOffsetY;
-  for (const [drop, spread, size] of [
-    [0.055, 0.01, 0.008],
-    [0.095, 0.02, 0.009],
+  const body = ctx.body;
+
+  // A mala is a ROUTE over the body, exactly as the serpent is.
+  //
+  // It used to be a ring parameterised by angle, with the front half
+  // switched onto the chest surface and the back half onto a circle
+  // around the neck — and the seam between those two rules showed as a
+  // gap with stray beads either side of it. A strand of beads is one
+  // continuous path lying on a body, so it is authored as one: a bearing
+  // and a height, walked over the surface the body reports, with the
+  // clearance being the bead's own radius.
+  const neckBase = body.necklaceSocketY + body.neckBaseOffsetY;
+  const toSocket = (point: THREE.Vector3): V3 => [
+    point.x,
+    point.y - body.necklaceSocketY,
+    point.z - body.necklaceSocketZ,
+  ];
+
+  for (const [drop, size] of [
+    [body.neckRadius * 1.6, body.neckRadius * 0.17],
+    [body.neckRadius * 2.8, body.neckRadius * 0.19],
   ] as const) {
-    // A bead is a real seed of a real size, so the strand carries as many
-    // as its own length holds — measured along the path it actually
-    // follows, which on a slim neck is mostly the drop, not the circle.
-    const at = (angle: number): [number, number, number] => {
-      const frontness = Math.max(0, Math.sin(angle));
-      const x = Math.cos(angle) * (neckR + frontness * spread);
-      const y = collarY + 0.008 - frontness * (drop + collarY);
-      const zNeck = Math.sin(angle) * neckR * 0.7;
-      const z = frontness > 0.05 ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.007)) : zNeck;
-      return [x, y, z];
-    };
-    let strand = 0;
-    let previous = at(0);
-    for (let step = 1; step <= 180; step += 1) {
-      const point = at((step / 180) * Math.PI * 2);
-      strand += Math.hypot(point[0] - previous[0], point[1] - previous[1], point[2] - previous[2]);
-      previous = point;
+    // Round the neck at the back, falling to its lowest at the front —
+    // which is what a strand hung over a neck does under its own weight.
+    const route: SurfaceWaypoint[] = [];
+    const steps = 16;
+    for (let i = 0; i <= steps; i += 1) {
+      const bearing = (i / steps) * Math.PI * 2;
+      // Bearings are measured FROM THE FRONT, so bearing 0 is the chest
+      // and π is the nape. 1 at the front, 0 at the back — the other way
+      // round hung the strand down the spine and left a ring at the
+      // throat, which is not what a mala does.
+      const front = (1 + Math.cos(bearing)) / 2;
+      route.push({
+        bearing,
+        // Cubed, not merely bowed: a strand hangs from the BACK of a neck
+        // and nearly all of its fall happens at the front. A gentler
+        // curve leaves it halfway down at the sides, where the deltoids
+        // are, and the mala stands out past the shoulders.
+        y: neckBase + 0.004 - Math.pow(front, 3) * drop,
+      });
     }
-    const count = Math.min(64, Math.max(16, Math.round(strand / (size * 1.9))));
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      const [x, y, z] = at(angle);
-      // Rudraksha seeds with occasional gold spacers
-      group.add(
-        mesh(new THREE.SphereGeometry(size, 10, 8), i % 9 === 0 ? metal : bead, {
-          position: [x, y, z],
-          scale: [1, 0.88, 1],
-        }),
-      );
+    const walk = walkSurface(body, route, size * 0.95, 160);
+    const path = walk.points.map(toSocket);
+
+    // Beads laid along the path at their own diameter, so the strand is
+    // full whatever length this body's neck and chest give it.
+    let travelled = 0;
+    const spacing = size * 1.82;
+    let next = spacing * 0.5;
+    let index = 0;
+    for (let i = 1; i < path.length; i += 1) {
+      const a = path[i - 1] as V3;
+      const b = path[i] as V3;
+      const step = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      while (travelled + step >= next && step > 1e-9) {
+        const t = (next - travelled) / step;
+        group.add(
+          mesh(new THREE.SphereGeometry(size, 12, 10), index % 9 === 0 ? metal : bead, {
+            position: [
+              a[0] + (b[0] - a[0]) * t,
+              a[1] + (b[1] - a[1]) * t,
+              a[2] + (b[2] - a[2]) * t,
+            ],
+            scale: [1, 0.88, 1],
+          }),
+        );
+        index += 1;
+        next += spacing;
+      }
+      travelled += step;
     }
   }
-  // Central guru bead
-  const gy = -0.1;
+
+  // Central guru bead, hanging below the lower strand at the front.
+  const guru = body.neckRadius * 0.26;
+  const front = body.surfaceAt(0, neckBase - body.neckRadius * 2.8 - guru);
   group.add(
-    mesh(new THREE.SphereGeometry(0.012, 12, 10), bead, {
-      position: [0, gy, chestZAtSocket(ctx, 0, gy, 0.009)],
+    mesh(new THREE.SphereGeometry(guru, 14, 12), bead, {
+      position: [
+        0,
+        front.y - body.necklaceSocketY,
+        front.z + guru * 0.7 - body.necklaceSocketZ,
+      ],
     }),
   );
   return group;
@@ -717,24 +850,53 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   // front is a wrap that goes right, behind, and back round to the front.
   // Thickness along the route: nothing at the tail tip, heaviest through
   // the wrap, drawn in again where the head takes over.
+  // How thick the serpent is, scaled to the neck it is worn on. A girth
+  // authored in absolute metres is a python on a slim body and a worm on
+  // a broad one; a fraction of the wearer's own neck is a serpent on both.
+  const thick = body.neckRadius * 0.32;
+  // Every section of the hood and head below is a multiple of the
+  // serpent's own girth, so a hood is always about twice as wide as the
+  // body behind it whatever body the serpent is worn on.
+  const g = thick;
   const girth = (t: number): number => {
-    if (t < 0.26) return 0.0016 + (t / 0.26) * 0.0072;
-    if (t < 0.42) return 0.0088 + ((t - 0.26) / 0.16) * 0.0022;
-    if (t < 0.92) return 0.011;
-    return 0.011 - ((t - 0.92) / 0.08) * 0.0006;
+    if (t < 0.26) return thick * (0.15 + (t / 0.26) * 0.65);
+    if (t < 0.42) return thick * (0.8 + ((t - 0.26) / 0.16) * 0.2);
+    if (t < 0.92) return thick;
+    return thick * (1 - ((t - 0.92) / 0.08) * 0.06);
   };
   // The gap under the belly of the serpent. What the walk is given is
   // that gap PLUS the girth, so it is the scales that clear the skin.
   const GAP = 0.004;
+  /**
+   * Where the neck actually begins on THIS body, in the chest joint's
+   * space. The route used to be written in absolute chest-local heights
+   * taken from the stylised figure, and on a measured human those numbers
+   * land three centimetres up the jaw: the coil came out over the ears
+   * and the head reared beside the face. A torque is worn at the base of
+   * a neck, so that is the landmark the route is written against.
+   */
+  const neckBase = body.necklaceSocketY + body.neckBaseOffsetY;
+  const at = (below: number) => neckBase - below;
+  // A TORQUE, which is what the reference shows: a ring round the neck
+  // with the head lifted at the front, not a python crossing the chest.
+  // An earlier route began low on the right breast and climbed, and read
+  // as a strap worn over one shoulder.
+  // Sitting ON the collarbones, encircling the very base of the neck —
+  // which is where a torque rests. The neck base is the top of that
+  // seat, not the middle of it, so the whole route rides below it by
+  // about its own girth.
+  const seat = thick * 1.1;
   const route: SurfaceWaypoint[] = [
-    { bearing: -0.78, y: 0.018 },
-    { bearing: -0.6, y: 0.062 },
-    { bearing: -0.36, y: 0.104 },
-    { bearing: -0.12, y: 0.128 },
-    { bearing: -1.6, y: 0.142 },
-    { bearing: -3.15, y: 0.148 },
-    { bearing: -4.6, y: 0.14 },
-    { bearing: -5.0, y: 0.124, lift: 0.012 },
+    // Tail tucked at the front right, just under the collar…
+    { bearing: -0.55, y: at(0.028 + seat) },
+    { bearing: -0.95, y: at(0.012 + seat) },
+    // …round behind the neck, riding a little higher…
+    { bearing: -1.9, y: at(-0.006 + seat) },
+    { bearing: -3.15, y: at(-0.01 + seat) },
+    { bearing: -4.4, y: at(-0.006 + seat) },
+    // …and out at the front left, where the head lifts.
+    { bearing: -5.3, y: at(0.006 + seat) },
+    { bearing: -5.75, y: at(0.014 + seat), lift: 0.006 },
   ];
   const walk = walkSurface(body, route, (t) => GAP + girth(t), 120);
 
@@ -747,18 +909,19 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   ];
   const path = walk.points.map(toSocket);
 
-  group.add(
-    new THREE.Mesh(
-      sweptForm(
-        path,
-        (t) => ({ halfWidth: girth(t), halfHeight: girth(t) }),
-        new THREE.Vector3(0, 1, 0),
-        190,
-        18,
-      ),
-      scales,
-    ),
+  const toChest = { y: body.necklaceSocketY, z: body.necklaceSocketZ };
+  const coil = sweptForm(
+    path,
+    (t) => ({ halfWidth: girth(t), halfHeight: girth(t) }),
+    new THREE.Vector3(0, 1, 0),
+    190,
+    18,
   );
+  // The walk holds the SPINE off the skin; the swept surface around it is
+  // resampled through a spline that can cut a corner the walk did not.
+  // This is the guarantee, applied to what is actually drawn.
+  pushOutsideBody(coil, body, toChest, GAP * 0.5);
+  group.add(new THREE.Mesh(coil, scales));
 
   // Hood and head are one swept piece, and it REARS.
   //
@@ -781,34 +944,54 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   if (heading.lengthSq() < 1e-9) heading.set(0, 0, 1);
   heading.normalize();
   const outward = walk.normals[last] ?? new THREE.Vector3(0, 0, 1);
-  const reach = new THREE.Vector3(outward.x, 0, outward.z)
-    .normalize()
-    .addScaledVector(heading, 0.14)
+  /**
+   * The head CONTINUES THE JOURNEY the body was making, lifted a little
+   * away from the skin.
+   *
+   * Pointing it outward from the chest instead was the mistake, and two
+   * rounds of shrinking it did not help: a head aimed at the viewer is
+   * seen end-on, so however well it is modelled it reads as a lump. A
+   * serpent lying along a collarbone is seen in PROFILE, which is the one
+   * view in which a snake's head is unmistakably a snake's head. So the
+   * direction is the route's own tangent, with just enough outward lean
+   * to clear the throat.
+   */
+  const reach = heading
+    .clone()
+    .addScaledVector(new THREE.Vector3(outward.x, 0, outward.z).normalize(), 0.8)
     .normalize();
 
   // The hood leans out as it rises, so it stands beside the head rather
-  // than across it.
-  const RISE = 0.034;
+  // than across it — and it rises by a fraction of the neck it is worn
+  // on, not by a fixed 34 mm, which on a smaller head carried the skull
+  // to ear height and made the serpent read as a growth on the jaw.
+  // How far the head lifts off the shoulder. A cobra at rest on a
+  // shoulder raises its head a little and looks forward; rearing it half
+  // a neck's width carried the skull past the jaw and put a green lump
+  // over the cheek.
+  const RISE = body.neckRadius * 0.5;
   const hoodMid: V3 = [
-    headBase[0] + reach.x * 0.019,
+    headBase[0] + reach.x * g * 1.2,
     headBase[1] + RISE * 0.46,
-    headBase[2] + reach.z * 0.019,
+    headBase[2] + reach.z * g * 1.2,
   ];
   // Where the skull begins and where the snout ends: both level, so the
   // features below can be laid along a horizontal line.
   const skullBase: V3 = [
-    headBase[0] + reach.x * 0.03,
+    headBase[0] + reach.x * g * 1.9,
     headBase[1] + RISE,
-    headBase[2] + reach.z * 0.03,
+    headBase[2] + reach.z * g * 1.9,
   ];
+  // The snout tips slightly DOWN from the skull: a reared cobra looks at
+  // what is in front of it, and a head that levels off reads as a stick.
   const headTip: V3 = [
-    skullBase[0] + reach.x * 0.04,
-    skullBase[1] + 0.004,
-    skullBase[2] + reach.z * 0.04,
+    skullBase[0] + reach.x * g * 2.5,
+    skullBase[1] - g * 0.5,
+    skullBase[2] + reach.z * g * 2.5,
   ];
   const skullMid: V3 = [
     (skullBase[0] + headTip[0]) / 2,
-    (skullBase[1] + headTip[1]) / 2 + 0.0022,
+    (skullBase[1] + headTip[1]) / 2 + g * 0.2,
     (skullBase[2] + headTip[2]) / 2,
   ];
   const serpentHead = sweptForm(
@@ -816,32 +999,39 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
     (t) => {
       // Body girth, into the flare, into the hood, in behind the skull,
       // out over the skull, down to the snout.
-      if (t < 0.16) return { halfWidth: 0.0104, halfHeight: 0.0104 };
+      if (t < 0.16) return { halfWidth: g * 0.95, halfHeight: g * 0.95 };
       if (t < 0.34) {
         const k = (t - 0.16) / 0.18;
-        return { halfWidth: 0.0104 + k * 0.0114, halfHeight: 0.0104 - k * 0.004 };
+        return { halfWidth: g * (0.95 + k * 0.72), halfHeight: g * (0.95 - k * 0.36) };
       }
       if (t < 0.5) {
-        // The hood at its widest: a plate, not a tube.
+        // The hood at its widest: a plate, not a tube. Kept to a little
+        // over half again the body's girth — a hood twice as wide reads
+        // as a collar over the cheek rather than as a serpent.
         const k = (t - 0.34) / 0.16;
-        return { halfWidth: 0.0218 + k * 0.0026, halfHeight: 0.0064 - k * 0.0008 };
+        return { halfWidth: g * (1.67 + k * 0.16), halfHeight: g * (0.59 - k * 0.07) };
       }
       if (t < 0.64) {
         const k = (t - 0.5) / 0.14;
-        return { halfWidth: 0.0244 - k * 0.0138, halfHeight: 0.0056 + k * 0.0046 };
+        return { halfWidth: g * (1.83 - k * 0.9), halfHeight: g * (0.52 + k * 0.42) };
       }
       if (t < 0.86) {
         // The skull: a wedge, wider than it is tall.
         const k = (t - 0.64) / 0.22;
-        return { halfWidth: 0.0106 + k * 0.0014, halfHeight: 0.0102 - k * 0.0006 };
+        return { halfWidth: g * (0.93 + k * 0.1), halfHeight: g * (0.9 - k * 0.06) };
       }
       const k = (t - 0.86) / 0.14;
-      return { halfWidth: 0.012 - k * 0.0072, halfHeight: 0.0096 - k * 0.0058 };
+      return { halfWidth: g * (1.03 - k * 0.63), halfHeight: g * (0.84 - k * 0.5) };
     },
     new THREE.Vector3(0, 1, 0),
     88,
     24,
   );
+  // The hood and head are a form built off the end of the route rather
+  // than a walk along it, so nothing about their control points keeps
+  // them out of a shoulder. Measured, a tenth of the serpent's surface
+  // was inside the figure. Pushed out here, by construction.
+  pushOutsideBody(serpentHead, body, toChest, GAP * 0.5);
   group.add(new THREE.Mesh(serpentHead, scales));
 
   // Orientation of the head, used to place what sits on it. The skull
@@ -861,35 +1051,35 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   };
 
   // The line of the mouth, set into the wedge rather than drawn on it.
-  const mouth = facingGroup(0.66, -0.0042);
+  const mouth = facingGroup(0.66, -g * 0.38);
   mouth.add(
-    mesh(new THREE.SphereGeometry(0.0078, 14, 8), ctx.materials.fixed.eyeDark, {
-      position: [0.0012, 0, 0],
+    mesh(new THREE.SphereGeometry(g * 0.71, 14, 8), ctx.materials.fixed.eyeDark, {
+      position: [g * 0.11, 0, 0],
       scale: [1.5, 0.11, 1.05],
     }),
   );
 
   // Eyes: a hooded brow, and under it an eye small enough to be a glint.
-  const eyes = facingGroup(0.54, 0.0036);
+  const eyes = facingGroup(0.54, g * 0.33);
   for (const side of [1, -1]) {
     eyes.add(
-      mesh(new THREE.SphereGeometry(0.0052, 12, 8), scales, {
-        position: [0, 0.0024, side * 0.0098],
+      mesh(new THREE.SphereGeometry(g * 0.47, 12, 8), scales, {
+        position: [0, g * 0.22, side * g * 0.89],
         scale: [1.35, 0.38, 0.85],
       }),
     );
     eyes.add(
-      mesh(new THREE.SphereGeometry(0.0019, 8, 6), ctx.materials.fixed.eyeDark, {
-        position: [0.001, -0.0015, side * 0.0106],
+      mesh(new THREE.SphereGeometry(g * 0.17, 8, 6), ctx.materials.fixed.eyeDark, {
+        position: [g * 0.09, -g * 0.14, side * g * 0.96],
         scale: [1, 0.72, 0.72],
       }),
     );
   }
 
   // The pale throat, under the jaw where a snake shows it.
-  const throat = facingGroup(0.5, -0.0084);
+  const throat = facingGroup(0.5, -g * 0.76);
   throat.add(
-    mesh(new THREE.SphereGeometry(0.007, 12, 10), belly, {
+    mesh(new THREE.SphereGeometry(g * 0.64, 12, 10), belly, {
       rotation: [0, -facing, 0],
       scale: [1.7, 0.24, 0.75],
     }),
@@ -1013,7 +1203,12 @@ export const itemTrishul: AttachmentGenerator = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const itemDamaru: AttachmentGenerator = (ctx) => {
-  const wood = ctx.materials.get("garmentAccent");
+  // A damaru is turned from WOOD. It took the garment's accent colour,
+  // which is the ochre of the sash, and an ochre hourglass with ivory
+  // ends held out at arm's length reads as a goblet rather than a drum —
+  // the reference shows dark wood with pale heads, and the difference is
+  // what makes the shape legible at all.
+  const wood = ctx.materials.fixed.rudraksha;
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
   // A drum is held: it is sized to the hand holding it, not to the hand
@@ -1027,17 +1222,23 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   // hand they close through them instead.
   const waist = DAMARU_WAIST_RADIUS;
   const half = DAMARU_WAIST_HALF;
+  // Wider heads on a longer body than it had. The waist is untouched —
+  // it is the part the hand closes on and the manifest declares it — but
+  // the drum it belongs to was the size of a bottle cork, and a small
+  // object held at arm's length reads as a trinket whatever its shape.
+  const headRadius = waist * 4.1;
+  const headY = 0.047;
   held.add(
     mesh(
       lathe([
-        [waist * 2.87, -0.038],
-        [waist * 3.48, -0.0335],
+        [headRadius * 0.82, -headY],
+        [headRadius, -headY * 0.88],
         [waist * 1.35, -half * 1.72],
         [waist, -half],
         [waist, half],
         [waist * 1.35, half * 1.72],
-        [waist * 3.48, 0.0335],
-        [waist * 2.87, 0.038],
+        [headRadius, headY * 0.88],
+        [headRadius * 0.82, headY],
       ]),
       wood,
     ),
@@ -1045,9 +1246,11 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
   // Drum heads (hide membranes), slightly proud of the rim.
   for (const side of [1, -1]) {
     held.add(
-      mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.0032, 20), ctx.materials.fixed.ivory, {
-        position: [0, side * 0.0372, 0],
-      }),
+      mesh(
+        new THREE.CylinderGeometry(headRadius * 0.84, headRadius * 0.84, 0.0032, 20),
+        ctx.materials.fixed.ivory,
+        { position: [0, side * (headY - 0.0008), 0] },
+      ),
     );
   }
   // Waist cord
@@ -1057,7 +1260,8 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
       rotation: [Math.PI / 2, 0, 0],
     }),
   );
-  // The two knotted strikers, hanging from the waist as cords do.
+  // The two knotted strikers, hanging from the waist as cords do. Cord
+  // and knot, not wire and bead: they are the same material as the drum.
   for (const side of [1, -1]) {
     const swing = side * 0.0165;
     held.add(
@@ -1072,11 +1276,11 @@ export const itemDamaru: AttachmentGenerator = (ctx) => {
           12,
           6,
         ),
-        metal,
+        wood,
       ),
     );
     held.add(
-      mesh(new THREE.SphereGeometry(0.0031, 10, 8), metal, {
+      mesh(new THREE.SphereGeometry(0.0034, 10, 8), wood, {
         position: [swing * 1.25, -0.034, 0.011],
       }),
     );

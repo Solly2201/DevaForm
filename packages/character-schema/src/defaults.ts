@@ -65,17 +65,32 @@ export function createDefaultGaneshaConfiguration(): CharacterConfiguration {
   };
 }
 
+/**
+ * The Classic build, as weights on the human body's own morph targets.
+ * Kept in step with the deity's `bodyVariants` by a test — a default that
+ * is not one of the offered variants is a fourth variant nobody chose.
+ */
+export const SHIVA_DEFAULT_MORPHS: Readonly<Record<string, number>> = {
+  bodyHeroic: 0.85,
+  bodyPowerful: 0.35,
+  bodyAscetic: 0.3,
+  faceDivine: 1,
+};
+
 export function createDefaultShivaConfiguration(): CharacterConfiguration {
   return {
     schemaVersion: SCHEMA_VERSION,
     deity: "shiva",
     parts: {
-      body: { assetId: "shiva.body.classic", version: 1 },
-      head: { assetId: "shiva.head.classic", version: 1 },
-      eyes: { assetId: "shiva.eyes.serene", version: 1 },
-      hair: { assetId: "shiva.jata.crown", version: 1 },
-      hands: { assetId: "shiva.hands.classic", version: 1 },
-      lowerGarment: { assetId: "shiva.garment.dhoti", version: 1 },
+      // The human mesh: one continuous skinned body with its own head,
+      // face, eyes and hands. The head/eyes/hands slots are left empty
+      // because this body already has them — see integratedFeatures.
+      body: { assetId: "humanoid.body.human", version: 1 },
+      head: null,
+      eyes: null,
+      hair: { assetId: "shiva.jata.flowing", version: 1 },
+      hands: null,
+      lowerGarment: { assetId: "shiva.garment.tigerHide", version: 1 },
       // Bare-chested ascetic by default — the rudraksha and serpent read
       // against skin, as in classical iconography.
       upperGarment: null,
@@ -86,8 +101,9 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
     },
     attachments: [
       { socket: "head.moon", asset: { assetId: "shiva.crescent.chandra", version: 1 } },
-      { socket: "head.forehead", asset: { assetId: "shiva.thirdeye.trinetra", version: 1 } },
-      { socket: "chest.necklace", asset: { assetId: "shiva.mala.rudraksha", version: 1 } },
+      { socket: "head.forehead", asset: { assetId: "shiva.forehead.trinetra", version: 1 } },
+      { socket: "chest.necklace", asset: { assetId: "shiva.ornament.naga", version: 1 } },
+      { socket: "chest.mala", asset: { assetId: "shiva.mala.rudraksha", version: 1 } },
       { socket: "arm.frontRight.hand.item", asset: { assetId: "shiva.attribute.trishul", version: 1 } },
       { socket: "arm.frontLeft.hand.item", asset: { assetId: "shiva.attribute.damaru", version: 1 } },
     ],
@@ -95,16 +111,21 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
       preset: "shiva.standing",
       jointOverrides: {},
     },
-    morphs: {},
+    morphs: { ...SHIVA_DEFAULT_MORPHS },
     proportions: { height: 1, bulk: 1 },
-    // Shiva's own default palette: fair ash-toned skin, matted brown jata,
-    // ochre garment, antique gold — distinct from Ganesha's warm default.
+    // Ash-pale skin, matted brown jata, CREAM cloth with an ochre sash and
+    // a spotted hide over it — the layering references/ref3.png shows. The
+    // garment zone used to be the ochre itself, which left the reference's
+    // cream underlayer with nowhere to come from.
     materials: {
-      skin: { color: "#c8cfdb", finish: "satin" },
-      skinSecondary: { color: "#a4adbd", finish: "satin" },
-      hair: { color: "#4d3421", finish: "matte" },
-      garment: { color: "#c9862e", finish: "satin" },
-      garmentAccent: { color: "#8a5a1e", finish: "satin" },
+      // Ash, which is a pale blue-grey and not white. At satin finish
+      // under studio light #c8cfdb rendered as paper; the reference's
+      // skin keeps a visible blue cast in the lit areas.
+      skin: { color: "#aebbd0", finish: "satin" },
+      skinSecondary: { color: "#8e9cb3", finish: "satin" },
+      hair: { color: "#4a3324", finish: "matte" },
+      garment: { color: "#ece0c8", finish: "matte" },
+      garmentAccent: { color: "#c9862e", finish: "satin" },
       metal: { color: "#d8a636", finish: "metallic" },
       gem: { color: "#20643f", finish: "polished" },
       base: { color: "#5d5347", finish: "satin" },

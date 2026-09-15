@@ -93,6 +93,7 @@ export async function buildAssetObject(
     armSlots: activeArmSlots(config.arms),
     held: {},
     seated: false,
+    garment: "full",
     // Thumbnails render against the canonical classic body measurements.
     body: deriveBodyProfile({ belly: 1 }, config.proportions),
   };

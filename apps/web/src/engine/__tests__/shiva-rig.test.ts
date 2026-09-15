@@ -45,7 +45,9 @@ describe("shiva rig construction", () => {
   it("builds from the humanoid skeleton with no warnings", () => {
     const { rig } = buildShivaRig();
     expect(rig.warnings).toEqual([]);
-    expect(rig.skeleton.id).toBe("humanoid");
+    // The BODY is the anatomy: Shiva is built on the measured human mesh,
+    // so the rig follows that skeleton rather than the deity's default.
+    expect(rig.skeleton.id).toBe("human");
     assertRigIntegrity(rig);
   });
 
@@ -64,9 +66,13 @@ describe("shiva rig construction", () => {
     assertRigIntegrity(gRig);
   });
 
-  it("renders real geometry for head, jata, and body", () => {
+  it("renders real geometry for the jata", () => {
     const { rig } = buildShivaRig();
-    for (const prefix of ["part:shiva.head", "part:shiva.jata", "part:shiva.body"]) {
+    // Only the jata: the head is not a part any more (the mesh body is one
+    // continuous human, face and hands included) and the body itself is a
+    // GLB the mocked loader never resolves here. Its geometry is checked
+    // against the shipped file in humanBase.test.ts, which reads it.
+    for (const prefix of ["part:shiva.jata"]) {
       const box = new THREE.Box3();
       let found = false;
       rig.root.traverse((o) => {
@@ -127,15 +133,34 @@ describe("shiva semantic attachments", () => {
     expect(crescent).toBeDefined();
   });
 
-  it("seats the third eye on the head-refined forehead socket", () => {
-    const { rig } = buildShivaRig();
+  it("seats the brow mark on the head-refined forehead socket", () => {
+    // On the stylised head, which is the part that refines the socket
+    // onto geometry it drew. The mesh body does the same through SOCKET_
+    // nodes in its GLB — checked in humanBase.test.ts, which reads it.
+    const { rig } = buildShivaRig((config) => {
+      config.parts.head = { assetId: "shiva.head.classic", version: 1 };
+    });
     const forehead = rig.sockets.get("head.forehead");
     const schemaDefault = HUMANOID_SKELETON.sockets.find((s) => s.id === "head.forehead")!;
     expect(forehead!.position.toArray()).not.toEqual([...schemaDefault.position]);
-    const eye = forehead?.children.find(
-      (c) => c.name === "attachment:shiva.thirdeye.trinetra",
+    const mark = forehead?.children.find(
+      (c) => c.name === "attachment:shiva.forehead.trinetra",
     );
-    expect(eye).toBeDefined();
+    expect(mark).toBeDefined();
+  });
+
+  it("wears the naga at the throat and the rudraksha below it", () => {
+    // Two ornaments, two seats. The reference wears both, and one socket
+    // holds one thing — so the mala has its own.
+    const { rig } = buildShivaRig();
+    const naga = rig.sockets
+      .get("chest.necklace")
+      ?.children.some((c) => c.name === "attachment:shiva.ornament.naga");
+    const mala = rig.sockets
+      .get("chest.mala")
+      ?.children.some((c) => c.name === "attachment:shiva.mala.rudraksha");
+    expect(naga, "naga at the collar").toBe(true);
+    expect(mala, "rudraksha on the mala seat").toBe(true);
   });
 
   it("drapes the rudraksha mala in front of the measured chest", () => {

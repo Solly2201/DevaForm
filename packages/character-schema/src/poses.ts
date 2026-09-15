@@ -11,11 +11,38 @@
 import type { ArmSlot, JointId } from "./skeleton";
 import type { MudraId, Vec3 } from "./configuration";
 
+/**
+ * How the cloth is worn in a pose.
+ *
+ * A full-length dhoti is one draped mass around both legs, which is what
+ * the iconography shows and what a wrapped garment actually is. That only
+ * works while the legs stay under it: a pose that folds them up or throws
+ * one out needs the cloth gathered or cut short, which is exactly what a
+ * person does before sitting down or dancing.
+ *
+ * It is a property of the POSE because it is a fact about the pose, not
+ * about the garment: the same dhoti is worn all three ways. Generators
+ * read it and build accordingly, rather than the renderer discovering a
+ * leg sticking through a skirt.
+ */
+export type GarmentFit =
+  /** Legs down and together: cloth falls to the ankles. */
+  | "full"
+  /** Legs folded: cloth gathered over the lap. */
+  | "gathered"
+  /** A leg is lifted or swung: cloth ends above the knee. */
+  | "short";
+
 export interface PosePreset {
   id: string;
   label: string;
   description: string;
   joints: Partial<Record<JointId, Vec3>>;
+  /**
+   * How cloth is worn here. Defaults to "gathered" when seated and
+   * "full" otherwise — see garmentFitOf, which is what consumers call.
+   */
+  garment?: GarmentFit;
   /**
    * Root translation applied with the pose — seated poses lower the
    * character onto the base instead of folding the legs in mid-air.
@@ -325,6 +352,9 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     id: "dance",
     label: "Dancing",
     description: "Nritya Ganapati — weight on one leg, the other lifted.",
+    // A lifted leg has to come out of its cloth; a dancer wears the wrap
+    // short, which is what the iconography shows too.
+    garment: "short",
     joints: {
       pelvis: [0, 12 * D, 7 * D],
       spine: [0, -9 * D, -5 * D],
@@ -462,6 +492,7 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
   {
     id: "shiva.tandava",
     label: "Dancing",
+    garment: "short",
     description:
       "Nataraja-inspired tandava direction — lifted left leg, abhaya and gajahasta. A coherent supported pose, not a full production Nataraja.",
     joints: {
@@ -511,6 +542,12 @@ for (const preset of ALL_POSE_PRESETS) {
 
 export function getPosePreset(id: string): PosePreset | undefined {
   return presetMap.get(id);
+}
+
+/** How cloth is worn in this pose, with the default the pose implies. */
+export function garmentFitOf(preset: PosePreset | undefined): GarmentFit {
+  if (!preset) return "full";
+  return preset.garment ?? (preset.seated ? "gathered" : "full");
 }
 
 /** Poses that place the character on the ground — derived from preset data. */

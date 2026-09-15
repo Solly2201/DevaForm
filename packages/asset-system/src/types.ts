@@ -168,6 +168,20 @@ export interface MeasuredTorsoSurface {
   radius: readonly number[];
 }
 
+/**
+ * The legs' own extent, sampled top to bottom. `halfWidth[i]` is the
+ * furthest either leg reaches sideways at that height; `frontZ`/`backZ`
+ * are the furthest forward and back, relative to the pelvis joint.
+ */
+export interface MeasuredLegEnvelope {
+  /** Pelvis-local heights of the first and last rows. */
+  topY: number;
+  bottomY: number;
+  halfWidth: readonly number[];
+  frontZ: readonly number[];
+  backZ: readonly number[];
+}
+
 /** A body asset's measured surfaces, plus how each morph target moves them. */
 export interface MeasuredBodyProfile {
   base: MeasuredBodySurfaces;
@@ -266,6 +280,16 @@ export interface AssetDefinition {
   gripApertures?: Readonly<Record<string, readonly (readonly [number, number])[]>>;
   /** Body-slot assets: this mesh's torso and neck, measured all round. */
   torsoSurface?: MeasuredTorsoSurface;
+  /**
+   * Body-slot assets: how far the legs reach, at a stack of heights from
+   * the hip to the ankle, in the pelvis joint's own space.
+   *
+   * What a wrapped lower garment has to contain. A mean limb radius is
+   * not that: a calf bulges backward by half again its mean, and a dhoti
+   * lofted from the mean leaves both calves standing outside the cloth
+   * from behind while looking well fitted from the front.
+   */
+  legEnvelope?: MeasuredLegEnvelope;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
   /** Categorization for the editor UI. */

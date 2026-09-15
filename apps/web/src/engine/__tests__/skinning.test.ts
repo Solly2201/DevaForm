@@ -8,15 +8,21 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-const skinnedScene = vi.hoisted(() => ({ current: null as unknown }));
+const skinnedScene = vi.hoisted(() => ({ current: null as unknown, forPath: "" }));
 
 // GLTFLoader cannot fetch in Node. Tests that exercise the rig's GLB path
-// hand it a synthetic scene; the rest keep the "never resolves" behavior
-// the existing suites rely on.
+// hand it a synthetic scene for ONE path; every other request keeps the
+// "never resolves" behaviour the rest of the suite relies on.
+//
+// Per-path matters now that a real character is GLB-sourced: answering
+// every request with the synthetic arm handed the human body a skeleton
+// whose bones rest a hand's breadth from its own, and the rig said so.
 vi.mock("three/examples/jsm/loaders/GLTFLoader.js", () => ({
   GLTFLoader: class {
-    load(_path: string, onLoad: (gltf: { scene: unknown }) => void): void {
-      if (skinnedScene.current) onLoad({ scene: skinnedScene.current });
+    load(path: string, onLoad: (gltf: { scene: unknown }) => void): void {
+      if (skinnedScene.current && path.includes(skinnedScene.forPath)) {
+        onLoad({ scene: skinnedScene.current });
+      }
     }
   },
 }));
@@ -389,10 +395,11 @@ describe("rig integration", () => {
   it("mounts and binds a skinned GLB part through buildRig", () => {
     const { root: source } = makeSkinnedFixture();
     skinnedScene.current = source;
+    skinnedScene.forPath = "ganesha-aidraft";
     try {
-      const config = createDefaultShivaConfiguration();
+      const config = createDefaultGaneshaConfiguration();
       // Any GLB-sourced part exercises the loader path; the mocked loader
-      // supplies the synthetic skinned scene for it.
+      // supplies the synthetic skinned scene for that one path.
       config.parts.head = { assetId: "ganesha.head.aidraft", version: 2 };
       // The GLB cache answers "loading" on first request and rebuilds when
       // the asset arrives (see glbCache); the first build primes it.
@@ -412,10 +419,11 @@ describe("rig integration", () => {
       expect(vertexWorld(skinned[0]!, TIP_VERTEX).distanceTo(rest)).toBeGreaterThan(0.05);
     } finally {
       skinnedScene.current = null;
+      skinnedScene.forPath = "";
     }
   });
 
-  it("leaves procedural deities untouched: no skinned meshes, no warnings", () => {
+  it("leaves procedural characters untouched: no skinned meshes, no warnings", () => {
     const ganesha = createDefaultGaneshaConfiguration();
     ganesha.parts.head = { assetId: "ganesha.head.classic", version: 3 };
     ganesha.attachments = ganesha.attachments.filter((a) => a.socket !== "base.platform");
@@ -423,7 +431,16 @@ describe("rig integration", () => {
     expect(ganeshaRig.warnings).toEqual([]);
     expect(collectSkinnedMeshes(ganeshaRig.root)).toHaveLength(0);
 
-    const shivaRig = buildRig(createDefaultShivaConfiguration(), new ZoneMaterials());
+    // Shiva on the superseded stylised body: still entirely procedural,
+    // and still built without a word of complaint. A saved character
+    // naming it has to go on working.
+    const stylised = createDefaultShivaConfiguration();
+    stylised.parts.body = { assetId: "shiva.body.classic", version: 1 };
+    stylised.parts.head = { assetId: "shiva.head.classic", version: 1 };
+    stylised.parts.eyes = { assetId: "shiva.eyes.serene", version: 1 };
+    stylised.parts.hands = { assetId: "shiva.hands.classic", version: 1 };
+    stylised.parts.lowerGarment = { assetId: "shiva.garment.dhoti", version: 2 };
+    const shivaRig = buildRig(stylised, new ZoneMaterials());
     expect(shivaRig.warnings).toEqual([]);
     expect(collectSkinnedMeshes(shivaRig.root)).toHaveLength(0);
   });

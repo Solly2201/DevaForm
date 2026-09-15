@@ -96,12 +96,35 @@ const PINNED = {
   // garment, head, trunk and base are unchanged view for view. What moved
   // is the back hands, and they moved from beside their attributes to
   // around them.
-  ganesha: { nodes: 370, digest: "ced6cadb987a4329" },
+  // One node more than before, and it is an EMPTY one: the chest.mala
+  // socket, added so a torque at the throat and a mala on the chest can be
+  // worn together. Verified by removing the socket and re-running: with it
+  // gone the digest is byte-for-byte the previous ced6cadb987a4329, so
+  // nothing else about Ganesha moved.
+  ganesha: { nodes: 371, digest: "dc153b6c88d0e7ee" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
   // procedural fist closes onto the radius each attribute declares.
-  shiva: { nodes: 314, digest: "f59247888f3b1b30" },
+  // Shiva is a different statue now, deliberately. The default body is the
+  // measured human mesh rather than a primitive assembly, so the stylised
+  // head, eyes and hands parts are gone (the mesh has its own), the
+  // garment is the layered dhoti-and-hide, the jata flows, and the naga
+  // and rudraksha are both worn. Judged against references/ref3.png; the
+  // QA sheet is screenshots/shiva.
+  //
+  // The node count DROPS because a skinned mesh is one node where the
+  // primitive figure was two hundred.
+  //
+  // Re-pinned again after the garment was rebuilt: the hide is ONE closed
+  // skin instead of a tube plus a sheet plus two leg wraps, the sash end
+  // is a pleat of the cascade rather than a flat panel of its own, and
+  // the dhoti is cut to the body's measured leg envelope — which the
+  // engine was not passing to the profile at all, so every wrap had been
+  // sized from mean limb radii. Fourteen nodes more than the count above,
+  // all of them the pieces the hide split into. Judged against
+  // references/ref3.png; the QA sheet is screenshots/shiva.
+  shiva: { nodes: 279, digest: "1076688c9cdc33c0" },
 } as const;
 
 describe("protected characters do not move", () => {

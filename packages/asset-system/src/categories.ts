@@ -50,7 +50,7 @@ export const GANESHA_EDITOR_CATEGORIES: readonly EditorCategory[] = [
     content: {
       type: "mixed",
       slots: ["earrings", "armlets", "bracelets", "anklets"],
-      sockets: ["head.crown", "head.forehead", "chest.necklace", "waist.ornament"],
+      sockets: ["head.crown", "head.forehead", "chest.necklace", "chest.mala", "waist.ornament"],
       allowNone: true,
     },
   },
@@ -135,7 +135,7 @@ export const SHIVA_EDITOR_CATEGORIES: readonly EditorCategory[] = [
     content: {
       type: "mixed",
       slots: ["earrings", "armlets", "bracelets", "anklets"],
-      sockets: ["head.moon", "chest.necklace", "waist.ornament"],
+      sockets: ["head.moon", "chest.necklace", "chest.mala", "waist.ornament"],
       allowNone: true,
     },
   },

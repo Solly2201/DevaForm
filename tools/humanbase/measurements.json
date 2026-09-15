@@ -464,7 +464,12 @@
     ],
     "chest.necklace": [
       0,
-      0.10373,
+      0.11773,
+      0.03604
+    ],
+    "chest.mala": [
+      0,
+      0.11773,
       0.03604
     ],
     "waist.ornament": [
@@ -526,9 +531,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.03246,
+      "neckRadius": 0.04491,
       "neckCentreZ": 0.00773,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.86892,
       "waistY": 0.64199,
       "waistHalfWidth": 0.07513,
       "waistHalfDepth": 0.04459,
@@ -588,9 +593,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.03125,
+      "neckRadius": 0.04377,
       "neckCentreZ": 0.00749,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.86692,
       "waistY": 0.63999,
       "waistHalfWidth": 0.07413,
       "waistHalfDepth": 0.04072,
@@ -650,9 +655,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.03217,
+      "neckRadius": 0.04429,
       "neckCentreZ": 0.00768,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.86692,
       "waistY": 0.65299,
       "waistHalfWidth": 0.07399,
       "waistHalfDepth": 0.04393,
@@ -712,9 +717,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.0382,
+      "neckRadius": 0.05085,
       "neckCentreZ": 0.00823,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.87292,
       "waistY": 0.63899,
       "waistHalfWidth": 0.08044,
       "waistHalfDepth": 0.04382,
@@ -774,9 +779,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.03431,
+      "neckRadius": 0.04879,
       "neckCentreZ": 0.00773,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.86892,
       "waistY": 0.64199,
       "waistHalfWidth": 0.07135,
       "waistHalfDepth": 0.04453,
@@ -836,9 +841,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.03134,
+      "neckRadius": 0.0448,
       "neckCentreZ": 0.00397,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.86692,
       "waistY": 0.64199,
       "waistHalfWidth": 0.07492,
       "waistHalfDepth": 0.04447,
@@ -898,9 +903,9 @@
         "spreadX": 0.06121,
         "seatY": -0.00683
       },
-      "neckRadius": 0.03189,
+      "neckRadius": 0.04469,
       "neckCentreZ": 0.00691,
-      "neckBaseY": 0.86492,
+      "neckBaseY": 0.86892,
       "waistY": 0.64099,
       "waistHalfWidth": 0.0735,
       "waistHalfDepth": 0.0428,
@@ -932,8 +937,8 @@
   "bodyProfile": {
     "base": {
       "spineToChestY": 0.11374,
-      "neckRadius": 0.03246,
-      "neckBaseOffsetY": 0.01,
+      "neckRadius": 0.04491,
+      "neckBaseOffsetY": 0,
       "pelvisHalfWidth": 0.08453,
       "waistSeatY": 0.057,
       "dhotiRadius": 0.11172,
@@ -963,14 +968,14 @@
       "shinLength": 0.246,
       "legSpreadX": 0.06121,
       "thighSeatY": -0.00683,
-      "necklaceSocketY": 0.10373,
+      "necklaceSocketY": 0.11773,
       "necklaceSocketZ": 0.03604
     },
     "morphs": {
       "bodyLean": {
         "spineToChestY": 0,
-        "neckRadius": -0.00121,
-        "neckBaseOffsetY": 0,
+        "neckRadius": -0.00114,
+        "neckBaseOffsetY": -0.002,
         "pelvisHalfWidth": -0.00169,
         "waistSeatY": 0.00185,
         "dhotiRadius": -0.00299,
@@ -1005,8 +1010,8 @@
       },
       "bodyAthletic": {
         "spineToChestY": 0,
-        "neckRadius": -0.00029,
-        "neckBaseOffsetY": 0,
+        "neckRadius": -0.00062,
+        "neckBaseOffsetY": -0.002,
         "pelvisHalfWidth": 0.0019,
         "waistSeatY": 0.00495,
         "dhotiRadius": -0.00124,
@@ -1041,8 +1046,8 @@
       },
       "bodyPowerful": {
         "spineToChestY": 0,
-        "neckRadius": 0.00574,
-        "neckBaseOffsetY": 0,
+        "neckRadius": 0.00594,
+        "neckBaseOffsetY": 0.004,
         "pelvisHalfWidth": 0.00363,
         "waistSeatY": -0.00135,
         "dhotiRadius": 0.00229,
@@ -1077,7 +1082,7 @@
       },
       "bodyHeroic": {
         "spineToChestY": 0,
-        "neckRadius": 0.00185,
+        "neckRadius": 0.00388,
         "neckBaseOffsetY": 0,
         "pelvisHalfWidth": -0.00295,
         "waistSeatY": 0,
@@ -1113,8 +1118,8 @@
       },
       "faceDivine": {
         "spineToChestY": 0,
-        "neckRadius": -0.00112,
-        "neckBaseOffsetY": 0,
+        "neckRadius": -0.00011,
+        "neckBaseOffsetY": -0.002,
         "pelvisHalfWidth": -0.00021,
         "waistSeatY": 0,
         "dhotiRadius": -0.00017,
@@ -1149,7 +1154,7 @@
       },
       "bodyAscetic": {
         "spineToChestY": 0,
-        "neckRadius": -0.00057,
+        "neckRadius": -0.00022,
         "neckBaseOffsetY": 0,
         "pelvisHalfWidth": -0.00159,
         "waistSeatY": -0.00045,
@@ -1273,6 +1278,58 @@
         1,
         0.00783
       ]
+    ]
+  },
+  "legEnvelope": {
+    "topY": -0.00683,
+    "bottomY": -0.5115,
+    "halfWidth": [
+      0.09182,
+      0.09688,
+      0.09927,
+      0.09857,
+      0.09682,
+      0.09038,
+      0.08953,
+      0.09191,
+      0.09895,
+      0.09826,
+      0.09366,
+      0.08755,
+      0.08071,
+      0.08257
+    ],
+    "frontZ": [
+      0.06207,
+      0.05704,
+      0.05634,
+      0.05543,
+      0.05032,
+      0.03904,
+      0.02983,
+      0.01923,
+      0.01506,
+      0.01356,
+      0.01224,
+      0.011,
+      0.01324,
+      0.00531
+    ],
+    "backZ": [
+      -0.0561,
+      -0.04663,
+      -0.03784,
+      -0.03713,
+      -0.03805,
+      -0.03494,
+      -0.0389,
+      -0.0462,
+      -0.05175,
+      -0.04983,
+      -0.04372,
+      -0.03659,
+      -0.03443,
+      -0.03408
     ]
   },
   "torsoSurface": {
