@@ -350,6 +350,91 @@ function legHide(
 }
 
 /**
+ * Cloth over one thigh, for a figure that has folded its legs.
+ *
+ * A wrapped column is a statement about two legs standing side by side;
+ * fold them and the statement is false, so a seated figure was given the
+ * hip wrap alone and sat in what read as underwear. Cloth does not
+ * disappear when you sit down — it goes over the lap.
+ *
+ * It rides the thigh bone, so the drape follows whatever the pose does
+ * with the leg, and it is sized from that thigh's own girths.
+ */
+function thighDrape(
+  body: BodyProfile,
+  material: THREE.Material,
+  seed: number,
+  reach: number,
+): THREE.Mesh {
+  // Close to the leg. Cloth wrapped round a thigh is a wrap, not a
+  // trumpet: lofted out to half again the knee's girth it came out as two
+  // cream flags standing off the lap.
+  const fit = (radius: number) => radius + CLEARANCE * 1.8;
+  const top = fit(body.thighTopRadius);
+  const mid = fit(body.thighMidRadius);
+  const knee = fit(body.kneeRadius);
+  // Short of the knee. Carried past it, the cloth juts into the air where
+  // the shin has already turned away, and an open tube end pointing at
+  // the viewer reads as a sheet of paper rather than as a leg in cloth.
+  const fall = body.thighLength * (0.62 + 0.14 * Math.min(1, Math.max(0, reach)));
+  const sections: ClothSection[] = [
+    { y: 0.03, rx: top * 1.02, rz: top * 1.05 },
+    { y: -fall * 0.45, rx: mid * 1.06, rz: mid * 1.1 },
+    { y: -fall * 0.85, rx: knee * 1.12, rz: knee * 1.16 },
+    { y: -fall, rx: knee * 1.06, rz: knee * 1.1 },
+  ];
+  return clothPiece(sections, material, { seed, hem: 0.016, density: 0, folds: 0.07, radial: 30 });
+}
+
+/**
+ * The cloth that falls from the waist between folded knees.
+ *
+ * A narrow fall, not an apron. Authored first as a panel the width of the
+ * hips, it spread past the knees as two cream wings and ran through both
+ * thighs on the way — because a seated figure's thighs come out of the
+ * hips SIDEWAYS, and any cloth wide enough to cover them has to be on
+ * them rather than hanging from the waist. The thighs carry their own
+ * (see thighDrape); this is the piece that shows in the gap between them,
+ * which is where a seated dhoti actually falls.
+ */
+function lapFall(body: BodyProfile, material: THREE.Material, side: 1 | -1): THREE.Mesh {
+  const rows = 12;
+  const cols = 8;
+  const waistY = body.waistSeatY;
+  const drop = body.thighLength * 0.66;
+  const depth = (body.bellyRadiusZ + CLEARANCE * 2.4) * side;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let row = 0; row <= rows; row += 1) {
+    const t = row / rows;
+    const y = waistY - 0.012 - t * drop;
+    for (let col = 0; col <= cols; col += 1) {
+      const u = col / cols - 0.5;
+      const width = 0.05 + 0.022 * t;
+      // Gathered folds down its length, and it curls away as it falls.
+      const curl = Math.cos(u * Math.PI) * 0.012 * (0.3 + t);
+      const hem = t > 0.9 ? Math.abs(u) * 0.03 : 0;
+      positions.push(u * width * 2, y + hem, depth * (0.9 + 0.5 * t) + curl * side);
+    }
+  }
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const a = row * (cols + 1) + col;
+      const b = a + 1;
+      const c = a + cols + 1;
+      const d = c + 1;
+      indices.push(a, c, b, b, c, d, a, b, c, b, d, c);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  markHide(geometry, 9, 0);
+  return new THREE.Mesh(geometry, material);
+}
+
+/**
  * A section of cloth that CONTAINS the legs at that height.
  *
  * Every dimension is the body's own measured leg extent plus cloth, so
@@ -819,7 +904,16 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // ---- sash and clasp at the waist --------------------------------------
   // The cream cloth goes on FIRST, under everything: it is the layer the
   // reference shows reaching the ankles, and the hide is slung over it.
-  if (dhotiReach > 0 && ctx.garment !== "gathered") {
+  if (dhotiReach > 0 && ctx.garment === "gathered") {
+    // Folded legs: the cloth goes over the lap. A wrapped column is a
+    // statement about two legs standing side by side, and fold them and
+    // the statement is false — so the seated figure was given the hip
+    // wrap alone and sat in what read as underwear. A panel falls from
+    // the waist between the knees instead, front and back, and each thigh
+    // carries its own cloth (below).
+    wrap.add(lapFall(body, cloth, 1));
+    wrap.add(lapFall(body, cloth, -1));
+  } else if (dhotiReach > 0) {
     // How far down the shin the cloth reaches: all the way for a standing
     // figure, above the knee when the pose has a leg out.
     const reach = ctx.garment === "short" ? 0 : dhotiReach;
@@ -909,6 +1003,12 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   if (hideAmount > 0 && dhotiReach === 0) {
     parts.push({ joint: "leg.left.thigh", object: legHide(body, hide, 11, reach) });
     parts.push({ joint: "leg.right.thigh", object: legHide(body, hide, 23, reach) });
+  }
+  // Seated, the cream goes onto the thighs themselves — one piece per
+  // thigh, riding the bone, so a folded leg carries its own cloth.
+  if (dhotiReach > 0 && ctx.garment === "gathered") {
+    parts.push({ joint: "leg.left.thigh", object: thighDrape(body, cloth, 5, dhotiReach) });
+    parts.push({ joint: "leg.right.thigh", object: thighDrape(body, cloth, 19, dhotiReach) });
   }
   return parts;
 };

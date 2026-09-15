@@ -74,7 +74,6 @@ export interface ResolvedPose {
   preset: PosePreset | undefined;
   /** Joint rotations, preset then overrides. Unknown joints are dropped. */
   joints: Readonly<Partial<Record<JointId, Vec3>>>;
-  rootOffset: Vec3;
   seated: boolean;
   /** How cloth is worn in this pose — the pose's own statement. */
   garment: GarmentFit;
@@ -232,7 +231,6 @@ export function resolveCharacterPresentation(
     presetId: config.pose.preset,
     preset,
     joints,
-    rootOffset: preset?.rootOffset ?? [0, 0, 0],
     seated: preset?.seated === true,
     garment: garmentFitOf(preset),
   };

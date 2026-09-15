@@ -124,6 +124,14 @@ export interface CharacterRig {
   body: BodyProfile;
   /** The body this rig was built on, when one was selected. */
   bodyAsset: AssetDefinition | undefined;
+  /** Top of the base, in the statue root's own space: the support. */
+  baseTop: number;
+  /**
+   * The body's own geometry — the part of the statue that rests on the
+   * base. Ornaments and cloth are not in it: a hem that hangs past the
+   * feet would otherwise lift the whole figure off its support.
+   */
+  bodyMeshes: THREE.Mesh[];
   /** What each hand is closing on — the radius it must close onto. */
   heldByHand: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>;
   /** Assets that failed to resolve (not fatal). */
@@ -481,6 +489,16 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // until every joint entry has landed, so owner parts have already
   // refined the sockets they terminate on.
   const socketMounts: Array<{ assetId: string; socket: SocketId; object: THREE.Object3D }> = [];
+  // The flesh: what the statue rests on its base with. Collected as the
+  // parts are mounted, because only here is it known which geometry came
+  // from the body slot and which from something worn over it.
+  const bodyMeshes: THREE.Mesh[] = [];
+  const claimFlesh = (object: THREE.Object3D): void => {
+    object.traverse((node) => {
+      const mesh = node as THREE.Mesh;
+      if (mesh.isMesh) bodyMeshes.push(mesh);
+    });
+  };
   for (const [slot, ref] of Object.entries(config.parts)) {
     const asset = resolveAssetRef(ref);
     if (ref && !asset) {
@@ -521,6 +539,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       if (skinnedMeshes.length > 0) {
         for (const mesh of skinnedMeshes) {
           mesh.name = mesh.name || `part:${asset.id}`;
+          if (slot === "body") bodyMeshes.push(mesh);
           characterRoot.add(mesh);
           mesh.position.set(0, 0, 0);
           mesh.quaternion.identity();
@@ -557,6 +576,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     }
     for (const entry of renderable.jointed) {
       entry.object.name = entry.object.name || `part:${asset.id}`;
+      if (slot === "body") claimFlesh(entry.object);
       if (entry.socket !== undefined) {
         socketMounts.push({ assetId: asset.id, socket: entry.socket, object: entry.object });
       } else {
@@ -695,6 +715,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
   return {
     root,
+    baseTop,
+    bodyMeshes,
     skeleton,
     joints,
     sockets,
@@ -750,6 +772,53 @@ export function settlePlantedAttachments(rig: CharacterRig): void {
       .applyQuaternion(worldQuaternion.invert())
       .add(rest);
   }
+}
+
+/**
+ * Rest the figure on its support.
+ *
+ * A pose used to carry an authored root offset: `rootOffset: [0, -0.2, 0]`
+ * on every seated preset, typed against the body those presets were
+ * written for. On any other body it is wrong by however much that body
+ * differs — which is why the meditating figure levitated a hand's breadth
+ * above its own base, and why the standing one hovered thirteen
+ * millimetres over it.
+ *
+ * A body resting on something touches it. That is the whole statement,
+ * and it is measurable: the lowest point of the body, in the pose it is
+ * actually in, is placed on the support. Nothing is authored, and no
+ * landmark stands in for the geometry — a padmasana ankle rolls its sole
+ * skyward and touches on the side of the foot, which no offset below a
+ * joint can describe.
+ *
+ * The BODY, not what it wears: cloth pools on the floor beside a seated
+ * figure without holding it up, and a hem that reached lower than the
+ * feet would lift the whole statue off its base.
+ */
+export function settleOnSupport(rig: CharacterRig): void {
+  const root = rig.joints.get("root");
+  if (!root || rig.bodyMeshes.length === 0) return;
+  rig.root.updateWorldMatrix(true, true);
+
+  const point = new THREE.Vector3();
+  let lowest = Number.POSITIVE_INFINITY;
+  for (const mesh of rig.bodyMeshes) {
+    const position = mesh.geometry.getAttribute("position");
+    if (!position) continue;
+    mesh.updateWorldMatrix(true, false);
+    const skinned = (mesh as THREE.SkinnedMesh).isSkinnedMesh ? (mesh as THREE.SkinnedMesh) : null;
+    for (let i = 0; i < position.count; i += 1) {
+      point.fromBufferAttribute(position, i);
+      if (skinned) skinned.applyBoneTransform(i, point);
+      point.applyMatrix4(mesh.matrixWorld);
+      rig.root.worldToLocal(point);
+      if (point.y < lowest) lowest = point.y;
+    }
+  }
+  if (!Number.isFinite(lowest)) return;
+
+  root.position.y += rig.baseTop - lowest;
+  rig.root.updateWorldMatrix(true, true);
 }
 
 /**
@@ -813,6 +882,11 @@ export function poseRig(rig: CharacterRig): HandSolution[] {
         `(${degrees(grip.residual)}° out).`,
     );
   }
+
+  // The figure meets its base before anything else is settled against the
+  // ground — a staff plants itself relative to a support the figure is
+  // already resting on, not to one it is about to move onto.
+  settleOnSupport(rig);
 
   // The arm has moved; only now is it known where a planted staff's hand
   // ended up, and therefore how far it has to slide to reach the ground.
