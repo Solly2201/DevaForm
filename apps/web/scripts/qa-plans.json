@@ -5,33 +5,73 @@
     "shots": [
       {
         "name": "ganesha-blessing",
-        "params": { "deity": "ganesha", "pose": "blessing" },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       },
       {
         "name": "ganesha-standing",
-        "params": { "deity": "ganesha", "pose": "standing" },
-        "views": ["front", "threeQuarter"]
+        "params": {
+          "deity": "ganesha",
+          "pose": "standing"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
       },
       {
         "name": "ganesha-meditation",
-        "params": { "deity": "ganesha", "pose": "meditation" },
-        "views": ["front", "threeQuarter"]
+        "params": {
+          "deity": "ganesha",
+          "pose": "meditation"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
       },
       {
         "name": "ganesha-royal",
-        "params": { "deity": "ganesha", "pose": "royal" },
-        "views": ["front", "threeQuarter"]
+        "params": {
+          "deity": "ganesha",
+          "pose": "royal"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
       },
       {
         "name": "ganesha-dance",
-        "params": { "deity": "ganesha", "pose": "dance" },
-        "views": ["front", "threeQuarter"]
+        "params": {
+          "deity": "ganesha",
+          "pose": "dance"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
       },
       {
         "name": "ganesha-hands",
-        "params": { "deity": "ganesha", "pose": "blessing", "focus": "hands" },
-        "views": ["front", "threeQuarter", "side"]
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       }
     ]
   },
@@ -41,48 +81,155 @@
     "shots": [
       {
         "name": "shiva-standing",
-        "params": { "deity": "shiva", "pose": "shiva.standing" },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       },
       {
         "name": "shiva-staff",
-        "params": { "deity": "shiva", "pose": "shiva.standingStaff" },
-        "views": ["front", "threeQuarter", "side"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standingStaff"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "shiva-blessing",
-        "params": { "deity": "shiva", "pose": "shiva.blessing" },
-        "views": ["front", "threeQuarter", "side"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.blessing"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "shiva-meditation",
-        "params": { "deity": "shiva", "pose": "shiva.meditation" },
-        "views": ["front", "threeQuarter"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
       },
       {
         "name": "shiva-tandava",
-        "params": { "deity": "shiva", "pose": "shiva.tandava" },
-        "views": ["front", "threeQuarter"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.tandava"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
       },
       {
         "name": "shiva-grip",
-        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "hands" },
-        "views": ["front", "threeQuarter", "side"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "shiva-neck",
-        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "torso" },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "torso"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       },
       {
         "name": "shiva-head",
-        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "head" },
-        "views": ["front", "threeQuarter", "side"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "head"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "shiva-waist",
-        "params": { "deity": "shiva", "pose": "shiva.standing", "focus": "waist" },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "waist"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "shiva-hand-trishul",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
+      },
+      {
+        "name": "shiva-hand-damaru",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "leftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
+      },
+      {
+        "name": "shiva-hand-staff",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standingStaff",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       }
     ]
   },
@@ -98,7 +245,12 @@
           "body": "humanoid.body.human",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       },
       {
         "name": "human-staff",
@@ -108,7 +260,11 @@
           "body": "humanoid.body.human",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "human-blessing",
@@ -118,7 +274,11 @@
           "body": "humanoid.body.human",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "human-grip",
@@ -129,7 +289,11 @@
           "focus": "hands",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "human-head",
@@ -140,7 +304,11 @@
           "focus": "head",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
       },
       {
         "name": "human-torso",
@@ -151,7 +319,12 @@
           "focus": "torso",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       },
       {
         "name": "human-waist",
@@ -162,7 +335,12 @@
           "focus": "waist",
           "morphs": "bodyHeroic:0.85,bodyPowerful:0.35,bodyAscetic:0.3,faceDivine:1"
         },
-        "views": ["front", "threeQuarter", "side", "back"]
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       }
     ]
   }

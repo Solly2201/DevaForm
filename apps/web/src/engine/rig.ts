@@ -247,6 +247,37 @@ function orientMeasuredGripSockets(
   }
 }
 
+/**
+ * Seat what each hand holds ON the hand, rather than in the middle of the
+ * hole the fist makes.
+ *
+ * The body measures where the skin over its knuckles is and which way its
+ * fingers close; an object of radius r rests at seat + normal × r. The
+ * grip socket is the one thing between a hand and what it holds, so that
+ * is where the measurement lands — no attachment, presentation or asset
+ * has to know anything about it.
+ *
+ * A body that does not measure itself keeps the socket its skeleton
+ * declared, which is what the stylised bodies have always used.
+ */
+function seatMeasuredGrips(
+  sockets: Map<SocketId, THREE.Object3D>,
+  seats: AssetDefinition["gripSeats"],
+  held: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>,
+): void {
+  if (!seats) return;
+  for (const slot of ARM_SLOTS) {
+    const seat = seats[slot];
+    const radius = held[slot]?.radius;
+    if (!seat || radius === undefined) continue;
+    const socket = sockets.get(`arm.${slot}.hand.item` as SocketId);
+    if (!socket) continue;
+    socket.position
+      .set(...(seat.point as [number, number, number]))
+      .addScaledVector(new THREE.Vector3(...(seat.normal as [number, number, number])), radius);
+  }
+}
+
 function buildSockets(
   skeleton: SkeletonDefinition,
   joints: Map<JointId, THREE.Object3D>,
@@ -605,6 +636,11 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       }
     }
   }
+
+  // Every part has refined the sockets it owns; now that the hand's own
+  // grip socket is where the GLB says it is, seat what the hand holds on
+  // the palm rather than in the middle of the hole the fist makes.
+  seatMeasuredGrips(sockets, bodyAsset?.gripSeats, heldByHand);
 
   for (const mount of socketMounts) {
     const socket = sockets.get(mount.socket);

@@ -70,6 +70,11 @@ const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> 
     ],
     span: 0.5,
   },
+  // One hand at a time, close enough to see the fingers: a frame that
+  // holds every hand at once holds none of them near enough to judge
+  // whether the fingers are actually round the thing they hold.
+  rightHand: { joints: ["arm.frontRight.hand"], span: 0.2 },
+  leftHand: { joints: ["arm.frontLeft.hand"], span: 0.2 },
   waist: { joints: ["pelvis"], span: 0.42 },
   feet: { joints: ["leg.left.foot", "leg.right.foot"], span: 0.35 },
 };
@@ -128,7 +133,12 @@ function Figure({
 }: {
   config: CharacterConfiguration;
   focus: readonly string[] | null;
-  onReady: (report: { warnings: string[]; height: number; centre: number; pending: string[] }) => void;
+  onReady: (report: {
+    warnings: string[];
+    height: number;
+    centre: { x: number; y: number };
+    pending: string[];
+  }) => void;
 }) {
   const [glbVersion, setGlbVersion] = useState(0);
   useEffect(() => subscribeGlbCache(() => setGlbVersion((v) => v + 1)), []);
@@ -153,12 +163,28 @@ function Figure({
     const found = (focus ?? [])
       .map((id) => rig.joints.get(id as never))
       .filter((joint): joint is THREE.Object3D => joint !== undefined)
-      .map((joint) => joint.getWorldPosition(new THREE.Vector3()).y);
+      .map((joint) => joint.getWorldPosition(new THREE.Vector3()));
+    // Where the thing is, not just how high it is. A hand hangs at the
+    // side of the figure, and a frame centred on the midline puts it off
+    // the edge however tightly the span is drawn.
     const centre =
       found.length > 0
-        ? found.reduce((total, y) => total + y, 0) / found.length
-        : box.max.y * 0.5;
-    onReady({ warnings: rigWarnings(rig), height: box.max.y, centre, pending: rig.pending });
+        ? {
+            x: found.reduce((total, p) => total + p.x, 0) / found.length,
+            y: found.reduce((total, p) => total + p.y, 0) / found.length,
+          }
+        : { x: 0, y: box.max.y * 0.5 };
+    onReady({
+      warnings: rigWarnings(rig),
+      height: box.max.y,
+      centre,
+      // A GLB that fails to load is not "pending" — the cache remembers
+      // the failure and the rig carries on without it. A dev server that
+      // was recompiling when the page asked for the body answers exactly
+      // that way, and the capture that follows is a photograph of a
+      // costume with nobody in it. So the body's absence is reported too.
+      pending: rig.bodyMeshes.length > 0 ? rig.pending : [...rig.pending, "body missing"],
+    });
   }, [rig, focus, onReady]);
 
   useEffect(() => {
@@ -184,7 +210,7 @@ function Frame({
   onFramed,
 }: {
   bearing: number;
-  centre: number;
+  centre: { x: number; y: number };
   span: number;
   onFramed: () => void;
 }) {
@@ -200,11 +226,18 @@ function Frame({
     // Level with the centre of the frame. A camera raised above its own
     // target tilts down, which crops the top of whatever it was framing —
     // which is how a crown ends up outside a full-figure QA view.
-    camera.position.set(Math.sin(bearing) * distance, centre, Math.cos(bearing) * distance);
-    camera.lookAt(0, centre, 0);
+    // Offset sideways with the target, so the camera orbits the thing
+    // being looked at rather than the statue's midline.
+    const target = new THREE.Vector3(centre.x, centre.y, 0);
+    camera.position.set(
+      target.x + Math.sin(bearing) * distance,
+      target.y,
+      Math.cos(bearing) * distance,
+    );
+    camera.lookAt(target);
     camera.updateProjectionMatrix();
     onFramed();
-  }, [camera, bearing, centre, span, onFramed]);
+  }, [camera, bearing, centre.x, centre.y, span, onFramed]);
   return null;
 }
 
@@ -229,7 +262,7 @@ function QaCapture() {
   const [report, setReport] = useState<{
     warnings: string[];
     height: number;
-    centre: number;
+    centre: { x: number; y: number };
     pending: string[];
   } | null>(null);
   const preset = getLightingPreset("studio");
@@ -238,7 +271,7 @@ function QaCapture() {
   // or a raised trishul can change what "the whole thing" means — so the
   // frame is computed from the built scene rather than assumed.
   const height = report?.height ?? 1;
-  const centre = report?.centre ?? height * 0.5;
+  const centre = report?.centre ?? { x: 0, y: height * 0.5 };
   const span = height * focus.span;
   const bearing = (view * Math.PI) / 180;
   const [framed, setFramed] = useState(false);

@@ -285,6 +285,20 @@ export interface AssetDefinition {
    * about a hand that has not measured itself.
    */
   gripApertures?: Readonly<Record<string, readonly (readonly [number, number])[]>>;
+  /**
+   * Body-slot assets: where a held object RESTS in each hand, in that
+   * hand joint's own frame — the skin over the knuckles, and the
+   * direction the fingers close from.
+   *
+   * An object of radius r sits at `point + normal * r`, which is the same
+   * sentence for a staff and for a drum. Centred on the grip point
+   * instead — the middle of the tube a fist makes — an object is held in
+   * the fingertips with a centimetre of daylight behind it however well
+   * the fingers close, which is what every look at the trishul has said.
+   */
+  gripSeats?: Readonly<
+    Record<string, { point: readonly [number, number, number]; normal: readonly [number, number, number] }>
+  >;
   /** Body-slot assets: this mesh's torso and neck, measured all round. */
   torsoSurface?: MeasuredTorsoSurface;
   /**

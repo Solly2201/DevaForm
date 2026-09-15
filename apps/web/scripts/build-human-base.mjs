@@ -1344,72 +1344,136 @@ for (const side of SIDES) {
  * measurement is of the tube a fist makes rather than of a fingertip that
  * happens to stray near the line.
  */
-function gripAperture(prefix, slot, curled) {
+/**
+ * Where a held object rests in this hand, and how wide it can be.
+ *
+ * A hand holding a staff has the staff AGAINST THE PALM. The grip point
+ * the body measures is the middle of the tube a fist makes — better than
+ * a third of a finger's length off the knuckles — and an object centred
+ * there is held in the fingertips with a clear centimetre of daylight
+ * behind it, whatever its size. Every note written about the trishul has
+ * said the same thing: the hand is not actually holding it.
+ *
+ * So the body ships the SEAT instead: the skin over the knuckles, and the
+ * direction the fingers close from. An object of radius r rests at
+ * seat + normal × r, which is the same sentence for a staff and for a
+ * drum, and the fist closes onto whatever is there.
+ *
+ * Both come from the landmarks the grip point already uses, in the hand's
+ * own frame.
+ */
+function gripSeat(prefix, slot, curled) {
+  const to5 = (value) => Number(value.toFixed(5));
   const neutral = finalMesh.neutral;
-  const axis = new THREE.Vector3(...thumbAxes[slot]).normalize();
-  // Both the socket and the axis are in the hand's own frame; the mesh is
-  // in the character's. Carry the socket back out to compare with it.
-  const origin = restFinal
-    .get(`arm.${slot}.hand`)
-    .clone()
-    .add(
-      sockets[`arm.${slot}.hand.item`]
-        .clone()
-        .applyQuaternion(rotation.get(`arm.${slot}.hand`).clone().invert()),
-    );
-  const worldAxis = axis
-    .clone()
-    .applyQuaternion(rotation.get(`arm.${slot}.hand`).clone().invert())
-    .normalize();
+  const { fingers: fingerDirection, normal: palmUp } = palmNormal(prefix);
 
-  // Only the flesh that closes: every finger segment of this hand.
-  const closing = new Set();
+  // The knuckle line, and how long the fingers are that close over it.
+  const knuckles = new THREE.Vector3();
+  let span = 0;
+  for (const finger of [2, 3, 4, 5]) {
+    knuckles.add(v3(`${prefix}-finger-${finger}-1`));
+    span += v3(`${prefix}-finger-${finger}-1`).distanceTo(v3(`${prefix}-finger-${finger}-4`));
+  }
+  knuckles.multiplyScalar(0.25);
+  span /= 4;
+  // The flesh over the knuckles — a tenth of the fingers' reach — and a
+  // touch along them, where the tube actually runs.
+  const seatMH = knuckles
+    .clone()
+    .addScaledVector(palmUp, span * 0.1)
+    .addScaledVector(fingerDirection, span * 0.12);
+
+  // Into the canonical frame, the way every other measured point goes.
+  const turn = rotation.get(`arm.${slot}.hand`);
+  const handRest = restFinal.get(`arm.${slot}.hand`);
+  const handTurn = turn.clone().invert();
+  const toFinal = (point) =>
+    handRest
+      .clone()
+      .add(
+        point
+          .clone()
+          .sub(restFor("neutral").get(`arm.${slot}.hand`))
+          .applyQuaternion(turn)
+          .multiplyScalar(scale * heightFix.neutral)
+          .applyQuaternion(handTurn),
+      );
+  const seat = toFinal(seatMH);
+  const normal = palmUp.clone().applyQuaternion(turn).applyQuaternion(handTurn).normalize();
+  const axis = new THREE.Vector3(...thumbAxes[slot])
+    .applyQuaternion(handTurn)
+    .normalize();
+  const across = (vector) => vector.addScaledVector(axis, -vector.dot(axis));
+
+  // The fingers that close over it.
+  const side = prefix === "l" ? "L" : "R";
+  const flesh = new Set();
   for (const finger of [1, 2, 3, 4, 5]) {
     for (const segment of [1, 2, 3]) {
-      const bone = rigWeights[`finger${finger}-${segment}.${prefix === "l" ? "L" : "R"}`];
-      for (const [baseIndex, weight] of bone ?? []) {
+      for (const [baseIndex, weight] of rigWeights[`finger${finger}-${segment}.${side}`] ?? []) {
         if (weight <= 0.25) continue;
         const vertex = inverseParentMap[baseIndex];
-        if (vertex >= 0) closing.add(vertex);
+        if (vertex >= 0) flesh.add(vertex);
       }
     }
   }
-
-  /** Half the width of a palm, along the axis: the length of the tube. */
-  const WINDOW = 0.035;
-  const point = new THREE.Vector3();
-  const offset = new THREE.Vector3();
-  const measureAt = (influence) => {
-    let narrowest = Infinity;
-    for (const vertex of closing) {
+  /** Half the length of the tube the object passes through. */
+  const WINDOW = 0.028;
+  const posed = (influence) => {
+    const out = [];
+    for (const vertex of flesh) {
       const i = vertex * 3;
-      point.set(
+      const point = new THREE.Vector3(
         neutral[i] + (curled[i] - neutral[i]) * influence,
         neutral[i + 1] + (curled[i + 1] - neutral[i + 1]) * influence,
         neutral[i + 2] + (curled[i + 2] - neutral[i + 2]) * influence,
       );
-      offset.copy(point).sub(origin);
-      const along = offset.dot(worldAxis);
-      if (Math.abs(along) > WINDOW) continue;
-      narrowest = Math.min(narrowest, offset.addScaledVector(worldAxis, -along).length());
+      if (Math.abs(point.clone().sub(seat).dot(axis)) > WINDOW) continue;
+      out.push(point);
     }
-    return Number.isFinite(narrowest) ? Number(narrowest.toFixed(5)) : 0;
+    return out;
   };
 
+  // How wide an object resting on that seat can be, at each closure: grow
+  // it off the palm until a finger is inside it.
   const curve = [];
   for (let step = 0; step <= 8; step += 1) {
     const influence = step / 8;
-    curve.push([Number(influence.toFixed(3)), measureAt(influence)]);
+    const closing = posed(influence);
+    let best = 0.002;
+    for (let radius = 0.0025; radius <= 0.03; radius += 0.0005) {
+      const centre = seat.clone().addScaledVector(normal, radius);
+      let fits = true;
+      for (const point of closing) {
+        if (across(point.clone().sub(centre)).length() < radius - 0.001) {
+          fits = false;
+          break;
+        }
+      }
+      if (!fits) break;
+      best = radius;
+    }
+    curve.push([to5(influence), to5(best)]);
   }
-  return curve;
+
+  const local = seat.clone().sub(handRest).applyQuaternion(turn);
+  const localNormal = normal.clone().applyQuaternion(turn).normalize();
+  return {
+    curve,
+    seat: [to5(local.x), to5(local.y), to5(local.z)],
+    normal: [to5(localNormal.x), to5(localNormal.y), to5(localNormal.z)],
+  };
 }
 
 const gripApertures = {};
+const gripSeats = {};
 for (const side of SIDES) {
   const prefix = side.mh === "L" ? "l" : "r";
   const name = `grip${side.arm[0].toUpperCase()}${side.arm.slice(1)}`;
   if (!finalGrips[name]) continue;
-  gripApertures[side.arm] = gripAperture(prefix, side.arm, finalGrips[name]);
+  const measured = gripSeat(prefix, side.arm, finalGrips[name]);
+  gripApertures[side.arm] = measured.curve;
+  gripSeats[side.arm] = { point: measured.seat, normal: measured.normal };
 }
 
 /**
@@ -1702,6 +1766,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
       gripApertures,
+      gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceMap(finalMesh.neutral),
       printability: { printSourceAvailable: false },
@@ -1745,6 +1810,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       thumbAxes,
       gripApertures,
+      gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceMap(finalMesh.neutral),
     },
