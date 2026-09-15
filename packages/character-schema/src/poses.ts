@@ -539,7 +539,100 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
  * Global preset registry: every deity's presets, keyed by their persisted
  * id. Duplicate ids across sets are a data error caught at module load.
  */
-const ALL_POSE_PRESETS: readonly PosePreset[] = [...POSE_PRESETS, ...SHIVA_POSE_PRESETS];
+/**
+ * Vishnu — the preserver, standing.
+ *
+ * `references/ref_vishnu.png` is unambiguous about the arrangement, and
+ * it is an arrangement rather than a pose: the FRONT pair works at hip
+ * height — a mace resting on the ground under one hand, a lotus held out
+ * in the other — while the BACK pair is raised beside the head with the
+ * discus and the conch. Every preset here keeps that hierarchy, because
+ * it is what makes four arms read as four arms rather than as two pairs
+ * of the same arm.
+ *
+ * Which hand holds what is not decided here. The pose says where the
+ * hands are; the resolver decides what each one can hold, from the
+ * presentations the attributes declare — so a blessing hand gives up its
+ * attribute the same way Shiva's does.
+ */
+export const VISHNU_POSE_PRESETS: readonly PosePreset[] = [
+  {
+    id: "vishnu.regal",
+    label: "Regal",
+    description: "Upright and symmetrical, all four attributes presented.",
+    joints: {
+      // Front pair: low and open, the mace hand at the hip.
+      "arm.frontRight.upper": [4 * D, 0, -6 * D],
+      "arm.frontRight.forearm": [-22 * D, -14 * D, 0],
+      "arm.frontRight.hand": [-8 * D, 0, 0],
+      "arm.frontLeft.upper": [4 * D, 0, 6 * D],
+      "arm.frontLeft.forearm": [-26 * D, 14 * D, 0],
+      "arm.frontLeft.hand": [-8 * D, 0, 0],
+      // Back pair: raised beside the head.
+      "arm.backRight.upper": [-34 * D, 12 * D, -58 * D],
+      "arm.backRight.forearm": [-74 * D, 0, 0],
+      "arm.backRight.hand": [-12 * D, 0, 0],
+      "arm.backLeft.upper": [-34 * D, -12 * D, 58 * D],
+      "arm.backLeft.forearm": [-74 * D, 0, 0],
+      "arm.backLeft.hand": [-12 * D, 0, 0],
+      "leg.left.thigh": [0, 4 * D, 2 * D],
+      "leg.right.thigh": [0, -4 * D, -2 * D],
+    },
+  },
+  {
+    id: "vishnu.blessing",
+    label: "Blessing",
+    description: "The front right hand raised in abhaya; the rest present their attributes.",
+    joints: {
+      spine: [0, 0, 2 * D],
+      ...gestureArm("abhaya", "frontRight"),
+      "arm.frontLeft.upper": [4 * D, 0, 8 * D],
+      "arm.frontLeft.forearm": [-30 * D, 16 * D, 0],
+      "arm.frontLeft.hand": [-8 * D, 0, 0],
+      "arm.backRight.upper": [-36 * D, 12 * D, -56 * D],
+      "arm.backRight.forearm": [-72 * D, 0, 0],
+      "arm.backRight.hand": [-12 * D, 0, 0],
+      "arm.backLeft.upper": [-36 * D, -12 * D, 56 * D],
+      "arm.backLeft.forearm": [-72 * D, 0, 0],
+      "arm.backLeft.hand": [-12 * D, 0, 0],
+      "leg.left.thigh": [0, 4 * D, 2 * D],
+      "leg.right.thigh": [0, -4 * D, -2 * D],
+      head: [3 * D, 0, 0],
+    },
+  },
+  {
+    id: "vishnu.serene",
+    label: "Serene",
+    description: "Weight on one foot, the shoulders soft — the same attributes, at rest.",
+    joints: {
+      pelvis: [0, 0, -3 * D],
+      spine: [0, 3 * D, 4 * D],
+      chest: [0, -2 * D, 2 * D],
+      "arm.frontRight.upper": [6 * D, 0, -10 * D],
+      "arm.frontRight.forearm": [-18 * D, -12 * D, 0],
+      "arm.frontRight.hand": [-6 * D, 0, 0],
+      "arm.frontLeft.upper": [2 * D, 0, 10 * D],
+      "arm.frontLeft.forearm": [-34 * D, 18 * D, 0],
+      "arm.frontLeft.hand": [-10 * D, 0, 0],
+      "arm.backRight.upper": [-30 * D, 14 * D, -54 * D],
+      "arm.backRight.forearm": [-70 * D, 0, 0],
+      "arm.backRight.hand": [-10 * D, 0, 0],
+      "arm.backLeft.upper": [-38 * D, -10 * D, 60 * D],
+      "arm.backLeft.forearm": [-76 * D, 0, 0],
+      "arm.backLeft.hand": [-14 * D, 0, 0],
+      "leg.left.thigh": [0, 6 * D, 5 * D],
+      "leg.right.thigh": [-4 * D, -3 * D, -2 * D],
+      "leg.right.shin": [10 * D, 0, 0],
+      head: [0, -4 * D, -2 * D],
+    },
+  },
+] as const;
+
+const ALL_POSE_PRESETS: readonly PosePreset[] = [
+  ...POSE_PRESETS,
+  ...SHIVA_POSE_PRESETS,
+  ...VISHNU_POSE_PRESETS,
+];
 
 const presetMap = new Map<string, PosePreset>();
 for (const preset of ALL_POSE_PRESETS) {

@@ -16,8 +16,16 @@ import { isSocketId } from "./sockets";
 
 export const SCHEMA_VERSION = 1;
 
-/** Deities a configuration may reference — widened as deities are added. */
-export const DEITY_IDS = ["ganesha", "shiva"] as const;
+/**
+ * Deities a configuration may reference — widened as deities are added.
+ *
+ * Widening is backwards compatible: every configuration that parsed
+ * before still parses, because the set only ever grows. Whether a deity
+ * is OFFERED is a different question, answered by the registry — Vishnu
+ * is here so his assets and poses can be validated while the deity itself
+ * is still being prepared.
+ */
+export const DEITY_IDS = ["ganesha", "shiva", "vishnu"] as const;
 export type DeityId = (typeof DEITY_IDS)[number];
 
 /**
