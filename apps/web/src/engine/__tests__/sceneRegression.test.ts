@@ -160,7 +160,13 @@ const PINNED = {
   // there is pinched in the fingertips with daylight behind it. The body
   // ships the SEAT now — the skin over its knuckles and the way its
   // fingers close — and an object of radius r rests at seat + normal × r.
-  shiva: { nodes: 334, digest: "37091d25268c3737" },
+  //
+  // And again for the cloth: the pleat beside the sash had no colour
+  // attribute under a material that renders them, so it rendered BLACK —
+  // a hole cut through the dhoti in every three-quarter view. Every cloth
+  // piece carries vertex colours now, and vertexColours.test.ts holds
+  // every mesh of every pose of both deities to that.
+  shiva: { nodes: 334, digest: "10523c1e599cf110" },
 } as const;
 
 describe("protected characters do not move", () => {

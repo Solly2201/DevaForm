@@ -796,7 +796,13 @@ function dhotiCascade(
       const at = onCloth(profile, y, bearing, air, gathered(y));
       panel.push({ y, rx: width * widen, rz: thick, z: at.z });
     }
-    const piece = new THREE.Mesh(sleeve(panel, 14, 4, 0.06), material);
+    // Every piece that wears a garment material carries vertex colours,
+    // because those materials render them: a mesh without the attribute
+    // comes out BLACK, which is what the pleat beside the sash was doing
+    // — a hole cut through the dhoti in every three-quarter view.
+    const pleat = sleeve(panel, 14, 4, 0.06);
+    markHide(pleat, 3 + bearing * 7, 0);
+    const piece = new THREE.Mesh(pleat, material);
     piece.position.x = onCloth(profile, waistY - 0.012, bearing, 0.004, gathered(waistY)).x;
     group.add(piece);
   }
@@ -820,8 +826,11 @@ function sashFall(
   reach: number,
   side: 1 | -1,
 ): THREE.Mesh {
-  const rows = 20;
-  const cols = 6;
+  // Enough columns across to read as cloth: at six the curl below turns
+  // into a crease every three centimetres and the sash reads as crumpled
+  // paper.
+  const rows = 22;
+  const cols = 12;
   const waistY = body.waistSeatY;
   const sections = dhotiSections(body, reach);
   const profile = profileOf(sections);
@@ -847,7 +856,7 @@ function sashFall(
     for (let col = 0; col <= cols; col += 1) {
       const u = col / cols - 0.5;
       // A hanging strip curls around its own fall.
-      const curl = Math.cos(u * Math.PI) * 0.01 * (0.35 + t);
+      const curl = Math.cos(u * Math.PI) * 0.006 * (0.35 + t);
       positions.push(
         spine.x + across.x * u * width * 2 + outward.x * curl,
         y,
@@ -868,6 +877,7 @@ function sashFall(
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
+  markHide(geometry, 23, 0);
   return new THREE.Mesh(geometry, material);
 }
 

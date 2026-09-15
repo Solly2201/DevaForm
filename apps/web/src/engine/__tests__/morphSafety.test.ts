@@ -170,7 +170,7 @@ function skinSlices(rig: ReturnType<typeof buildRig>): Map<number, THREE.Vector2
 function depthInside(slices: Map<number, THREE.Vector2[]>, point: THREE.Vector3): number {
   const slice = slices.get(Math.round(point.y / 0.01));
   if (!slice || slice.length < 16) return 0;
-  let centre = new THREE.Vector2();
+  const centre = new THREE.Vector2();
   for (const flat of slice) centre.add(flat);
   centre.multiplyScalar(1 / slice.length);
   const here = new THREE.Vector2(point.x, point.z).sub(centre);
