@@ -448,6 +448,22 @@ function lapFall(body: BodyProfile, material: THREE.Material, side: 1 | -1): THR
  * cylinder: both of them stood outside the dhoti from behind while it
  * looked perfectly fitted from the front.
  */
+/**
+ * Where the body actually is, front to back, at the hips.
+ *
+ * A ring centred on the pelvis JOINT is not centred on the body: this
+ * figure's mass sits nearly three centimetres forward of it. Sized from a
+ * half-depth and centred on the joint, a waist ring stands four
+ * centimetres clear at the back and cuts a centimetre into the belly at
+ * the front — which is what the hide was doing. The legs beneath report
+ * their own fore-aft centre in this very frame, and the hips are directly
+ * above them.
+ */
+function hipCentreZ(body: BodyProfile): number {
+  const leg = body.legExtentAt(body.thighSeatY);
+  return (leg.frontZ + leg.backZ) / 2;
+}
+
 function overHips(
   body: BodyProfile,
   y: number,
@@ -550,9 +566,10 @@ function hideWrap(
   const deepestY = topY - fall;
   // Outside the cream cloth where they overlap: the hide is worn OVER the
   // dhoti, and the dhoti is already fitted to the legs.
+  const centreZ = hipCentreZ(body);
   const profile = profileOf([
-    { y: topY, rx: hipRx, rz: hipRz },
-    { y: waistY - 0.016, rx: hipRx * 1.02, rz: hipRz * 1.02 },
+    { y: topY, rx: hipRx, rz: hipRz, z: centreZ },
+    { y: waistY - 0.016, rx: hipRx * 1.02, rz: hipRz * 1.02, z: centreZ },
     overHips(body, seat - 0.01, 5, hipRx * 1.07, hipRz * 1.09),
     wrapSection(body, Math.min(seat - 0.02, deepestY + fall * 0.35), 5.4),
     wrapSection(body, deepestY, 5),
@@ -632,6 +649,10 @@ function dhotiSections(body: BodyProfile, reach: number): ClothSection[] {
   const hem = knee - body.shinLength * reach;
   const around = (y: number, slack: number) => wrapSection(body, y, slack);
   return [
+    // No z offset here: the column below it is centred on the LEGS, and
+    // pulling its waist ring forward onto the body's own centre tips the
+    // loft between them enough to uncover the outside of a thigh. The
+    // hide and the band above are what needed centring.
     { y: waistY - 0.006, rx: hipRx * 0.95, rz: hipRz * 0.97 },
     // Where the legs begin, the cloth clears the legs — the pelvis is
     // narrower than the tops of the thighs beside it, and a ring sized
@@ -953,6 +974,7 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // own radius disappears under the hide, leaving the hide's top edge
   // showing as a cut line across the waist.
   const under = hideAmount > 0 ? 1.035 : 1;
+  const waistZ = hipCentreZ(body);
   const sashRx = hipRx * 1.04 * under;
   const sashRz = hipRz * 1.05 * under;
   wrap.add(
@@ -961,10 +983,10 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
         // Barely tapered. A band that narrows towards its edges dips back
         // inside the hide it is wound over, and the two surfaces cross in
         // a pair of notches either side of the clasp.
-        { y: waistY + 0.03, rx: sashRx * 0.98, rz: sashRz * 0.985 },
-        { y: waistY + 0.012, rx: sashRx, rz: sashRz },
-        { y: waistY - 0.008, rx: sashRx * 0.995, rz: sashRz * 0.995 },
-        { y: waistY - 0.026, rx: sashRx * 0.965, rz: sashRz * 0.97 },
+        { y: waistY + 0.03, rx: sashRx * 0.98, rz: sashRz * 0.985, z: waistZ },
+        { y: waistY + 0.012, rx: sashRx, rz: sashRz, z: waistZ },
+        { y: waistY - 0.008, rx: sashRx * 0.995, rz: sashRz * 0.995, z: waistZ },
+        { y: waistY - 0.026, rx: sashRx * 0.965, rz: sashRz * 0.97, z: waistZ },
       ],
       sashMaterial,
       { seed: 17, density: 0, folds: 0.05, radial: 40 },
@@ -973,7 +995,7 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // The clasp sits ON the band, at the band's own surface.
   wrap.add(
     mesh(new THREE.SphereGeometry(0.015, 14, 12), metal, {
-      position: [0, waistY + 0.008, sashRz * 1.01],
+      position: [0, waistY + 0.008, waistZ + sashRz * 1.01],
       scale: [1.3, 0.9, 0.5],
     }),
   );

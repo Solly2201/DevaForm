@@ -26,7 +26,11 @@ export const TRISHUL_TRAVEL = 0.24;
 /** Half-thickness of the damaru at its waist — the only part a hand grips. */
 export const DAMARU_WAIST_RADIUS = 0.0062;
 /** Half-length of that waist, before the drum flares. */
-export const DAMARU_WAIST_HALF = 0.009;
+// Long enough for a hand. A drum whose waist is eighteen millimetres is
+// gripped by fingers that span thirty, so the outer two run into the
+// flare — which is not a placement problem to be nudged away but a drum
+// with no handle on it.
+export const DAMARU_WAIST_HALF = 0.014;
 
 const HAND_SOCKETS = [
   "arm.frontLeft.hand.item",

@@ -44,7 +44,8 @@ import {
   type CharacterConfiguration,
 } from "@devaform/character-schema";
 import { getAvailableDeity } from "@devaform/asset-system";
-import { buildRig, poseRig } from "../rig";
+import { buildRig, poseRig, rigMorphInfluences } from "../rig";
+import { applyMorphInfluences, deformedVertex } from "../skinning";
 import { ZoneMaterials } from "../materials";
 
 /**
@@ -88,6 +89,9 @@ async function rigFor(config: CharacterConfiguration): Promise<{
   await new Promise((resolve) => setTimeout(resolve, 0));
   const rig = buildRig(config, materials);
   poseRig(rig);
+  // The morphs have to be ON the mesh, or this tests ornaments fitted to
+  // a blended profile against a body that never changed shape.
+  applyMorphInfluences(rig.root, rigMorphInfluences(rig, config.morphs));
   rig.root.updateWorldMatrix(true, true);
   return { rig, materials };
 }
@@ -149,9 +153,7 @@ function skinSlices(rig: ReturnType<typeof buildRig>): Map<number, THREE.Vector2
         if (isTorso[bone]) share += weight;
       }
       if (share < 0.75) continue;
-      point.fromBufferAttribute(position, i);
-      skinned.applyBoneTransform(i, point);
-      point.applyMatrix4(mesh.matrixWorld);
+      deformedVertex(mesh, i, point).applyMatrix4(mesh.matrixWorld);
       rig.root.worldToLocal(point);
       const key = Math.round(point.y / SLICE);
       const slice = slices.get(key);
@@ -221,13 +223,8 @@ describe("no morph combination breaks the statue", () => {
     const point = new THREE.Vector3();
     for (const mesh of rig.bodyMeshes) {
       const position = mesh.geometry.getAttribute("position");
-      const skinned = (mesh as THREE.SkinnedMesh).isSkinnedMesh
-        ? (mesh as THREE.SkinnedMesh)
-        : null;
       for (let i = 0; i < position.count; i += 1) {
-        point.fromBufferAttribute(position, i);
-        if (skinned) skinned.applyBoneTransform(i, point);
-        point.applyMatrix4(mesh.matrixWorld);
+        deformedVertex(mesh, i, point).applyMatrix4(mesh.matrixWorld);
         lowest = Math.min(lowest, rig.root.worldToLocal(point).y);
       }
     }

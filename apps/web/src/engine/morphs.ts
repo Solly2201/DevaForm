@@ -33,6 +33,9 @@ const MUDRA_CLOSURE: Record<MudraId, number> = {
   grip: 1,
 };
 
+/** How much air a closing hand leaves around what it holds. */
+const CONTACT_GAP = 0.0015;
+
 const gripTarget = (slot: ArmSlot): string => `grip${slot[0]!.toUpperCase()}${slot.slice(1)}`;
 
 /**
@@ -77,9 +80,21 @@ export function handMorphInfluences(
     const radius = held[slot]?.radius;
     const measured =
       radius !== undefined
-        ? closureFor(body?.gripApertures?.[slot], radius)
+        ? // A millimetre and a half of air, so the fingers stop AT the
+          // object rather than a little way into it. The aperture curve
+          // is the largest circle that fits, which is a lower bound on
+          // the hole — the flesh comes closer than that in places, and
+          // closing to the exact radius put fingertips a few millimetres
+          // inside a drum that is made of wood.
+          closureFor(body?.gripApertures?.[slot], radius + CONTACT_GAP)
         : undefined;
-    influences[target] = measured ?? MUDRA_CLOSURE[hands[slot].mudra];
+    // What the hand is DOING bounds how far it closes. A pinch that shuts
+    // into a fist because the object is thin is not a pinch — and a drum
+    // is pinched at a waist nine millimetres long, so a fist closing over
+    // three centimetres of it runs its fingers into the flare whatever
+    // the waist measures. The object can only ever stop the hand sooner.
+    const intended = MUDRA_CLOSURE[hands[slot].mudra];
+    influences[target] = measured === undefined ? intended : Math.min(measured, intended);
   }
   return influences;
 }

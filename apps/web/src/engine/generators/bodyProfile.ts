@@ -474,6 +474,7 @@ function sampleSurface(
   map: MeasuredTorsoSurface,
   bearing: number,
   y: number,
+  morphs: Readonly<Record<string, number>> = {},
 ): { x: number; z: number } {
   const rowAt = Math.min(
     map.rows - 1,
@@ -489,11 +490,29 @@ function sampleSurface(
   const c1 = (c0 + 1) % map.columns;
   const fc = colAt - Math.floor(colAt);
 
-  const radiusAt = (row: number, col: number) => map.radius[row * map.columns + col] ?? 0;
+  // The neutral surface plus whatever the customer's morphs do to it, on
+  // the same grid and by the same influences the mesh is blended by.
+  const radiusAt = (row: number, col: number) => {
+    const index = row * map.columns + col;
+    let value = map.radius[index] ?? 0;
+    for (const [name, influence] of Object.entries(morphs)) {
+      if (!influence) continue;
+      value += (map.morphs?.[name]?.radius[index] ?? 0) * influence;
+    }
+    return value;
+  };
   const radius =
     (radiusAt(r0, c0) * (1 - fc) + radiusAt(r0, c1) * fc) * (1 - fr) +
     (radiusAt(r1, c0) * (1 - fc) + radiusAt(r1, c1) * fc) * fr;
-  const centre = (map.centreZ[r0] ?? 0) * (1 - fr) + (map.centreZ[r1] ?? 0) * fr;
+  const centreAt = (row: number) => {
+    let value = map.centreZ[row] ?? 0;
+    for (const [name, influence] of Object.entries(morphs)) {
+      if (!influence) continue;
+      value += (map.morphs?.[name]?.centreZ[row] ?? 0) * influence;
+    }
+    return value;
+  };
+  const centre = centreAt(r0) * (1 - fr) + centreAt(r1) * fr;
   return { x: Math.sin(turn) * radius, z: centre + Math.cos(turn) * radius };
 }
 
@@ -536,7 +555,7 @@ function deriveMeasuredProfile(
   // everything else about the surface is asked through it.
   const surfaceAt = (bearing: number, y: number) => {
     if (torsoSurface) {
-      const { x, z } = sampleSurface(torsoSurface, bearing, y);
+      const { x, z } = sampleSurface(torsoSurface, bearing, y, morphs);
       return { x, y, z };
     }
     // Without a measurement, the volume the body was generated as.
