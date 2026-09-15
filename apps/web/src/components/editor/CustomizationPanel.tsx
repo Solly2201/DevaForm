@@ -5,13 +5,15 @@
  * part categories get asset grids per slot, socket categories get asset
  * grids per socket, and hands/pose/materials/base render dedicated panels.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   armOptionsFor,
   coveredFeatures,
+  customerFacingIssues,
   getAsset,
   listAssets,
   presentationsOf,
+  resolveCharacterPresentation,
   type EditorCategory,
 } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
@@ -553,6 +555,47 @@ function CategoryPanelBody({ category }: { category: EditorCategory }) {
   );
 }
 
+/**
+ * What the figure did with the choices, in the customer's words.
+ *
+ * The resolver already decides these and writes a sentence for each: a
+ * blessing hand puts its trident down, an attribute with nowhere to go on
+ * this body is left out. Those sentences used to reach a console warning
+ * and nothing else, so from the customer's side an attribute simply
+ * vanished when they changed a mudra. Shown here they are the difference
+ * between a rule and a bug.
+ */
+function ResolutionNotices() {
+  const config = useEditorStore((s) => s.config);
+  const issues = useMemo(
+    () => customerFacingIssues(resolveCharacterPresentation(config)),
+    [config],
+  );
+  if (issues.length === 0) return null;
+  return (
+    <div className="border-b border-surface-800 bg-surface-950/60 px-4 py-3">
+      <ul className="space-y-1.5">
+        {issues.map((issue, index) => (
+          <li
+            key={`${issue.assetId ?? "issue"}-${index}`}
+            className="flex gap-2 text-[11px] leading-snug text-stone-400"
+          >
+            <span
+              aria-hidden
+              className={
+                issue.severity === "rejected"
+                  ? "mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                  : "mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-stone-500"
+              }
+            />
+            <span>{issue.message}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function CustomizationPanel() {
   const deity = useDeity();
   const activeCategoryId = useUiStore((s) => s.activeCategoryId);
@@ -566,6 +609,7 @@ export function CustomizationPanel() {
         <h2 className="font-display text-base text-stone-100">{category.label}</h2>
         <p className="text-xs text-stone-500">{category.description}</p>
       </header>
+      <ResolutionNotices />
       <CategoryPanelBody category={category} />
     </aside>
   );
