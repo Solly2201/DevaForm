@@ -50,7 +50,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "part", slot: "body" },
     deityCompatibility: ["shiva"],
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.athletic", params: { form: "athletic", chest: 1, waist: 1, shoulder: 1 } },
     materialZones: ["skin", "skinSecondary"],
     category: "body",
@@ -64,7 +64,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "part", slot: "body" },
     deityCompatibility: ["shiva"],
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.athletic", params: { form: "athletic", chest: 0.88, waist: 0.88, shoulder: 0.94 } },
     materialZones: ["skin", "skinSecondary"],
     category: "body",
@@ -78,7 +78,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "part", slot: "body" },
     deityCompatibility: ["shiva"],
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.athletic", params: { form: "athletic", chest: 1.18, waist: 1.08, shoulder: 1.12 } },
     materialZones: ["skin", "skinSecondary"],
     category: "body",
@@ -95,7 +95,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     // Superseded: the mesh body carries its own head.
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "shiva.head", params: {} },
     // The sculpt physically includes its ears — standalone ear parts (if a
     // configuration ever carried them) are suppressed, same rule as
@@ -116,7 +116,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     // Superseded: the mesh body carries its own eyes.
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: {
       kind: "procedural",
       generatorId: "humanoid.eyes",
@@ -140,7 +140,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     // Superseded: the mesh body carries its own eyes.
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: {
       kind: "procedural",
       generatorId: "humanoid.eyes",
@@ -194,7 +194,7 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     // Superseded: the mesh body carries its own hands.
     stage: "deprecated",
-    supersedes: "humanoid.body.human",
+    supersededBy: "humanoid.body.human",
     source: { kind: "procedural", generatorId: "humanoid.hands" },
     materialZones: ["skin"],
     category: "hands",

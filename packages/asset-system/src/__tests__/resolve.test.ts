@@ -23,6 +23,7 @@ import {
 import { GROUND_SOCKET, resolveCharacterPresentation } from "../resolve";
 import { isHandheld } from "../presentation";
 import { getAsset } from "../registry";
+import { armOptionsFor, getAvailableDeity } from "../deities";
 
 const withPose = (config: CharacterConfiguration, preset: string | null): CharacterConfiguration => ({
   ...config,
@@ -77,6 +78,45 @@ describe("anatomy cannot be exceeded", () => {
       "arm.backRight.hand.item",
     );
     expect(resolved.issues.some((i) => i.message.includes("does not have"))).toBe(true);
+  });
+});
+
+/**
+ * A second pair of arms is anatomy, and anatomy comes from the body.
+ *
+ * Shiva is shown with two arms and with four. The measured human mesh has
+ * two, and a four-armed option on it would be a pair of hands seven
+ * centimetres from anything that could hold a thing — so the offer is the
+ * deity's iconography intersected with the body's own skeleton, and a
+ * future four-armed body turns the option back on by declaring the
+ * extension rather than by anyone editing this.
+ */
+describe("four arms are a property of the body, not of the deity", () => {
+  it("is not offered on a body that has two", () => {
+    const shiva = getAvailableDeity("shiva")!;
+    const mesh = getAsset("humanoid.body.human")!;
+    expect(shiva.armOptions, "the iconography knows about four").toContain(4);
+    expect(armOptionsFor(shiva, mesh), "this body does not").toEqual([2]);
+  });
+
+  it("is offered again by a body whose skeleton has them", () => {
+    const shiva = getAvailableDeity("shiva")!;
+    // Any body declaring the four-armed skeleton restores the option; the
+    // stylised Shiva bodies, kept resolvable for old saves, are exactly
+    // such a body.
+    const stylised = getAsset("shiva.body.classic")!;
+    expect(armOptionsFor(shiva, stylised)).toEqual(shiva.armOptions);
+  });
+
+  it("never invents a limb the body does not have", () => {
+    const config = createDefaultShivaConfiguration();
+    config.arms = { count: 4 };
+    const resolved = resolveCharacterPresentation(config);
+    expect(resolved.armSlots).toEqual(["frontLeft", "frontRight"]);
+    for (const attachment of resolved.attachments) {
+      if (!attachment.handSlot) continue;
+      expect(resolved.skeleton.armSlots).toContain(attachment.handSlot);
+    }
   });
 });
 

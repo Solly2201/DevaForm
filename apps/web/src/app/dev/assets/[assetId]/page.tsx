@@ -316,6 +316,9 @@ export default function AssetInspectorPage({
               {asset.supersedes && (
                 <div><dt className="inline text-stone-500">Supersedes: </dt><dd className="inline font-mono">{asset.supersedes}</dd></div>
               )}
+              {asset.supersededBy && (
+                <div><dt className="inline text-stone-500">Superseded by: </dt><dd className="inline font-mono">{asset.supersededBy}</dd></div>
+              )}
             </dl>
           </section>
 
