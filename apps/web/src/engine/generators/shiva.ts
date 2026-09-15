@@ -825,8 +825,49 @@ function sweptForm(
   return geometry;
 }
 
+/**
+ * A serpent's skin: dark along the back, pale under the belly, with
+ * scale banding across it.
+ *
+ * Counter-shading is taken from which way the surface FACES, not from
+ * where it sits in a sweep's parameter grid — a hood is a flattened
+ * section whose broad faces are its sides, and shading it by the sweep
+ * painted both faces belly-pale and left the edges dark. Normals work on
+ * anything: the swept body, the hood plate, a skull built from spheres.
+ *
+ * `bands` is how many scale rings fall across the piece, measured along
+ * whichever axis the piece is longest in. Zero leaves it smooth.
+ */
+function serpentSkin(geometry: THREE.BufferGeometry, bands = 0): void {
+  geometry.computeVertexNormals();
+  const position = geometry.getAttribute("position");
+  const normal = geometry.getAttribute("normal");
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox!;
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const axis = size.x >= size.y && size.x >= size.z ? 0 : size.y >= size.z ? 1 : 2;
+  const span = Math.max(1e-6, [size.x, size.y, size.z][axis]!);
+  const origin = [box.min.x, box.min.y, box.min.z][axis]!;
+  const colors = new Float32Array(position.count * 3);
+  for (let i = 0; i < position.count; i += 1) {
+    const up = normal.getY(i);
+    // Quick across the flank, so the change reads as counter-shading
+    // rather than as a gradient.
+    const back = 0.5 + 0.5 * Math.tanh(up * 2.6);
+    const belly = 1 - back;
+    const at = ([position.getX(i), position.getY(i), position.getZ(i)][axis]! - origin) / span;
+    const ring = bands === 0 ? 0 : 0.5 + 0.5 * Math.cos(at * Math.PI * 2 * bands);
+    const shade = (1 - 0.2 * ring * back) * (0.78 + 0.32 * belly);
+    colors[i * 3] = shade * (0.9 + 0.55 * belly);
+    colors[i * 3 + 1] = shade * (1.0 + 0.36 * belly);
+    colors[i * 3 + 2] = shade * (0.82 + 0.5 * belly);
+  }
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+}
+
 export const ornamentNaga: AttachmentGenerator = (ctx) => {
-  const scales = ctx.materials.fixed.serpent;
+  const scales = ctx.materials.getPatternedFixed("serpent");
   const belly = ctx.materials.fixed.ivory;
   const group = new THREE.Group();
   const body = ctx.body;
@@ -853,16 +894,25 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   // How thick the serpent is, scaled to the neck it is worn on. A girth
   // authored in absolute metres is a python on a slim body and a worm on
   // a broad one; a fraction of the wearer's own neck is a serpent on both.
-  const thick = body.neckRadius * 0.32;
+  const thick = body.neckRadius * 0.22;
   // Every section of the hood and head below is a multiple of the
   // serpent's own girth, so a hood is always about twice as wide as the
   // body behind it whatever body the serpent is worn on.
-  const g = thick;
+  // The hood and the head are sized from the NECK, not from the body
+  // behind them: a serpent's hood is wider than its body by definition,
+  // and scaling both from one number meant that thinning the body — which
+  // is what every look at it asked for — shrank the head with it.
+  const g = body.neckRadius * 0.3;
+  /**
+   * Girth along the route: a point at the tail, swelling through the
+   * wrap, easing again where the hood takes over. Continuous, because a
+   * tube of constant section is the single thing that most makes a
+   * serpent read as a length of hose.
+   */
   const girth = (t: number): number => {
-    if (t < 0.26) return thick * (0.15 + (t / 0.26) * 0.65);
-    if (t < 0.42) return thick * (0.8 + ((t - 0.26) / 0.16) * 0.2);
-    if (t < 0.92) return thick;
-    return thick * (1 - ((t - 0.92) / 0.08) * 0.06);
+    const swell = Math.sin(Math.min(1, t / 0.55) * Math.PI * 0.5);
+    const ease = t < 0.72 ? 1 : 1 - ((t - 0.72) / 0.28) * 0.18;
+    return thick * (0.16 + 0.84 * swell) * ease;
   };
   // The gap under the belly of the serpent. What the walk is given is
   // that gap PLUS the girth, so it is the scales that clear the skin.
@@ -910,178 +960,147 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   const path = walk.points.map(toSocket);
 
   const toChest = { y: body.necklaceSocketY, z: body.necklaceSocketZ };
+  const COIL_ALONG = 190;
+  const COIL_AROUND = 20;
+
   const coil = sweptForm(
     path,
-    (t) => ({ halfWidth: girth(t), halfHeight: girth(t) }),
+    // Not round: a resting snake is a little wider than it is tall.
+    (t) => ({ halfWidth: girth(t) * 1.08, halfHeight: girth(t) * 0.92 }),
     new THREE.Vector3(0, 1, 0),
-    190,
-    18,
+    COIL_ALONG,
+    COIL_AROUND,
   );
   // The walk holds the SPINE off the skin; the swept surface around it is
   // resampled through a spline that can cut a corner the walk did not.
   // This is the guarantee, applied to what is actually drawn.
   pushOutsideBody(coil, body, toChest, GAP * 0.5);
+  serpentSkin(coil, 30);
   group.add(new THREE.Mesh(coil, scales));
 
-  // Hood and head are one swept piece, and it REARS.
+  // ---- the head, built in its own frame and then aimed ----------------
   //
-  // A cobra at rest on a shoulder does not lie along it pointing sideways
-  // — it lifts. The route ends at the left shoulder and the sweep carries
-  // on upward: the neck spreads into a hood that stands vertical and flat,
-  // draws back in behind the skull, and the head levels off forward. The
-  // hood is therefore wide across the figure and thin front-to-back, which
-  // is what makes it read as a hood from the front rather than as a fin.
+  // It was one swept form with a six-stage profile ladder, and every
+  // attempt to make it read as a cobra moved a number in that ladder: the
+  // skull came out as a flat paddle lying across the throat with its
+  // mouth on top of its head, because a sweep carries its own idea of
+  // which way is up and the ladder cannot argue with it.
+  //
+  // A head is not a length of anything. It is a hood, a skull, a snout
+  // and two eyes, each of which has a place relative to the others — so
+  // that is what it is built as, in a frame where +Z is the way the snake
+  // is looking and +Y is up. Aiming the frame is then one decision, made
+  // once, rather than a consequence of how a spline happened to twist.
   const last = path.length - 1;
   const headBase = path[last] as V3;
-  const hoodStart = path[Math.max(0, last - 14)] as V3;
-  // The head leans out along the direction the route was already going,
-  // away from the skin rather than back into the jaw.
-  const heading = new THREE.Vector3(
+  const travel = new THREE.Vector3(
     headBase[0] - (path[last - 6] as V3)[0],
     0,
     headBase[2] - (path[last - 6] as V3)[2],
   );
-  if (heading.lengthSq() < 1e-9) heading.set(0, 0, 1);
-  heading.normalize();
+  if (travel.lengthSq() < 1e-9) travel.set(0, 0, 1);
+  travel.normalize();
   const outward = walk.normals[last] ?? new THREE.Vector3(0, 0, 1);
-  /**
-   * The head CONTINUES THE JOURNEY the body was making, lifted a little
-   * away from the skin.
-   *
-   * Pointing it outward from the chest instead was the mistake, and two
-   * rounds of shrinking it did not help: a head aimed at the viewer is
-   * seen end-on, so however well it is modelled it reads as a lump. A
-   * serpent lying along a collarbone is seen in PROFILE, which is the one
-   * view in which a snake's head is unmistakably a snake's head. So the
-   * direction is the route's own tangent, with just enough outward lean
-   * to clear the throat.
-   */
-  const reach = heading
+  // Looking the way it was going, leaned out from the throat so the head
+  // clears the jaw and is seen in profile rather than end-on.
+  const facing = travel
     .clone()
-    .addScaledVector(new THREE.Vector3(outward.x, 0, outward.z).normalize(), 0.8)
+    .addScaledVector(new THREE.Vector3(outward.x, 0, outward.z).normalize(), 1.4)
     .normalize();
 
-  // The hood leans out as it rises, so it stands beside the head rather
-  // than across it — and it rises by a fraction of the neck it is worn
-  // on, not by a fixed 34 mm, which on a smaller head carried the skull
-  // to ear height and made the serpent read as a growth on the jaw.
-  // How far the head lifts off the shoulder. A cobra at rest on a
-  // shoulder raises its head a little and looks forward; rearing it half
-  // a neck's width carried the skull past the jaw and put a green lump
-  // over the cheek.
-  const RISE = body.neckRadius * 0.5;
-  const hoodMid: V3 = [
-    headBase[0] + reach.x * g * 1.2,
-    headBase[1] + RISE * 0.46,
-    headBase[2] + reach.z * g * 1.2,
-  ];
-  // Where the skull begins and where the snout ends: both level, so the
-  // features below can be laid along a horizontal line.
-  const skullBase: V3 = [
-    headBase[0] + reach.x * g * 1.9,
-    headBase[1] + RISE,
-    headBase[2] + reach.z * g * 1.9,
-  ];
-  // The snout tips slightly DOWN from the skull: a reared cobra looks at
-  // what is in front of it, and a head that levels off reads as a stick.
-  const headTip: V3 = [
-    skullBase[0] + reach.x * g * 2.5,
-    skullBase[1] - g * 0.5,
-    skullBase[2] + reach.z * g * 2.5,
-  ];
-  const skullMid: V3 = [
-    (skullBase[0] + headTip[0]) / 2,
-    (skullBase[1] + headTip[1]) / 2 + g * 0.2,
-    (skullBase[2] + headTip[2]) / 2,
-  ];
-  const serpentHead = sweptForm(
-    [hoodStart, headBase, hoodMid, skullBase, skullMid, headTip],
-    (t) => {
-      // Body girth, into the flare, into the hood, in behind the skull,
-      // out over the skull, down to the snout.
-      if (t < 0.16) return { halfWidth: g * 0.95, halfHeight: g * 0.95 };
-      if (t < 0.34) {
-        const k = (t - 0.16) / 0.18;
-        return { halfWidth: g * (0.95 + k * 0.72), halfHeight: g * (0.95 - k * 0.36) };
-      }
-      if (t < 0.5) {
-        // The hood at its widest: a plate, not a tube. Kept to a little
-        // over half again the body's girth — a hood twice as wide reads
-        // as a collar over the cheek rather than as a serpent.
-        const k = (t - 0.34) / 0.16;
-        return { halfWidth: g * (1.67 + k * 0.16), halfHeight: g * (0.59 - k * 0.07) };
-      }
-      if (t < 0.64) {
-        const k = (t - 0.5) / 0.14;
-        return { halfWidth: g * (1.83 - k * 0.9), halfHeight: g * (0.52 + k * 0.42) };
-      }
-      if (t < 0.86) {
-        // The skull: a wedge, wider than it is tall.
-        const k = (t - 0.64) / 0.22;
-        return { halfWidth: g * (0.93 + k * 0.1), halfHeight: g * (0.9 - k * 0.06) };
-      }
-      const k = (t - 0.86) / 0.14;
-      return { halfWidth: g * (1.03 - k * 0.63), halfHeight: g * (0.84 - k * 0.5) };
-    },
-    new THREE.Vector3(0, 1, 0),
-    88,
-    24,
+  // How far the head rears off the shoulder.
+  //
+  // A serpent worn at the neck lifts its head a little and watches; it
+  // does not tower. Reared a whole neck-radius it stood beside the jaw
+  // and covered half the face, which is the same mistake as putting the
+  // torque itself over the ears: an ornament worn at the collarbones has
+  // to stay at the collarbones.
+  const rise = body.neckRadius * 0.34;
+  const head = new THREE.Group();
+  head.position.set(
+    headBase[0] + facing.x * g * 0.9,
+    headBase[1] + rise,
+    headBase[2] + facing.z * g * 0.9,
   );
-  // The hood and head are a form built off the end of the route rather
-  // than a walk along it, so nothing about their control points keeps
-  // them out of a shoulder. Measured, a tenth of the serpent's surface
-  // was inside the figure. Pushed out here, by construction.
-  pushOutsideBody(serpentHead, body, toChest, GAP * 0.5);
-  group.add(new THREE.Mesh(serpentHead, scales));
+  head.rotation.y = Math.atan2(facing.x, facing.z);
+  // Looking slightly down, the way a reared snake watches what is below it.
+  head.rotation.x = 0.12;
+  group.add(head);
 
-  // Orientation of the head, used to place what sits on it. The skull
-  // runs level, so this is the line the face is laid along.
-  const facing = Math.atan2(headTip[2] - skullBase[2], headTip[0] - skullBase[0]);
-  const along = (f: number, lift = 0): [number, number, number] => [
-    skullBase[0] + (headTip[0] - skullBase[0]) * f,
-    skullBase[1] + (headTip[1] - skullBase[1]) * f + lift,
-    skullBase[2] + (headTip[2] - skullBase[2]) * f,
-  ];
-  const facingGroup = (f: number, lift = 0): THREE.Group => {
-    const node = new THREE.Group();
-    node.position.set(...along(f, lift));
-    node.rotation.y = -facing;
-    group.add(node);
-    return node;
+  const scaled = (
+    parent: THREE.Object3D,
+    radius: number,
+    material: THREE.Material,
+    position: V3,
+    scale: V3,
+    rotation?: V3,
+  ): void => {
+    const geometry = new THREE.SphereGeometry(radius, 18, 14);
+    serpentSkin(geometry);
+    const piece = mesh(geometry, material, { position, scale, rotation });
+    parent.add(piece);
   };
 
-  // The line of the mouth, set into the wedge rather than drawn on it.
-  const mouth = facingGroup(0.66, -g * 0.38);
-  mouth.add(
-    mesh(new THREE.SphereGeometry(g * 0.71, 14, 8), ctx.materials.fixed.eyeDark, {
-      position: [g * 0.11, 0, 0],
-      scale: [1.5, 0.11, 1.05],
-    }),
+  // The neck between the coil and the skull, rising to meet it.
+  const riser = sweptForm(
+    [
+      path[Math.max(0, last - 5)] as V3,
+      headBase,
+      [
+        headBase[0] + facing.x * g * 0.45,
+        headBase[1] + rise * 0.55,
+        headBase[2] + facing.z * g * 0.45,
+      ],
+      [head.position.x, head.position.y - g * 0.1, head.position.z],
+    ],
+    (t) => {
+      const r = thick * (1 - t * 0.25);
+      return { halfWidth: r, halfHeight: r };
+    },
+    new THREE.Vector3(0, 1, 0),
+    40,
+    16,
   );
+  serpentSkin(riser, 6);
+  group.add(new THREE.Mesh(riser, scales));
 
-  // Eyes: a hooded brow, and under it an eye small enough to be a glint.
-  const eyes = facingGroup(0.54, g * 0.33);
+  // The hood: a plate standing behind the skull, wide across and thin
+  // front to back, which is what makes it read as a hood from the front
+  // instead of as a fin from the side.
+  scaled(head, g, scales, [0, g * 0.25, -g * 0.34], [1.85, 1.62, 0.3]);
+  // …with the spectacle marking a cobra carries on it.
+  scaled(head, g, belly, [0, g * 0.34, -g * 0.52], [1.0, 0.72, 0.06]);
+
+  // Skull, snout and jaw: a wedge that narrows forward.
+  scaled(head, g, scales, [0, 0, g * 0.28], [0.82, 0.66, 1.12]);
+  scaled(head, g, scales, [0, -g * 0.05, g * 1.12], [0.56, 0.44, 0.62]);
+  // Eyes on the sides, under a brow ridge, small enough to be a glint.
   for (const side of [1, -1]) {
-    eyes.add(
-      mesh(new THREE.SphereGeometry(g * 0.47, 12, 8), scales, {
-        position: [0, g * 0.22, side * g * 0.89],
-        scale: [1.35, 0.38, 0.85],
-      }),
-    );
-    eyes.add(
-      mesh(new THREE.SphereGeometry(g * 0.17, 8, 6), ctx.materials.fixed.eyeDark, {
-        position: [g * 0.09, -g * 0.14, side * g * 0.96],
-        scale: [1, 0.72, 0.72],
-      }),
+    scaled(head, g * 0.3, scales, [side * g * 0.52, g * 0.2, g * 0.5], [1.1, 0.75, 1.5]);
+    scaled(
+      head,
+      g * 0.15,
+      ctx.materials.fixed.eyeDark,
+      [side * g * 0.56, g * 0.08, g * 0.62],
+      [0.9, 0.95, 1],
     );
   }
+  // The mouth, set into the wedge rather than drawn on it.
+  scaled(
+    head,
+    g * 0.45,
+    ctx.materials.fixed.mouthDark,
+    [0, -g * 0.24, g * 0.82],
+    [1.0, 0.16, 1.15],
+  );
 
   // The pale throat, under the jaw where a snake shows it.
-  const throat = facingGroup(0.5, -g * 0.76);
-  throat.add(
-    mesh(new THREE.SphereGeometry(g * 0.64, 12, 10), belly, {
-      rotation: [0, -facing, 0],
-      scale: [1.7, 0.24, 0.75],
+  const throat = new THREE.SphereGeometry(g * 0.5, 14, 10);
+  serpentSkin(throat);
+  head.add(
+    mesh(throat, belly, {
+      position: [0, -g * 0.34, g * 0.55],
+      scale: [1.0, 0.4, 1.6],
     }),
   );
   return group;

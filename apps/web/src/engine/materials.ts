@@ -77,6 +77,7 @@ export class ZoneMaterials {
    * them tint the zone colour the customer chose instead of replacing it.
    */
   private readonly patterned = new Map<MaterialZone, THREE.MeshPhysicalMaterial>();
+  private readonly patternedFixed = new Map<FixedMaterialKey, THREE.MeshPhysicalMaterial>();
 
   constructor() {
     this.zones = Object.fromEntries(
@@ -105,6 +106,24 @@ export class ZoneMaterials {
 
   get(zone: MaterialZone): THREE.MeshPhysicalMaterial {
     return this.zones[zone];
+  }
+
+  /**
+   * A fixed material that renders its mesh's vertex colours on top.
+   *
+   * What a skin is made of is not the customer's to choose — a serpent is
+   * green, a rudraksha seed is brown — but a single flat colour over a
+   * swept tube is what makes one read as plastic. The pattern belongs to
+   * the geometry that carries it; this is only the material that shows it.
+   */
+  getPatternedFixed(key: FixedMaterialKey): THREE.MeshPhysicalMaterial {
+    let material = this.patternedFixed.get(key);
+    if (!material) {
+      material = this.fixed[key].clone();
+      material.vertexColors = true;
+      this.patternedFixed.set(key, material);
+    }
+    return material;
   }
 
   /**
@@ -165,5 +184,7 @@ export class ZoneMaterials {
     for (const material of Object.values(this.fixed)) material.dispose();
     for (const material of this.patterned.values()) material.dispose();
     this.patterned.clear();
+    for (const material of this.patternedFixed.values()) material.dispose();
+    this.patternedFixed.clear();
   }
 }
