@@ -31,12 +31,10 @@ export function applyPose(
 ): void {
   const preset = pose.preset ? getPosePreset(pose.preset) : undefined;
 
-  // Seated presets translate the root so the figure rests on the base.
-  const root = joints.get("root");
-  if (root) {
-    const offset = preset?.rootOffset ?? [0, 0, 0];
-    root.position.set(offset[0], offset[1], offset[2]);
-  }
+  // The root starts where the skeleton puts it. Where the figure ends up
+  // is settled afterwards, against the support it rests on — see
+  // settleOnSupport. A pose does not carry a height of its own.
+  joints.get("root")?.position.set(0, 0, 0);
 
   // Drive exactly the joints the rig was built with (the active deity's
   // skeleton); presets/overrides for joints this rig lacks are ignored.

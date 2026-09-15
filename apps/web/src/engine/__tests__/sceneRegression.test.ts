@@ -101,7 +101,14 @@ const PINNED = {
   // worn together. Verified by removing the socket and re-running: with it
   // gone the digest is byte-for-byte the previous ced6cadb987a4329, so
   // nothing else about Ganesha moved.
-  ganesha: { nodes: 371, digest: "dc153b6c88d0e7ee" },
+  //
+  // Moved again, by thirteen millimetres straight down, when the figure
+  // stopped being placed by an authored root offset and started resting
+  // on its base: Ganesha's soles had been hovering that far above the
+  // lotus seat. Same node count, same everything else — the whole statue
+  // is one translation lower. See support.test.ts, which now holds every
+  // pose of both deities to actual contact.
+  ganesha: { nodes: 371, digest: "8aafabab8d6e2991" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

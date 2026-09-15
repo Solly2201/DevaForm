@@ -43,11 +43,7 @@ export interface PosePreset {
    * "full" otherwise — see garmentFitOf, which is what consumers call.
    */
   garment?: GarmentFit;
-  /**
-   * Root translation applied with the pose — seated poses lower the
-   * character onto the base instead of folding the legs in mid-air.
-   */
-  rootOffset?: Vec3;
+
   /**
    * Seated poses place the figure on the ground/base: clothing generators
    * swap to lap drapes and the base keeps its own anchoring. A property of
@@ -292,17 +288,23 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     description: "Levitating padmasana, front hands resting in dhyana.",
     // Levitation: legs fold into padmasana and the whole figure hovers
     // with clear daylight between the folded legs and the base.
-    rootOffset: [0, -0.2, 0],
     seated: true,
     joints: {
       // Padmasana solved by forward kinematics: knees swing wide and
       // forward, shins fold under, feet tuck inward with soles turned up.
-      "leg.left.thigh": [-126 * D, 54 * D, 64 * D],
-      "leg.left.shin": [106 * D, 0, 0],
-      "leg.left.foot": [54 * D, -17 * D, 0],
-      "leg.right.thigh": [-126 * D, -54 * D, -69 * D],
-      "leg.right.shin": [110 * D, 0, 0],
-      "leg.right.foot": [54 * D, 17 * D, 0],
+      // Cross-legged, solved from the directions the limbs have to run in
+      // rather than typed: the thighs carry the knees OUT to the sides and
+      // a little below the hips, the shins cross back under the body, and
+      // the knee stays the hinge it is. The figure then rests on whatever
+      // of that is lowest — see settleOnSupport — which is the knees and
+      // the ankles, with the seat just above them. Authored by eye, the
+      // knees hung in the air with the shins crossing below them.
+      "leg.left.thigh": [-126 * D, 36 * D, 63 * D],
+      "leg.left.shin": [153 * D, 0, 0],
+      "leg.left.foot": [30 * D, -12 * D, 0],
+      "leg.right.thigh": [-126 * D, -36 * D, -66 * D],
+      "leg.right.shin": [148 * D, 0, 0],
+      "leg.right.foot": [30 * D, 12 * D, 0],
       "arm.frontLeft.upper": [24 * D, 0, 46 * D],
       "arm.frontLeft.forearm": [-84 * D, 26 * D, 0],
       "arm.frontLeft.hand": [-58 * D, 0, 0],
@@ -321,7 +323,6 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     id: "royal",
     label: "Royal Ease",
     description: "Lalitasana — one leg folded, one pendant, easeful bearing.",
-    rootOffset: [0, -0.18, 0],
     seated: true,
     joints: {
       // Lalitasana: left leg folded flat, right leg pendant with a strong
@@ -444,15 +445,21 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
     id: "shiva.meditation",
     label: "Meditation",
     description: "The great yogi in padmasana, front hands in dhyana.",
-    rootOffset: [0, -0.2, 0],
     seated: true,
     joints: {
-      "leg.left.thigh": [-126 * D, 54 * D, 64 * D],
-      "leg.left.shin": [106 * D, 0, 0],
-      "leg.left.foot": [54 * D, -17 * D, 0],
-      "leg.right.thigh": [-126 * D, -54 * D, -69 * D],
-      "leg.right.shin": [110 * D, 0, 0],
-      "leg.right.foot": [54 * D, 17 * D, 0],
+      // Cross-legged, solved from the directions the limbs have to run in
+      // rather than typed: the thighs carry the knees OUT to the sides and
+      // a little below the hips, the shins cross back under the body, and
+      // the knee stays the hinge it is. The figure then rests on whatever
+      // of that is lowest — see settleOnSupport — which is the knees and
+      // the ankles, with the seat just above them. Authored by eye, the
+      // knees hung in the air with the shins crossing below them.
+      "leg.left.thigh": [-126 * D, 36 * D, 63 * D],
+      "leg.left.shin": [153 * D, 0, 0],
+      "leg.left.foot": [30 * D, -12 * D, 0],
+      "leg.right.thigh": [-126 * D, -36 * D, -66 * D],
+      "leg.right.shin": [148 * D, 0, 0],
+      "leg.right.foot": [30 * D, 12 * D, 0],
       "arm.frontLeft.upper": [24 * D, 0, 46 * D],
       "arm.frontLeft.forearm": [-84 * D, 26 * D, 0],
       "arm.frontLeft.hand": [-58 * D, 0, 0],
