@@ -179,7 +179,7 @@ describe("the body that has four arms", () => {
     expect(body!.gripShapes).toEqual(human.gripShapes);
     expect(body!.morphTargets).toEqual(human.morphTargets);
     // And it is bigger, because it has two more arms in it.
-    expect(body!.geometry!.triangles).toBeGreaterThan(human.geometry!.triangles);
+    expect(body!.geometry!.triangles ?? 0).toBeGreaterThan(human.geometry!.triangles ?? 0);
   });
 
   it("closes four hands, not two", () => {
