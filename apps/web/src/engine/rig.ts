@@ -234,6 +234,41 @@ function aimSocket(
 /** Palm direction in the hand's own frame — the shared hand contract. */
 const HAND_PALM = new THREE.Vector3(0, 0, 1);
 
+/**
+ * Turn a socket worn ON THE SKIN to face the way that skin faces.
+ *
+ * A forehead slopes back about ten degrees, and a mark built on the plane
+ * z = 0 with the socket pointing straight ahead has its upper half inside
+ * the skull. Every ornament that goes there used to carry its own
+ * `rotation.x = -0.18` — two ornaments, two guesses, about a body that
+ * measures its own surface.
+ *
+ * So the body ships the normal and this turns the socket onto it: +Z
+ * becomes the way the face faces, +Y stays up. Anything worn there is
+ * then authored flat, facing +Z, the way a decal is — and gets the same
+ * treatment on any body that measures itself, for any socket named in
+ * `faceAxes`.
+ */
+function orientMeasuredFaceSockets(
+  sockets: Map<SocketId, THREE.Object3D>,
+  faceAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
+): void {
+  if (!faceAxes) return;
+  const basis = new THREE.Matrix4();
+  for (const [id, measured] of Object.entries(faceAxes)) {
+    const socket = sockets.get(id as SocketId);
+    if (!socket) continue;
+    const forward = new THREE.Vector3(...measured);
+    if (forward.lengthSq() < 1e-10) continue;
+    forward.normalize();
+    const up = new THREE.Vector3(0, 1, 0).projectOnPlane(forward);
+    if (up.lengthSq() < 1e-10) continue;
+    up.normalize();
+    basis.makeBasis(new THREE.Vector3().crossVectors(up, forward), up, forward);
+    socket.quaternion.setFromRotationMatrix(basis);
+  }
+}
+
 function orientMeasuredGripSockets(
   sockets: Map<SocketId, THREE.Object3D>,
   gripAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
@@ -468,6 +503,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
   const bodyAsset = resolveAssetRef(config.parts.body);
   orientMeasuredGripSockets(sockets, bodyAsset?.gripAxes);
+  orientMeasuredFaceSockets(sockets, bodyAsset?.faceAxes);
 
   // Body-fit: torso surfaces for the configured body asset (pure data — no
   // asset-id conditionals). A mesh body ships measurements of itself and

@@ -341,6 +341,9 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         normal: [0, 0, 1],
       },
     },
+    faceAxes: {
+      "head.forehead": [0, 0.14703, 0.98913],
+    },
     torsoSurface: {
       minY: -0.26,
       maxY: 0.2,
@@ -739,6 +742,9 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         point: [0.00776, -0.04943, -0.00952],
         normal: [0, 0, 1],
       },
+    },
+    faceAxes: {
+      "head.forehead": [0, 0.14703, 0.98913],
     },
     torsoSurface: {
       minY: -0.26,

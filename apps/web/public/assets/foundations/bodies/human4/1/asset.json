@@ -339,6 +339,13 @@
     "grip": 0.007,
     "cradle": 0.03
   },
+  "faceAxes": {
+    "head.forehead": [
+      0,
+      0.14703,
+      0.98913
+    ]
+  },
   "gripSeats": {
     "frontLeft": {
       "point": [

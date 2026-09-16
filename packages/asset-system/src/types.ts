@@ -298,6 +298,16 @@ export interface AssetDefinition {
    */
   gripShapes?: Readonly<Record<string, number>>;
   /**
+   * Body-slot assets: which way the face FACES, at each socket worn on it.
+   *
+   * A forehead slopes back; a mark placed on it with its own plane
+   * pointing straight forward has its upper half inside the skull. Every
+   * ornament that goes there used to carry its own guess at that angle,
+   * which is two guesses about one body that measured itself. Keys are
+   * socket ids, values the outward normal in the parent joint's space.
+   */
+  faceAxes?: Readonly<Record<string, readonly [number, number, number]>>;
+  /**
    * Body-slot assets: where a held object RESTS in each hand, in that
    * hand joint's own frame — the skin over the knuckles, and the
    * direction the fingers close from.

@@ -207,7 +207,12 @@ const PINNED = {
   // cloth with a shaped hem. Five nodes fewer, because the two thigh
   // sleeves and the front fan are gone — the strip's own far end is the
   // hanging part.
-  shiva: { nodes: 335, digest: "8ef3edb06b8c9aa8" },
+  //
+  // And for the brow. The forehead socket is turned onto the forehead's
+  // own measured normal now, so the third eye and the ash lie on the
+  // skin instead of half inside it, and neither carries its own guess at
+  // the angle any more.
+  shiva: { nodes: 335, digest: "7134e963c65ea51d" },
 } as const;
 
 describe("protected characters do not move", () => {

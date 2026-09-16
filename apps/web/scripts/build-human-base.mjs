@@ -1613,6 +1613,65 @@ function gripSeat(prefix, slot) {
   };
 }
 
+/**
+ * Which way the face is FACING, at each socket worn on it.
+ *
+ * A forehead is not a wall. It slopes back about twenty degrees, and a
+ * mark placed on it with its own plane pointing straight forward has its
+ * upper half inside the skull — which is what the third eye did, and what
+ * the ash bands did, and what each of them worked around with its own
+ * hand-guessed `rotation.x = -0.18`. Two ornaments, two guesses, one
+ * body that knows the answer.
+ *
+ * So the body measures it: the average normal of the skin it actually has
+ * round that socket, area-weighted over the triangles there, in the head
+ * joint's own space. The engine turns the socket onto it and anything
+ * worn there is built flat on the plane z = 0, facing +Z, exactly as a
+ * decal would be.
+ */
+function faceAxes(positions) {
+  const turn = rotation.get("head").clone().invert();
+  const headRest = restFinal.get("head");
+  const indices = meshes.neutral.indices;
+  const centre = new THREE.Vector3(0, measurements.neutral.headCenterY, measurements.neutral.headCenterZ)
+    .add(headRest);
+
+  const at = (index) =>
+    new THREE.Vector3(positions[index * 3], positions[index * 3 + 1], positions[index * 3 + 2]);
+
+  const around = (point, radius) => {
+    const normal = new THREE.Vector3();
+    const ab = new THREE.Vector3();
+    const ac = new THREE.Vector3();
+    const face = new THREE.Vector3();
+    for (let i = 0; i < indices.length; i += 3) {
+      const a = at(indices[i]);
+      const b = at(indices[i + 1]);
+      const c = at(indices[i + 2]);
+      const middle = a.clone().add(b).add(c).multiplyScalar(1 / 3);
+      if (middle.distanceTo(point) > radius) continue;
+      // Area-weighted, which is what a cross product already is.
+      face.copy(ab.copy(b).sub(a)).cross(ac.copy(c).sub(a));
+      if (face.dot(middle.clone().sub(centre)) < 0) face.negate();
+      normal.add(face);
+    }
+    if (normal.lengthSq() < 1e-12) return new THREE.Vector3(0, 0, 1);
+    return normal.normalize().applyQuaternion(turn);
+  };
+
+  const sockets = socketPositions(positions, measurements.neutral);
+  const out = {};
+  for (const name of ["head.forehead"]) {
+    const local = sockets[name];
+    if (!local) continue;
+    const world = headRest.clone().add(local);
+    const normal = around(world, 0.022);
+    out[name] = [normal.x, normal.y, normal.z].map((value) => Number(value.toFixed(5)));
+  }
+  return out;
+}
+const measuredFaceAxes = faceAxes(finalMesh.neutral);
+
 const gripSeats = {};
 for (const side of SIDES) {
   const prefix = side.mh === "L" ? "l" : "r";
@@ -1957,6 +2016,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       gripAxes,
       gripShapes: GRIP_RADII,
+      faceAxes: measuredFaceAxes,
       gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceWithMorphs,
@@ -2001,6 +2061,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       gripAxes,
       gripShapes: GRIP_RADII,
+      faceAxes: measuredFaceAxes,
       gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceWithMorphs,
@@ -2369,6 +2430,7 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       gripAxes: fourArmGripAxes,
       gripShapes: GRIP_RADII,
+      faceAxes: measuredFaceAxes,
       gripSeats: fourArmGripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceWithMorphs,

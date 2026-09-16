@@ -612,20 +612,30 @@ export const ornamentTripundra: AttachmentGenerator = (ctx) => {
         path.push([
           side * t * reach,
           lift * fit,
-          -Math.pow(t, 2) * 0.013 * fit,
+          // Following the brow's curve away from the centre AND up it,
+          // and standing off the skin by a stroke's own thickness so the
+          // ash lies ON the forehead rather than half in it.
+          0.0034 * fit -
+            Math.pow(t, 2) * 0.013 * fit -
+            (lift * lift * fit) / (2 * ctx.body.headRadius),
         ]);
       }
       // Ash thins out towards the temple, the way a drawn stroke does.
       const band = new THREE.Mesh(
-        taperedTube(path, [0.005 * fit, 0.0028 * fit], 16, 8),
+        taperedTube(path, [0.0038 * fit, 0.002 * fit], 16, 8),
         ash,
       );
       // Ash is a stroke of powder, not a rod: flatten it onto the skin.
-      band.scale.set(1, 0.85, 0.4);
+      // Five millimetres of tube scaled to four tenths still stands two
+      // millimetres off a forehead, which at this size is a plastic bar.
+      band.scale.set(1, 0.8, 0.3);
       group.add(band);
     }
   }
-  group.rotation.x = -0.18; // the forehead's upward tilt, as the third eye
+  // No tilt. The socket is turned onto the forehead's own measured
+  // normal — see orientMeasuredFaceSockets — so this plane already IS
+  // the plane of the brow, and a second guess at the angle would tilt
+  // the ash off the skin it is drawn on.
   return group;
 };
 
@@ -687,11 +697,15 @@ export const ornamentCrescent: AttachmentGenerator = (ctx) => {
 export const ornamentThirdEye: AttachmentGenerator = (ctx) => {
   const skin = ctx.materials.get("skin");
   const group = new THREE.Group();
-  // Embedded in the brow: the socket is refined onto the forehead surface
-  // by the head part; the eye itself is a shallow, lidded vertical almond
-  // that follows the forehead plane (total relief under 5mm), not a jewel
-  // resting on it.
-  group.rotation.x = -0.18; // match the forehead's upward-facing tilt
+  // ON the brow, not IN it.
+  //
+  // The socket sits on the forehead's skin and is turned onto its
+  // measured normal, so z = 0 is the surface. Built centred on that
+  // plane — which is what this did — half the eye is inside the head and
+  // what shows is a slot cut into the forehead. It is a low relief
+  // instead: its back on the skin, its lids and iris standing a couple of
+  // millimetres proud, the way a mark carved on a face does.
+  const RELIEF = 0.0022;
   // Drawn against the reference skull, worn on this one — as everything
   // else on this brow already was. Unscaled, a two-centimetre almond on a
   // head whose cranium measures four across is not an eye set into the
@@ -699,33 +713,52 @@ export const ornamentThirdEye: AttachmentGenerator = (ctx) => {
   // is what every render of this face has shown.
   group.scale.setScalar(headFit(ctx.body));
 
-  // Skin lids — vertical almond rims that blend into the brow
+  /**
+   * The brow's own curve, as a depth.
+   *
+   * A forehead is a piece of a sphere about four centimetres across, and
+   * this mark is two centimetres tall on it. Built flat — which a capsule
+   * is — its ends are a couple of millimetres inside the skin while its
+   * middle sits correctly on it, and the test that measures the mark
+   * against the deformed head says so. So the lids are drawn as strokes
+   * that follow the surface, the same way the ash bands are.
+   */
+  const brow = ctx.body.headRadius;
+  const curve = (y: number) => -(y * y) / (2 * brow);
+
+  // Skin lids — vertical almond rims that blend into the brow.
   for (const side of [1, -1] as const) {
-    group.add(
-      mesh(new THREE.CapsuleGeometry(0.0028, 0.02, 6, 10), skin, {
-        position: [side * 0.0038, 0, 0.0012],
-        rotation: [0, 0, side * 0.16],
-        scale: [1, 1, 0.55],
-      }),
-    );
+    const path: V3[] = [];
+    const STEPS = 10;
+    for (let i = 0; i <= STEPS; i += 1) {
+      const t = i / STEPS;
+      const y = (t - 0.5) * 0.021;
+      // Together at the ends, apart in the middle: an almond, not two
+      // parallel bars.
+      const spread = Math.sin(t * Math.PI);
+      path.push([side * 0.0031 * spread, y, RELIEF + 0.0011 + curve(y)]);
+    }
+    const lid = new THREE.Mesh(taperedTube(path, [0.0021, 0.0021], 12, 8), skin);
+    lid.scale.z = 0.62;
+    group.add(lid);
   }
   // Sliver of eye-white between the lids
   group.add(
     mesh(new THREE.SphereGeometry(0.0085, 16, 12), ctx.materials.fixed.eyeWhite, {
-      position: [0, 0, 0.0004],
-      scale: [0.34, 1.05, 0.16],
+      position: [0, 0, RELIEF + 0.0009],
+      scale: [0.4, 0.9, 0.2],
     }),
   );
   // Iris and pupil
   group.add(
     mesh(new THREE.SphereGeometry(0.0034, 12, 10), ctx.materials.fixed.iris, {
-      position: [0, 0, 0.0022],
+      position: [0, 0, RELIEF + 0.0026],
       scale: [0.75, 1, 0.4],
     }),
   );
   group.add(
     mesh(new THREE.SphereGeometry(0.0017, 10, 8), ctx.materials.fixed.eyeDark, {
-      position: [0, 0, 0.0032],
+      position: [0, 0, RELIEF + 0.0036],
       scale: [0.8, 1, 0.4],
     }),
   );
