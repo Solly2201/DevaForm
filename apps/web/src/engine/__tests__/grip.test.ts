@@ -108,8 +108,8 @@ function fingerSkin(
     return offset.addScaledVector(axis, -offset.dot(axis)).length();
   };
 
-  const index = body.geometry.attributes.skinIndex;
-  const weight = body.geometry.attributes.skinWeight;
+  const index = body.geometry.attributes.skinIndex!;
+  const weight = body.geometry.attributes.skinWeight!;
   const bones = body.skeleton.bones;
   const boneOf = (name: string): number =>
     bones.findIndex((bone) => bone.name.replace(/^joint:/, "").replace(/_/g, ".") === name);

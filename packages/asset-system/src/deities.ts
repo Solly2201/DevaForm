@@ -18,7 +18,9 @@ import {
   SHIVA_POSE_PRESETS,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
+  createDefaultVishnuConfiguration,
   getSkeleton,
+  HUMAN_FOUR_ARM_SKELETON,
   VISHNU_POSE_PRESETS,
   type CharacterConfiguration,
   type PosePreset,
@@ -97,6 +99,14 @@ export interface UpcomingDeity extends DeityDefinitionBase {
     skeleton: SkeletonDefinition;
     assets: readonly AssetDefinition[];
     categories: readonly EditorCategory[];
+    /**
+     * What this deity will be the day it is offered. Written before the
+     * flag flips, so the promotion is one line rather than a design
+     * session, and so the configuration can be rendered and judged in the
+     * meantime — which is the only way to know whether the flag SHOULD
+     * flip.
+     */
+    defaultConfiguration?: () => CharacterConfiguration;
     posePresets: readonly PosePreset[];
     armOptions: readonly (2 | 4)[];
   };
@@ -164,16 +174,17 @@ const shiva: AvailableDeity = {
 };
 
 /**
- * Vishnu — prepared, not offered.
+ * Vishnu.
  *
  * The first deity added since the engine became a deity-agnostic one, and
- * therefore its first real test. Everything below is declaration:
+ * therefore its first real test. Everything here is declaration:
  * iconography, poses, the four attributes and how each may be held. No
  * engine code was written for him, which is the result being tested for.
  *
- * He is not `available` because he has no body, face or crown of
- * production quality, and a rushed one would be worse than none. See
- * docs/vishnu-direction.md and references/ref_vishnu.png.
+ * Four arms by iconography, and a body that has them — the measured
+ * human with a second pair built from the first, by the same script, in
+ * the same run. See docs/vishnu-direction.md and
+ * references/ref_vishnu.png.
  */
 const vishnu: UpcomingDeity = {
   id: "vishnu",
@@ -182,16 +193,20 @@ const vishnu: UpcomingDeity = {
   description:
     "The serene king of cosmic order — conch, discus, mace and lotus in four hands, crowned and garlanded.",
   accent: "#7dd3fc",
+  // NOT YET. The body is real and the Studio renders him correctly — four
+  // arms, four attributes, a crown, a garland, a dhoti, no holes and no
+  // floating. What is not ready is the SCULPTING: the crown is a cone,
+  // the conch a white vase, the discus a plate, the garland a string of
+  // beads. Flipping this flag is one line and the only thing standing in
+  // front of it is art, which is the honest place for it to stand.
   available: false,
   preparing: {
-    // Four arms by iconography. What a configuration can actually render
-    // is this narrowed to the arms its chosen body has, which is why the
-    // measured two-armed mesh is offered two — see armOptionsFor.
-    skeleton: HUMANOID_SKELETON,
+    skeleton: HUMAN_FOUR_ARM_SKELETON,
     assets: VISHNU_ASSETS,
     categories: VISHNU_EDITOR_CATEGORIES,
     posePresets: VISHNU_POSE_PRESETS,
     armOptions: [4],
+    defaultConfiguration: createDefaultVishnuConfiguration,
   },
 };
 

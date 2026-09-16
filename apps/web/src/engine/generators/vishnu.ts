@@ -112,9 +112,13 @@ export const itemChakra: AttachmentGenerator = (ctx) => {
   const stone = ctx.materials.fixed.nagamani;
   const group = new THREE.Group();
   const disc = new THREE.Group();
-  // Clear of the fingertips, standing on edge.
+  // Clear of the fingertips, and STANDING. A torus is built in the XY
+  // plane, so turning it a quarter turn about X lays it flat — which is
+  // what the Studio showed: a gold dinner plate balanced on a hand. The
+  // presentation keeps the item world-upright, so the disc is upright
+  // already and the only thing to decide is which way it faces.
   disc.position.y = 0.055;
-  disc.rotation.x = Math.PI / 2;
+  disc.rotation.y = 0.35;
   group.add(disc);
 
   const RADIUS = 0.052;
@@ -283,24 +287,52 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   const stone = ctx.materials.fixed.nagamani;
   const group = new THREE.Group();
   const skull = ctx.body.headRadius;
+  /**
+   * How far below this socket the head is still wide.
+   *
+   * The crown socket is measured a centimetre below the top of the
+   * skull, where the skull's own horizontal radius has almost run out.
+   * A band built at that height with the head's full radius is a hoop in
+   * mid-air — which is what the Studio showed, a party hat perched above
+   * a bald blue head. A crown grips at the brow, most of a radius lower.
+   */
+  const seat = -skull * 0.55;
+  /**
+   * How much wider than the head the band has to be.
+   *
+   * `headRadius` is a MEAN — the skull is an ovoid, wider at the temples
+   * than the average says — so a band built at that radius cuts through
+   * the forehead, which is exactly what it did. The same lesson the limb
+   * bands learned: an ornament that goes ROUND something is sized by what
+   * contains it, never by its average.
+   */
+  const around = skull * 1.18;
 
-  // The band that sits on the head, and the tiers above it.
+  // The band that grips the head, and the tiers above it.
   group.add(
     mesh(
       lathe([
-        [skull * 1.02, -0.004],
-        [skull * 1.06, skull * 0.12],
-        [skull * 1.0, skull * 0.3],
-        [skull * 0.86, skull * 0.52],
-        [skull * 0.7, skull * 0.78],
-        [skull * 0.46, skull * 1.02],
-        [skull * 0.26, skull * 1.22],
-        [skull * 0.1, skull * 1.34],
-        [0, skull * 1.4],
+        [around * 0.94, seat - skull * 0.1],
+        [around, seat],
+        [around * 1.03, seat + skull * 0.24],
+        [around * 0.98, seat + skull * 0.46],
+        [around * 0.86, seat + skull * 0.78],
+        [around * 0.68, seat + skull * 1.14],
+        [around * 0.46, seat + skull * 1.54],
+        [around * 0.26, seat + skull * 1.9],
+        [around * 0.11, seat + skull * 2.1],
+        [0, seat + skull * 2.18],
       ]),
       metal,
       {},
     ),
+  );
+  // The finial: a kirita ends in a bud, not a point.
+  group.add(
+    mesh(new THREE.SphereGeometry(skull * 0.13, 12, 10), metal, {
+      position: [0, seat + skull * 2.2, 0],
+      scale: [1, 1.35, 1],
+    }),
   );
   // Ribs up the cone, which is what keeps a tall crown from reading as a
   // funnel.
@@ -310,12 +342,13 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
       new THREE.Mesh(
         taperedTube(
           [
-            [Math.cos(angle) * skull * 1.04, skull * 0.14, Math.sin(angle) * skull * 1.04],
-            [Math.cos(angle) * skull * 0.72, skull * 0.72, Math.sin(angle) * skull * 0.72],
-            [Math.cos(angle) * skull * 0.22, skull * 1.24, Math.sin(angle) * skull * 0.22],
+            [Math.cos(angle) * around * 1.02, seat + skull * 0.3, Math.sin(angle) * around * 1.02],
+            [Math.cos(angle) * around * 0.88, seat + skull * 0.82, Math.sin(angle) * around * 0.88],
+            [Math.cos(angle) * around * 0.48, seat + skull * 1.52, Math.sin(angle) * around * 0.48],
+            [Math.cos(angle) * around * 0.14, seat + skull * 2.02, Math.sin(angle) * around * 0.14],
           ],
-          [skull * 0.055, skull * 0.02],
-          10,
+          [skull * 0.06, skull * 0.018],
+          12,
           6,
         ),
         metal,
@@ -328,18 +361,19 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     group.add(
       mesh(new THREE.SphereGeometry(skull * 0.07, 10, 8), stone, {
         position: [
-          Math.cos(angle) * skull * 1.07,
-          skull * 0.16,
-          Math.sin(angle) * skull * 1.07,
+          Math.cos(angle) * around * 1.02,
+          seat + skull * 0.14,
+          Math.sin(angle) * around * 1.02,
         ],
         scale: [1, 1, 0.45],
         rotation: [0, -angle, 0],
       }),
     );
   }
+  // The brow stone, on the band's own surface.
   group.add(
-    mesh(new THREE.SphereGeometry(skull * 0.12, 12, 10), stone, {
-      position: [0, skull * 0.34, skull * 0.95],
+    mesh(new THREE.SphereGeometry(skull * 0.13, 12, 10), stone, {
+      position: [0, seat + skull * 0.26, around * 0.96],
       scale: [0.8, 1.2, 0.5],
     }),
   );
@@ -378,15 +412,44 @@ export const ornamentVaijayanti: AttachmentGenerator = (ctx: GeneratorContext) =
     point.z - body.necklaceSocketZ,
   ];
   const points = walk.points.map(toSocket);
+  // FLOWERS, not beads. A vaijayanti is a forest garland — five kinds of
+  // blossom on a cord — and a row of spheres is a mala, which Shiva is
+  // already wearing two of. Each bloom is a ring of petals round a pale
+  // heart, small enough that a hundred of them read as a garland rather
+  // than as a wreath.
+  const PETALS = 5;
   for (let i = 0; i < points.length; i += 3) {
     const at = points[i]!;
-    const alternate = (i / 3) % 3 === 0;
-    group.add(
-      mesh(new THREE.SphereGeometry(alternate ? 0.011 : 0.008, 10, 8), alternate ? flower : leaf, {
-        position: at,
-        scale: alternate ? [1, 0.85, 1] : [0.8, 1.1, 0.8],
-      }),
-    );
+    const bloom = (i / 3) % 3 !== 1;
+    if (!bloom) {
+      // A leaf between blooms, to break the rhythm.
+      group.add(
+        mesh(new THREE.SphereGeometry(0.006, 8, 6), leaf, {
+          position: at,
+          scale: [0.7, 1.5, 0.5],
+          rotation: [0, (i * 0.7) % Math.PI, 0.4],
+        }),
+      );
+      continue;
+    }
+    const head = new THREE.Group();
+    head.position.set(at[0], at[1], at[2]);
+    head.rotation.set(0.5, (i * 1.1) % Math.PI, 0);
+    // Petals with VOLUME. Flattened to a third of their width they read
+    // as red dashes painted on the chest, which is what the first
+    // attempt rendered as — a blossom is a small mass, not a decal.
+    for (let petal = 0; petal < PETALS; petal += 1) {
+      const angle = (petal / PETALS) * Math.PI * 2;
+      head.add(
+        mesh(new THREE.SphereGeometry(0.0062, 8, 6), flower, {
+          position: [Math.cos(angle) * 0.0062, 0, Math.sin(angle) * 0.0062],
+          scale: [1.15, 0.8, 1],
+          rotation: [0, -angle, 0],
+        }),
+      );
+    }
+    head.add(mesh(new THREE.SphereGeometry(0.0042, 8, 6), leaf, { position: [0, 0.003, 0] }));
+    group.add(head);
   }
   return group;
 };

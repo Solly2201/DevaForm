@@ -144,3 +144,72 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
     arms: { count: 2 },
   };
 }
+
+/**
+ * Vishnu's default: a standing figure with the four attributes in the four
+ * hands his body now has.
+ *
+ * The skin is the deep blue of the reference, satin rather than polished —
+ * a gloss on blue reads as plastic. The dhoti is the shared wrap in
+ * Vishnu's colours, and the ornament is the existing slots used densely,
+ * which is what the iconography asks for and what the engine already does.
+ */
+export const VISHNU_DEFAULT_MORPHS: Readonly<Record<string, number>> = {
+  bodyAthletic: 0.55,
+  bodyPowerful: 0.2,
+  faceDivine: 1,
+};
+
+export function createDefaultVishnuConfiguration(): CharacterConfiguration {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    deity: "vishnu",
+    parts: {
+      // The four-armed mesh: one body, four arms, its own head, face,
+      // eyes and hands — so those slots stay empty, as they do for the
+      // two-armed one.
+      body: { assetId: "humanoid.body.human4", version: 1 },
+      head: null,
+      eyes: null,
+      hair: null,
+      hands: null,
+      lowerGarment: { assetId: "vishnu.garment.dhoti", version: 1 },
+      upperGarment: null,
+      earrings: { assetId: "ganesha.earrings.kundala", version: 1 },
+      armlets: { assetId: "ganesha.armlets.vanki", version: 1 },
+      bracelets: { assetId: "ganesha.bracelets.kada", version: 1 },
+      anklets: { assetId: "ganesha.anklets.payal", version: 1 },
+    },
+    attachments: [
+      { socket: "head.crown", asset: { assetId: "vishnu.crown.kirita", version: 1 } },
+      { socket: "chest.mala", asset: { assetId: "vishnu.garland.vaijayanti", version: 1 } },
+      // Front pair low: the mace steadied on the ground, the lotus held
+      // out. Back pair raised: the discus and the conch.
+      { socket: "arm.frontRight.hand.item", asset: { assetId: "vishnu.attribute.gada", version: 1 } },
+      { socket: "arm.frontLeft.hand.item", asset: { assetId: "vishnu.attribute.padma", version: 1 } },
+      { socket: "arm.backRight.hand.item", asset: { assetId: "vishnu.attribute.chakra", version: 1 } },
+      { socket: "arm.backLeft.hand.item", asset: { assetId: "vishnu.attribute.shankha", version: 1 } },
+    ],
+    pose: { preset: "vishnu.regal", jointOverrides: {} },
+    morphs: { ...VISHNU_DEFAULT_MORPHS },
+    proportions: { height: 1, bulk: 1 },
+    materials: {
+      skin: { color: "#6f8fd0", finish: "satin" },
+      skinSecondary: { color: "#5d7cbb", finish: "satin" },
+      hair: { color: "#3b2a1e", finish: "matte" },
+      garment: { color: "#e8b53c", finish: "satin" },
+      garmentAccent: { color: "#b3352f", finish: "satin" },
+      metal: { color: "#d8a637", finish: "metallic" },
+      gem: { color: "#1f6b46", finish: "polished" },
+      base: { color: "#c9bda6", finish: "matte" },
+    },
+    base: { style: "lotus" },
+    hands: {
+      frontLeft: { mudra: "pinch" },
+      frontRight: { mudra: "grip" },
+      backLeft: { mudra: "hold" },
+      backRight: { mudra: "hold" },
+    },
+    arms: { count: 4 },
+  };
+}

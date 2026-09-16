@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import {
   GANESHA_SKELETON,
   HUMANOID_SKELETON,
+  HUMAN_FOUR_ARM_SKELETON,
   HUMAN_SKELETON,
   MATERIAL_ZONES,
   PART_SLOTS,
@@ -46,7 +47,14 @@ const payload = {
    * a second pair of arms, and only this tells a validator that.
    */
   skeletons: Object.fromEntries(
-    ([HUMANOID_SKELETON, GANESHA_SKELETON, HUMAN_SKELETON] as SkeletonDefinition[]).map(
+    (
+      [
+        HUMANOID_SKELETON,
+        GANESHA_SKELETON,
+        HUMAN_SKELETON,
+        HUMAN_FOUR_ARM_SKELETON,
+      ] as SkeletonDefinition[]
+    ).map(
       (skeleton) => [
         skeleton.id,
         {

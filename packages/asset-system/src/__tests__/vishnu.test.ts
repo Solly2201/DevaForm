@@ -128,11 +128,8 @@ describe("Vishnu is prepared, and prepared means described", () => {
     }
   });
 
-  it("gives every attribute a hand on a body that has four", () => {
-    // The stylised body is deprecated and kept resolvable; what matters
-    // here is that its skeleton HAS four arms, which is the anatomy the
-    // iconography asks for.
-    const resolved = resolveCharacterPresentation(vishnu("shiva.body.classic", "vishnu.regal"));
+  it("gives every attribute a hand on the body built to have four", () => {
+    const resolved = resolveCharacterPresentation(vishnu("humanoid.body.human4", "vishnu.regal"));
     expect(resolved.armSlots).toHaveLength(4);
     const held = resolved.attachments.filter((a) => a.handSlot);
     expect(held.map((a) => a.asset.id).sort()).toEqual([...ATTRIBUTES].sort());
@@ -154,7 +151,7 @@ describe("Vishnu is prepared, and prepared means described", () => {
   it("never leaves a blessing hand holding something", () => {
     for (const preset of VISHNU_POSE_PRESETS) {
       const resolved = resolveCharacterPresentation(
-        vishnu("shiva.body.classic", preset.id),
+        vishnu("humanoid.body.human4", preset.id),
       );
       for (const attachment of resolved.attachments) {
         if (!attachment.handSlot) continue;
@@ -165,5 +162,54 @@ describe("Vishnu is prepared, and prepared means described", () => {
         ).toContain(mudra);
       }
     }
+  });
+});
+
+describe("the body that has four arms", () => {
+  const BODY = "humanoid.body.human4";
+
+  it("is a real body with a real second pair", () => {
+    const body = getAsset(BODY);
+    expect(body, "the four-armed body is registered").toBeDefined();
+    expect(body!.skeleton).toBe("human4");
+    // The same measurements the two-armed body ships — it IS that body —
+    // so every ornament, garment and grip fitted to one fits the other.
+    const human = getAsset("humanoid.body.human")!;
+    expect(body!.bodyProfile).toEqual(human.bodyProfile);
+    expect(body!.gripShapes).toEqual(human.gripShapes);
+    expect(body!.morphTargets).toEqual(human.morphTargets);
+    // And it is bigger, because it has two more arms in it.
+    expect(body!.geometry!.triangles).toBeGreaterThan(human.geometry!.triangles);
+  });
+
+  it("closes four hands, not two", () => {
+    const body = getAsset(BODY)!;
+    for (const slot of ["frontLeft", "frontRight", "backLeft", "backRight"]) {
+      expect(body.gripSeats?.[slot], `${slot} has a measured grip seat`).toBeDefined();
+      expect(body.gripAxes?.[slot], `${slot} has a measured grip axis`).toBeDefined();
+    }
+  });
+
+  it("is offered to Vishnu and to nobody else", () => {
+    const body = getAsset(BODY)!;
+    expect(body.deityCompatibility).toEqual(["vishnu"]);
+    for (const other of ["ganesha", "shiva"] as const) {
+      expect(listAssets({ deity: other }).map((asset) => asset.id)).not.toContain(BODY);
+    }
+  });
+
+  it("renders the whole iconography, which is why the flag is still off", () => {
+    // The default configuration is written and resolvable: four
+    // attributes in four hands, a crown, a garland, a dhoti. What is NOT
+    // ready is the sculpting, and `available` says so.
+    const deity = getDeity("vishnu")!;
+    expect(deity.available).toBe(false);
+    const build = deity.available ? undefined : deity.preparing?.defaultConfiguration;
+    expect(build, "the configuration he will ship with exists").toBeDefined();
+    const resolved = resolveCharacterPresentation(build!());
+    expect(resolved.armSlots).toHaveLength(4);
+    const held = resolved.attachments.filter((a) => a.handSlot);
+    expect(held).toHaveLength(4);
+    expect(new Set(held.map((a) => a.handSlot)).size).toBe(4);
   });
 });

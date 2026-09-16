@@ -221,14 +221,59 @@ export const HUMAN_SKELETON: SkeletonDefinition = defineSkeleton(
  * the option appears, with the same sockets, the same grip channels and
  * the same resolver.
  *
- * The back pair takes the stylised rig's offsets, because there is no
- * measured body to take them from yet. A body that claims this skeleton
- * must ship its own rest positions, exactly as the two-armed one does.
+ * The back pair's offsets are MEASURED, like the front pair's: the body
+ * that claims this skeleton builds its second pair by moving the first
+ * one, and these are where that move puts every joint. They are emitted
+ * by apps/web/scripts/build-human-base.mjs and held to the built asset by
+ * a test, because a joint the schema places anywhere other than where the
+ * mesh put it is a hand in the wrong place for every pose ever written.
  */
+const HUMAN_BACK_ARM_POSITIONS: Record<string, Vec3> = {
+    "arm.backLeft.upper": [0.11738, 0.00491, -0.02507],
+    "arm.backLeft.forearm": [-0.01128, -0.14889, 0],
+    "arm.backLeft.hand": [-0.02892, -0.14266, 0],
+    "arm.backLeft.hand.thumb.01": [0.0132, -0.02301, -0.00572],
+    "arm.backLeft.hand.thumb.02": [0.00958, -0.01242, 0.00975],
+    "arm.backLeft.hand.thumb.03": [0.0094, -0.01935, 0.00478],
+    "arm.backLeft.hand.index.01": [0.01239, -0.05932, -0.02126],
+    "arm.backLeft.hand.index.02": [0.00099, -0.01549, -0.00203],
+    "arm.backLeft.hand.index.03": [-0.00016, -0.01401, 0.001],
+    "arm.backLeft.hand.middle.01": [-0.00271, -0.05645, -0.02501],
+    "arm.backLeft.hand.middle.02": [-0.00443, -0.01979, -0.00217],
+    "arm.backLeft.hand.middle.03": [-0.00276, -0.01616, 0.0002],
+    "arm.backLeft.hand.ring.01": [-0.01411, -0.05189, -0.02501],
+    "arm.backLeft.hand.ring.02": [-0.00677, -0.01643, -0.00253],
+    "arm.backLeft.hand.ring.03": [-0.0046, -0.01421, -0.00025],
+    "arm.backLeft.hand.little.01": [-0.0253, -0.04675, -0.02126],
+    "arm.backLeft.hand.little.02": [-0.00613, -0.01132, -0.00074],
+    "arm.backLeft.hand.little.03": [-0.00399, -0.00839, 0.00097],
+    "arm.backRight.upper": [-0.11738, 0.00491, -0.02507],
+    "arm.backRight.forearm": [0.01128, -0.14889, 0],
+    "arm.backRight.hand": [0.02892, -0.14266, 0],
+    "arm.backRight.hand.thumb.01": [-0.0132, -0.02301, -0.00572],
+    "arm.backRight.hand.thumb.02": [-0.00958, -0.01242, 0.00975],
+    "arm.backRight.hand.thumb.03": [-0.0094, -0.01935, 0.00478],
+    "arm.backRight.hand.index.01": [-0.01239, -0.05932, -0.02126],
+    "arm.backRight.hand.index.02": [-0.00099, -0.01549, -0.00203],
+    "arm.backRight.hand.index.03": [0.00016, -0.01401, 0.001],
+    "arm.backRight.hand.middle.01": [0.00271, -0.05645, -0.02501],
+    "arm.backRight.hand.middle.02": [0.00443, -0.01979, -0.00217],
+    "arm.backRight.hand.middle.03": [0.00276, -0.01616, 0.0002],
+    "arm.backRight.hand.ring.01": [0.01411, -0.05189, -0.02501],
+    "arm.backRight.hand.ring.02": [0.00677, -0.01643, -0.00253],
+    "arm.backRight.hand.ring.03": [0.0046, -0.01421, -0.00025],
+    "arm.backRight.hand.little.01": [0.0253, -0.04675, -0.02126],
+    "arm.backRight.hand.little.02": [0.00613, -0.01132, -0.00074],
+    "arm.backRight.hand.little.03": [0.00399, -0.00839, 0.00097],
+};
+
 export const HUMAN_FOUR_ARM_SKELETON: SkeletonDefinition = defineSkeleton(
   "human4",
   { fingers: true, backArms: true },
-  { joints: HUMAN_JOINT_POSITIONS, sockets: HUMAN_SOCKET_POSITIONS },
+  {
+    joints: { ...HUMAN_JOINT_POSITIONS, ...HUMAN_BACK_ARM_POSITIONS },
+    sockets: HUMAN_SOCKET_POSITIONS,
+  },
 );
 
 /**

@@ -1980,3 +1980,379 @@ console.log(
 );
 console.log(`  scale ${scale.toFixed(5)} (MakeHuman dm -> ${CANONICAL_HEIGHT} m canonical)`);
 console.log(`  measurements -> ${MEASURE_OUT}`);
+
+// ---------------------------------------------------------------------------
+// 8. The four-armed body
+// ---------------------------------------------------------------------------
+
+/**
+ * A second pair of arms, made of the same arm.
+ *
+ * Four arms are iconography, not anatomy, and there is no scan of a
+ * four-armed man to import. What there IS is a measured human arm —
+ * skinned, morphed, fingered and already correct — so the second pair is
+ * that arm again: its vertices, its triangles, its weights and its morph
+ * deltas, moved to a second shoulder and bound to a second chain of
+ * bones. Everything true of the front pair is therefore true of the back
+ * pair, including whatever nobody would have thought to copy.
+ *
+ * It is not a second MESH. Both pairs live in one skinned body with one
+ * skeleton, one set of morph targets and one material, so a morph that
+ * widens the chest widens all four shoulders, and the print is one
+ * object rather than a figure with arms resting against it.
+ *
+ * WHERE THEY GO. Behind and below the front pair by about the depth of a
+ * deltoid: far enough that the seam where the copy enters the torso is
+ * inside the ribcage and cannot be seen, near enough that the pair reads
+ * as one figure's shoulders rather than as a second torso. They splay a
+ * little further out as well, which is what stops four hanging arms from
+ * reading as two arms with a shadow.
+ */
+const BACK_ARM_DROP = 0.052;
+const BACK_ARM_DEPTH = 0.062;
+const BACK_ARM_SPLAY = 0.2;
+const FOUR_ARM_OUT = path.resolve("public/assets/foundations/bodies/human4/1");
+
+/** Every joint of one arm chain, in build order. */
+function armChain(slot) {
+  const chain = [`arm.${slot}.upper`, `arm.${slot}.forearm`, `arm.${slot}.hand`];
+  for (const finger of FINGER_NAMES) {
+    for (const segment of [1, 2, 3]) chain.push(`arm.${slot}.hand.${finger}.0${segment}`);
+  }
+  return chain;
+}
+
+/** How a front arm becomes the back arm below and behind it. */
+function backArmTransform(slot) {
+  const shoulder = restFinal.get(`arm.${slot}.upper`);
+  const sign = slot === "frontLeft" ? 1 : -1;
+  const turn = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 0, 1),
+    -sign * BACK_ARM_SPLAY,
+  );
+  const shift = new THREE.Vector3(sign * 0.012, -BACK_ARM_DROP, -BACK_ARM_DEPTH);
+  return {
+    turn,
+    apply: (point) => point.clone().sub(shoulder).applyQuaternion(turn).add(shoulder).add(shift),
+  };
+}
+
+/**
+ * Which vertices belong to an arm: the ones its own joints carry.
+ *
+ * A threshold rather than any weight at all. The deltoid and the top of
+ * the chest share weight with the shoulder, and carrying half a ribcage
+ * along with the copy is how a second pair of arms becomes a second
+ * torso.
+ */
+function armIsland(slot) {
+  const chain = armChain(slot);
+  const island = new Set();
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    let carried = 0;
+    for (const joint of chain) carried += groupWeights.get(joint)?.[vertex] ?? 0;
+    if (carried > 0.55) island.add(vertex);
+  }
+  return island;
+}
+
+const FOUR_ARM_PAIRS = [
+  ["frontLeft", "backLeft"],
+  ["frontRight", "backRight"],
+];
+
+const fourArmPositions = Array.from(finalMesh.neutral);
+const fourArmColours = Array.from(halahala(finalMesh.neutral, measurements.neutral.neckBaseY));
+const fourArmIndices = Array.from(meshes.neutral.indices);
+const fourArmMorphs = new Map();
+for (const [variant, name] of Object.entries(MORPHS)) {
+  fourArmMorphs.set(
+    name,
+    Array.from(finalMesh.neutral, (value, index) => finalMesh[variant][index] - value),
+  );
+}
+for (const [name, posed] of Object.entries(finalGrips)) {
+  fourArmMorphs.set(name, Array.from(finalMesh.neutral, (value, index) => posed[index] - value));
+}
+const fourArmWeights = new Map();
+for (const [joint, weights] of groupWeights) fourArmWeights.set(joint, Array.from(weights));
+for (const [, back] of FOUR_ARM_PAIRS) {
+  for (const joint of armChain(back)) {
+    if (!fourArmWeights.has(joint)) fourArmWeights.set(joint, new Array(vertexCount).fill(0));
+  }
+}
+const fourArmRest = new Map();
+for (const [joint, position] of restFinal) fourArmRest.set(joint, position.clone());
+
+for (const [front, back] of FOUR_ARM_PAIRS) {
+  const island = armIsland(front);
+  const move = backArmTransform(front);
+  for (const joint of armChain(front)) {
+    fourArmRest.set(joint.replace(front, back), move.apply(restFinal.get(joint)));
+  }
+
+  const copyOf = new Map();
+  const point = new THREE.Vector3();
+  for (const vertex of island) {
+    const index = fourArmPositions.length / 3;
+    copyOf.set(vertex, index);
+    point.set(
+      finalMesh.neutral[vertex * 3],
+      finalMesh.neutral[vertex * 3 + 1],
+      finalMesh.neutral[vertex * 3 + 2],
+    );
+    const moved = move.apply(point);
+    fourArmPositions.push(moved.x, moved.y, moved.z);
+    fourArmColours.push(
+      fourArmColours[vertex * 3],
+      fourArmColours[vertex * 3 + 1],
+      fourArmColours[vertex * 3 + 2],
+    );
+    // A morph moves the copy the way it moves the original, turned the
+    // way the copy is turned. Otherwise a heroic build widens the front
+    // arms and shears the back ones.
+    for (const deltas of fourArmMorphs.values()) {
+      point.set(deltas[vertex * 3], deltas[vertex * 3 + 1], deltas[vertex * 3 + 2]);
+      point.applyQuaternion(move.turn);
+      deltas.push(point.x, point.y, point.z);
+    }
+    // Every joint gains a slot for the new vertex; the arm's own joints
+    // hand theirs to the copied chain.
+    for (const [joint, weights] of fourArmWeights) {
+      weights[index] = joint.startsWith(`arm.${back}.`)
+        ? (groupWeights.get(joint.replace(back, front))?.[vertex] ?? 0)
+        : 0;
+    }
+  }
+
+  const source = meshes.neutral.indices;
+  for (let corner = 0; corner < source.length; corner += 3) {
+    const a = copyOf.get(source[corner]);
+    const b = copyOf.get(source[corner + 1]);
+    const c = copyOf.get(source[corner + 2]);
+    if (a === undefined || b === undefined || c === undefined) continue;
+    fourArmIndices.push(a, b, c);
+  }
+}
+
+const fourArmVertexCount = fourArmPositions.length / 3;
+const fourArmOrder = [
+  ...boneOrder,
+  ...FOUR_ARM_PAIRS.flatMap(([, back]) => armChain(back)),
+];
+const fourArmParent = { ...PARENT };
+for (const [front, back] of FOUR_ARM_PAIRS) {
+  for (const joint of armChain(front)) {
+    const parent = PARENT[joint];
+    fourArmParent[joint.replace(front, back)] = parent?.startsWith(`arm.${front}.`)
+      ? parent.replace(front, back)
+      : parent;
+  }
+}
+
+const fourArmGeometry = new THREE.BufferGeometry();
+fourArmGeometry.setAttribute(
+  "position",
+  new THREE.Float32BufferAttribute(fourArmPositions, 3),
+);
+fourArmGeometry.setAttribute("color", new THREE.Float32BufferAttribute(fourArmColours, 3));
+fourArmGeometry.setIndex(fourArmIndices);
+{
+  const indices = new Uint16Array(fourArmVertexCount * 4);
+  const weights = new Float32Array(fourArmVertexCount * 4);
+  const slotOf = new Map(fourArmOrder.map((joint, index) => [joint, index]));
+  for (let vertex = 0; vertex < fourArmVertexCount; vertex += 1) {
+    const influences = [];
+    for (const [joint, perVertex] of fourArmWeights) {
+      const weight = perVertex[vertex] ?? 0;
+      if (weight > 0) influences.push([slotOf.get(joint), weight]);
+    }
+    influences.sort((a, b) => b[1] - a[1]);
+    const top = influences.slice(0, 4);
+    const total = top.reduce((sum, [, weight]) => sum + weight, 0) || 1;
+    top.forEach(([joint, weight], slot) => {
+      indices[vertex * 4 + slot] = joint;
+      weights[vertex * 4 + slot] = weight / total;
+    });
+    if (top.length === 0) {
+      indices[vertex * 4] = slotOf.get("pelvis");
+      weights[vertex * 4] = 1;
+    }
+  }
+  fourArmGeometry.setAttribute("skinIndex", new THREE.BufferAttribute(indices, 4));
+  fourArmGeometry.setAttribute("skinWeight", new THREE.BufferAttribute(weights, 4));
+}
+computeSmoothNormals(fourArmGeometry);
+fourArmGeometry.morphTargetsRelative = true;
+fourArmGeometry.morphAttributes.position = [];
+const fourArmMorphNames = [];
+for (const [name, deltas] of fourArmMorphs) {
+  fourArmGeometry.morphAttributes.position.push(
+    new THREE.Float32BufferAttribute(deltas, 3),
+  );
+  fourArmMorphNames.push(name);
+}
+
+const fourArmBones = new Map();
+for (const joint of fourArmOrder) {
+  const bone = new THREE.Bone();
+  bone.name = boneName(joint);
+  fourArmBones.set(joint, bone);
+}
+for (const joint of fourArmOrder) {
+  const parent = fourArmParent[joint];
+  const local = fourArmRest.get(joint).clone();
+  if (parent) {
+    local.sub(fourArmRest.get(parent));
+    fourArmBones.get(parent).add(fourArmBones.get(joint));
+  }
+  fourArmBones.get(joint).position.copy(local);
+}
+
+const fourArmMesh = new THREE.SkinnedMesh(
+  fourArmGeometry,
+  new THREE.MeshStandardMaterial({ name: "zone:skin", roughness: 0.62, vertexColors: true }),
+);
+fourArmMesh.name = "humanBody4";
+fourArmMesh.morphTargetDictionary = Object.fromEntries(
+  fourArmMorphNames.map((name, index) => [name, index]),
+);
+fourArmMesh.morphTargetInfluences = fourArmMorphNames.map(() => 0);
+fourArmGeometry.userData.targetNames = fourArmMorphNames;
+
+// The eyes ride along unchanged — the same proxy, on the same skin.
+const fourArmEyeGeometry = eyeGeometry.clone();
+const fourArmEyes = new THREE.SkinnedMesh(fourArmEyeGeometry, eyeMesh.material);
+fourArmEyes.name = "humanEyes4";
+fourArmEyes.morphTargetDictionary = eyeMesh.morphTargetDictionary;
+fourArmEyes.morphTargetInfluences = Object.values(MORPHS).map(() => 0);
+
+const fourArmRoot = new THREE.Group();
+fourArmRoot.name = "humanoid_body_human4";
+fourArmRoot.add(fourArmBones.get("root"));
+fourArmRoot.add(fourArmMesh);
+fourArmRoot.add(fourArmEyes);
+fourArmRoot.updateMatrixWorld(true);
+const fourArmSkeleton = new THREE.Skeleton(
+  fourArmOrder.map((joint) => fourArmBones.get(joint)),
+);
+fourArmMesh.bind(fourArmSkeleton);
+fourArmEyes.bind(fourArmSkeleton);
+
+for (const [socket, local] of Object.entries(sockets)) {
+  const parentJoint = socket.startsWith("head.")
+    ? "head"
+    : socket.startsWith("chest.")
+      ? "chest"
+      : socket.startsWith("arm.")
+        ? socket.split(".").slice(0, 3).join(".")
+        : "pelvis";
+  const empty = new THREE.Object3D();
+  empty.name = `SOCKET_${socket.replace(/\./g, "_")}`;
+  empty.position.copy(fourArmRest.get(parentJoint)).add(local);
+  fourArmRoot.add(empty);
+}
+// …and the back pair gets the same hand sockets, in its own frame.
+for (const [front, back] of FOUR_ARM_PAIRS) {
+  for (const [socket, local] of Object.entries(sockets)) {
+    if (!socket.startsWith(`arm.${front}.`)) continue;
+    const empty = new THREE.Object3D();
+    empty.name = `SOCKET_${socket.replace(front, back).replace(/\./g, "_")}`;
+    const joint = socket.split(".").slice(0, 3).join(".").replace(front, back);
+    empty.position.copy(fourArmRest.get(joint)).add(local);
+    fourArmRoot.add(empty);
+  }
+}
+fourArmRoot.updateMatrixWorld(true);
+
+const fourArmGlb = await new Promise((resolve, reject) => {
+  new GLTFExporter().parse(fourArmRoot, resolve, reject, { binary: true, onlyVisible: false });
+});
+await mkdir(FOUR_ARM_OUT, { recursive: true });
+await writeFile(path.join(FOUR_ARM_OUT, "model.glb"), Buffer.from(fourArmGlb));
+
+// The back hands are the front hands turned, so what they measured about
+// themselves is what the front hands measured, turned the same way.
+const fourArmGripAxes = { ...gripAxes };
+const fourArmGripSeats = { ...gripSeats };
+for (const [front, back] of FOUR_ARM_PAIRS) {
+  const { turn } = backArmTransform(front);
+  const spin = (vector) =>
+    new THREE.Vector3(...vector).applyQuaternion(turn).toArray().map(round);
+  if (gripAxes[front]) fourArmGripAxes[back] = spin(gripAxes[front]);
+  if (gripSeats[front]) {
+    fourArmGripSeats[back] = {
+      point: spin(gripSeats[front].point),
+      normal: spin(gripSeats[front].normal),
+    };
+  }
+}
+
+const fourArmBounds = new THREE.Box3().setFromBufferAttribute(
+  fourArmGeometry.getAttribute("position"),
+);
+await writeFile(
+  path.join(FOUR_ARM_OUT, "asset.json"),
+  JSON.stringify(
+    {
+      id: "humanoid.body.human4",
+      version: 1,
+      name: "Four-Armed Human Body",
+      description:
+        "The measured human body with a second pair of arms: the same arm, moved to a second shoulder and bound to its own chain.",
+      deity: "shared",
+      category: "body",
+      kind: { type: "part", slot: "body" },
+      skeleton: "human4",
+      stage: "experimental",
+      provenance: {
+        type: "imported",
+        provider: "MakeHuman",
+        tool: `MakeHuman Community ${report.makehumanVersion}; ${report.exporter}; built by apps/web/scripts/build-human-base.mjs`,
+        references: ["tools/humanbase/exports/neutral.mhm"],
+        notes:
+          "The back pair is the front arm's own geometry, weights and morph deltas, moved behind and below the front shoulder and bound to a second chain of joints.",
+      },
+      model: { path: "/assets/foundations/bodies/human4/1/model.glb" },
+      geometry: {
+        triangles: (fourArmIndices.length + eyeGeometry.getIndex().count) / 3,
+        vertices: fourArmVertexCount + eyeVertexCount,
+        boundsM: [
+          round(fourArmBounds.max.x - fourArmBounds.min.x),
+          round(fourArmBounds.max.y - fourArmBounds.min.y),
+          round(fourArmBounds.max.z - fourArmBounds.min.z),
+        ],
+      },
+      units: "meters",
+      upAxis: "+Y",
+      forwardAxis: "+Z",
+      materialZones: ["skin"],
+      morphTargets: fourArmMorphNames,
+      bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
+      gripAxes: fourArmGripAxes,
+      gripShapes: GRIP_RADII,
+      gripSeats: fourArmGripSeats,
+      legEnvelope: legEnvelope(finalMesh.neutral),
+      torsoSurface: torsoSurfaceWithMorphs,
+      printability: { printSourceAvailable: false },
+    },
+    null,
+    2,
+  ),
+);
+
+console.log(`wrote ${FOUR_ARM_OUT}/model.glb`);
+console.log(
+  `  ${fourArmVertexCount + eyeVertexCount} verts, ${(fourArmIndices.length + eyeGeometry.getIndex().count) / 3} tris, ` +
+    `${fourArmOrder.length} bones, four arms`,
+);
+console.log("  back-arm rest positions (paste into HUMAN_FOUR_ARM_POSITIONS):");
+for (const [, back] of FOUR_ARM_PAIRS) {
+  for (const joint of armChain(back)) {
+    const parent = fourArmParent[joint];
+    const local = fourArmRest.get(joint).clone().sub(fourArmRest.get(parent));
+    console.log(
+      `    "${joint}": [${round(local.x)}, ${round(local.y)}, ${round(local.z)}],`,
+    );
+  }
+}
