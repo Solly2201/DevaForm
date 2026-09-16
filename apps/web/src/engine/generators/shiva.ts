@@ -1051,9 +1051,15 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
     { bearing: -1.9, y: at(-0.006 + seat) },
     { bearing: -3.15, y: at(-0.01 + seat) },
     { bearing: -4.4, y: at(-0.006 + seat) },
-    // …and out at the front left, where the head lifts.
-    { bearing: -5.3, y: at(0.006 + seat) },
-    { bearing: -5.75, y: at(0.014 + seat), lift: 0.006 },
+    // …and out at the LEFT SHOULDER, where the head lifts.
+    //
+    // It used to come out thirty degrees off the front, which put the
+    // head under the chin: a snake apparently inspecting the figure's
+    // mouth. references/ref4.png rears it beside the shoulder, clear of
+    // the jaw, looking out past it — so the route stops short of the
+    // throat and the head has somewhere to go that is not the face.
+    { bearing: -4.85, y: at(0.002 + seat) },
+    { bearing: -5.25, y: at(0.008 + seat), lift: 0.006 },
   ];
   const walk = walkSurface(body, route, (t) => GAP + girth(t), 120);
 

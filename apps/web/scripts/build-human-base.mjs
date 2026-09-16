@@ -928,11 +928,15 @@ function halahala(positions, neckBaseY) {
   const colors = new Float32Array(positions.length);
   // The tint at its strongest: less green than red, and blue left alone,
   // which is a violet shadow rather than purple paint.
-  const TINT = [0.85, 0.66, 1.0];
+  const TINT = [0.9, 0.79, 1.0];
   // Centred a little below the neck joint — the joint is at the top of
   // the neck, where the head turns, and the poison is held at the throat.
-  const centreY = neckBaseY + (jawY - neckBaseY) * 0.44;
-  const spanY = (jawY - neckBaseY) * 1.15;
+  // `jawY` is the HEAD JOINT, which is inside the skull and well above
+  // the jaw it is named for — so a band centred at 0.44 of the way up
+  // landed on the chin, and the Studio showed a figure with a violet
+  // face and a pale throat. The throat is the lower half of that span.
+  const centreY = neckBaseY + (jawY - neckBaseY) * 0.3;
+  const spanY = (jawY - neckBaseY) * 0.72;
   for (let i = 0; i < vertexCount; i += 1) {
     const x = positions[i * 3];
     const y = positions[i * 3 + 1];

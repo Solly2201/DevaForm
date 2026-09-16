@@ -194,7 +194,13 @@ const PINNED = {
   // fist-sized — instead of one fist dialled to a fraction, and the seat
   // an object rests on is the seat those closures were baked around
   // rather than a second computation of it. Every finger moves.
-  shiva: { nodes: 340, digest: "e83e24dbb1dad357" },
+  //
+  // And for a throat that is violet where a throat is and a serpent that
+  // is not inspecting the figure's mouth: the halahala band was centred
+  // on a landmark named for the jaw that is actually the head joint,
+  // inside the skull, and the naga's route came out thirty degrees off
+  // the front instead of at the shoulder.
+  shiva: { nodes: 340, digest: "6d39392473f3aa56" },
 } as const;
 
 describe("protected characters do not move", () => {
