@@ -18,6 +18,26 @@ assets/
 └── presentation/    cameras, lighting, intros, transitions
 ```
 
+Presentation assets are not character components and do not go through the
+part/attachment registry: nothing is worn, held or posed. They live under
+`presentation/<kind>/<name>/<version>/` with their own `asset.json`, and
+the typed stage configuration that consumes them is
+`packages/asset-system/src/stage.ts`.
+
+```
+presentation/intros/temple-sanctum/1/
+├── intro.mp4     the entry sequence
+├── final.jpg     its last frame — the stage's backdrop
+└── asset.json    what it is, where it starts, where it ends
+```
+
+`final.jpg` is DERIVED, by `apps/web/scripts/build-intro-poster.mjs`, and
+re-derived whenever the video changes. That is the whole continuity
+mechanism: the sequence ends held on a frame and the interactive stage
+stands on the same file, so the handover is a fade between one picture
+and itself. Two files holding the same picture is only safe while one of
+them is generated from the other.
+
 Each asset occupies `<area>/<name>/<version>/` and contains:
 
 ```

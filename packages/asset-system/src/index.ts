@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./presentation";
+export * from "./stage";
 export * from "./resolve";
 export * from "./dataset";
 export * from "./registry";

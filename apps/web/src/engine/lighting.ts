@@ -23,6 +23,38 @@ export interface LightingPreset {
 
 export const LIGHTING_PRESETS = [
   {
+    /**
+     * The sanctum: the light in the room the stage stands in.
+     *
+     * The backdrop is a temple interior lit by one shaft from an oculus
+     * above and behind the statue's left shoulder, with oil lamps low on
+     * the floor all round. So that is the rig — a warm key high and a
+     * little behind, a dim warm bounce from below for the lamps, and a
+     * cool fill barely strong enough to keep the shadow side readable.
+     *
+     * Deliberately NOT bright. Shiva's skin is ash-pale and the first
+     * thing a generous key does to it is blow it to paper; the gold has
+     * to be what catches the light, which it does because the
+     * environment intensity is low and the key is warm. Dark hair keeps
+     * its structure because the rim is the strongest light on it.
+     */
+    id: "sanctum",
+    label: "Sanctum",
+    background: "#0d0b09",
+    hemisphere: { sky: "#f6e2bd", ground: "#2a1c10", intensity: 0.22 },
+    directionals: [
+      // The shaft: high, behind the left shoulder, warm.
+      { position: [-1.4, 4.2, -1.1], intensity: 2.1, color: "#ffe9c4", castShadow: true },
+      // Lamps: low, warm, from the front of the room.
+      { position: [0.9, 0.35, 2.6], intensity: 0.42, color: "#ffb469" },
+      // Fill: cool and weak, so the shadow side is form rather than void.
+      { position: [2.6, 1.6, 1.4], intensity: 0.34, color: "#bcd0e8" },
+      // Rim: separates the silhouette from the dark of the hall.
+      { position: [1.2, 2.4, -2.8], intensity: 1.15, color: "#ffd79a" },
+    ],
+    envIntensity: 0.28,
+  },
+  {
     id: "studio",
     label: "Studio",
     background: "#131110",

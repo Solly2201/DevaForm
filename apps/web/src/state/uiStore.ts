@@ -32,7 +32,7 @@ interface UiState {
 export const useUiStore = create<UiState>()((set) => ({
   activeCategoryId: "head",
   activeSubcategoryId: null,
-  lightingPreset: "studio",
+  lightingPreset: "sanctum",
   selectedJoint: "arm.frontRight.upper",
   cameraCommand: { view: "threeQuarter", nonce: 0 },
   exportDialogOpen: false,
