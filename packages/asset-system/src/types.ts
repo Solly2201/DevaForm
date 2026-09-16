@@ -281,20 +281,22 @@ export interface AssetDefinition {
    * assuming a convention — its hands are mirrored while the rig is
    * not, so no single constant reaches the thumb on both sides.
    */
-  thumbAxes?: Readonly<Record<string, readonly [number, number, number]>>;
+  gripAxes?: Readonly<Record<string, readonly [number, number, number]>>;
   /**
-   * Body-slot assets: how wide a hole each hand leaves at each stage of
-   * closing, measured off the mesh — `[influence, radius]` pairs, open to
-   * shut.
+   * Body-slot assets: the RADIUS each hand-closure morph was baked at.
    *
-   * A hand modelled once and shipped as a curl morph can only be dialled,
-   * and dialling it to a fixed amount gives every fist the same diameter.
-   * That is why fingers met a drum head as readily as a staff's shaft. The
-   * item declares the radius it presents at the grip; the engine reads
-   * this curve and dials the influence that matches. Nothing is assumed
-   * about a hand that has not measured itself.
+   * A hand modelled once and shipped as a single curl morph can only be
+   * dialled, and a fraction of a fist is not a hand closed on anything —
+   * it is a hand with half-extended fingers. So a body that can close its
+   * hands bakes more than one closure, each onto a cylinder of a stated
+   * size, and says here which size each was. The engine blends the two
+   * that bracket the radius an item declares; both ends are real grips,
+   * so everything between is one too.
+   *
+   * Keys are the morph-target prefixes — `grip`, `cradle` — and the
+   * targets themselves are `<prefix><ArmSlot>`.
    */
-  gripApertures?: Readonly<Record<string, readonly (readonly [number, number])[]>>;
+  gripShapes?: Readonly<Record<string, number>>;
   /**
    * Body-slot assets: where a held object RESTS in each hand, in that
    * hand joint's own frame — the skin over the knuckles, and the

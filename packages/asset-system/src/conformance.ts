@@ -63,15 +63,15 @@ export function validateSkeletonConformance(
   const sockets = new Set(skeleton.sockets.map((s) => s.id));
 
   // 1. Thumb axes describe hands. Every hand, and only the hands there are.
-  if (asset.thumbAxes) {
-    for (const slot of Object.keys(asset.thumbAxes)) {
+  if (asset.gripAxes) {
+    for (const slot of Object.keys(asset.gripAxes)) {
       if (!armSlots.has(slot)) {
         problem(
           `declares a thumb axis for ${slot}, which skeleton "${skeleton.id}" does not have`,
         );
       }
     }
-    const missing = [...armSlots].filter((slot) => !asset.thumbAxes?.[slot]);
+    const missing = [...armSlots].filter((slot) => !asset.gripAxes?.[slot]);
     if (missing.length > 0 && missing.length < armSlots.size) {
       // Some but not all: the body measured one hand and forgot the other,
       // and a hand with no measured axis silently falls back to the
@@ -86,7 +86,7 @@ export function validateSkeletonConformance(
     if (slot && !armSlots.has(slot)) {
       problem(`exposes ${morph}, but skeleton "${skeleton.id}" has no ${slot} arm`);
     }
-    if (slot && !asset.thumbAxes?.[slot]) {
+    if (slot && !asset.gripAxes?.[slot]) {
       // A modelled hand is turned onto what it holds using its measured
       // thumb axis. Without one it is turned using a guess.
       problem(

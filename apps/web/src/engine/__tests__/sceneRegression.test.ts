@@ -188,7 +188,13 @@ const PINNED = {
   // The skin IS the lower garment now — the layered look is still offered
   // and still loads — and the skin was rebuilt for being worn on the body
   // rather than over four centimetres of gathered cloth.
-  shiva: { nodes: 340, digest: "fb4a592b964f6225" },
+  //
+  // And again for the hands, which now close on what they hold. The body
+  // bakes two closures — one round something thin, one round something
+  // fist-sized — instead of one fist dialled to a fraction, and the seat
+  // an object rests on is the seat those closures were baked around
+  // rather than a second computation of it. Every finger moves.
+  shiva: { nodes: 340, digest: "e83e24dbb1dad357" },
 } as const;
 
 describe("protected characters do not move", () => {

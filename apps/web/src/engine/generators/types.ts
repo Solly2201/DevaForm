@@ -23,6 +23,19 @@ export interface HeldItemSpec {
    * treats all three the same is a hand that holds none of them.
    */
   grip?: "grip" | "pinch" | "hold";
+  /**
+   * How far the item stays that radius along its own axis, each way from
+   * the grip, in metres.
+   *
+   * A staff is a cylinder for a quarter of a metre; a damaru is one for
+   * fourteen millimetres and then flares into two drum heads. Anything
+   * asking "is this finger inside what it holds" has to know where the
+   * declared radius stops describing the object, or a finger resting
+   * perfectly against a drum head reads as a finger buried in a shaft.
+   * The presentation already says it — `grip.travel` is how far the hand
+   * may slide — and this carries it through.
+   */
+  straight?: number;
 }
 
 export interface GeneratorContext {

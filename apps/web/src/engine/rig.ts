@@ -59,7 +59,6 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import { morphInfluences } from "./morphs";
-import { solveGrip } from "./fingerSolve";
 import type { ZoneMaterials } from "./materials";
 import {
   applyGestureOrientations,
@@ -135,11 +134,6 @@ export interface CharacterRig {
   bodyMeshes: THREE.Mesh[];
   /** What each hand is closing on — the radius it must close onto. */
   heldByHand: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>;
-  /**
-   * Hands whose FINGERS were solved onto what they hold. Those hands must
-   * not also be curled by the body's grip morph, or they close twice.
-   */
-  solvedGrips: Set<ArmSlot>;
   /** Assets that failed to resolve (not fatal). */
   warnings: string[];
   /**
@@ -242,11 +236,11 @@ const HAND_PALM = new THREE.Vector3(0, 0, 1);
 
 function orientMeasuredGripSockets(
   sockets: Map<SocketId, THREE.Object3D>,
-  thumbAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
+  gripAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
 ): void {
-  if (!thumbAxes) return;
+  if (!gripAxes) return;
   for (const slot of ARM_SLOTS) {
-    const measured = thumbAxes[slot];
+    const measured = gripAxes[slot];
     if (!measured) continue;
     const socket = sockets.get(`arm.${slot}.hand.item` as SocketId);
     if (!socket) continue;
@@ -473,7 +467,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   const sockets = buildSockets(skeleton, joints, root, baseTop);
 
   const bodyAsset = resolveAssetRef(config.parts.body);
-  orientMeasuredGripSockets(sockets, bodyAsset?.thumbAxes);
+  orientMeasuredGripSockets(sockets, bodyAsset?.gripAxes);
 
   // Body-fit: torso surfaces for the configured body asset (pure data — no
   // asset-id conditionals). A mesh body ships measurements of itself and
@@ -503,6 +497,11 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     heldByHand[attachment.handSlot] = {
       presentationId: attachment.presentation.id,
       radius: attachment.presentation.grip?.radius,
+      straight: (() => {
+        const travel = attachment.presentation.grip?.travel;
+        if (!travel) return undefined;
+        return Math.max(travel.up ?? 0, travel.down ?? 0) || undefined;
+      })(),
       grip:
         attachment.presentation.hand === "none" ? undefined : attachment.presentation.hand,
     };
@@ -762,7 +761,6 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     root,
     baseTop,
     bodyMeshes,
-    solvedGrips: new Set<ArmSlot>(),
     skeleton,
     joints,
     sockets,
@@ -929,46 +927,22 @@ export function poseRig(rig: CharacterRig): HandSolution[] {
     );
   }
 
-  // The hand is aimed; now the fingers close on what is in it.
+  // What closes a hand is the hand's own grip morph, and nothing else.
   //
-  // This is the one place a held object and a hand meet as geometry
-  // rather than as a parenting relationship. Everything above decides
-  // WHAT is held and which way it runs; this decides what the hand does
-  // about it, and it does so from the object's own radius and axis, so
-  // the next attribute — of any deity — needs no new code.
-  rig.solvedGrips.clear();
-  // Which joints this body's mesh is actually skinned to. A body whose
-  // hands are geometry rather than bones keeps the hands its own
-  // generator built — they are made closed, around the same declared
-  // radius, which is how the stylised hands have always worked.
-  const boned = new Set<string>();
-  for (const mesh of rig.bodyMeshes) {
-    const skinned = mesh as THREE.SkinnedMesh;
-    if (!skinned.isSkinnedMesh) continue;
-    for (const bone of skinned.skeleton.bones) {
-      boned.add(bone.name.replace(/^joint:/, "").replace(/_/g, "."));
-    }
-  }
-  for (const slot of ARM_SLOTS) {
-    const held = rig.heldByHand[slot];
-    const socket = rig.sockets.get(`arm.${slot}.hand.item` as SocketId);
-    if (!held?.radius || !held.grip || !socket) continue;
-    socket.updateWorldMatrix(true, false);
-    const solved = solveGrip(
-      rig.joints,
-      slot,
-      {
-        origin: socket.getWorldPosition(new THREE.Vector3()),
-        axis: new THREE.Vector3(0, 1, 0).applyQuaternion(
-          socket.getWorldQuaternion(new THREE.Quaternion()),
-        ),
-        radius: held.radius,
-        shape: held.grip,
-      },
-      (id) => boned.has(id),
-    );
-    if (solved) rig.solvedGrips.add(slot);
-  }
+  // There was a finger solver here that rotated the three joints of each
+  // finger onto the object after the morph had already closed the hand.
+  // Two closure systems on one hand, neither able to see the other: the
+  // morph moves skin without moving bones, so the solver measured an open
+  // chain, decided it could not reach, and applied its whole budget to
+  // every finger — on top of a fist that was already shut. The Studio
+  // showed what that produces, and a hand with the solver switched off
+  // measured closer to the shaft than one with it on.
+  //
+  // The morph is the better instrument in any case. It is baked offline
+  // by the body itself, from the full-resolution hand its author rigged,
+  // and the runtime rig has three joints per finger and no correctives.
+  // What the engine has to get right is which shape, and how far — see
+  // handMorphInfluences and the radii the body baked them at.
 
   // The figure meets its base before anything else is settled against the
   // ground — a staff plants itself relative to a support the figure is

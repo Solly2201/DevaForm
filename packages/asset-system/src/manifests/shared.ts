@@ -57,6 +57,8 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
       "bodyAscetic",
       "gripFrontLeft",
       "gripFrontRight",
+      "cradleFrontLeft",
+      "cradleFrontRight",
     ],
     bodyProfile: {
       base: {
@@ -321,41 +323,21 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
         },
       },
     },
-    thumbAxes: {
-      frontLeft: [0.79651, 0, 0.60463],
-      frontRight: [-0.79651, 0, 0.60463],
+    gripAxes: {
+      frontLeft: [1, 0, 0],
+      frontRight: [-1, 0, 0],
     },
-    gripApertures: {
-      frontLeft: [
-        [0, 0.015],
-        [0.125, 0.013],
-        [0.25, 0.0115],
-        [0.375, 0.0115],
-        [0.5, 0.0115],
-        [0.625, 0.011],
-        [0.75, 0.011],
-        [0.875, 0.0105],
-        [1, 0.01],
-      ],
-      frontRight: [
-        [0, 0.015],
-        [0.125, 0.013],
-        [0.25, 0.0115],
-        [0.375, 0.0115],
-        [0.5, 0.0115],
-        [0.625, 0.011],
-        [0.75, 0.011],
-        [0.875, 0.0105],
-        [1, 0.01],
-      ],
+    gripShapes: {
+      grip: 0.007,
+      cradle: 0.03,
     },
     gripSeats: {
       frontLeft: {
-        point: [0.00337, -0.05942, -0.01863],
+        point: [0.00222, -0.04999, -0.00952],
         normal: [0, 0, 1],
       },
       frontRight: {
-        point: [-0.00337, -0.05942, -0.01863],
+        point: [-0.00222, -0.04999, -0.00952],
         normal: [0, 0, 1],
       },
     },

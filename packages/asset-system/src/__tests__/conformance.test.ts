@@ -42,7 +42,7 @@ describe("registry conformance", () => {
     const human = getAsset("humanoid.body.human")!;
     expect(human.skeleton).toBe("human");
     // Two hands measured, two hands gripped — no claim about a third.
-    expect(Object.keys(human.thumbAxes ?? {}).sort()).toEqual(["frontLeft", "frontRight"]);
+    expect(Object.keys(human.gripAxes ?? {}).sort()).toEqual(["frontLeft", "frontRight"]);
     const gripMorphs = (human.morphTargets ?? []).filter((m) => m.startsWith("grip"));
     expect(gripMorphs.sort()).toEqual(["gripFrontLeft", "gripFrontRight"]);
     expect(validateSkeletonConformance(human, HUMAN_SKELETON)).toEqual([]);
@@ -67,7 +67,7 @@ describe("conformance catches what it is for", () => {
 
   it("rejects a thumb axis for an arm the skeleton does not have", () => {
     const issues = validateSkeletonConformance(
-      body({ thumbAxes: { frontLeft: [1, 0, 0], frontRight: [-1, 0, 0], backLeft: [1, 0, 0] } }),
+      body({ gripAxes: { frontLeft: [1, 0, 0], frontRight: [-1, 0, 0], backLeft: [1, 0, 0] } }),
       HUMAN_SKELETON,
     );
     expect(issues.map((i) => i.message)).toContainEqual(
@@ -79,7 +79,7 @@ describe("conformance catches what it is for", () => {
     const issues = validateSkeletonConformance(
       body({
         morphTargets: ["gripBackRight"],
-        thumbAxes: { frontLeft: [1, 0, 0], frontRight: [-1, 0, 0] },
+        gripAxes: { frontLeft: [1, 0, 0], frontRight: [-1, 0, 0] },
       }),
       HUMAN_SKELETON,
     );
@@ -90,7 +90,7 @@ describe("conformance catches what it is for", () => {
 
   it("notices a body that measured one hand and forgot the other", () => {
     const issues = validateSkeletonConformance(
-      body({ thumbAxes: { frontLeft: [1, 0, 0] } }),
+      body({ gripAxes: { frontLeft: [1, 0, 0] } }),
       HUMAN_SKELETON,
     );
     expect(issues.map((i) => i.message)).toContainEqual(

@@ -28,7 +28,7 @@ const TARGETS = [
     asset: path.join(here, "../public/assets/foundations/bodies/human/1/asset.json"),
     manifest: path.join(repo, "packages/asset-system/src/manifests/shared.ts"),
     marker: "humanoid.body.human",
-    fields: ["geometry", "morphTargets", "bodyProfile", "thumbAxes", "gripApertures", "gripSeats", "torsoSurface", "legEnvelope"],
+    fields: ["geometry", "morphTargets", "bodyProfile", "gripAxes", "gripShapes", "gripSeats", "torsoSurface", "legEnvelope"],
   },
 ];
 

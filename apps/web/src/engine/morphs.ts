@@ -3,10 +3,17 @@
  *
  * A procedural hand is built in whatever mudra it was asked for. A mesh
  * hand is already modelled, so closing it is a deformation — and a body
- * mesh that can close its hands says so by exposing `grip<ArmSlot>` morph
- * targets. The engine reads that declaration and dials them from the same
- * mudra the rest of the gesture system uses; a body without them simply
- * keeps its open hands, which is what the pose system already assumes.
+ * mesh that can close its hands says so by exposing `grip<ArmSlot>` and
+ * `cradle<ArmSlot>` morph targets, plus the radii it baked them at.
+ *
+ * WHY TWO. A hand closed on a staff and a hand closed on a conch are not
+ * the same hand scaled: one fist dialled to a fraction travels from an
+ * open hand, through a hand whose fingers are merely half-extended, to a
+ * fist closed on nothing, and the family of hands closed AROUND cylinders
+ * of different sizes does not lie on that path. Every grip in this
+ * product was picked off it, which is why every grip either failed to
+ * close or closed through what it held. So the body bakes two real
+ * closures and this blends between them by the radius the item declares.
  */
 import {
   ARM_SLOTS,
@@ -19,10 +26,9 @@ import type { AssetDefinition } from "@devaform/asset-system";
 /**
  * How closed each mudra's hand is when it is holding NOTHING.
  *
- * A hand that is holding something closes onto that instead — see
- * `closureFor`. These are the empty-handed shapes: a cradle is barely
- * closed, a pinch without a stem is a suggestion, and the open-palm
- * gestures are exactly that.
+ * A hand that is holding something closes onto that instead. These are
+ * the empty-handed shapes: a cradle is barely closed, a pinch without a
+ * stem is a suggestion, and the open-palm gestures are exactly that.
  */
 const MUDRA_CLOSURE: Record<MudraId, number> = {
   abhaya: 0,
@@ -33,37 +39,32 @@ const MUDRA_CLOSURE: Record<MudraId, number> = {
   grip: 1,
 };
 
-/** How much air a closing hand leaves around what it holds. */
-const CONTACT_GAP = 0.0015;
-
-const gripTarget = (slot: ArmSlot): string => `grip${slot[0]!.toUpperCase()}${slot.slice(1)}`;
+const shapeTarget = (shape: string, slot: ArmSlot): string =>
+  `${shape}${slot[0]!.toUpperCase()}${slot.slice(1)}`;
 
 /**
- * The closure that brings this hand onto an object of this radius.
+ * The blend that closes this hand on an object of this radius.
  *
- * The body measured its own fist at a series of influences; this reads
- * that curve backwards. Closing further than the object allows would put
- * fingers through it, so the answer is the influence whose aperture the
- * object exactly fills — and when the object is thinner than the fist can
- * ever close, the hand simply shuts, because that is all it can do.
+ * Both baked shapes are hands closed on a real cylinder, so anything
+ * between them is one too. Outside them the nearer shape is used whole: a
+ * hand cannot close tighter than its own fingers allow, and it does not
+ * open further than a cradle for something bigger than a fist — it holds
+ * such a thing against the palm, which is what the cradle is.
  */
-export function closureFor(
-  aperture: readonly (readonly [number, number])[] | undefined,
+export function gripBlend(
+  shapes: Readonly<Record<string, number>> | undefined,
   radius: number,
-): number | undefined {
-  if (!aperture || aperture.length === 0) return undefined;
-  let previous = aperture[0] as readonly [number, number];
-  if (radius >= previous[1]) return previous[0];
-  for (let i = 1; i < aperture.length; i += 1) {
-    const current = aperture[i] as readonly [number, number];
-    if (radius >= current[1]) {
-      const span = previous[1] - current[1];
-      const t = Math.abs(span) < 1e-9 ? 0 : (previous[1] - radius) / span;
-      return previous[0] + (current[0] - previous[0]) * t;
-    }
-    previous = current;
-  }
-  return previous[0];
+): Readonly<Record<string, number>> | undefined {
+  const tight = shapes?.grip;
+  const wide = shapes?.cradle;
+  if (tight === undefined || wide === undefined || wide <= tight) return undefined;
+  // A millimetre and a half of air, so the fingers stop AT the surface
+  // rather than a little way into it. Skin presses on what it holds, and
+  // the flesh over a knuckle comes closer than the bone does — without
+  // this the fingertips show through the far side of a thin shaft.
+  const CONTACT_GAP = 0.0015;
+  const t = Math.min(1, Math.max(0, (radius + CONTACT_GAP - tight) / (wide - tight)));
+  return { grip: 1 - t, cradle: t };
 }
 
 export function handMorphInfluences(
@@ -75,26 +76,29 @@ export function handMorphInfluences(
   const available = new Set(body?.morphTargets ?? []);
   const influences: Record<string, number> = {};
   for (const slot of ARM_SLOTS) {
-    const target = gripTarget(slot);
-    if (!available.has(target)) continue;
+    const targets = ["grip", "cradle"].filter((shape) =>
+      available.has(shapeTarget(shape, slot)),
+    );
+    if (targets.length === 0) continue;
+    for (const shape of targets) influences[shapeTarget(shape, slot)] = 0;
+
     const radius = held[slot]?.radius;
-    const measured =
-      radius !== undefined
-        ? // A millimetre and a half of air, so the fingers stop AT the
-          // object rather than a little way into it. The aperture curve
-          // is the largest circle that fits, which is a lower bound on
-          // the hole — the flesh comes closer than that in places, and
-          // closing to the exact radius put fingertips a few millimetres
-          // inside a drum that is made of wood.
-          closureFor(body?.gripApertures?.[slot], radius + CONTACT_GAP)
-        : undefined;
-    // What the hand is DOING bounds how far it closes. A pinch that shuts
-    // into a fist because the object is thin is not a pinch — and a drum
-    // is pinched at a waist nine millimetres long, so a fist closing over
-    // three centimetres of it runs its fingers into the flare whatever
-    // the waist measures. The object can only ever stop the hand sooner.
-    const intended = MUDRA_CLOSURE[hands[slot].mudra];
-    influences[target] = measured === undefined ? intended : Math.min(measured, intended);
+    const blend = radius === undefined ? undefined : gripBlend(body?.gripShapes, radius);
+    if (blend) {
+      // Holding something: the hand closes ON it, fully. What the hand is
+      // DOING cannot open it — a pinch holding a stem is still a hand
+      // round a stem — but see the presentation vocabulary for which
+      // shape an attribute asks for in the first place.
+      for (const [shape, weight] of Object.entries(blend)) {
+        const target = shapeTarget(shape, slot);
+        if (available.has(target)) influences[target] = weight;
+      }
+      continue;
+    }
+    // Empty: the gesture decides, and it dials the tight shape, because
+    // an empty hand closing has nothing to close around.
+    const tight = shapeTarget("grip", slot);
+    if (available.has(tight)) influences[tight] = MUDRA_CLOSURE[hands[slot].mudra];
   }
   return influences;
 }

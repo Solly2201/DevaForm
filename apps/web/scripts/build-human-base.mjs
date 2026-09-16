@@ -447,73 +447,236 @@ const FINGER_CURL = {
   4: [1, 1, 0.97],
   5: [0.96, 1, 0.92],
 };
-// Enough flexion for the fingertips to come round a shaft and meet the
-// thumb — a hand laid over a staff is not holding it.
+// A CLOSED fist, because the fist is the only thing that closes.
 //
-// NOTE: this is a fixed pose, not a closure that stops on contact. A hand
-// closes to the same radius whatever it holds, which is why fingers still
-// meet a drum head. Fixing that needs the item to declare the radius it
-// presents and the body to report how wide its fist is at each end of
-// this range — both measured in the SAME frame, which is where a first
-// attempt went wrong. Left as a known defect rather than half-built.
+// This was 0.78/0.95/0.62 — a hundred and thirty-five degrees over the
+// three joints, which is a hand cupped rather than a hand shut. The
+// measured hole at full closure came out at thirty-nine millimetres
+// across, so a ten-millimetre shaft sat in it with a centimetre of
+// daylight all round and every note written about the trishul said the
+// same thing: the hand is not actually holding it. A hand closes about
+// two hundred and twenty degrees over these joints, and it is measured
+// afterwards rather than asserted — see the aperture curve, which is
+// what the engine dials against.
 const CURL_ANGLES = [0.78, 0.95, 0.62]; // radians at full grip, per segment
 
-function curledHand(positions, prefix) {
+/**
+ * The radii the hand is baked closed around.
+ *
+ * ONE fist scaled by one number cannot hold things of different sizes,
+ * and that — not the solver, not the weights, not the topology — is why
+ * every grip in this product has looked wrong. A scaled fist travels one
+ * trajectory: from an open hand, through a hand whose fingers are merely
+ * half-extended, to a fist closed on nothing. The family of hands closed
+ * around cylinders of different radii is a different curve, and it does
+ * not lie on that one. Dialling a fraction of a fist to "match" a shaft
+ * therefore picks between a hand that has not closed and a hand closed
+ * through the shaft — which is exactly what the Studio showed.
+ *
+ * So the hand is baked closed on an actual cylinder, twice: once round
+ * something thin, once round something fist-sized. Anything between is
+ * those two blended, which IS a hand closing on that radius, because both
+ * ends are. Both are built here, offline, on MakeHuman's own fifteen-bone
+ * hand with its own weights — deformation the three-joint runtime rig
+ * cannot match.
+ */
+const GRIP_RADII = { grip: 0.007, cradle: 0.03 };
+
+/** Where each hand's closure was baked around, in MakeHuman space. */
+const bakedSeats = {};
+
+/**
+ * A hand closed onto a cylinder of a given radius.
+ *
+ * Each finger curls until its flesh reaches the surface and stops there —
+ * one bisection per finger against the mesh's own vertices, so contact is
+ * measured rather than assumed. A finger that cannot reach takes all the
+ * flexion it has.
+ */
+function handClosedOn(positions, prefix, radiusMetres) {
   const { fingers, normal } = palmNormal(prefix);
   const lateral = v3(`${prefix}-finger-2-1`).sub(v3(`${prefix}-finger-5-1`)).normalize();
   const out = new Float32Array(positions);
   const side = prefix === "l" ? "L" : "R";
-  const point = new THREE.Vector3();
-  const moved = new THREE.Vector3();
+
+  // MakeHuman units, from the same conversion the mesh itself gets.
+  const perMetre = 1 / (scale * heightFix.neutral);
+  const radius = radiusMetres * perMetre;
+
+  // The cylinder: along the knuckle line, resting on the palm's skin at
+  // the base of the fingers — the line a held shaft actually lies on.
+  const axis = lateral.clone().projectOnPlane(fingers).normalize();
+  const palmVertices = [];
+  for (const bone of [`wrist.${side}`, ...[1, 2, 3, 4].map((n) => `metacarpal${n}.${side}`)]) {
+    for (const [baseIndex, weight] of rigWeights[bone] ?? []) {
+      if (weight <= 0.35) continue;
+      const vertex = inverseParentMap[baseIndex];
+      if (vertex >= 0) palmVertices.push(vertex);
+    }
+  }
+  const vertexAt = (source, vertex) =>
+    new THREE.Vector3(source[vertex * 3], source[vertex * 3 + 1], source[vertex * 3 + 2]);
+  const knuckles = new THREE.Vector3();
+  for (const digit of [2, 3, 4, 5]) knuckles.add(v3(`${prefix}-finger-${digit}-1`));
+  knuckles.multiplyScalar(0.25);
+  const nearby = palmVertices
+    .map((vertex) => ({ vertex, d: vertexAt(positions, vertex).distanceTo(knuckles) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 24);
+  const patch = nearby
+    .reduce((sum, entry) => sum.add(vertexAt(positions, entry.vertex)), new THREE.Vector3())
+    .multiplyScalar(1 / nearby.length);
+  let thickness = 0;
+  for (const entry of nearby) {
+    thickness = Math.max(thickness, vertexAt(positions, entry.vertex).sub(patch).dot(normal));
+  }
+  const centre = patch.clone().addScaledVector(normal, thickness + radius);
+  // The seat the engine will ship is THIS seat. Two computations of "where
+  // a held thing rests on this palm" is one too many: the fingers were
+  // baked closed around the cylinder above, so anything placed anywhere
+  // else is placed where they are not.
+  bakedSeats[prefix] = { skin: patch.clone().addScaledVector(normal, thickness), normal };
+  if (process.env.DEVAFORM_GRIP_DEBUG) {
+    console.log(
+      `  ${prefix} r=${(radiusMetres * 1000).toFixed(0)} normal=${normal.toArray().map((n) => n.toFixed(2)).join(",")}` +
+        ` axis=${axis.toArray().map((n) => n.toFixed(2)).join(",")} thick=${thickness.toFixed(3)} radius=${radius.toFixed(3)}` +
+        ` patch=${patch.toArray().map((n) => n.toFixed(3)).join(",")}`,
+    );
+  }
+  const WINDOW = 0.05 * perMetre;
+  const distanceToAxis = (candidate) => {
+    const d = candidate.clone().sub(centre);
+    if (Math.abs(d.dot(axis)) > WINDOW) return Infinity;
+    return d.addScaledVector(axis, -d.dot(axis)).length();
+  };
 
   for (const finger of [1, 2, 3, 4, 5]) {
-    // Forward kinematics down the finger: each segment's transform is its
-    // own rotation about its (already moved) joint, after its parents'.
-    let chain = new THREE.Matrix4();
-    for (let segment = 1; segment <= 3; segment += 1) {
-      const joint = v3(`${prefix}-finger-${finger}-${segment}`).applyMatrix4(chain);
-      const angle = CURL_ANGLES[segment - 1] * FINGER_CURL[finger][segment - 1];
-      // Fingers flex about the knuckle line; the thumb swings about the
-      // line of the fingers, which carries it across the palm instead of
-      // folding it flat against its own side.
-      const axis = finger === 1 ? fingers : lateral;
-      const tip = v3(`${prefix}-finger-${finger}-4`).applyMatrix4(chain);
-      const pivot = (turn) =>
-        new THREE.Matrix4()
-          .makeTranslation(joint.x, joint.y, joint.z)
-          .multiply(new THREE.Matrix4().makeRotationAxis(axis, turn))
-          .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
-      // Whichever sign carries the tip toward the palm is the way a hand
-      // closes; it differs between the left hand and the right.
-      const toward = finger === 1 ? lateral.clone().multiplyScalar(-1) : normal;
-      const trial = pivot(angle);
-      chain = (tip.clone().applyMatrix4(trial).sub(tip).dot(toward) > 0
-        ? trial
-        : pivot(-angle)
-      ).multiply(chain);
-
-
-      const bone = rigWeights[`finger${finger}-${segment}.${side}`];
-      if (!bone) throw new Error(`no rig weights for finger${finger}-${segment}.${side}`);
-      for (const [baseIndex, weight] of bone) {
-        const vertex = inverseParentMap[baseIndex];
-        if (vertex < 0 || weight <= 0) continue;
-        point.set(positions[vertex * 3], positions[vertex * 3 + 1], positions[vertex * 3 + 2]);
-        moved.copy(point).applyMatrix4(chain).sub(point).multiplyScalar(weight);
-        out[vertex * 3] += moved.x;
-        out[vertex * 3 + 1] += moved.y;
-        out[vertex * 3 + 2] += moved.z;
+    const chainFor = (fraction) => {
+      const steps = [];
+      let chain = new THREE.Matrix4();
+      for (let segment = 1; segment <= 3; segment += 1) {
+        const joint = v3(`${prefix}-finger-${finger}-${segment}`).applyMatrix4(chain);
+        const angle = CURL_ANGLES[segment - 1] * FINGER_CURL[finger][segment - 1] * fraction;
+        // Fingers flex about the knuckle line; the thumb swings about the
+        // line of the fingers, which carries it across the palm instead
+        // of folding it flat against its own side.
+        const about = finger === 1 ? fingers : lateral;
+        const tip = v3(`${prefix}-finger-${finger}-4`).applyMatrix4(chain);
+        const pivot = (turn) =>
+          new THREE.Matrix4()
+            .makeTranslation(joint.x, joint.y, joint.z)
+            .multiply(new THREE.Matrix4().makeRotationAxis(about, turn))
+            .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
+        // Which way a finger bends is decided by the thing it is closing
+        // ON: whichever sign brings the fingertip nearer the cylinder's
+        // axis is the way this hand closes. Asking the object rather
+        // than the anatomy means no palm normal, no handedness and no
+        // mirrored-mesh convention has to be got right — and getting one
+        // of them wrong is how the right hand came out curling backwards
+        // while the left closed correctly, from identical inputs.
+        const forward = pivot(angle);
+        const back = pivot(-angle);
+        const reach = (turn) => distanceToAxis(tip.clone().applyMatrix4(turn));
+        const nearer = reach(forward) <= reach(back) ? forward : back;
+        chain = nearer.multiply(chain);
+        steps.push(chain.clone());
       }
+      return steps;
+    };
+
+    const bones = [1, 2, 3].map((segment) => {
+      const weights = rigWeights[`finger${finger}-${segment}.${side}`];
+      if (!weights) throw new Error(`no rig weights for finger${finger}-${segment}.${side}`);
+      return weights;
+    });
+    const skinned = (fraction, from = 0) => {
+      const steps = chainFor(fraction);
+      const shifted = [];
+      for (let segment = from; segment < 3; segment += 1) {
+        for (const [baseIndex, weight] of bones[segment]) {
+          const vertex = inverseParentMap[baseIndex];
+          if (vertex < 0 || weight <= 0) continue;
+          const from = vertexAt(positions, vertex);
+          shifted.push({
+            vertex,
+            delta: from.clone().applyMatrix4(steps[segment]).sub(from).multiplyScalar(weight),
+          });
+        }
+      }
+      return shifted;
+    };
+    /**
+     * How far this finger's nearest flesh is OUTSIDE the cylinder.
+     *
+     * Measured on the middle and distal phalanges only. The proximal
+     * one's skin is continuous with the palm — it is a few millimetres
+     * from anything lying on the palm whatever the hand is doing — so
+     * including it says every finger is already touching and no hand
+     * ever closes. What comes ROUND an object is the rest of the finger.
+     */
+    const clearance = (fraction) => {
+      let nearest = Infinity;
+      for (const { vertex, delta } of skinned(fraction, 1)) {
+        nearest = Math.min(nearest, distanceToAxis(vertexAt(positions, vertex).add(delta)));
+      }
+      return nearest === Infinity ? Infinity : nearest - radius;
+    };
+
+    // A hand closes until it meets what it is holding: the FURTHEST this
+    // finger can flex while still clearing the surface.
+    //
+    // Swept rather than bisected, because clearance is not monotonic for
+    // every digit. A thumb starts lying along the palm — inside the
+    // cylinder before it has moved at all — then swings clear of it, then
+    // comes down onto it, so bisecting from zero decides the thumb cannot
+    // move. Sweeping finds the far side of that excursion, which is
+    // opposition: the thumb round the object rather than beside it.
+    const LIMIT = 1.7;
+    const STEPS = 48;
+    let fraction = 0;
+    // The thumb is not solved, and saying so is better than pretending.
+    //
+    // It lies ALONG the palm at rest — already against anything resting
+    // there — and swinging it across does not take it clear, so there is
+    // no "furthest flexion that still clears" to find. What a thumb does
+    // round a staff is also nearly the same pose whatever the staff: it
+    // comes over and presses. So it is authored, once, per shape, and
+    // left alone.
+    if (finger === 1) {
+      const authored = radiusMetres <= (GRIP_RADII.grip + GRIP_RADII.cradle) / 2 ? 1.15 : 0.7;
+      for (const { vertex, delta } of skinned(authored)) {
+        out[vertex * 3] += delta.x;
+        out[vertex * 3 + 1] += delta.y;
+        out[vertex * 3 + 2] += delta.z;
+      }
+      if (process.env.DEVAFORM_GRIP_DEBUG) {
+        console.log(`    ${prefix} r=${(radiusMetres * 1000).toFixed(0)}mm thumb f=${authored} (authored)`);
+      }
+      continue;
+    }
+    // FIRST contact, not last. A finger that closes past the surface
+    // comes out the far side and clears it again, so taking the furthest
+    // flexion that clears is taking a finger THROUGH the object — which
+    // is what the little finger did to a damaru, four millimetres inside
+    // its waist, and what this test now refuses.
+    for (let step = 1; step <= STEPS; step += 1) {
+      const trial = (LIMIT * step) / STEPS;
+      if (clearance(trial) < 0) break;
+      fraction = trial;
+    }
+    if (process.env.DEVAFORM_GRIP_DEBUG) {
+      console.log(
+        `    ${prefix} r=${(radiusMetres * 1000).toFixed(0)}mm finger${finger} f=${fraction.toFixed(2)} clear(0)=${clearance(0).toFixed(4)} clear(LIMIT)=${clearance(LIMIT).toFixed(4)}`,
+      );
+    }
+    for (const { vertex, delta } of skinned(fraction)) {
+      out[vertex * 3] += delta.x;
+      out[vertex * 3 + 1] += delta.y;
+      out[vertex * 3 + 2] += delta.z;
     }
   }
   return out;
 }
-
-/** morph target name -> the A-pose mesh with that hand closed. */
-const GRIPS = {
-  gripFrontLeft: curledHand(meshes.neutral.positions, "l"),
-  gripFrontRight: curledHand(meshes.neutral.positions, "r"),
-};
 
 const retargeted = {};
 for (const variant of VARIANTS) {
@@ -567,6 +730,21 @@ for (const variant of VARIANTS) {
   for (let i = 0; i < placed.length; i += 1) placed[i] *= heightFix[variant];
   finalMesh[variant] = placed;
 }
+
+/**
+ * The hands, closed on each radius.
+ *
+ * Built here rather than beside `handClosedOn` because closing onto a
+ * cylinder of a size measured in METRES needs the conversion the mesh
+ * itself gets, and that is not known until the variants have been
+ * normalised to canonical height.
+ */
+const GRIPS = {
+  gripFrontLeft: handClosedOn(meshes.neutral.positions, "l", GRIP_RADII.grip),
+  gripFrontRight: handClosedOn(meshes.neutral.positions, "r", GRIP_RADII.grip),
+  cradleFrontLeft: handClosedOn(meshes.neutral.positions, "l", GRIP_RADII.cradle),
+  cradleFrontRight: handClosedOn(meshes.neutral.positions, "r", GRIP_RADII.cradle),
+};
 
 // The closed hands travel the same road as the variants: retargeted into
 // the rest pose and normalised, so their deltas describe fingers only.
@@ -1294,33 +1472,36 @@ function gripPoint(prefix) {
 }
 
 /**
- * Which way the thumb points, in the hand's own rest frame.
+ * The line a held staff runs along, across this hand.
  *
- * The hand contract needs this and cannot assume it: the mesh's hands are
- * mirrored while the rig is not, so no single constant reaches the thumb
- * on both sides, and which local axis it lands on depends on how the
- * retarget turned the arm. So the body measures it and ships it, and the
- * solver is told rather than guessing.
+ * It is the KNUCKLE LINE — index knuckle to little knuckle — and it is
+ * measured from the flesh, because that is what an object touches.
+ *
+ * This was the thumb's direction, which is a different line: the thumb
+ * leaves the palm at about forty degrees to the knuckles, so a shaft
+ * aimed along it crossed the row diagonally and ran through the base of
+ * the ring and little fingers while standing two centimetres off the
+ * index. The Studio showed exactly that gradient and the measurement
+ * below now removes it.
  */
-function thumbAxis(prefix, slot) {
+function gripAxis(prefix, slot) {
+  const knuckle = (finger) => v3(`${prefix}-finger-${finger}-1`);
+  const line = knuckle(2).sub(knuckle(5));
+  // Across the hand, not along it: whatever the knuckle row has of the
+  // fingers' own direction is the arch of the palm, not the shaft.
   const { fingers } = palmNormal(prefix);
-  const palmCentre = v3(`${prefix}-finger-2-1`).add(v3(`${prefix}-finger-5-1`)).multiplyScalar(0.5);
-  const toThumb = v3(`${prefix}-finger-1-4`).sub(palmCentre);
-  // In the rest pose the hand's local frame is the character's, so the
-  // retarget rotation is all that stands between the two.
   const turn = rotation.get(`arm.${slot}.hand`);
-  const rest = toThumb.applyQuaternion(turn).normalize();
-  const restFingers = fingers.clone().applyQuaternion(turn).normalize();
-  // Across the hand, not along it: the thumb reaches sideways from the
-  // line the fingers run in.
-  return rest.projectOnPlane(restFingers).normalize();
+  return line
+    .applyQuaternion(turn)
+    .projectOnPlane(fingers.clone().applyQuaternion(turn).normalize())
+    .normalize();
 }
 
-const thumbAxes = {};
+const gripAxes = {};
 for (const side of SIDES) {
   const prefix = side.mh === "L" ? "l" : "r";
-  const axis = thumbAxis(prefix, side.arm);
-  thumbAxes[side.arm] = [axis.x, axis.y, axis.z].map((v) => Number(v.toFixed(5)));
+  const axis = gripAxis(prefix, side.arm);
+  gripAxes[side.arm] = [axis.x, axis.y, axis.z].map((v) => Number(v.toFixed(5)));
 }
 
 for (const side of SIDES) {
@@ -1370,117 +1551,50 @@ for (const side of SIDES) {
  * Both come from the landmarks the grip point already uses, in the hand's
  * own frame.
  */
-function gripSeat(prefix, slot, curled) {
+/**
+ * Where a held object rests in this hand.
+ *
+ * It is the seat the CLOSURES WERE BAKED AROUND — see `handClosedOn` —
+ * mapped into the character's frame and nothing else. Every earlier
+ * version of this computed its own answer, and a second opinion about
+ * where a staff lies on a palm is worth less than none: the fingers close
+ * around one cylinder and the engine puts the object on another, a few
+ * millimetres away, so the fingers come down through it.
+ *
+ * The engine places an object of radius r at `point + normal × r`, which
+ * is exactly how the bake placed its cylinder.
+ */
+function gripSeat(prefix, slot) {
   const to5 = (value) => Number(value.toFixed(5));
-  const neutral = finalMesh.neutral;
-  const { fingers: fingerDirection, normal: palmUp } = palmNormal(prefix);
+  const to3 = (vector) => [to5(vector.x), to5(vector.y), to5(vector.z)];
+  const baked = bakedSeats[prefix];
+  if (!baked) throw new Error(`no baked grip seat for ${prefix}`);
 
-  // The knuckle line, and how long the fingers are that close over it.
-  const knuckles = new THREE.Vector3();
-  let span = 0;
-  for (const finger of [2, 3, 4, 5]) {
-    knuckles.add(v3(`${prefix}-finger-${finger}-1`));
-    span += v3(`${prefix}-finger-${finger}-1`).distanceTo(v3(`${prefix}-finger-${finger}-4`));
-  }
-  knuckles.multiplyScalar(0.25);
-  span /= 4;
-  // The flesh over the knuckles — a tenth of the fingers' reach — and a
-  // touch along them, where the tube actually runs.
-  const seatMH = knuckles
-    .clone()
-    .addScaledVector(palmUp, span * 0.1)
-    .addScaledVector(fingerDirection, span * 0.12);
-
-  // Into the canonical frame, the way every other measured point goes.
+  // In the rest pose a hand's local frame IS the character's, so the
+  // retarget rotation is all that stands between MakeHuman and here.
   const turn = rotation.get(`arm.${slot}.hand`);
   const handRest = restFinal.get(`arm.${slot}.hand`);
-  const handTurn = turn.clone().invert();
-  const toFinal = (point) =>
-    handRest
-      .clone()
-      .add(
-        point
-          .clone()
-          .sub(restFor("neutral").get(`arm.${slot}.hand`))
-          .applyQuaternion(turn)
-          .multiplyScalar(scale * heightFix.neutral)
-          .applyQuaternion(handTurn),
-      );
-  const seat = toFinal(seatMH);
-  const normal = palmUp.clone().applyQuaternion(turn).applyQuaternion(handTurn).normalize();
-  const axis = new THREE.Vector3(...thumbAxes[slot])
-    .applyQuaternion(handTurn)
-    .normalize();
-  const across = (vector) => vector.addScaledVector(axis, -vector.dot(axis));
-
-  // The fingers that close over it.
-  const side = prefix === "l" ? "L" : "R";
-  const flesh = new Set();
-  for (const finger of [1, 2, 3, 4, 5]) {
-    for (const segment of [1, 2, 3]) {
-      for (const [baseIndex, weight] of rigWeights[`finger${finger}-${segment}.${side}`] ?? []) {
-        if (weight <= 0.25) continue;
-        const vertex = inverseParentMap[baseIndex];
-        if (vertex >= 0) flesh.add(vertex);
-      }
-    }
-  }
-  /** Half the length of the tube the object passes through. */
-  const WINDOW = 0.028;
-  const posed = (influence) => {
-    const out = [];
-    for (const vertex of flesh) {
-      const i = vertex * 3;
-      const point = new THREE.Vector3(
-        neutral[i] + (curled[i] - neutral[i]) * influence,
-        neutral[i + 1] + (curled[i + 1] - neutral[i + 1]) * influence,
-        neutral[i + 2] + (curled[i + 2] - neutral[i + 2]) * influence,
-      );
-      if (Math.abs(point.clone().sub(seat).dot(axis)) > WINDOW) continue;
-      out.push(point);
-    }
-    return out;
-  };
-
-  // How wide an object resting on that seat can be, at each closure: grow
-  // it off the palm until a finger is inside it.
-  const curve = [];
-  for (let step = 0; step <= 8; step += 1) {
-    const influence = step / 8;
-    const closing = posed(influence);
-    let best = 0.002;
-    for (let radius = 0.0025; radius <= 0.03; radius += 0.0005) {
-      const centre = seat.clone().addScaledVector(normal, radius);
-      let fits = true;
-      for (const point of closing) {
-        if (across(point.clone().sub(centre)).length() < radius - 0.001) {
-          fits = false;
-          break;
-        }
-      }
-      if (!fits) break;
-      best = radius;
-    }
-    curve.push([to5(influence), to5(best)]);
-  }
-
-  const local = seat.clone().sub(handRest).applyQuaternion(turn);
-  const localNormal = normal.clone().applyQuaternion(turn).normalize();
+  const seat = handRest
+    .clone()
+    .add(
+      baked.skin
+        .clone()
+        .sub(restFor("neutral").get(`arm.${slot}.hand`))
+        .applyQuaternion(turn)
+        .multiplyScalar(scale * heightFix.neutral),
+    );
   return {
-    curve,
-    seat: [to5(local.x), to5(local.y), to5(local.z)],
-    normal: [to5(localNormal.x), to5(localNormal.y), to5(localNormal.z)],
+    seat: to3(seat.sub(handRest)),
+    normal: to3(baked.normal.clone().applyQuaternion(turn).normalize()),
   };
 }
 
-const gripApertures = {};
 const gripSeats = {};
 for (const side of SIDES) {
   const prefix = side.mh === "L" ? "l" : "r";
   const name = `grip${side.arm[0].toUpperCase()}${side.arm.slice(1)}`;
   if (!finalGrips[name]) continue;
-  const measured = gripSeat(prefix, side.arm, finalGrips[name]);
-  gripApertures[side.arm] = measured.curve;
+  const measured = gripSeat(prefix, side.arm);
   gripSeats[side.arm] = { point: measured.seat, normal: measured.normal };
 }
 
@@ -1799,8 +1913,8 @@ await writeFile(
       upAxis: "+Y",
       forwardAxis: "+Z",
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
-      thumbAxes,
-      gripApertures,
+      gripAxes,
+      gripShapes: GRIP_RADII,
       gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceWithMorphs,
@@ -1843,8 +1957,8 @@ await writeFile(
       ),
       morphTargets: morphTargetNames,
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
-      thumbAxes,
-      gripApertures,
+      gripAxes,
+      gripShapes: GRIP_RADII,
       gripSeats,
       legEnvelope: legEnvelope(finalMesh.neutral),
       torsoSurface: torsoSurfaceWithMorphs,
