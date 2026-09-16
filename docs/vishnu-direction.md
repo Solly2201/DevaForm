@@ -3,10 +3,13 @@
 Reference: `references/ref_vishnu.png`.
 
 Vishnu is **registered and not offered**. Everything below exists in code
-today — assets, presentations, poses, editor panel, a skeleton with four
-arms — and is validated by the same build gates as Ganesha's and Shiva's.
-No customer can select him, because he has no body, face or crown of
-production quality, and a rushed one would be worse than none.
+today — a four-armed body, assets, presentations, poses, editor panel, a
+default configuration — and is validated by the same build gates as
+Ganesha's and Shiva's. The Studio renders him correctly the moment
+`available` is true.
+
+It is not true yet, and the reason is sculpting rather than structure.
+See *What is deliberately missing*.
 
 This document is the decision record for the next person who picks him up.
 
@@ -47,14 +50,42 @@ are arranged in a strict hierarchy:
 That hierarchy is what makes four arms read as four arms rather than as
 two copies of the same pair, and every pose preset keeps it.
 
-`armOptions: [4]`. Note what this does *not* mean: a configuration can
-only render the arms the **selected body** has, and the measured human
-mesh has two (`armOptionsFor` narrows iconography to anatomy). A
-four-armed Vishnu therefore waits on a four-armed body. The resolver
-already handles the mismatch honestly today — asked for four attributes
-on a two-armed mesh it places the front pair, refuses the back pair, and
-returns a customer-facing reason, which is the behaviour
-`vishnu.test.ts` pins.
+`armOptions: [4]`, and there is now a body that has them.
+
+## The four-armed body
+
+`humanoid.body.human4` — the measured human with a second pair of arms,
+built by `apps/web/scripts/build-human-base.mjs` alongside the two-armed
+one, from the same export, in the same run.
+
+The second pair is **the same arm again**. Four arms are iconography, not
+anatomy, and there is no scan of a four-armed man to import; what there
+is is a measured human arm, skinned and morphed and fingered and already
+correct. So the build copies that arm's vertices, triangles, weights and
+morph deltas to a second shoulder and binds them to a second chain of
+joints. Everything true of the front pair is true of the back pair,
+including whatever nobody would have thought to copy.
+
+It is one skinned mesh, not two bodies touching: one skeleton, one set of
+morph targets, one material. A heroic build widens all four shoulders,
+and a print is a single object.
+
+Where they go is measured too — behind and below the front shoulder by
+about the depth of a deltoid, splayed a little further out. Far enough
+that the seam where the copy enters the torso is inside the ribcage and
+cannot be seen; close enough that the pair reads as one figure's
+shoulders rather than as a second torso.
+
+The rest positions the copy lands on are **emitted by the build** and
+pasted into `HUMAN_BACK_ARM_POSITIONS` in the schema, because the rig
+places joints from the schema. A joint the schema puts anywhere else is a
+hand in the wrong place for every pose ever written; a test holds the two
+to each other.
+
+The resolver needed nothing for any of this. Asked for four attributes on
+the two-armed mesh it still places the front pair, refuses the back pair
+and gives a customer-facing reason — the behaviour `vishnu.test.ts`
+pins — and asked for them on this body it places all four.
 
 ## The four attributes
 
@@ -78,14 +109,18 @@ does not.
 
 ## Crown, jewellery, garment
 
-- **Kirita mukuta** — the tall royal crown, on `head.crown`, worn with
-  clearance over the measured head. Vishnu's crown is his most
-  recognisable feature after the four arms; the current generator is a
-  placeholder silhouette and is the single biggest piece of remaining
-  modelling work.
+- **Kirita mukuta** — the tall royal crown, on `head.crown`: a band that
+  GRIPS the head, ribs up a tapering tower, stones round the band and a
+  bud at the top. The band is sized by what contains the skull, not by
+  `headRadius` — that is a mean, the skull is an ovoid, and a band built
+  at the mean cuts through the temples. (The same lesson the limb bands
+  learned.)
 - **Vaijayanti** — the long forest garland, on `chest.mala`, falling past
-  the knees. Routed over the measured torso by the shared surface walker,
-  like Shiva's rudraksha.
+  the knees: five-petalled blooms with pale hearts, threaded on a route
+  walked over the measured torso by the shared surface walker. Blooms
+  rather than beads, because Shiva already wears two rows of beads and
+  because a vaijayanti is flowers. Petals need VOLUME — flattened to a
+  third of their width they render as red dashes painted on the chest.
 - **Golden dhoti** — the **shared** `humanoid.hideWrap` generator with
   Vishnu's parameters (`{ length: 1, hide: 0, dhoti: 1, drape: 1 }`). A
   dhoti is a dhoti: same measured legs, same gathering, different dye.
@@ -134,29 +169,39 @@ the current preparation assumes him, and nothing blocks him later.
 
 ## What is deliberately missing
 
-1. **A body.** `humanoid.body.human` is the measured two-armed mesh
-   shared with Shiva. Vishnu needs a four-armed one before he can be
-   offered, and building it is the gating item.
-2. **A face and crown of production quality.** The current generators are
-   prototypes and are marked `stage: "prototype"` accordingly.
-3. **Seated poses**, per above.
-4. **A default configuration.** `createDefaultConfiguration` belongs to
-   `AvailableDeity` and is written when he becomes one.
+Everything left is **sculpting**. Rendered in the Studio today, the
+figure is correct and unfinished: four arms with four attributes in four
+hands, a crown that grips the head, a garland of blooms, a dhoti, no
+holes, nothing floating, no intersections. And:
+
+1. **The conch is a white vase.** The spiral is there; the shape is not.
+2. **The discus is a plate with flame points.** It stands upright and
+   clears the fingers, which is the hard part; it does not yet read as
+   the Sudarshana.
+3. **The dhoti is a smooth column.** The same defect the tiger hide
+   replaced on Shiva: a surface of revolution round both legs reads as a
+   tube, and what makes cloth read as cloth is the wrap — an overlapping
+   edge, a pleated fan, a hem that is not level.
+4. **The face and hair.** He wears the shared human head and no hair
+   asset, so he is bald under the crown.
+5. **Ornament density.** The reference is far more jewelled; the slots
+   all exist and are filled with Ganesha's pieces.
+6. **Seated poses** (on Garuda, or the coiled Shesha), per above.
 
 ## How to finish him
 
-In order, and none of it should require engine work:
+None of it should require engine work:
 
-1. Model the four-armed body against `HUMAN_FOUR_ARM_SKELETON`, and run
-   the same measurement pass that produced `bodyProfile`, `torsoSurface`,
-   `legEnvelope` and `gripSeats` for the human base. Everything
-   downstream — garment fit, ornament clearance, grip seating — reads
-   those measurements and nothing else.
-2. Replace the six prototype generators with production geometry.
-3. Author the ornament density the reference shows, using existing slots.
+1. Replace the prototype generators — conch, discus, crown, garland —
+   with production geometry. They are shapes and nothing else; no other
+   system knows what they look like.
+2. Give the dhoti the wrap that the tiger hide got: an overlap, a
+   cascade, and a hem with a shape.
+3. Author hair, and the ornament density the reference shows.
 4. Add seated poses once there is something to sit on.
-5. Promote him: give him `createDefaultConfiguration`, flip `available`
-   to `true`, and move his `preparing` block into the main definition.
+5. Flip `available` to `true` and move the `preparing` block's contents
+   into the definition. It is a few lines, and they are already written:
+   `preparing.defaultConfiguration` is the configuration he will ship
+   with, and it resolves and renders today.
 
-Step 5 is a few lines. That it is a few lines is the point of steps 1–4
-being the hard part.
+That step 5 is a few lines is the point of steps 1–4 being the work.

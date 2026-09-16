@@ -33,7 +33,14 @@ import {
 } from "@devaform/character-schema";
 import { getLightingPreset } from "@/engine/lighting";
 import { ZoneMaterials } from "@/engine/materials";
-import { buildRig, disposeRig, poseRig, rigMorphInfluences, rigWarnings } from "@/engine/rig";
+import {
+  buildRig,
+  disposeRig,
+  poseRig,
+  rigMorphInfluences,
+  rigWarnings,
+  type CharacterRig,
+} from "@/engine/rig";
 import { applyMorphInfluences } from "@/engine/skinning";
 import { SceneEnvironment } from "@/engine/SceneEnvironment";
 import { subscribeGlbCache } from "@/engine/glbCache";
@@ -78,6 +85,20 @@ const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> 
   waist: { joints: ["pelvis"], span: 0.42 },
   feet: { joints: ["leg.left.foot", "leg.right.foot"], span: 0.35 },
 };
+
+/**
+ * How tall the body's own geometry is, in the posed scene.
+ *
+ * Not "is there a body asset" — whether there is a BODY: a figure a
+ * metre high, in the frame, with its skin on. The capture is a
+ * photograph, so the check is the one a photograph can fail.
+ */
+function bodyHeight(rig: CharacterRig): number {
+  if (rig.bodyMeshes.length === 0) return 0;
+  const box = new THREE.Box3();
+  for (const mesh of rig.bodyMeshes) box.expandByObject(mesh);
+  return box.isEmpty() ? 0 : box.max.y - box.min.y;
+}
 
 function configFor(params: URLSearchParams): CharacterConfiguration {
   const deity = params.get("deity") ?? "shiva";
@@ -182,8 +203,17 @@ function Figure({
       // the failure and the rig carries on without it. A dev server that
       // was recompiling when the page asked for the body answers exactly
       // that way, and the capture that follows is a photograph of a
-      // costume with nobody in it. So the body's absence is reported too.
-      pending: rig.bodyMeshes.length > 0 ? rig.pending : [...rig.pending, "body missing"],
+      // costume with nobody in it.
+      //
+      // Asking whether the body EXISTS is not enough: one sheet in
+      // seventy-four came back with the rig reporting a body and the
+      // render showing ornaments hanging in the air. So the question is
+      // whether the body occupies space — its own bounds, in the scene,
+      // after posing — which is the thing the photograph is of.
+      pending: [
+        ...rig.pending,
+        ...(bodyHeight(rig) > 0.5 ? [] : ["body missing"]),
+      ],
     });
   }, [rig, focus, onReady]);
 
