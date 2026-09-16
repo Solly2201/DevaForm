@@ -219,10 +219,25 @@ function garmentOf(rig: ReturnType<typeof buildRig>): THREE.Mesh[] {
   return meshes;
 }
 
-const shiva = (preset: string): CharacterConfiguration => ({
-  ...createDefaultShivaConfiguration(),
-  pose: { preset, jointOverrides: {} },
-});
+/**
+ * Shiva in a pose, wearing whichever lower garment is being judged.
+ *
+ * The containment test below is about garments that CONTAIN — a dhoti is
+ * a column of cloth round both legs, and a leg outside it is a defect
+ * that is invisible from the front and unarguable from the side. That is
+ * not true of every lower garment: a wrapped tiger skin is cut so the
+ * legs come out of it, and asking whether it contains them is asking the
+ * wrong question about the right object. So the test names the garment it
+ * is judging instead of taking whatever the default happens to be.
+ */
+const shiva = (preset: string, lowerGarment = "shiva.garment.dhoti"): CharacterConfiguration => {
+  const base = createDefaultShivaConfiguration();
+  return {
+    ...base,
+    parts: { ...base.parts, lowerGarment: { assetId: lowerGarment, version: 2 } },
+    pose: { preset, jointOverrides: {} },
+  };
+};
 
 /**
  * The body's OWN leg vertices, read from the shipped GLB.
@@ -276,7 +291,54 @@ function bodyLegVertices(hipY: number): Float32Array {
   return Float32Array.from(kept);
 }
 
-describe("the lower garment contains the legs", () => {
+/**
+ * Every body vertex in a height band, whatever bone drives it.
+ *
+ * `bodyLegVertices` filters by leg BONE, which is right for "is a leg
+ * outside the cloth" and useless for the hips: nothing round the pelvis
+ * is driven by a leg, so the band came back empty and the measurement
+ * judged nothing at all while reporting success.
+ *
+ * The ARMS are excluded, though. They hang at the sides and their hands
+ * are level with the hips, fifteen centimetres out — read as body, they
+ * say the hips are three hundred millimetres across and every scrap of
+ * cloth is inside them.
+ */
+function bodyVerticesBetween(lo: number, hi: number): Float32Array {
+  const source = asset!.source;
+  if (source.kind !== "glb") throw new Error("expected a GLB body");
+  const glb = readGlb(join(PUBLIC_DIR, source.path.replace(/^\//, "")));
+  const skinJoints = glb.json.skins?.[0]?.joints ?? [];
+  const isArmBone = new Set<number>();
+  skinJoints.forEach((node, index) => {
+    const name = glb.json.nodes?.[node]?.name ?? "";
+    if (/^arm[._]/.test(name)) isArmBone.add(index);
+  });
+  expect(isArmBone.size, "arm bones found in the skin").toBeGreaterThan(3);
+
+  const kept: number[] = [];
+  for (const mesh of glb.json.meshes ?? []) {
+    for (const primitive of mesh.primitives) {
+      if (primitive.material !== undefined && isEyeMaterial(glb.json, primitive.material)) continue;
+      const positions = readVec3(glb, primitive.attributes.POSITION!);
+      const joints = readJoints(glb, primitive.attributes.JOINTS_0!);
+      const weights = readWeights(glb, primitive.attributes.WEIGHTS_0!);
+      for (let v = 0; v < positions.length / 3; v += 1) {
+        const y = positions[v * 3 + 1]!;
+        if (y < lo || y > hi) continue;
+        let arm = 0;
+        for (let k = 0; k < 4; k += 1) {
+          if (isArmBone.has(joints[v * 4 + k]!)) arm += weights[v * 4 + k]!;
+        }
+        if (arm > 0.35) continue;
+        kept.push(positions[v * 3]!, y, positions[v * 3 + 2]!);
+      }
+    }
+  }
+  return Float32Array.from(kept);
+}
+
+describe("a garment that contains the legs, contains them", () => {
   const full = SHIVA_POSE_PRESETS.filter((preset) => garmentFitOf(preset) === "full");
 
   // There was a second test here, comparing the cloth against the body
@@ -345,4 +407,103 @@ describe("the lower garment contains the legs", () => {
       materials.dispose();
     },
   );
+});
+
+
+/**
+ * A garment that is NOT a column still has one thing it must not do.
+ *
+ * Shiva's default is a tiger skin: wound round the hips, cut so the legs
+ * come out of it, deliberately shallow on one side. Containment says
+ * nothing about it. Clearance does — cloth is worn ON a body, and cloth
+ * inside the body is skin coming through a hide, which is this file's
+ * defect in the only form a wrap can have it.
+ *
+ * MEASURED ONLY WHERE THE BODY IS ONE VOLUME. Around the hips it is, and
+ * a bearing-and-radius map of it means something. Below the thigh seat
+ * there are two legs, and the same map says the body reaches to the outer
+ * edge of each — so cloth hanging BETWEEN the legs, which is what a tail
+ * does, reads as cloth inside a thigh. A metric that cannot tell those
+ * apart is worse than none, because it fails for the wrong reason; this
+ * one stops where it stops being true.
+ */
+describe("a wrapped garment stays outside the body", () => {
+  const full = SHIVA_POSE_PRESETS.filter((preset) => garmentFitOf(preset) === "full");
+
+  it.each(full.map((preset) => preset.id))("%s: no cloth inside the hips", (presetId) => {
+    const config = shiva(presetId, "shiva.garment.vyaghracharma");
+    const materials = new ZoneMaterials();
+    const rig = buildRig(config, materials);
+    poseRig(rig);
+    rig.root.updateWorldMatrix(true, true);
+    const garment = garmentOf(rig);
+    const hipY = rig.joints.get("leg.left.thigh")!.getWorldPosition(new THREE.Vector3()).y;
+    // The single-volume band: from the thigh seat up to the waist.
+    const top = hipY + 0.09;
+    const bottom = hipY - 0.01;
+
+    const body = bodyVerticesBetween(bottom, top);
+    const ROWS = 12;
+    const rowOf = (y: number) =>
+      Math.min(ROWS - 1, Math.max(0, Math.round(((top - y) / (top - bottom)) * (ROWS - 1))));
+    const reach = new Float64Array(ROWS * BEARINGS);
+    const centre = new Float64Array(ROWS);
+    const seen = new Float64Array(ROWS);
+    for (let i = 0; i < body.length; i += 3) {
+      const y = body[i + 1]!;
+      if (y > top || y < bottom) continue;
+      const row = rowOf(y);
+      centre[row] = (centre[row] ?? 0) + body[i + 2]!;
+      seen[row] = (seen[row] ?? 0) + 1;
+    }
+    for (let row = 0; row < ROWS; row += 1) {
+      centre[row] = (centre[row] ?? 0) / Math.max(1, seen[row] ?? 1);
+    }
+    for (let i = 0; i < body.length; i += 3) {
+      const y = body[i + 1]!;
+      if (y > top || y < bottom) continue;
+      const row = rowOf(y);
+      const dz = body[i + 2]! - centre[row]!;
+      const at = row * BEARINGS + binOf(body[i]!, dz);
+      reach[at] = Math.max(reach[at]!, Math.hypot(body[i]!, dz));
+    }
+
+    // Four millimetres of tolerance: the pose moves the body a little
+    // from the rest positions it was read at, and cloth lying ON skin is
+    // allowed to touch it.
+    const TOLERANCE = 0.004;
+    let inside = 0;
+    let judged = 0;
+    const where: string[] = [];
+    const point = new THREE.Vector3();
+    for (const mesh of garment) {
+      const positions = mesh.geometry.getAttribute("position");
+      for (let v = 0; v < positions.count; v += 1) {
+        point.fromBufferAttribute(positions, v);
+        mesh.localToWorld(point);
+        if (point.y > top || point.y < bottom) continue;
+        const row = rowOf(point.y);
+        const dz = point.z - centre[row]!;
+        const skin = reach[row * BEARINGS + binOf(point.x, dz)]!;
+        if (skin <= 0) continue;
+        judged += 1;
+        const r = Math.hypot(point.x, dz);
+        if (r < skin - TOLERANCE) {
+          inside += 1;
+          if (where.length < 5) {
+            where.push(
+              `y=${point.y.toFixed(3)} bearing=${Math.round((Math.atan2(point.x, dz) * 180) / Math.PI)}° ` +
+                `cloth=${r.toFixed(4)} skin=${skin.toFixed(4)}`,
+            );
+          }
+        }
+      }
+    }
+    expect(judged, `${presetId}: cloth vertices were judged`).toBeGreaterThan(200);
+    expect(
+      inside,
+      `${presetId}: ${inside} of ${judged} cloth vertices inside the hips — ${where.join("; ")}`,
+    ).toBe(0);
+    materials.dispose();
+  });
 });

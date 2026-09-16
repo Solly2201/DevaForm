@@ -200,7 +200,14 @@ const PINNED = {
   // on a landmark named for the jaw that is actually the head joint,
   // inside the skull, and the naga's route came out thirty degrees off
   // the front instead of at the shoulder.
-  shiva: { nodes: 340, digest: "6d39392473f3aa56" },
+  //
+  // And once more for the garment, which is a different kind of object
+  // now: one strip of hide wound round the hips with its far end over its
+  // near one and its last stretch falling as a tail, instead of a ring of
+  // cloth with a shaped hem. Five nodes fewer, because the two thigh
+  // sleeves and the front fan are gone — the strip's own far end is the
+  // hanging part.
+  shiva: { nodes: 335, digest: "8ef3edb06b8c9aa8" },
 } as const;
 
 describe("protected characters do not move", () => {

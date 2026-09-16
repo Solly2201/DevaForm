@@ -31,7 +31,7 @@
  * measurements gets a garment cut to them.
  */
 import * as THREE from "three";
-import { mesh } from "../geometry";
+import { mesh, taperedTube } from "../geometry";
 import { clothWeave, hideMarkings } from "../textures";
 import { num, type GeneratorContext, type PartGenerator } from "./types";
 import type { JointId } from "@devaform/character-schema";
@@ -650,6 +650,463 @@ function hideWrap(
 }
 
 /**
+ * THE TIGER SKIN, AS A SKIN.
+ *
+ * Every previous version of this was a surface of revolution: a closed
+ * ring of cloth round the hips whose lower edge was cut into a shape. It
+ * can be cut into any shape at all and it still reads as a barrel,
+ * because a surface of revolution has no ENDS. A skin has two. One is
+ * tucked at the waist, the other lies over the first, and the line where
+ * they cross is the single thing that says "wrapped" rather than "worn
+ * over the head".
+ *
+ * So this is built as what it is: one long strip of hide with a spine and
+ * a width, wound a turn and a bit round the measured hips, its far end
+ * lying over its near one, and its last stretch leaving the body and
+ * falling down the thigh as a tail.
+ *
+ * HOW A STRIP IS PUT ON A BODY. The spine is authored in the body's own
+ * surface coordinates — how far round (`u`, arc length round the hip
+ * outline, so 1 is one full turn) and how high (`y`). At every point the
+ * strip's WIDTH runs across the spine, perpendicular to it, in those same
+ * coordinates. That one rule is what makes the tail part of the garment
+ * rather than a flap stapled to it: while the spine runs round the waist
+ * the width hangs down, and where the spine turns and runs down the
+ * thigh the width becomes horizontal, of its own accord, because it is
+ * always across.
+ *
+ * Nothing about it is a cylinder. The strip is mapped onto whatever the
+ * body measures at each (u, y) it passes through, held off the skin by a
+ * clearance, and pushed out by one hide-thickness wherever it has already
+ * been round once — which is what makes the overlap a step you can see
+ * instead of two surfaces in the same place.
+ */
+
+/** How far round the hips the skin goes: a turn, and enough to overlap. */
+const HIDE_TURNS = 1.16;
+/** Stations round the wrap, before the tail is added. */
+const ROUND_STATIONS = 96;
+/** Where the near end is tucked — just left of the front. */
+const HIDE_START = 0.3;
+/** The hide's own thickness, which is what makes the overlap read. */
+const HIDE_THICKNESS = 0.0075;
+
+/** A point on the strip's spine, in the body's surface coordinates. */
+interface HidePoint {
+  /** Turns round the hip outline; whole turns are laps. */
+  u: number;
+  /** Pelvis-local height. */
+  y: number;
+  /** Half-width of the strip here, in metres of surface. */
+  half: number;
+  /**
+   * How far out this station stands, in hide-thicknesses.
+   *
+   * A whole number — "which lap is this" — steps the surface out the
+   * moment a lap completes, and the two sheets interleave either side of
+   * that step: the overlap came out as a crumpled patch with the tear on
+   * the free edge poking through the layer beneath. Lying ON something
+   * is gradual, so this is a ramp.
+   */
+  layer: number;
+}
+
+/**
+ * The strip's spine: round the hips, then down the thigh.
+ *
+ * Authored as a handful of stations and read continuously, so the shape
+ * is a description rather than a list of vertices. The widths are what
+ * carry most of the character: narrow where it is tied, broad across the
+ * hips, drawn in again as it turns into the tail.
+ */
+function hideSpine(waistY: number, seat: number, drop: number): HidePoint[] {
+  // Round first. Each station is a fraction of the way round from the
+  // tuck, a height, and how deep the skin hangs there.
+  // The half-widths are what the hem's shape IS. The two ends are the
+  // shallow places — a skin is tucked with its corners, and the corner
+  // that goes under is the shallower — but neither may be so shallow
+  // that the hip it is tucked over comes out from under it, which the
+  // first version of these numbers managed on the right side.
+  const wrap: { at: number; rise: number; half: number }[] = [
+    { at: 0, rise: 0.014, half: 0.088 },
+    { at: 0.2, rise: 0.004, half: 0.108 },
+    { at: 0.45, rise: -0.004, half: 0.126 },
+    { at: 0.7, rise: -0.002, half: 0.134 },
+    { at: 0.9, rise: 0.004, half: 0.122 },
+    { at: 1.05, rise: 0.008, half: 0.114 },
+    { at: HIDE_TURNS, rise: 0.012, half: 0.104 },
+  ];
+  const points: HidePoint[] = [];
+  for (let i = 0; i <= ROUND_STATIONS; i += 1) {
+    const travelled = (i / ROUND_STATIONS) * HIDE_TURNS;
+    let k = 0;
+    while (k < wrap.length - 2 && (wrap[k + 1] as { at: number }).at < travelled) k += 1;
+    const a = wrap[k] as { at: number; rise: number; half: number };
+    const b = wrap[k + 1] as { at: number; rise: number; half: number };
+    const t = Math.min(1, Math.max(0, (travelled - a.at) / Math.max(1e-6, b.at - a.at)));
+    const ease = t * t * (3 - 2 * t);
+    points.push({
+      u: HIDE_START + travelled,
+      y: waistY + a.rise + (b.rise - a.rise) * ease,
+      half: a.half + (b.half - a.half) * ease,
+      // Climbing onto the first lap over a quarter-turn.
+      layer: (() => {
+        const onto = Math.min(1, Math.max(0, (travelled - 0.62) / 0.34));
+        return onto * onto * (3 - 2 * onto) * 1.7;
+      })(),
+    });
+  }
+  // …then the tail. The spine turns down at the bearing the wrap ended
+  // on and falls, narrowing to a torn point. It is the same strip: the
+  // width goes on being measured across the spine, so it lies flat
+  // against the thigh instead of standing out from it.
+  const end = points[points.length - 1] as HidePoint;
+  const TAIL = 26;
+  for (let i = 1; i <= TAIL; i += 1) {
+    const t = i / TAIL;
+    points.push({
+      u: end.u + 0.045 * t,
+      y: end.y - drop * t,
+      // Broad where it leaves the hip and drawn to a torn point: a hind
+      // leg, not a ribbon. A narrow strip hanging down the thigh reads as
+      // a sash pinned on, which is the thing this construction exists to
+      // stop being.
+      half: end.half * (1 + 0.35 * Math.sin(t * Math.PI)) * (1 - t * t * 0.78),
+      layer: end.layer,
+    });
+  }
+  return points;
+}
+
+/**
+ * The skin, wound onto the body.
+ *
+ * `section` answers what the body measures at a height; `outlineAt` turns
+ * a fraction of the way round that section into a point on it. Both are
+ * the measured body, so the garment follows whatever body wears it and
+ * cannot be inside one.
+ */
+function wrappedHide(
+  body: BodyProfile,
+  material: THREE.Material,
+  options: {
+    waistY: number;
+    seat: number;
+    /** How far the tail falls below the wrap. */
+    drop: number;
+    /** Clearance in CLEARANCE units — more when worn over cloth. */
+    slack: number;
+    seed: number;
+    /** What the skin is tied with, and what the knot is clasped by. */
+    cord: THREE.Material;
+    clasp: THREE.Material;
+  },
+): THREE.Group {
+  const { seat, drop, slack, seed, cord, clasp } = options;
+  /**
+   * ON THE HIPS, not at the waist.
+   *
+   * Everything this garment knows about the body's girth is measured at
+   * the hips and below — `pelvisHalfWidth`, `bellyRadiusZ`, the leg
+   * envelope. Ask it for the body at the natural waist and it answers
+   * with the hips, because that is the only answer it has, and a wrap
+   * built to hip width around a waist is a bucket: the Studio showed a
+   * centimetre of daylight all round the top edge.
+   *
+   * A tiger skin is worn on the hips anyway. So the wrap sits where the
+   * measurement is true, which is the crest, and the question does not
+   * arise.
+   */
+  const waistY = seat + (options.waistY - seat) * 0.45;
+  const centreZ = hipCentreZ(body);
+  const spine = hideSpine(waistY, seat, drop);
+
+  // What the body is, at any height the strip reaches.
+  const profile = profileOf([
+    { y: waistY + 0.04, ...hipsAt(body, waistY + 0.04, slack) },
+    { y: waistY, ...hipsAt(body, waistY, slack) },
+    { y: seat, ...hipsAt(body, seat, slack) },
+    wrapSection(body, seat - 0.08, slack),
+    wrapSection(body, seat - 0.2, slack),
+    wrapSection(body, seat - 0.34, slack),
+  ]);
+  /**
+   * Where a surface coordinate lands, and how big a turn is there.
+   *
+   * Below the hips the body stops being one volume and becomes two legs,
+   * and a section that spans both is a span of air between them. The tail
+   * hangs on ONE thigh, so below the seat the section is drawn in toward
+   * the thigh the tail is on — which is what keeps it against a leg
+   * instead of hanging off the widest point of a pair.
+   */
+  const thighX = -body.legSpreadX * 0.5;
+  const place = (u: number, y: number) => {
+    const at = profile(y);
+    const below = Math.min(1, Math.max(0, (seat - y) / Math.max(0.02, body.thighLength * 0.55)));
+    const ease = below * below * (3 - 2 * below);
+    const thigh =
+      body.thighTopRadius +
+      (body.thighMidRadius - body.thighTopRadius) * ease +
+      CLEARANCE * slack * 0.5;
+    const rx = at.rx + (thigh - at.rx) * ease;
+    const rz = (at.rz ?? thigh) + (thigh - (at.rz ?? thigh)) * ease;
+    const point = outlineAt(u, rx, rz, (at.flat ?? 0) * (1 - ease));
+    return {
+      x: point.x + thighX * ease,
+      y,
+      z: point.z + (at.z ?? centreZ),
+      // A turn is this far in metres, which is what lets the width be
+      // measured across the spine in the same units as the height.
+      perimeter: 2 * Math.PI * Math.max(0.02, (rx + rz) / 2),
+    };
+  };
+
+  // Across the spine, in surface coordinates: perpendicular to the way
+  // the spine is going, with `u` scaled into metres so "perpendicular"
+  // means what it says.
+  /**
+   * Which way the strip's WIDTH runs at each station.
+   *
+   * Round the hips it hangs straight DOWN. That is not what "across the
+   * spine" computes — the spine rises and falls a few millimetres as it
+   * goes round, and a width that tilts with it takes the hem with it, so
+   * the cover creeps up one hip and down the other. Which is how three
+   * separate attempts at this garment each fixed one side by exposing
+   * the other.
+   *
+   * In the TAIL it does have to be across the spine: the spine is running
+   * downward there, and a width still pointing down would collapse the
+   * tail to a line. So the two rules are blended over the turn between
+   * them, which is exactly the length of hide that is doing the turning.
+   */
+  const TURN_IN = 10;
+  const across = spine.map((point, index) => {
+    const before = spine[Math.max(0, index - 1)] as HidePoint;
+    const after = spine[Math.min(spine.length - 1, index + 1)] as HidePoint;
+    const metres = place(point.u, point.y).perimeter;
+    const du = (after.u - before.u) * metres;
+    const dy = after.y - before.y;
+    const length = Math.hypot(du, dy) || 1;
+    const perpendicular = { u: (dy / length) / metres, y: -du / length };
+    const toTail = Math.min(
+      1,
+      Math.max(0, (index - (ROUND_STATIONS - TURN_IN)) / (TURN_IN * 2)),
+    );
+    const ease = toTail * toTail * (3 - 2 * toTail);
+    return {
+      u: perpendicular.u * ease,
+      y: -1 * (1 - ease) + perpendicular.y * ease,
+    };
+  });
+
+  // How far along the strip each station is, in METRES of hide.
+  //
+  // The pattern is carried by these coordinates, and `u` is turns: round
+  // the hips a turn is most of a metre and down the tail it is a few
+  // hundredths, so a pattern laid out in turns comes out smeared into
+  // stripes on the tail. Measured along the spine it is the same hide all
+  // the way, which is what it is.
+  const along: number[] = [0];
+  for (let i = 1; i < spine.length; i += 1) {
+    const a = spine[i - 1] as HidePoint;
+    const b = spine[i] as HidePoint;
+    const here = place(a.u, a.y);
+    const there = place(b.u, b.y);
+    along.push(
+      (along[i - 1] as number) + Math.hypot(there.x - here.x, there.y - here.y, there.z - here.z),
+    );
+  }
+
+  const ACROSS = 14;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const rows = spine.length;
+  const sheet = (side: 1 | -1, offset: number) => {
+    const base = positions.length / 3;
+    for (let i = 0; i < rows; i += 1) {
+      const point = spine[i] as HidePoint;
+      const step = across[i] as { u: number; y: number };
+      for (let j = 0; j <= ACROSS; j += 1) {
+        const w = j / ACROSS;
+        // Torn along the free edge, and only along it: the tucked edge is
+        // under the sash and a skin does not fray where it is held.
+        const tear =
+          w < 0.82
+            ? 0
+            : (smoothNoise(i * 0.16, seed) - 0.5) * 0.026 +
+              (smoothNoise(i * 0.62 + 3.1, seed + 2) - 0.5) * 0.012;
+        const reach = (w - 0.06) * 2 * (point.half + tear * (w - 0.8) * 5);
+        // The tucked edge is ROLLED. A skin folded over a cord at the
+        // waist is thicker there than anywhere else, and a top edge cut
+        // straight across is the one line that still said "hem of a
+        // skirt" once everything else had stopped saying it.
+        const roll = w < 0.14 ? Math.cos((w / 0.14) * Math.PI * 0.5) * 0.006 : 0;
+        const u = point.u + step.u * reach;
+        const y = point.y + step.y * reach;
+        const at = place(u, y);
+        // Outward from the slice's middle, which is the way the body
+        // faces here — and one thickness further out for every lap
+        // already made, so the far end lies ON the near one.
+        const below = Math.min(1, Math.max(0, (seat - y) / Math.max(0.02, body.thighLength * 0.55)));
+        const middleX = thighX * below * below * (3 - 2 * below);
+        const outward = new THREE.Vector3(at.x - middleX, 0, at.z - (profile(y).z ?? centreZ));
+        if (outward.lengthSq() < 1e-12) outward.set(0, 0, 1);
+        outward.normalize();
+        const stand = point.layer * HIDE_THICKNESS + offset + roll;
+        positions.push(
+          at.x + outward.x * stand,
+          at.y,
+          at.z + outward.z * stand,
+        );
+        uvs.push((along[i] as number) / 0.32, w);
+      }
+    }
+    for (let i = 0; i < rows - 1; i += 1) {
+      for (let j = 0; j < ACROSS; j += 1) {
+        const a = base + i * (ACROSS + 1) + j;
+        const b = a + 1;
+        const c = a + ACROSS + 1;
+        const d = c + 1;
+        if (side > 0) indices.push(a, b, c, b, d, c);
+        else indices.push(a, c, b, b, c, d);
+      }
+    }
+    return base;
+  };
+  const outer = sheet(1, 0);
+  const inner = sheet(-1, -HIDE_THICKNESS);
+  // The torn edge has a thickness, so the two sheets are stitched all the
+  // way round their boundary. A skin seen edge-on is a skin, not a decal.
+  const rim = (a: number, b: number) => {
+    indices.push(a, b, a + (inner - outer), b, b + (inner - outer), a + (inner - outer));
+  };
+  for (let i = 0; i < rows - 1; i += 1) {
+    const row = outer + i * (ACROSS + 1);
+    rim(row + ACROSS, row + ACROSS + (ACROSS + 1));
+    rim(row + (ACROSS + 1), row);
+  }
+  for (let j = 0; j < ACROSS; j += 1) {
+    const last = outer + (rows - 1) * (ACROSS + 1);
+    rim(outer + j + 1, outer + j);
+    rim(last + j, last + j + 1);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  markHide(geometry, seed, 0);
+
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(geometry, material));
+
+  // WHAT HOLDS IT ON.
+  //
+  // A cord wound over the skin's tucked edge, following the same wrap it
+  // holds — the same stations, the same body — and knotted at the hip
+  // where the near end went under. It is thin on purpose: a band deep
+  // enough to be a cummerbund makes everything below it read as a skirt
+  // hung from a belt, which is what the old lathe-turned sash did.
+  // The cord follows the EDGE it holds, not a level line round the body.
+  // The wrap spirals down as it goes round, so a tie at a constant height
+  // leaves the skin at one side and floats above it at the other.
+  const topAt = (travel: number): number => {
+    const at = Math.min(spine.length - 1, Math.max(0, (travel / HIDE_TURNS) * ROUND_STATIONS));
+    const low = Math.floor(at);
+    const high = Math.min(spine.length - 1, low + 1);
+    const t = at - low;
+    return (spine[low] as HidePoint).y * (1 - t) + (spine[high] as HidePoint).y * t;
+  };
+  const tie: [number, number, number][] = [];
+  const TIE = 72;
+  for (let i = 0; i <= TIE; i += 1) {
+    const travel = (i / TIE) * (HIDE_TURNS + 0.06) - 0.03;
+    const u = HIDE_START + travel;
+    const y = topAt(travel) + 0.004;
+    const at = place(u, y);
+    const middle = profile(y).z ?? centreZ;
+    const outward = new THREE.Vector3(at.x, 0, at.z - middle);
+    if (outward.lengthSq() < 1e-12) outward.set(0, 0, 1);
+    outward.normalize();
+    // Climbing onto the overlap rather than stepping onto it: the cord is
+    // one length of cloth, and a stand-off that jumps by a thickness the
+    // moment a lap completes breaks it into gold chunks at the front.
+    const stand = Math.min(1, Math.max(0, travel - 0.86) / 0.2) * HIDE_THICKNESS + 0.009;
+    tie.push([at.x + outward.x * stand, at.y, at.z + outward.z * stand]);
+  }
+  group.add(new THREE.Mesh(taperedTube(tie, [0.011, 0.008], 12, 8), cord));
+  // The knot, at the hip the skin is tucked at.
+  const knotAt = place(HIDE_START + 0.02, topAt(0.02) + 0.004);
+  const knotOut = new THREE.Vector3(knotAt.x, 0, knotAt.z - (profile(knotAt.y).z ?? centreZ))
+    .normalize()
+    .multiplyScalar(0.016);
+  group.add(
+    mesh(new THREE.SphereGeometry(0.014, 14, 12), clasp, {
+      position: [knotAt.x + knotOut.x, knotAt.y, knotAt.z + knotOut.z],
+      scale: [1.1, 0.8, 0.7],
+    }),
+  );
+  return group;
+}
+
+/**
+ * The body at a height, for a skin worn ON it.
+ *
+ * Two measurements meet here and neither is right on its own. The leg
+ * envelope is measured from the hip crest DOWN, so asked about anything
+ * above it, it answers with the widest point of the hips — nine
+ * centimetres of half-width at the navel, where the body is nearer
+ * seven. And `wrapSection`'s allowance is sized for cloth gathered over
+ * a dhoti: fifteen millimetres a side, which on bare hips is fifteen
+ * millimetres of daylight.
+ *
+ * So above the crest this answers from the pelvis, narrowing toward the
+ * waist the way a body does, with a skin's own allowance — four
+ * millimetres, enough to lie on the body without lying in it. Below the
+ * crest the legs are what the garment has to clear, and the envelope is
+ * measured there, so it answers.
+ */
+function hipsAt(
+  body: BodyProfile,
+  y: number,
+  slack: number,
+): { rx: number; rz: number; flat: number; z: number } {
+  const gap = CLEARANCE * slack * 0.3;
+  const crest = body.thighSeatY;
+  if (y <= crest) {
+    const leg = wrapSection(body, y, slack * 0.55);
+    return {
+      rx: leg.rx,
+      rz: leg.rz ?? body.bellyRadiusZ,
+      flat: (leg.flat ?? 0) * 0.6,
+      z: hipCentreZ(body),
+    };
+  }
+  // Above the crest, the widest MEASURED thing is the crest itself — the
+  // leg envelope's top row, which carries the buttock's depth as well as
+  // the hip's width. `bellyRadiusZ` is the belly's half-depth, measured
+  // at the front, and a section built from it cut a centimetre into the
+  // back of the hips: the garment-fit test found a hundred and twenty
+  // leg vertices standing outside the cloth at a hundred and forty
+  // degrees, which is the buttock.
+  const base = wrapSection(body, crest, 0);
+  const toWaist = Math.min(1, (y - crest) / Math.max(0.02, body.waistSeatY - crest));
+  // Barely narrower. The body above the crest draws in at the waist, but
+  // not as fast as a section tapered by a tenth: measured against the
+  // mesh, a twelve-per-cent taper put the tuck's first few centimetres
+  // six millimetres inside the belly.
+  const narrow = 1 - 0.04 * toWaist;
+  return {
+    rx: Math.max(base.rx, body.pelvisHalfWidth) * narrow + gap,
+    rz: Math.max(base.rz ?? 0, body.bellyRadiusZ) * narrow + gap,
+    flat: (base.flat ?? 0) * 0.35 * (1 - toWaist),
+    z: base.z ?? hipCentreZ(body),
+  };
+}
+
+/**
  * The cream dhoti: ONE draped mass from the waist to the ankles.
  *
  * Built as two tubes first, one per leg, and it read as trousers — which
@@ -978,7 +1435,25 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     : (waistY - seat) + body.thighLength * (dhotiReach > 0 ? 0.62 : 0.92);
   // What the skin is worn over: the cream dhoti, or the body.
   const overCloth = dhotiReach > 0 ? 1 : 0;
-  if (hideAmount > 0) wrap.add(hideWrap(body, hide, waistY, fall, 1, 1.9 + 3.1 * overCloth));
+  // ONE strip of hide, wound a turn and a bit round the hips with its far
+  // end over its near one, and its last stretch falling down the thigh as
+  // a tail. Not a ring of cloth with a shaped hem — see `wrappedHide`.
+  if (hideAmount > 0) {
+    wrap.add(
+      wrappedHide(body, hide, {
+        cord: sashMaterial,
+        clasp: metal,
+        waistY,
+        seat,
+        // Seated, the thighs come forward and a long tail would hang
+        // through them; the skin is gathered instead, which is what you
+        // do with a garment before sitting down.
+        drop: ctx.seated ? body.thighLength * 0.42 : fall + body.thighLength * 0.55,
+        slack: 1.9 + 3.1 * overCloth,
+        seed: 1,
+      }),
+    );
+  }
 
   // ---- sash and clasp at the waist --------------------------------------
   // The cream cloth goes on FIRST, under everything: it is the layer the
@@ -1010,33 +1485,33 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // outermost of those rather than from the body: a band at the body's
   // own radius disappears under the hide, leaving the hide's top edge
   // showing as a cut line across the waist.
-  const under = hideAmount > 0 ? 1.035 : 1;
+  // The kamarbandh is the SKIN'S OWN TIE when the skin is the garment —
+  // built with it, wound on the same path, knotted where it is tucked
+  // (see `wrappedHide`). A second band turned on a lathe over the top of
+  // that is a belt worn over a belt.
   const waistZ = hipCentreZ(body);
-  const sashRx = hipRx * 1.04 * under;
-  const sashRz = hipRz * 1.05 * under;
-  wrap.add(
-    clothPiece(
-      [
-        // Barely tapered. A band that narrows towards its edges dips back
-        // inside the hide it is wound over, and the two surfaces cross in
-        // a pair of notches either side of the clasp.
-        { y: waistY + 0.03, rx: sashRx * 0.98, rz: sashRz * 0.985, z: waistZ },
-        { y: waistY + 0.012, rx: sashRx, rz: sashRz, z: waistZ },
-        { y: waistY - 0.008, rx: sashRx * 0.995, rz: sashRz * 0.995, z: waistZ },
-        { y: waistY - 0.026, rx: sashRx * 0.965, rz: sashRz * 0.97, z: waistZ },
-      ],
-      sashMaterial,
-      { seed: 17, density: 0, folds: 0.05, radial: 40 },
-    ),
-  );
-  // The clasp sits ON the band, at the band's own surface.
-  wrap.add(
-    mesh(new THREE.SphereGeometry(0.015, 14, 12), metal, {
-      position: [0, waistY + 0.008, waistZ + sashRz * 1.01],
-      scale: [1.3, 0.9, 0.5],
-    }),
-  );
-
+  if (hideAmount === 0) {
+    const sashRx = hipRx * 1.03;
+    const sashRz = hipRz * 1.04;
+    wrap.add(
+      clothPiece(
+        [
+          { y: waistY + 0.03, rx: sashRx * 0.98, rz: sashRz * 0.985, z: waistZ },
+          { y: waistY + 0.012, rx: sashRx, rz: sashRz, z: waistZ },
+          { y: waistY - 0.008, rx: sashRx * 0.995, rz: sashRz * 0.995, z: waistZ },
+          { y: waistY - 0.026, rx: sashRx * 0.965, rz: sashRz * 0.97, z: waistZ },
+        ],
+        sashMaterial,
+        { seed: 17, density: 0, folds: 0.05, radial: 40 },
+      ),
+    );
+    wrap.add(
+      mesh(new THREE.SphereGeometry(0.015, 14, 12), metal, {
+        position: [0, waistY + 0.008, waistZ + sashRz * 1.01],
+        scale: [1.3, 0.9, 0.5],
+      }),
+    );
+  }
   // The gathered fold that hangs at the front of a wrapped dhoti. It is
   // what separates a wrap from a tube, so it is the one piece allowed to
   // hang free — and it is shortened when seated, exactly as cloth is
@@ -1068,7 +1543,12 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     piece.scale.y = drop;
     fold.add(piece);
   }
-  if (dhotiReach === 0) wrap.add(fold);
+  // The fan of flat panels that used to hang at the front belonged to the
+  // ring-of-cloth construction: three plates standing off the body,
+  // which from the side was a board. A wrapped skin has its own front —
+  // the overlap where its far end lies over its near one — so the fan is
+  // only worn when something else is the outer layer.
+  if (dhotiReach > 0 && drape > 0) wrap.add(fold);
 
   // Seated poses fold the thighs up in front, so the skin is gathered
   // shorter — the same garment, worn the way you wear it to sit down.
@@ -1080,20 +1560,12 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // second layer of hide down thighs the cream cloth already covers, and
   // the two torn hems crossing each other is what read as a notch chopped
   // out of the front.
-  if (hideAmount > 0 && dhotiReach === 0) {
-    // A skin is not a pair of trousers. Its hind leg falls down ONE
-    // thigh — the right, which is the bearing the hip skin is cut
-    // deepest over — and the other side is a short torn edge. Two equal
-    // sleeves is what merged with the hip skin into one leopard drum.
-    parts.push({
-      joint: "leg.right.thigh",
-      object: legHide(body, hide, 23, reach, overCloth),
-    });
-    parts.push({
-      joint: "leg.left.thigh",
-      object: legHide(body, hide, 11, reach * 0.3, overCloth),
-    });
-  }
+  // No sleeves. The skin's hanging part is the skin — the far end of the
+  // same strip, continuing past the last lap and down the thigh — and a
+  // separate piece riding each thigh bone is how two sleeves and a hip
+  // ring merged into one leopard drum.
+  void legHide;
+  void reach;
   // Seated, the cream goes onto the thighs themselves — one piece per
   // thigh, riding the bone, so a folded leg carries its own cloth.
   if (dhotiReach > 0 && ctx.garment === "gathered") {

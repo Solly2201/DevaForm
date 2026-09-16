@@ -1101,6 +1101,26 @@ const REGIONS = {
     "leg.left.shin",
     "leg.right.shin",
   ]),
+  /**
+   * What a lower garment has to go round.
+   *
+   * The legs AND the pelvis they hang from. A wrapped skin is tied above
+   * the hip crest, and a garment cut to the legs alone is cut to
+   * something narrower than the body it is worn on: the buttock belongs
+   * to the pelvis, so it was not in the envelope, and the hide went a
+   * centimetre into it at a hundred and forty degrees.
+   */
+  lower: new Set([
+    // The spine carries the upper buttock and the flank, and a garment
+    // tied at the waist goes round both. Leaving them out is what let a
+    // hide cut into the backside while the measurement said it fitted.
+    "spine",
+    "pelvis",
+    "leg.left.thigh",
+    "leg.right.thigh",
+    "leg.left.shin",
+    "leg.right.shin",
+  ]),
 };
 
 /**
@@ -1774,15 +1794,33 @@ function torsoSurfaceMap(positions) {
  */
 function legEnvelope(positions) {
   const pelvis = restFinal.get("pelvis");
-  const hipY = restFinal.get("leg.left.thigh").y;
+  // From the WAIST down, not from the hip joint down.
+  //
+  // A wrapped garment is tied above the crest and the rows above the hip
+  // joint are where it grips; without them the only answer the envelope
+  // could give up there was its top row, which is the widest point of
+  // the hips reported at every height above it. Two garments in a row
+  // came out as buckets standing off the waist because of it.
+  // The top of the lower body, measured: the highest the pelvis's own
+  // skin reaches, less a band's thickness so the first row has vertices
+  // in it. Taking the spine JOINT instead put the first two rows above
+  // any pelvis vertex at all, and they fell back to a default.
+  let waistY = -Infinity;
+  for (let i = 0; i < vertexCount; i += 1) {
+    if (dominantGroup[i] !== "pelvis") continue;
+    waistY = Math.max(waistY, positions[i * 3 + 1]);
+  }
+  waistY += 0.02;
   const ankleY = restFinal.get("leg.left.foot").y;
-  const ROWS = 14;
+  // Fine enough that a calf's widest point lands on a row: the span is
+  // longer now that it starts at the waist, so the count goes up with it.
+  const ROWS = 22;
   const halfWidth = [];
   const frontZ = [];
   const backZ = [];
   for (let row = 0; row < ROWS; row += 1) {
-    const y = hipY + ((ankleY - hipY) * row) / (ROWS - 1);
-    const band = slice(positions, y - 0.012, y + 0.012, "legs");
+    const y = waistY + ((ankleY - waistY) * row) / (ROWS - 1);
+    const band = slice(positions, y - 0.012, y + 0.012, "lower");
     if (band.length < 8) {
       halfWidth.push(halfWidth[row - 1] ?? 0.05);
       frontZ.push(frontZ[row - 1] ?? 0.05);
@@ -1796,7 +1834,7 @@ function legEnvelope(positions) {
     backZ.push(z.lo - pelvis.z);
   }
   return {
-    topY: round(hipY - pelvis.y),
+    topY: round(waistY - pelvis.y),
     bottomY: round(ankleY - pelvis.y),
     halfWidth: halfWidth.map(round),
     frontZ: frontZ.map(round),
