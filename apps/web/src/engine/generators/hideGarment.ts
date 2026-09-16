@@ -339,17 +339,23 @@ function legHide(
   material: THREE.Material,
   seed: number,
   length: number,
+  /** 1 = worn over cloth, 0 = on the thigh itself. See `hideWrap`. */
+  over: number,
 ): THREE.Mesh {
-  const fit = (radius: number) => radius + CLEARANCE * 2.2;
+  const fit = (radius: number) => radius + CLEARANCE * (0.9 + 1.3 * over);
   const top = fit(body.thighTopRadius);
   const mid = fit(body.thighMidRadius);
   // How far down the thigh the skin reaches before it is torn off.
   const fall = body.thighLength * (0.5 + 0.42 * Math.min(1, Math.max(0, length)));
+  // A skin hangs off the thigh; it does not balloon away from it. The
+  // flare below is what a skin over gathered cloth needs and what a skin
+  // on bare skin must not have.
+  const flare = (amount: number) => 1 + amount * (0.35 + 0.65 * over);
   const sections: ClothSection[] = [
-    { y: 0.032, rx: top * 1.1, rz: top * 1.13 },
-    { y: -fall * 0.42, rx: mid * 1.26, rz: mid * 1.3 },
-    { y: -fall * 0.84, rx: mid * 1.4, rz: mid * 1.45 },
-    { y: -fall, rx: mid * 1.44, rz: mid * 1.49 },
+    { y: 0.032, rx: top * flare(0.1), rz: top * flare(0.13) },
+    { y: -fall * 0.42, rx: mid * flare(0.26), rz: mid * flare(0.3) },
+    { y: -fall * 0.84, rx: mid * flare(0.4), rz: mid * flare(0.45) },
+    { y: -fall, rx: mid * flare(0.44), rz: mid * flare(0.49) },
   ];
   return clothPiece(sections, material, { seed, hem: 0.04, density: 1, folds: 0.07 });
 }
@@ -556,10 +562,21 @@ function hideWrap(
   waistY: number,
   fall: number,
   seed: number,
+  /**
+   * How much air the skin leaves round what is under it.
+   *
+   * A skin worn OVER a dhoti has to clear the cloth, and the cloth is
+   * gathered: four centimetres of allowance is right, and it is what
+   * this was built with. Worn directly on the body that same allowance
+   * is four centimetres of nothing, and the render showed exactly that —
+   * a leopard barrel standing off the hips with the legs somewhere
+   * inside it. So what it is worn over is now something it is told.
+   */
+  slack: number,
 ): THREE.Mesh {
   const seat = body.thighSeatY;
-  const hipRx = body.pelvisHalfWidth + CLEARANCE * 2.4;
-  const hipRz = body.bellyRadiusZ + CLEARANCE * 2.4;
+  const hipRx = body.pelvisHalfWidth + CLEARANCE * slack * 0.48;
+  const hipRz = body.bellyRadiusZ + CLEARANCE * slack * 0.48;
   // The top edge goes under the kamarbandh, which is why it can be a
   // plain ring: the band is wound over it and there is no seam to see.
   const topY = waistY + 0.018;
@@ -570,9 +587,9 @@ function hideWrap(
   const profile = profileOf([
     { y: topY, rx: hipRx, rz: hipRz, z: centreZ },
     { y: waistY - 0.016, rx: hipRx * 1.02, rz: hipRz * 1.02, z: centreZ },
-    overHips(body, seat - 0.01, 5, hipRx * 1.07, hipRz * 1.09),
-    wrapSection(body, Math.min(seat - 0.02, deepestY + fall * 0.35), 5.4),
-    wrapSection(body, deepestY, 5),
+    overHips(body, seat - 0.01, slack, hipRx * 1.07, hipRz * 1.09),
+    wrapSection(body, Math.min(seat - 0.02, deepestY + fall * 0.35), slack * 1.08),
+    wrapSection(body, deepestY, slack),
   ]);
 
   // Dense enough for the markings. They are vertex colours, so a spot
@@ -591,7 +608,13 @@ function hideWrap(
       // How far down this bearing carries: shallow over the left hip
       // where the skin is slung, deepest over the right thigh, the front
       // longer than the back, and torn all along it.
-      const cut = 0.66 - 0.34 * Math.cos(angle) + 0.12 * Math.sin(angle);
+      // Slung high over the left hip, deepest over the right thigh, the
+      // front longer than the back. The spread matters more than the
+      // mean: a skin whose hem varies by a third of its fall reads as a
+      // drum with a wobble, and it took a render of the skin worn ALONE
+      // — with no cream cloth below to carry the eye down — to see that
+      // the shape saying "skin" is almost entirely this one number.
+      const cut = 0.58 - 0.4 * Math.cos(angle) + 0.16 * Math.sin(angle);
       // Torn, not serrated. Per-column noise puts a full swing between
       // one column and the next, and forty-four of those round the hips
       // is a saw blade; a skin tears in long runs with small ones inside
@@ -947,10 +970,15 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // fold the legs up in front, so it is gathered short and the length
   // goes onto the legs instead — which is how cloth is actually gathered
   // to sit down.
+  // Worn alone the skin IS the lower garment and has to reach the knee
+  // at its deepest bearing; worn over a dhoti it is the shorter layer
+  // that shows the cloth below it.
   const fall = ctx.seated
     ? (waistY - seat) + 0.06
-    : (waistY - seat) + body.thighLength * (dhotiReach > 0 ? 0.62 : 0.5);
-  if (hideAmount > 0) wrap.add(hideWrap(body, hide, waistY, fall, 1));
+    : (waistY - seat) + body.thighLength * (dhotiReach > 0 ? 0.62 : 0.92);
+  // What the skin is worn over: the cream dhoti, or the body.
+  const overCloth = dhotiReach > 0 ? 1 : 0;
+  if (hideAmount > 0) wrap.add(hideWrap(body, hide, waistY, fall, 1, 1.9 + 3.1 * overCloth));
 
   // ---- sash and clasp at the waist --------------------------------------
   // The cream cloth goes on FIRST, under everything: it is the layer the
@@ -1053,8 +1081,18 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // the two torn hems crossing each other is what read as a notch chopped
   // out of the front.
   if (hideAmount > 0 && dhotiReach === 0) {
-    parts.push({ joint: "leg.left.thigh", object: legHide(body, hide, 11, reach) });
-    parts.push({ joint: "leg.right.thigh", object: legHide(body, hide, 23, reach) });
+    // A skin is not a pair of trousers. Its hind leg falls down ONE
+    // thigh — the right, which is the bearing the hip skin is cut
+    // deepest over — and the other side is a short torn edge. Two equal
+    // sleeves is what merged with the hip skin into one leopard drum.
+    parts.push({
+      joint: "leg.right.thigh",
+      object: legHide(body, hide, 23, reach, overCloth),
+    });
+    parts.push({
+      joint: "leg.left.thigh",
+      object: legHide(body, hide, 11, reach * 0.3, overCloth),
+    });
   }
   // Seated, the cream goes onto the thighs themselves — one piece per
   // thigh, riding the bone, so a folded leg carries its own cloth.

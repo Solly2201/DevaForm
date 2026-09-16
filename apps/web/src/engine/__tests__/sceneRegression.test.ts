@@ -180,7 +180,15 @@ const PINNED = {
   // which is what made the silhouette leave the hip and come straight to
   // the floor. Sixty-eight columns rather than forty-four, so the deeper
   // of its two fold frequencies survives being sampled.
-  shiva: { nodes: 340, digest: "9c34469091524a8a" },
+  //
+  // And again for the garment itself, which is a different garment now.
+  // Shiva's default was a cream dhoti to the ankle with the tiger skin
+  // slung over it; in the Studio that read as a leopard belt over a cream
+  // cylinder, and the cylinder was the first thing anyone asked about.
+  // The skin IS the lower garment now — the layered look is still offered
+  // and still loads — and the skin was rebuilt for being worn on the body
+  // rather than over four centimetres of gathered cloth.
+  shiva: { nodes: 340, digest: "fb4a592b964f6225" },
 } as const;
 
 describe("protected characters do not move", () => {

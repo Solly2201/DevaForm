@@ -207,6 +207,51 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
 
   // ---- CLOTHING ---------------------------------------------------------
   {
+    /**
+     * The tiger skin, worn as the garment rather than over one.
+     *
+     * `references/ref4.png` and `ref5.png` — the most recent direction —
+     * show Shiva bare but for the skin, and the Studio showed why that
+     * matters: with a cream dhoti under it the skin reads as a belt and
+     * the cloth as a cream cylinder from waist to ankle, which is the
+     * first thing anyone looking at the figure asked about. A tiger skin
+     * IS the lower garment in most of the iconography; the cloth was the
+     * layer that needed justifying, not its absence.
+     *
+     * So this is the default. The dhoti-and-hide layering of ref3 is
+     * still offered as its own choice below, and still resolves for any
+     * configuration already saved with it.
+     */
+    id: "shiva.garment.vyaghracharma",
+    version: 1,
+    name: "Tiger Hide",
+    description: "The tiger skin slung over the hips and thighs, torn along its lower edge.",
+    kind: { type: "part", slot: "lowerGarment" },
+    deityCompatibility: ["shiva"],
+    stage: "integration",
+    source: {
+      kind: "procedural",
+      generatorId: "humanoid.hideWrap",
+      // No cloth under it: the skin is the garment. `length` is how far
+      // the fall down each thigh reaches.
+      params: { length: 0.7, hide: 1, dhoti: 0, drape: 0 },
+    },
+    provenance: {
+      type: "procedural",
+      tool: "apps/web/src/engine/generators/hideGarment.ts",
+      references: ["references/ref4.png", "references/ref5.png", "references/ref3.png"],
+      notes:
+        "One closed skin round the hips cut on the diagonal, a fall down each thigh riding the bone, and the kamarbandh wound over it.",
+    },
+    materialZones: ["garmentAccent", "metal"],
+    category: "clothing",
+    printability: {
+      printSourceAvailable: false,
+      minStatueHeightMm: 150,
+      notes: "The torn edge is 3-8 mm of relief at 1 m scale.",
+    },
+  },
+  {
     id: "shiva.garment.tigerHide",
     version: 1,
     name: "Dhoti and Tiger Hide",

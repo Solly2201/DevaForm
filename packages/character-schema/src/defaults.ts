@@ -90,7 +90,11 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
       eyes: null,
       hair: { assetId: "shiva.jata.flowing", version: 1 },
       hands: null,
-      lowerGarment: { assetId: "shiva.garment.tigerHide", version: 1 },
+      // The skin IS the garment. A cream dhoti under it made the hide
+      // read as a belt over a cream cylinder; the layered dhoti-and-hide
+      // of ref3 is still offered, and still loads for anything saved
+      // with it.
+      lowerGarment: { assetId: "shiva.garment.vyaghracharma", version: 1 },
       // Bare-chested ascetic by default — the rudraksha and serpent read
       // against skin, as in classical iconography.
       upperGarment: null,
