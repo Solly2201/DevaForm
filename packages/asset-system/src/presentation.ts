@@ -84,6 +84,22 @@ export type PresentationAnchor =
 export type PresentationOrientation = "anchor" | "worldUpright";
 
 /**
+ * Which way an upright item shows its face.
+ *
+ * A `worldUpright` axis constraint fixes two of the item's three degrees
+ * of freedom and leaves the third — spin about the vertical channel —
+ * wherever the arm solve happened to put it. For a shaft that is nothing;
+ * for an item WITH a face (a discus, a conch's lip) it is the difference
+ * between the attribute presenting itself and the attribute caught
+ * side-on. `front` spends that free spin deliberately: after the hand is
+ * turned onto the item, the item is rotated about its own channel until
+ * its +Z looks out the statue's front — how a murti shows a wheel. The
+ * grip is untouched: rotation about the channel is the one motion a
+ * channel cannot feel.
+ */
+export type PresentationFacing = "free" | "front";
+
+/**
  * Where the item's weight actually goes.
  *
  * `hand` — the hand carries it, so it travels with the wrist.
@@ -137,6 +153,11 @@ export interface AttributePresentation {
   anchor: PresentationAnchor;
   hand: HandRelationship;
   orientation: PresentationOrientation;
+  /**
+   * How the free spin about the channel is spent. Defaults to `free`.
+   * Only meaningful with `worldUpright`.
+   */
+  facing?: PresentationFacing;
   /** Where the weight goes. Defaults to `hand`. */
   support?: PresentationSupport;
   /** Required for `handheld`; meaningless otherwise. */
@@ -186,6 +207,8 @@ export function handheld(spec: {
   hand: HoldingMudra;
   /** Default `worldUpright`: a shafted attribute reads vertical. */
   orientation?: PresentationOrientation;
+  /** Default `free`: only an item with a face needs to spend the spin. */
+  facing?: PresentationFacing;
   /** Default `hand`: the hand carries what it holds. */
   support?: PresentationSupport;
   grip?: GripFrame;
@@ -200,6 +223,7 @@ export function handheld(spec: {
     anchor: { kind: "hand" },
     hand: spec.hand,
     orientation: spec.orientation ?? "worldUpright",
+    facing: spec.facing,
     support: spec.support ?? "hand",
     grip: spec.grip,
     autoSelectable: spec.autoSelectable ?? true,

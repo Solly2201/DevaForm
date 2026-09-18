@@ -113,6 +113,12 @@ export interface CharacterRig {
    */
   held: HeldItem[];
   /**
+   * Upright items whose presentation spends the free spin about the grip
+   * channel on a declared facing — a discus turned to look out the front.
+   * Applied after the hands are turned, every pose. See faceHeldItems.
+   */
+  faced: { object: THREE.Object3D; channel: Vec3 }[];
+  /**
    * What each hand is doing, pose and configuration reconciled by the
    * resolver. Consumers read THIS, never the configuration.
    */
@@ -494,6 +500,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   const pending: string[] = [];
   const planted: PlantedAttachment[] = [];
   const held: HeldItem[] = [];
+  const faced: { object: THREE.Object3D; channel: Vec3 }[] = [];
   const root = new THREE.Group();
   root.name = "statueRoot";
   const baseTop = BASE_TOP_HEIGHT[config.base.style] ?? 0;
@@ -721,6 +728,9 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         // socket's channel.
         axis: [0, 1, 0],
       });
+      if (presentation.facing === "front") {
+        faced.push({ object: renderable, channel: presentation.grip?.axis ?? [0, 1, 0] });
+      }
     }
 
     if (standsOnGround(presentation)) {
@@ -804,6 +814,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     planted,
     hands,
     held,
+    faced,
     body: bodyProfile,
     bodyAsset,
     heldByHand,
@@ -815,6 +826,32 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
 const worldQuaternion = new THREE.Quaternion();
 const plantedPoint = new THREE.Vector3();
+const worldFace = new THREE.Vector3();
+
+/**
+ * Spend the free spin of every facing-declared held item.
+ *
+ * The upright solve turned the hand so the item's channel is vertical;
+ * what it could not choose is the spin about that channel, which landed
+ * wherever the wrist did — pose-dependent, and for an item with a face,
+ * visibly wrong (the discus caught half-profile). So: measure where the
+ * item's +Z actually looks, project out the channel's component, and
+ * counter-spin about the channel until it looks out the statue's front.
+ * A correction measured from the world converges instead of accumulating,
+ * and a rotation about the grip channel is invisible to the grip.
+ */
+function faceHeldItems(rig: CharacterRig): void {
+  for (const { object, channel } of rig.faced) {
+    object.updateWorldMatrix(true, false);
+    worldFace.set(0, 0, 1).transformDirection(object.matrixWorld);
+    // Only the component the spin can move: the horizontal one, because
+    // the channel the item spins about has just been made vertical.
+    worldFace.y = 0;
+    if (worldFace.lengthSq() < 1e-8) continue; // face along the channel — nothing to spend
+    const yaw = Math.atan2(worldFace.x, worldFace.z); // signed angle from world +Z
+    object.rotateOnAxis(new THREE.Vector3(...channel).normalize(), -yaw);
+  }
+}
 
 /**
  * Settle planted attachments after a pose change.
@@ -962,6 +999,11 @@ export function poseRig(rig: CharacterRig): HandSolution[] {
         `(${degrees(grip.residual)}° out).`,
     );
   }
+
+  // The upright solve fixes the channel and leaves the spin about it
+  // wherever the wrist landed. Items that declared a facing spend that
+  // spin now, after the hands have been turned onto them.
+  faceHeldItems(rig);
 
   // What closes a hand is the hand's own grip morph, and nothing else.
   //
