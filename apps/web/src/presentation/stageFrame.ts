@@ -1,7 +1,7 @@
 /**
  * ONE geometry for the temple frame, wherever it is shown.
  *
- * Two things display the same picture: the entry video, and the backdrop
+ * Two things display the same picture: the entry, and the backdrop
  * still it ends on. The continuity between them is the whole point of the
  * presentation architecture, and it survives exactly as long as they are
  * scaled, cropped and positioned by the same arithmetic — so the
@@ -92,5 +92,17 @@ export function frameLayerStyle(config: StageBackdropConfig): React.CSSPropertie
     maxWidth: "none",
     maxHeight: "none",
     filter: config.grade,
+    /**
+     * The frame GLIDES when its measurement changes.
+     *
+     * It changes for exactly two reasons: the window was resized, and the
+     * Studio's tools arrived around the statue at the end of the entry.
+     * The second is the one that matters — the viewport narrows as the
+     * panels take their space, and the hall would otherwise jump sideways
+     * on the same frame the statue is revealed on. Eased, the room and
+     * the figure move together and the movement reads as the tools
+     * arriving.
+     */
+    transition: "left 700ms ease-out, top 700ms ease-out, width 700ms ease-out, height 700ms ease-out",
   };
 }

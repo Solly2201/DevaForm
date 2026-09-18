@@ -5,7 +5,7 @@
  *
  * The presentation layers are hosted HERE, not inside the viewport,
  * because the entry experience owns the whole window: the backdrop is a
- * fixed fullscreen layer under everything, the entry video is a fixed
+ * fixed fullscreen layer under everything, the entry is a fixed
  * fullscreen layer over everything, and the editor chrome lives between
  * them, hidden until the sequence hands over. That is what makes the
  * final video frame and the first stage frame the same picture — both
@@ -18,7 +18,7 @@ import { getPresentation } from "@devaform/asset-system";
 import { PresentationEntry } from "@/presentation/PresentationEntry";
 import { StageBackdrop } from "@/presentation/StageBackdrop";
 import { StageVignette } from "@/presentation/StageVignette";
-import { shouldPlayIntro, useStageStore } from "@/presentation/stageStore";
+import { shouldShowEntry, useStageStore } from "@/presentation/stageStore";
 import { useDeity } from "@/state/deityContext";
 import { CategorySidebar } from "./CategorySidebar";
 import { CustomizationPanel } from "./CustomizationPanel";
@@ -54,7 +54,7 @@ export function EditorShell() {
    */
   const [introAllowed, setIntroAllowed] = useState<boolean | null>(null);
   useEffect(() => {
-    const allowed = Boolean(stage.intro) && shouldPlayIntro();
+    const allowed = Boolean(stage.intro) && shouldShowEntry();
     setIntroAllowed(allowed);
     // Nothing to hand over from: the stage is the customer's at once,
     // and the statue still rises out of the dark, just promptly.
@@ -64,16 +64,39 @@ export function EditorShell() {
   const hasBackdrop = Boolean(stage.backdrop.image);
 
   /**
-   * The chrome recedes entirely during the entry. Nothing MOVES — the
-   * layout keeps its exact geometry, because the stage frame is measured
-   * against the viewport's place in it — the tools simply are not there
-   * until the statue is, and fade up as it does.
+   * The chrome is not merely invisible during the entry — it is not
+   * THERE.
+   *
+   * It used to keep its layout while fading, which meant the viewport
+   * stayed pinched between a hidden sidebar and a hidden panel, and the
+   * stage frame — centred on the statue, which is centred in the viewport
+   * — sat a hundred and thirty pixels left of the window's middle. The
+   * temple opened visibly off to one side with nothing on screen to
+   * explain why. A composition is centred or it is not; a customer
+   * looking at an empty screen should see the doors in the middle of it.
+   *
+   * So the tools arrive WITH the statue, and the stage makes room for
+   * them as they do: the viewport narrows, the frame re-measures, and the
+   * room and the figure standing in it move together, which is one
+   * motivated movement rather than a mystery.
    */
   const chromeHidden = phase === "intro";
+  // Mounted a frame before it is shown, so the tools fade UP rather than
+  // appearing: an element that arrives already opaque has nothing to
+  // transition from.
+  const [chromeIn, setChromeIn] = useState(false);
+  useEffect(() => {
+    if (chromeHidden) {
+      setChromeIn(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() => setChromeIn(true));
+    return () => cancelAnimationFrame(raf);
+  }, [chromeHidden]);
   const chrome: React.CSSProperties = {
-    opacity: chromeHidden ? 0 : 1,
+    opacity: chromeIn ? 1 : 0,
     transition: "opacity 700ms ease-out",
-    pointerEvents: chromeHidden ? "none" : "auto",
+    pointerEvents: chromeIn ? "auto" : "none",
   };
 
   return (
@@ -81,23 +104,34 @@ export function EditorShell() {
       {hasBackdrop && <StageBackdrop config={stage.backdrop} />}
       {hasBackdrop && <StageVignette />}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <div style={chrome}>
-          <TopBar />
-        </div>
-        <div className="flex min-h-0 flex-1">
+        {!chromeHidden && (
           <div style={chrome}>
-            <CategorySidebar />
+            <TopBar />
           </div>
+        )}
+        <div className="flex min-h-0 flex-1">
+          {!chromeHidden && (
+            <div style={chrome}>
+              <CategorySidebar />
+            </div>
+          )}
           {/* Transparent: the fixed backdrop behind it is the stage. */}
           <main className="relative min-w-0 flex-1">
             <EditorViewport stage={stage} />
-            <div style={chrome}>
-              <ViewportOverlay />
-            </div>
+            {/* Not merely invisible: not there. A control faded to zero
+                is still in the tab order, and a customer who has not
+                arrived yet could reach the camera presets with a Tab. */}
+            {!chromeHidden && (
+              <div style={chrome}>
+                <ViewportOverlay />
+              </div>
+            )}
           </main>
-          <div style={chrome}>
-            <CustomizationPanel />
-          </div>
+          {!chromeHidden && (
+            <div style={chrome}>
+              <CustomizationPanel />
+            </div>
+          )}
         </div>
       </div>
       <ExportDialog />

@@ -10,7 +10,7 @@
  * backdrop and the hero composition one decision instead of three, and
  * what lets a future deity be given its own room by adding a config
  * rather than by branching a component. The fullscreen layers themselves
- * — backdrop, vignette, entry video — are hosted by the shell; this is
+ * — backdrop, vignette, entry — are hosted by the shell; this is
  * only the statue.
  *
  * The viewport's one presentation duty of its own is measurement: the
@@ -72,7 +72,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   const hasBackdrop = Boolean(stage.backdrop.image);
 
   // Publish where the statue stands on screen, so the fullscreen frame —
-  // entry video and backdrop alike — centres its mandala there.
+  // entry and backdrop alike — centres its mandala there.
   useEffect(() => {
     if (!hasBackdrop) return;
     const measure = () => {

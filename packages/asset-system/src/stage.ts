@@ -93,19 +93,45 @@ export interface StageBackdrop {
   voidColor: string;
 }
 
-/** The entry sequence, and how it hands over. */
+/**
+ * The entry sequence, and how it hands over.
+ *
+ * NOTHING PLAYS. The approach into the sanctum is a strip of stills and
+ * the customer's own scrolling is its clock — they walk in, rather than
+ * watching a film of somebody else walking in. The strip is sampled from
+ * the source footage offline (see scripts/build-intro-frames.mjs); its
+ * LAST still is the backdrop this stage already stands on, so arriving is
+ * one picture giving way to itself.
+ */
 export interface StageIntro {
   /** The media asset's id, in the presentation asset tree. */
   assetId: string;
-  video: string;
-  /** Seconds. Playback starts here — see the asset's own record for why. */
-  startsAt: number;
-  /** Seconds. The frame the encoder last wrote, and the backdrop's source. */
-  lastFrameAt: number;
-  /** How long the video takes to give way to the live stage, ms. */
+  frames: {
+    /** Where the numbered stills live. The last one is `backdrop.image`. */
+    dir: string;
+    /** How many stills the approach has, the backdrop included. */
+    count: number;
+    /** The stills' own pixel size — what the entry draws at. */
+    width: number;
+    height: number;
+  };
+  /**
+   * How much scrolling the whole approach takes, in CSS pixels.
+   *
+   * About eighteen notches of a wheel, or two firm trackpad gestures:
+   * long enough that arriving feels like a journey, short enough that
+   * nobody wonders whether the page is broken. See introScroll.ts for
+   * how input becomes a position.
+   */
+  travelPx: number;
+  /** The same approach, for a customer who asked for less motion. */
+  reducedTravelPx: number;
+  /** How long the entry takes to give way to the live stage, ms. */
   handoverMs: number;
   /** How long the statue takes to rise into the light after it, ms. */
   settleMs: number;
+  /** The footage the strip was sampled from — provenance, not runtime. */
+  sourceVideo: string;
 }
 
 export interface PresentationConfig {
@@ -155,15 +181,21 @@ const SANCTUM: PresentationConfig = {
   },
   intro: {
     assetId: "presentation.intro.templeSanctum",
-    video: "/assets/presentation/intros/temple-sanctum/1/intro.mp4",
     // The shipped cut opens clean — the footage's original title segment
     // (cut through the very end of its fade, verified frame-by-frame) and
     // its generator glyph were removed at the asset level, so nothing
     // needs skipping and nothing needs hiding.
-    startsAt: 0,
-    lastFrameAt: 6.02,
-    handoverMs: 420,
+    frames: {
+      dir: "/assets/presentation/intros/temple-sanctum/1/frames",
+      count: 40,
+      width: 1280,
+      height: 720,
+    },
+    travelPx: 1800,
+    reducedTravelPx: 700,
+    handoverMs: 520,
     settleMs: 1500,
+    sourceVideo: "/assets/presentation/intros/temple-sanctum/1/intro.mp4",
   },
 };
 

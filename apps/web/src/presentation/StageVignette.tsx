@@ -4,7 +4,7 @@
  * The frame's own edge.
  *
  * A fixed fullscreen layer between the backdrop and the Studio shell —
- * the same stack the entry video draws its own copy of, so what the video
+ * the same stack the entry draws its own copy of, so what the entry
  * shows and what it reveals are graded identically. The hall is lit by a
  * single shaft from its oculus; its corners are not part of the
  * composition, and the statue standing in the middle of it is.

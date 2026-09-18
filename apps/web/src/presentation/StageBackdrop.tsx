@@ -34,7 +34,7 @@ export function StageBackdrop({ config }: { config: StageBackdropConfig }) {
       style={{ backgroundColor: config.voidColor }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- the frame
-          is measured geometry shared with the intro video; next/image
+          is measured geometry shared with the entry; next/image
           would re-fit it and break the continuity. */}
       <img src={config.image} alt="" draggable={false} style={frameLayerStyle(config)} />
     </div>

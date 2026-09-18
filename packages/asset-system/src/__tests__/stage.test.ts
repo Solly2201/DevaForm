@@ -13,7 +13,7 @@
  * who loads their Shiva a year from now gets a year-old camera angle
  * along with it.
  */
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -67,19 +67,16 @@ describe("the last frame is the stage", () => {
 
       // Both files exist, and they are the two halves of ONE asset: same
       // directory, same version, one derived from the other.
-      const video = asFile(intro.video);
+      const video = asFile(intro.sourceVideo);
       const backdrop = asFile(stage.backdrop.image);
-      expect(statSync(video).size, "the intro video ships").toBeGreaterThan(10_000);
+      expect(statSync(video).size, "the source footage ships").toBeGreaterThan(10_000);
       expect(statSync(backdrop).size, "so does its final frame").toBeGreaterThan(10_000);
-      expect(
-        backdrop.slice(0, backdrop.lastIndexOf("\\") + 1) ||
-          backdrop.slice(0, backdrop.lastIndexOf("/") + 1),
-      ).toBe(
-        video.slice(0, video.lastIndexOf("\\") + 1) || video.slice(0, video.lastIndexOf("/") + 1),
-      );
+      const dirOf = (file: string) =>
+        file.slice(0, file.lastIndexOf("\\") + 1) || file.slice(0, file.lastIndexOf("/") + 1);
+      expect(dirOf(backdrop)).toBe(dirOf(video));
 
       // The record on disk says the same thing the config does. It is the
-      // record the poster script reads, so a video swapped there and not
+      // record the frame script reads, so footage swapped there and not
       // here would hand over to a picture of somewhere else.
       const record = JSON.parse(
         readFileSync(join(video.slice(0, video.lastIndexOf("\\")), "asset.json"), "utf8"),
@@ -89,15 +86,33 @@ describe("the last frame is the stage", () => {
         timing: { duration: number; startsAt: number; lastFrameAt: number };
       };
       expect(record.id).toBe(intro.assetId);
-      expect(record.media.video).toBe(intro.video);
+      expect(record.media.video).toBe(intro.sourceVideo);
       expect(record.media.backdrop).toBe(stage.backdrop.image);
-      expect(record.timing.startsAt).toBe(intro.startsAt);
-      expect(record.timing.lastFrameAt).toBe(intro.lastFrameAt);
 
-      // And the timings are a sequence rather than three numbers.
-      expect(intro.startsAt).toBeGreaterThanOrEqual(0);
-      expect(intro.startsAt).toBeLessThan(intro.lastFrameAt);
-      expect(intro.lastFrameAt).toBeLessThanOrEqual(record.timing.duration);
+      /**
+       * THE STRIP ENDS ON THE BACKDROP.
+       *
+       * Every still but the last is a file of its own; the last one is
+       * the stage's own backdrop, which is what makes arriving one
+       * picture giving way to itself. A strip whose count does not match
+       * what the extractor wrote would either skip a still or reach for
+       * one that is not there.
+       */
+      const frameDir = asFile(intro.frames.dir);
+      const stills = readdirSync(frameDir).filter((name) => name.endsWith(".jpg")).sort();
+      expect(stills.length).toBe(intro.frames.count - 1);
+      expect(stills[0]).toBe("000.jpg");
+      for (const still of stills) {
+        expect(statSync(join(frameDir, still)).size).toBeGreaterThan(5_000);
+      }
+      expect(intro.frames.width).toBeGreaterThan(640);
+      expect(intro.frames.height).toBeGreaterThan(360);
+
+      // And the approach is a journey with a length, not a number of
+      // frames: the customer scrolls it.
+      expect(intro.travelPx).toBeGreaterThan(400);
+      expect(intro.reducedTravelPx).toBeGreaterThan(0);
+      expect(intro.reducedTravelPx).toBeLessThan(intro.travelPx);
       expect(intro.handoverMs).toBeGreaterThan(0);
       expect(intro.settleMs).toBeGreaterThan(0);
     },

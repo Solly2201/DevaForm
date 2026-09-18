@@ -110,21 +110,38 @@ describe("Vishnu is prepared, and prepared means described", () => {
       expect(presentations.length, `${id} declares how it is held`).toBeGreaterThan(0);
       for (const presentation of presentations) {
         if (!isHandheld(presentation)) continue;
-        expect(presentation.grip?.radius, `${id}/${presentation.id} declares a radius`).toBeGreaterThan(0);
         expect(presentation.grip?.axis, `${id}/${presentation.id} declares an axis`).toBeDefined();
         expect(presentation.hand, `${id}/${presentation.id} names a hold`).not.toBe("none");
+        // A held thing says HOW it is held: how thick it is where a hand
+        // closes on it, or — when no hand closes on it at all — which of
+        // the body's baked hand states presents it.
+        const named = presentation.grip?.closure && presentation.grip.closure !== "wrap";
+        if (named) {
+          expect(
+            presentation.grip?.radius,
+            `${id}/${presentation.id} is presented by a hand state, not a thickness`,
+          ).toBeUndefined();
+        } else {
+          expect(
+            presentation.grip?.radius,
+            `${id}/${presentation.id} declares a radius`,
+          ).toBeGreaterThan(0);
+        }
       }
     }
   });
 
-  it("does not ask a hand to close on a discus", () => {
-    // A fist round the rim of a blade is the one grip that cannot be
-    // made honest, so the chakra is poised rather than gripped and its
-    // declared radius is a finger's, not the disc's.
+  it("does not ask a hand to close on a discus, or pretend one is thin", () => {
+    // A fist round the rim of a blade is the one grip that cannot be made
+    // honest. The chakra used to claim a six-millimetre radius so the
+    // closure would shut on "a finger", which produced a fist closed on
+    // nothing beside a floating wheel: the lie was about the OBJECT, and
+    // it showed. It names the hand state instead.
     const chakra = getAsset("vishnu.attribute.chakra")!;
     for (const presentation of chakra.presentations ?? []) {
       expect(presentation.hand).not.toBe("grip");
-      expect(presentation.grip?.radius).toBeLessThan(0.01);
+      expect(presentation.grip?.closure).toBe("poise");
+      expect(presentation.grip?.radius).toBeUndefined();
     }
   });
 
@@ -177,7 +194,19 @@ describe("the body that has four arms", () => {
     const human = getAsset("humanoid.body.human")!;
     expect(body!.bodyProfile).toEqual(human.bodyProfile);
     expect(body!.gripShapes).toEqual(human.gripShapes);
-    expect(body!.morphTargets).toEqual(human.morphTargets);
+    // Every SHAPE morph is shared — it is that body. The hand closures
+    // are not: this one has four hands, and each needs its own, or the
+    // back pair holds its attributes in an open rest palm whatever it is
+    // given. One target used to close both left hands.
+    const shapes = (asset: { morphTargets?: readonly string[] }) =>
+      (asset.morphTargets ?? []).filter((name) => !/(Front|Back)(Left|Right)$/.test(name));
+    expect(shapes(body!)).toEqual(shapes(human));
+    for (const slot of ["frontLeft", "frontRight", "backLeft", "backRight"]) {
+      const suffix = slot[0]!.toUpperCase() + slot.slice(1);
+      for (const shape of ["grip", "cradle", "poise"]) {
+        expect(body!.morphTargets, `${shape}${suffix}`).toContain(`${shape}${suffix}`);
+      }
+    }
     // And it is bigger, because it has two more arms in it.
     expect(body!.geometry!.triangles ?? 0).toBeGreaterThan(human.geometry!.triangles ?? 0);
   });

@@ -31,22 +31,37 @@ interface StageState {
 }
 
 /**
- * Whether the sequence has already been shown in this tab.
+ * Whether the entry is offered on this visit.
  *
  * Once per session, not once per visit to the Studio: a customer who
  * switches deity twice while deciding does not want the temple doors
- * three times. Also skipped for anyone who has asked their system for
- * reduced motion, which is the whole point of that setting.
+ * three times.
+ *
+ * Reduced motion no longer excludes anyone. It did when the entry PLAYED
+ * — six seconds of camera movement nobody asked for is exactly what that
+ * setting is about — but nothing moves here unless the customer moves it,
+ * and excusing them from the entry would mean excusing them from the
+ * product's front door. What the preference changes is the journey's
+ * length and its weight; see `prefersReducedMotion`.
  */
-export function shouldPlayIntro(): boolean {
+export function shouldShowEntry(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    if (window.sessionStorage.getItem(INTRO_SEEN) === "1") return false;
+    return window.sessionStorage.getItem(INTRO_SEEN) !== "1";
   } catch {
-    // Private mode and similar: the sequence is not worth an exception.
+    // Private mode and similar: the entry is not worth an exception.
     return false;
   }
-  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Has this customer asked their system for less movement? */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
 }
 
 const INTRO_SEEN = "devaform.stage.introSeen";
