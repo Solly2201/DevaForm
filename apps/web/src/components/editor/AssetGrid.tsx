@@ -5,8 +5,26 @@
  * hardcoded asset knowledge. Used for both part slots and sockets.
  */
 import { useEffect, useState } from "react";
-import type { AssetDefinition } from "@devaform/asset-system";
+import type { AssetDefinition, AssetStage } from "@devaform/asset-system";
 import { getAssetThumbnail } from "@/engine/thumbnails";
+
+/**
+ * What a customer should be told about an asset's lifecycle — which is
+ * almost nothing.
+ *
+ * The card used to print the stage verbatim: "prototype", "integration",
+ * "experimental". Those are the pipeline's words for how far a piece has
+ * got through OUR process, and putting them in a picker tells a customer
+ * something about us instead of something about the statue. What they
+ * actually need to know is whether a piece is finished work or something
+ * still being made ready.
+ */
+const STAGE_BADGE: Partial<Record<AssetStage, string>> = {
+  prototype: "In preparation",
+  experimental: "In preparation",
+  integration: "In preparation",
+  review: "New",
+};
 
 interface AssetGridProps {
   assets: readonly AssetDefinition[];
@@ -40,10 +58,12 @@ function AssetCard({
   onSelect: () => void;
 }) {
   const thumbnail = useAssetThumbnail(asset.id);
+  const badge = STAGE_BADGE[asset.stage];
   return (
     <button
       type="button"
       onClick={onSelect}
+      aria-pressed={selected}
       title={asset.description ?? asset.name}
       className={`group flex flex-col items-stretch overflow-hidden rounded-lg border text-left transition-colors ${
         selected
@@ -62,7 +82,7 @@ function AssetCard({
       <span className="px-2 py-1.5">
         <span className="block truncate text-xs font-medium text-stone-200">{asset.name}</span>
         <span className="block text-[10px] uppercase tracking-wide text-stone-500">
-          {asset.stage}
+          {badge ?? " "}
         </span>
       </span>
     </button>
@@ -70,12 +90,21 @@ function AssetCard({
 }
 
 export function AssetGrid({ assets, selectedAssetId, allowNone = false, onSelect }: AssetGridProps) {
+  // An empty grid is a customer wondering whether the panel is broken.
+  if (assets.length === 0 && !allowNone) {
+    return (
+      <p className="rounded-lg border border-dashed border-surface-700 px-3 py-6 text-center text-xs text-stone-500">
+        Nothing to choose here yet.
+      </p>
+    );
+  }
   return (
     <div className="grid grid-cols-2 gap-2">
       {allowNone && (
         <button
           type="button"
           onClick={() => onSelect(null)}
+          aria-pressed={selectedAssetId === null}
           className={`flex h-full min-h-[5.5rem] flex-col items-center justify-center rounded-lg border text-xs transition-colors ${
             selectedAssetId === null
               ? "border-saffron-500 bg-surface-700 text-stone-200"

@@ -10,7 +10,7 @@
  * preview of the eventual commerce flow — checkout requires payment
  * integration and is labeled as such.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MANUFACTURING_MATERIALS,
   STATUE_SIZES,
@@ -41,6 +41,49 @@ export function ExportDialog() {
 
   const [sizeId, setSizeId] = useState<StatueSizeId>("s23");
   const [materialId, setMaterialId] = useState<ManufacturingMaterialId>("resin");
+
+  /**
+   * A modal a customer can leave the way they leave every other one.
+   *
+   * It closed on a click outside and on its own ✕, and on nothing else:
+   * Escape did nothing, focus stayed behind it on whatever had been
+   * clicked, and tabbing walked out of the dialog into the Studio it was
+   * covering.
+   */
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const returnTo = useRef<Element | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    returnTo.current = document.activeElement;
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+        "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (returnTo.current instanceof HTMLElement) returnTo.current.focus();
+    };
+  }, [open, setOpen]);
 
   const size =
     STATUE_SIZES.find((s) => s.id === sizeId) ?? (STATUE_SIZES[0] as (typeof STATUE_SIZES)[number]);
@@ -86,15 +129,17 @@ export function ExportDialog() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="max-h-[85vh] w-[34rem] overflow-y-auto rounded-xl border border-surface-700 bg-surface-900 shadow-2xl"
+        ref={panelRef}
+        className="max-h-[85vh] w-[34rem] max-w-full overflow-y-auto rounded-xl border border-surface-700 bg-surface-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-surface-800 px-5 py-3">
           <h2 className="font-display text-lg text-stone-100">Export &amp; Order Preview</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={() => setOpen(false)}
-            className="text-stone-500 hover:text-stone-200"
+            className="rounded-md px-1.5 py-0.5 text-stone-500 transition-colors hover:text-stone-200"
             aria-label="Close"
           >
             ✕
@@ -171,10 +216,9 @@ export function ExportDialog() {
 
           <section className="rounded-lg border border-surface-800 bg-surface-850 p-3">
             <p className="text-xs text-stone-400">
-              Ordering the physical statue ({size.label}, {material.label}) will be available
-              once manufacturing and payment integration are configured. Your saved
-              configuration and its exact asset versions already contain everything needed to
-              reproduce this piece.
+              Ordering this piece as a physical statue ({size.label}, {material.label}) is not
+              open yet. Your saved creation already records everything needed to cast it
+              exactly as you see it here, so nothing is lost by waiting.
             </p>
           </section>
         </div>

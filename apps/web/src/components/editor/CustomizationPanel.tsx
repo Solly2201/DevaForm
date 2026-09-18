@@ -254,10 +254,13 @@ function AttachmentAdjust({ socket }: { socket: SocketId }) {
             step={0.01}
             onChange={(s) => update({ scale: s })}
           />
+          {/* Disabled when there is nothing to reset: a control that
+              silently does nothing is worse than one that says so. */}
           <button
             type="button"
+            disabled={attachment.offset === undefined}
             onClick={() => setAttachmentOffset(socket, undefined)}
-            className="w-full rounded-md border border-surface-700 py-1 text-[11px] text-stone-400 hover:border-stone-500"
+            className="w-full rounded-md border border-surface-700 py-1 text-[11px] text-stone-400 transition-colors hover:border-stone-500 disabled:cursor-not-allowed disabled:border-surface-800 disabled:text-stone-600 disabled:hover:border-surface-800"
           >
             Reset placement
           </button>
@@ -538,7 +541,7 @@ function CategoryPanelBody({ category }: { category: EditorCategory }) {
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 onClick={() => setActiveSubcategory(section.id)}
-                className={`block w-full border-l-2 px-3 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-saffron-400 ${
+                className={`block w-full border-l-2 px-3 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-saffron-400 [@media(max-height:820px)]:py-1.5 ${
                   selected
                     ? "border-saffron-500 bg-surface-850 font-medium text-stone-100"
                     : "border-transparent text-stone-400 hover:bg-surface-850 hover:text-stone-200"

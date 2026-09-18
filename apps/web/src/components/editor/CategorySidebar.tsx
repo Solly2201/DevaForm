@@ -22,13 +22,24 @@ export function CategorySidebar() {
             type="button"
             onClick={() => setActiveCategory(category.id)}
             title={category.description}
-            className={`flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-[11px] font-medium transition-colors ${
+            // Colour alone is not a state. Anyone using a screen reader,
+            // or a customer who cannot separate saffron from stone, was
+            // told which category they were in by nothing at all.
+            aria-current={active ? "true" : undefined}
+            // Compact on a short window. Twelve categories at full
+            // spacing need seven hundred pixels of rail; a 620-tall
+            // window has five hundred and sixty, so the last two sat
+            // below the fold behind a scrollbar nobody was looking for.
+            className={`flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 text-[11px] font-medium transition-colors [@media(max-height:820px)]:gap-0.5 [@media(max-height:820px)]:py-1.5 [@media(max-height:700px)]:text-[10px] ${
               active
                 ? "bg-surface-700 text-saffron-400"
                 : "text-stone-500 hover:bg-surface-850 hover:text-stone-300"
             }`}
           >
-            <CategoryIcon icon={category.icon} />
+            <CategoryIcon
+              icon={category.icon}
+              className="h-5 w-5 [@media(max-height:820px)]:h-4 [@media(max-height:820px)]:w-4"
+            />
             {category.label}
           </button>
         );

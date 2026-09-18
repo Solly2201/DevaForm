@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { captureViewport } from "@/engine/capture";
@@ -8,6 +9,7 @@ import { createCharacter, createShare, saveCharacter } from "@/lib/characterApi"
 import { useDeity } from "@/state/deityContext";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
+import { ConfirmDialog, type Confirmation } from "./ConfirmDialog";
 
 const AUTOSAVE_DELAY_MS = 15_000;
 
@@ -38,6 +40,7 @@ function IconButton({
 
 export function TopBar() {
   const deity = useDeity();
+  const router = useRouter();
   const characterName = useEditorStore((s) => s.characterName);
   const setCharacterName = useEditorStore((s) => s.setCharacterName);
   const characterId = useEditorStore((s) => s.characterId);
@@ -51,12 +54,11 @@ export function TopBar() {
 
   const setExportDialogOpen = useUiStore((s) => s.setExportDialogOpen);
   const showStatus = useUiStore((s) => s.showStatus);
-  const statusMessage = useUiStore((s) => s.statusMessage);
-  const clearStatus = useUiStore((s) => s.clearStatus);
 
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
 
   const handleSave = useCallback(
     async (options?: { silent?: boolean }): Promise<string | null> => {
@@ -107,9 +109,12 @@ export function TopBar() {
       const url = `${window.location.origin}/share/${share.id}`;
       try {
         await navigator.clipboard.writeText(url);
-        showStatus("Share link copied to clipboard");
+        showStatus("Share link copied to your clipboard", "info", url);
       } catch {
-        showStatus(`Share link: ${url}`);
+        // No clipboard permission, or an insecure origin. The link is
+        // then the only thing that matters, so it is handed over rather
+        // than read out and truncated.
+        showStatus("Your share link is ready", "info", url);
       }
     } catch (error) {
       showStatus(error instanceof Error ? error.message : "Sharing failed", "error");
@@ -118,17 +123,62 @@ export function TopBar() {
     }
   }, [handleSave, sharing, showStatus]);
 
-  const handleNew = useCallback(() => {
-    if (useEditorStore.getState().dirty) {
-      const proceed = window.confirm(
-        "You have unsaved changes. Start a new creation anyway?",
-      );
-      if (!proceed) return;
-    }
+  const startNew = useCallback(() => {
     newCharacter(deity.createDefaultConfiguration());
     temporal.getState().clear();
-    showStatus("New creation started");
+    showStatus(`New ${deity.name} started`);
   }, [deity, newCharacter, showStatus, temporal]);
+
+  /**
+   * Leaving with work that has not been saved.
+   *
+   * The Studio holds ONE creation, so choosing another deity or opening
+   * the library replaces it — and it used to do that without a word, on
+   * a plain link. Unsaved work disappearing because a customer clicked
+   * the name of the god they were making is the kind of thing that is
+   * only ever discovered by losing something.
+   */
+  const leaveTo = useCallback(
+    (href: string, what: string) => {
+      if (!useEditorStore.getState().dirty) {
+        router.push(href);
+        return;
+      }
+      setConfirmation({
+        title: `Leave for ${what}?`,
+        body: "This creation has changes that have not been saved. They will not be here when you come back.",
+        confirmLabel: "Leave",
+        destructive: true,
+        onConfirm: () => router.push(href),
+      });
+    },
+    [router],
+  );
+
+  // And for a reload or a closed tab, which no in-app dialog can catch.
+  useEffect(() => {
+    if (!dirty) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty]);
+
+  const handleNew = useCallback(() => {
+    if (!useEditorStore.getState().dirty) {
+      startNew();
+      return;
+    }
+    setConfirmation({
+      title: "Start a new creation?",
+      body: "This one has changes that have not been saved. Starting fresh will leave them behind.",
+      confirmLabel: "Start new",
+      destructive: true,
+      onConfirm: startNew,
+    });
+  }, [startNew]);
 
   // Keyboard shortcuts: Ctrl+Z / Ctrl+Y / Ctrl+S
   useEffect(() => {
@@ -151,12 +201,6 @@ export function TopBar() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleSave, temporal]);
-
-  useEffect(() => {
-    if (!statusMessage) return;
-    const timer = setTimeout(clearStatus, 3500);
-    return () => clearTimeout(timer);
-  }, [statusMessage, clearStatus]);
 
   const saveState = saving
     ? "Saving…"
@@ -181,13 +225,14 @@ export function TopBar() {
 
       <div className="mx-2 h-6 w-px bg-surface-700" />
 
-      <Link
-        href="/deities"
+      <button
+        type="button"
+        onClick={() => leaveTo("/deities", "another deity")}
         className="rounded-full border border-surface-700 px-2.5 py-0.5 text-[11px] font-medium text-stone-400 transition-colors hover:border-saffron-600 hover:text-saffron-400"
         title="Change deity"
       >
         {deity.name}
-      </Link>
+      </button>
 
       <input
         value={characterName}
@@ -205,16 +250,6 @@ export function TopBar() {
       </span>
 
       <div className="flex-1" />
-
-      {statusMessage && (
-        <span
-          className={`hidden max-w-72 truncate text-xs md:inline ${
-            statusMessage.kind === "error" ? "text-red-400" : "text-stone-400"
-          }`}
-        >
-          {statusMessage.text}
-        </span>
-      )}
 
       <IconButton label="Undo (Ctrl+Z)" onClick={() => temporal.getState().undo()} disabled={!canUndo}>
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -238,12 +273,13 @@ export function TopBar() {
       >
         New
       </button>
-      <Link
-        href="/library"
-        className="rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-stone-300 hover:border-stone-500"
+      <button
+        type="button"
+        onClick={() => leaveTo("/library", "your library")}
+        className="rounded-lg border border-surface-700 px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-stone-500"
       >
         Library
-      </Link>
+      </button>
       <button
         type="button"
         onClick={() => setExportDialogOpen(true)}
@@ -267,6 +303,7 @@ export function TopBar() {
       >
         {saving ? "Saving…" : "Save"}
       </button>
+      <ConfirmDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} />
     </header>
   );
 }

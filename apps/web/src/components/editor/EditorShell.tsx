@@ -23,6 +23,7 @@ import { useDeity } from "@/state/deityContext";
 import { CategorySidebar } from "./CategorySidebar";
 import { CustomizationPanel } from "./CustomizationPanel";
 import { ExportDialog } from "./ExportDialog";
+import { StatusToast } from "./StatusToast";
 import { TopBar } from "./TopBar";
 import { ViewportOverlay } from "./ViewportOverlay";
 
@@ -135,6 +136,9 @@ export function EditorShell() {
         </div>
       </div>
       <ExportDialog />
+      {/* Over the stage, not inside the top bar: feedback belongs where
+          the customer is looking, and at a size that fits what it says. */}
+      {!chromeHidden && <StatusToast />}
       {stage.intro && introAllowed === true && phase !== "ready" && (
         <PresentationEntry stage={stage} />
       )}

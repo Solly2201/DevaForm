@@ -17,7 +17,11 @@ interface UiState {
   /** Incremented with each camera command so the viewport can react. */
   cameraCommand: { view: CameraView; nonce: number };
   exportDialogOpen: boolean;
-  statusMessage: { text: string; kind: "info" | "error" } | null;
+  /**
+   * What just happened. `link` is for a message the customer has to be
+   * able to KEEP — a share URL — which a toast that fades cannot deliver.
+   */
+  statusMessage: { text: string; kind: "info" | "error"; link?: string } | null;
 
   setActiveCategory: (id: string) => void;
   setActiveSubcategory: (id: string | null) => void;
@@ -25,7 +29,7 @@ interface UiState {
   setSelectedJoint: (id: JointId) => void;
   requestCameraView: (view: CameraView) => void;
   setExportDialogOpen: (open: boolean) => void;
-  showStatus: (text: string, kind?: "info" | "error") => void;
+  showStatus: (text: string, kind?: "info" | "error", link?: string) => void;
   clearStatus: () => void;
 }
 
@@ -45,6 +49,15 @@ export const useUiStore = create<UiState>()((set) => ({
   requestCameraView: (view) =>
     set((state) => ({ cameraCommand: { view, nonce: state.cameraCommand.nonce + 1 } })),
   setExportDialogOpen: (open) => set({ exportDialogOpen: open }),
-  showStatus: (text, kind = "info") => set({ statusMessage: { text, kind } }),
+  showStatus: (text, kind = "info", link) => set({ statusMessage: { text, kind, link } }),
   clearStatus: () => set({ statusMessage: null }),
 }));
+
+// Dev-only handle for QA automation, beside the editor store's. The
+// interaction audit has to ask whether a control CHANGED anything, and
+// half the Studio's controls change ephemeral UI state rather than the
+// character — a camera preset that silently did nothing would otherwise
+// be indistinguishable from one that worked.
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (window as unknown as { __devaformUi?: typeof useUiStore }).__devaformUi = useUiStore;
+}

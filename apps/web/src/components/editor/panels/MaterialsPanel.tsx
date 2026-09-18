@@ -102,18 +102,34 @@ export function MaterialsPanel() {
           Palettes
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {MATERIAL_PALETTES.map((palette) => (
-            <button
-              key={palette.id}
-              type="button"
-              title={palette.description}
-              onClick={() => applyPalette(palette.id)}
-              className="flex flex-col items-start gap-1.5 rounded-lg border border-surface-700 px-2.5 py-2 text-left transition-colors hover:border-saffron-600"
-            >
-              <PaletteSwatch id={palette.id} />
-              <span className="text-xs font-medium text-stone-300">{palette.label}</span>
-            </button>
-          ))}
+          {MATERIAL_PALETTES.map((palette) => {
+            // WHICH palette the statue is wearing. Eight identical tiles
+            // said nothing, so the only way to find out was to apply one
+            // and see whether anything changed — and on the palette you
+            // were already using, nothing did.
+            const current = Object.entries(palette.materials).every(
+              ([zone, value]) =>
+                materials[zone as keyof typeof materials]?.color === value.color &&
+                materials[zone as keyof typeof materials]?.finish === value.finish,
+            );
+            return (
+              <button
+                key={palette.id}
+                type="button"
+                title={palette.description}
+                aria-pressed={current}
+                onClick={() => applyPalette(palette.id)}
+                className={`flex flex-col items-start gap-1.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                  current
+                    ? "border-saffron-500 bg-surface-700"
+                    : "border-surface-700 hover:border-saffron-600"
+                }`}
+              >
+                <PaletteSwatch id={palette.id} />
+                <span className="text-xs font-medium text-stone-300">{palette.label}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
       <h3 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
