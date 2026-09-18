@@ -7,8 +7,8 @@ describe("deity registry", () => {
     expect(new Set(DEITIES.map((d) => d.id)).size).toBe(DEITIES.length);
   });
 
-  it("currently offers exactly ganesha and shiva as available", () => {
-    expect(AVAILABLE_DEITIES.map((d) => d.id)).toEqual(["ganesha", "shiva"]);
+  it("currently offers exactly ganesha, shiva and vishnu as available", () => {
+    expect(AVAILABLE_DEITIES.map((d) => d.id)).toEqual(["ganesha", "shiva", "vishnu"]);
   });
 
   it("declares the upcoming roadmap deities", () => {

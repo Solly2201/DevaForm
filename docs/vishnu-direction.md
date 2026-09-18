@@ -2,14 +2,18 @@
 
 Reference: `references/ref_vishnu.png`.
 
-Vishnu is **registered and not offered**. Everything below exists in code
-today — a four-armed body, assets, presentations, poses, editor panel, a
-default configuration — and is validated by the same build gates as
-Ganesha's and Shiva's. The Studio renders him correctly the moment
-`available` is true.
+Vishnu is **offered**. Everything below exists in code today — a
+four-armed body, assets, presentations, poses, editor panel, a default
+configuration — and is validated by the same build gates as Ganesha's and
+Shiva's. `available` is true, and the Studio renders him through exactly
+the pipeline the other two use.
 
-It is not true yet, and the reason is sculpting rather than structure.
-See *What is deliberately missing*.
+The sculpt pass that flipped the flag added what "not offered" was
+waiting on: the kirita mukuta with its full drum and finial, the urdhva
+pundra tilaka on the measured forehead, flowing hair under the crown, the
+grounded head-down gada, the standing chakra, and a palette taken from
+the reference rather than from defaults. What remains is refinement, not
+absence — see *What is deliberately missing*.
 
 This document is the decision record for the next person who picks him up.
 

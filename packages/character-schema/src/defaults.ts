@@ -155,8 +155,10 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
  * which is what the iconography asks for and what the engine already does.
  */
 export const VISHNU_DEFAULT_MORPHS: Readonly<Record<string, number>> = {
-  bodyAthletic: 0.55,
-  bodyPowerful: 0.2,
+  // Graceful, not a strongman: the reference's torso is athletic and
+  // composed, nothing like Shiva's mahayogi build.
+  bodyAthletic: 0.5,
+  bodyHeroic: 0.25,
   faceDivine: 1,
 };
 
@@ -171,7 +173,7 @@ export function createDefaultVishnuConfiguration(): CharacterConfiguration {
       body: { assetId: "humanoid.body.human4", version: 1 },
       head: null,
       eyes: null,
-      hair: null,
+      hair: { assetId: "vishnu.hair.flowing", version: 1 },
       hands: null,
       lowerGarment: { assetId: "vishnu.garment.dhoti", version: 1 },
       upperGarment: null,
@@ -182,6 +184,7 @@ export function createDefaultVishnuConfiguration(): CharacterConfiguration {
     },
     attachments: [
       { socket: "head.crown", asset: { assetId: "vishnu.crown.kirita", version: 1 } },
+      { socket: "head.forehead", asset: { assetId: "vishnu.forehead.tilaka", version: 1 } },
       { socket: "chest.mala", asset: { assetId: "vishnu.garland.vaijayanti", version: 1 } },
       // Front pair low: the mace steadied on the ground, the lotus held
       // out. Back pair raised: the discus and the conch.
@@ -193,15 +196,19 @@ export function createDefaultVishnuConfiguration(): CharacterConfiguration {
     pose: { preset: "vishnu.regal", jointOverrides: {} },
     morphs: { ...VISHNU_DEFAULT_MORPHS },
     proportions: { height: 1, bulk: 1 },
+    // The reference's own palette panel: divine blue that is MUTED — a
+    // slate with the light in it, not a saturated plastic — sacred gold,
+    // yellow garment, red accents, green gemstones, near-black hair, and
+    // a cream lotus pedestal.
     materials: {
-      skin: { color: "#6f8fd0", finish: "satin" },
-      skinSecondary: { color: "#5d7cbb", finish: "satin" },
-      hair: { color: "#3b2a1e", finish: "matte" },
-      garment: { color: "#e8b53c", finish: "satin" },
-      garmentAccent: { color: "#b3352f", finish: "satin" },
-      metal: { color: "#d8a637", finish: "metallic" },
-      gem: { color: "#1f6b46", finish: "polished" },
-      base: { color: "#c9bda6", finish: "matte" },
+      skin: { color: "#7b8db8", finish: "satin" },
+      skinSecondary: { color: "#66779e", finish: "satin" },
+      hair: { color: "#241a12", finish: "matte" },
+      garment: { color: "#e3a41f", finish: "satin" },
+      garmentAccent: { color: "#b23327", finish: "satin" },
+      metal: { color: "#d9a63b", finish: "metallic" },
+      gem: { color: "#20643f", finish: "polished" },
+      base: { color: "#ded1b6", finish: "matte" },
     },
     base: { style: "lotus" },
     hands: {

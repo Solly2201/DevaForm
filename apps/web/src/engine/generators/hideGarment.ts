@@ -1364,7 +1364,12 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     // figure, above the knee when the pose has a leg out.
     const reach = ctx.garment === "short" ? 0 : dhotiReach;
     wrap.add(dhotiColumn(ctx, cloth, reach));
-    wrap.add(dhotiCascade(ctx, cloth, sashMaterial, reach));
+    // Whether the centre pleats wear the ACCENT or the cloth itself.
+    // Shiva's ochre pleats over cream are the reference look for him;
+    // on Vishnu's yellow the accent pleats read as red stains, and the
+    // reference's pleats there are the garment's own fabric.
+    const pleatMaterial = num(ctx, "accent", 1) > 0 ? sashMaterial : cloth;
+    wrap.add(dhotiCascade(ctx, cloth, pleatMaterial, reach));
     if (drape > 0 && !ctx.seated) wrap.add(sashFall(body, sashMaterial, reach, 1));
   }
 

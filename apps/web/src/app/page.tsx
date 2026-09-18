@@ -37,8 +37,9 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="mt-6 text-xs text-stone-600">
-            Available now: <span className="text-stone-400">Ganesha</span> and{" "}
-            <span className="text-stone-400">Shiva</span> — five more divine forms in
+            Available now: <span className="text-stone-400">Ganesha</span>,{" "}
+            <span className="text-stone-400">Shiva</span> and{" "}
+            <span className="text-stone-400">Vishnu</span> — five more divine forms in
             preparation.
           </p>
         </div>

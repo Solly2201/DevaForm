@@ -561,22 +561,31 @@ export const VISHNU_POSE_PRESETS: readonly PosePreset[] = [
     label: "Regal",
     description: "Upright and symmetrical, all four attributes presented.",
     joints: {
-      // Front pair: low and open, the mace hand at the hip.
-      "arm.frontRight.upper": [4 * D, 0, -6 * D],
-      "arm.frontRight.forearm": [-22 * D, -14 * D, 0],
-      "arm.frontRight.hand": [-8 * D, 0, 0],
+      // Front pair: low and open, the mace hand at the hip. The right
+      // arm hangs nearly straight so the wrist can bring the shaft fully
+      // vertical — bent further, the upright solve ran out of joint.
+      "arm.frontRight.upper": [6 * D, 0, -9 * D],
+      "arm.frontRight.forearm": [-16 * D, -8 * D, 0],
+      "arm.frontRight.hand": [-6 * D, 0, 0],
       "arm.frontLeft.upper": [4 * D, 0, 6 * D],
       "arm.frontLeft.forearm": [-26 * D, 14 * D, 0],
       "arm.frontLeft.hand": [-8 * D, 0, 0],
-      // Back pair: raised beside the head.
-      "arm.backRight.upper": [-34 * D, 12 * D, -58 * D],
-      "arm.backRight.forearm": [-74 * D, 0, 0],
-      "arm.backRight.hand": [-12 * D, 0, 0],
-      "arm.backLeft.upper": [-34 * D, -12 * D, 58 * D],
-      "arm.backLeft.forearm": [-74 * D, 0, 0],
-      "arm.backLeft.hand": [-12 * D, 0, 0],
-      "leg.left.thigh": [0, 4 * D, 2 * D],
-      "leg.right.thigh": [0, -4 * D, -2 * D],
+      // Back pair: raised BESIDE the head, hands at ear height and out
+      // to the sides — the reference's silhouette. Elbows carried wide;
+      // a first version bent them forward and the conch and discus ended
+      // up floating in front of the chest.
+      "arm.backRight.upper": [-14 * D, 10 * D, -74 * D],
+      "arm.backRight.forearm": [-96 * D, -18 * D, 0],
+      "arm.backRight.hand": [-10 * D, 0, 8 * D],
+      "arm.backLeft.upper": [-14 * D, -10 * D, 74 * D],
+      "arm.backLeft.forearm": [-96 * D, 18 * D, 0],
+      "arm.backLeft.hand": [-10 * D, 0, -8 * D],
+      // Feet together, as the reference stands. Thigh z-rotation splays
+      // the shins sideways out of a dhoti cut to the resting legs — two
+      // degrees is nineteen millimetres at the calf — so the stance
+      // turns the feet with y alone.
+      "leg.left.thigh": [0, 5 * D, 0],
+      "leg.right.thigh": [0, -5 * D, 0],
     },
   },
   {
@@ -589,14 +598,14 @@ export const VISHNU_POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontLeft.upper": [4 * D, 0, 8 * D],
       "arm.frontLeft.forearm": [-30 * D, 16 * D, 0],
       "arm.frontLeft.hand": [-8 * D, 0, 0],
-      "arm.backRight.upper": [-36 * D, 12 * D, -56 * D],
-      "arm.backRight.forearm": [-72 * D, 0, 0],
-      "arm.backRight.hand": [-12 * D, 0, 0],
-      "arm.backLeft.upper": [-36 * D, -12 * D, 56 * D],
-      "arm.backLeft.forearm": [-72 * D, 0, 0],
-      "arm.backLeft.hand": [-12 * D, 0, 0],
-      "leg.left.thigh": [0, 4 * D, 2 * D],
-      "leg.right.thigh": [0, -4 * D, -2 * D],
+      "arm.backRight.upper": [-14 * D, 10 * D, -72 * D],
+      "arm.backRight.forearm": [-94 * D, -18 * D, 0],
+      "arm.backRight.hand": [-10 * D, 0, 8 * D],
+      "arm.backLeft.upper": [-14 * D, -10 * D, 72 * D],
+      "arm.backLeft.forearm": [-94 * D, 18 * D, 0],
+      "arm.backLeft.hand": [-10 * D, 0, -8 * D],
+      "leg.left.thigh": [0, 5 * D, 0],
+      "leg.right.thigh": [0, -5 * D, 0],
       head: [3 * D, 0, 0],
     },
   },
@@ -614,14 +623,14 @@ export const VISHNU_POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontLeft.upper": [2 * D, 0, 10 * D],
       "arm.frontLeft.forearm": [-34 * D, 18 * D, 0],
       "arm.frontLeft.hand": [-10 * D, 0, 0],
-      "arm.backRight.upper": [-30 * D, 14 * D, -54 * D],
-      "arm.backRight.forearm": [-70 * D, 0, 0],
-      "arm.backRight.hand": [-10 * D, 0, 0],
-      "arm.backLeft.upper": [-38 * D, -10 * D, 60 * D],
-      "arm.backLeft.forearm": [-76 * D, 0, 0],
-      "arm.backLeft.hand": [-14 * D, 0, 0],
-      "leg.left.thigh": [0, 6 * D, 5 * D],
-      "leg.right.thigh": [-4 * D, -3 * D, -2 * D],
+      "arm.backRight.upper": [-12 * D, 12 * D, -70 * D],
+      "arm.backRight.forearm": [-92 * D, -16 * D, 0],
+      "arm.backRight.hand": [-8 * D, 0, 8 * D],
+      "arm.backLeft.upper": [-16 * D, -10 * D, 76 * D],
+      "arm.backLeft.forearm": [-98 * D, 20 * D, 0],
+      "arm.backLeft.hand": [-12 * D, 0, -8 * D],
+      "leg.left.thigh": [0, 6 * D, 1 * D],
+      "leg.right.thigh": [-4 * D, -3 * D, 0],
       "leg.right.shin": [10 * D, 0, 0],
       head: [0, -4 * D, -2 * D],
     },

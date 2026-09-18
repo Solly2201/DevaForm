@@ -9,11 +9,13 @@ import { athleticBody } from "./bodyAthletic";
 import { ganeshaEars, classicEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
 import { humanoidHideWrap } from "./hideGarment";
 import {
+  featureHairFlowing,
   itemChakra,
   itemGada,
   itemPadma,
   itemShankha,
   ornamentKirita,
+  ornamentTilaka,
   ornamentVaijayanti,
 } from "./vishnu";
 import { humanoidDhoti, humanoidShawl } from "./clothing";
@@ -64,6 +66,7 @@ export const PART_GENERATORS: Record<string, PartGenerator> = {
   "humanoid.hands": humanoidHands,
   "humanoid.dhoti": humanoidDhoti,
   "humanoid.hideWrap": humanoidHideWrap,
+  "vishnu.hair": featureHairFlowing,
   "humanoid.shawl": humanoidShawl,
   "humanoid.eyes": classicEyes,
   // Ganesha anatomy
@@ -109,6 +112,7 @@ export const ATTACHMENT_GENERATORS: Record<string, AttachmentGenerator> = {
   "vishnu.padma": itemPadma,
   "vishnu.crown": ornamentKirita,
   "vishnu.garland": ornamentVaijayanti,
+  "vishnu.tilaka": ornamentTilaka,
 
   "item.damaru": itemDamaru,
 };

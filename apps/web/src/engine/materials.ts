@@ -51,7 +51,9 @@ export type FixedMaterialKey =
   | "mouthDark"
   | "rudraksha"
   | "serpent"
-  | "nagamani";
+  | "nagamani"
+  | "lotusPetal"
+  | "stem";
 
 const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
   "eyeDark",
@@ -59,6 +61,8 @@ const FIXED_MATERIAL_KEYS: readonly FixedMaterialKey[] = [
   "iris",
   "ivory",
   "tilak",
+  "lotusPetal",
+  "stem",
   "mouthDark",
   "rudraksha",
   "serpent",
@@ -103,6 +107,11 @@ export class ZoneMaterials {
       rudraksha: fixed("rudraksha", { color: "#6b4423", roughness: 0.85 }),
       // The stone a naga carries on its brow. Deep and warm rather than
       // bright: it is an ornament the serpent wears, not a lamp.
+      // A lotus is PINK, and a lotus painted in whatever the customer
+      // chose for garment accents is a lotus that turns maroon when the
+      // dhoti border does. Petal and stem are what the flower is.
+      lotusPetal: fixed("lotusPetal", { color: "#e78aa4", roughness: 0.55, clearcoat: 0.2 }),
+      stem: fixed("stem", { color: "#48663c", roughness: 0.7 }),
       nagamani: fixed("nagamani", {
         color: "#7c2f3a",
         roughness: 0.14,

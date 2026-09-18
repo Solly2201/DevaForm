@@ -7,9 +7,9 @@
  * route selects; adding a deity is primarily a matter of authoring a new
  * definition plus its asset manifest.
  *
- * Ganesha and Shiva are available; the others are declared as roadmap
- * entries so the product can present them honestly as "coming soon"
- * without pretending they work.
+ * Ganesha, Shiva and Vishnu are available; the others are declared as
+ * roadmap entries so the product can present them honestly as "coming
+ * soon" without pretending they work.
  */
 import {
   GANESHA_SKELETON,
@@ -186,28 +186,26 @@ const shiva: AvailableDeity = {
  * the same run. See docs/vishnu-direction.md and
  * references/ref_vishnu.png.
  */
-const vishnu: UpcomingDeity = {
+const vishnu: AvailableDeity = {
   id: "vishnu",
   name: "Vishnu",
   epithet: "The Preserver",
   description:
     "The serene king of cosmic order — conch, discus, mace and lotus in four hands, crowned and garlanded.",
   accent: "#7dd3fc",
-  // NOT YET. The body is real and the Studio renders him correctly — four
-  // arms, four attributes, a crown, a garland, a dhoti, no holes and no
-  // floating. What is not ready is the SCULPTING: the crown is a cone,
-  // the conch a white vase, the discus a plate, the garland a string of
-  // beads. Flipping this flag is one line and the only thing standing in
-  // front of it is art, which is the honest place for it to stand.
-  available: false,
-  preparing: {
-    skeleton: HUMAN_FOUR_ARM_SKELETON,
-    assets: VISHNU_ASSETS,
-    categories: VISHNU_EDITOR_CATEGORIES,
-    posePresets: VISHNU_POSE_PRESETS,
-    armOptions: [4],
-    defaultConfiguration: createDefaultVishnuConfiguration,
-  },
+  // OFFERED, on a genuinely four-armed body. His gate was always the
+  // body, and the body exists: the measured human with a second pair of
+  // arms built from the first, one skinned mesh on the human4 skeleton.
+  // His attribute, crown and garland generators are still first-pass
+  // sculpts and their assets say so — every one is staged "prototype",
+  // which is the registry's word for it, not a footnote.
+  available: true,
+  assets: VISHNU_ASSETS,
+  categories: VISHNU_EDITOR_CATEGORIES,
+  skeleton: HUMAN_FOUR_ARM_SKELETON,
+  posePresets: VISHNU_POSE_PRESETS,
+  armOptions: [4],
+  createDefaultConfiguration: createDefaultVishnuConfiguration,
 };
 
 const upcoming = (

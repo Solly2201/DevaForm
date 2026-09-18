@@ -8,8 +8,9 @@
  * correctly and refuse what cannot work, then the foundation is reusable.
  * If it needed a line of Vishnu-specific engine code, it is not.
  *
- * Nothing here renders him. He is not offered and has no body of
- * production quality; see docs/vishnu-direction.md.
+ * Nothing here renders him — the Studio does that. His attribute and
+ * crown sculpts are first-pass and staged as such; what this file pins
+ * is the architecture they hang from. See docs/vishnu-direction.md.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -89,13 +90,12 @@ function vishnu(bodyId: string, preset: string): CharacterConfiguration {
 }
 
 describe("Vishnu is prepared, and prepared means described", () => {
-  it("is registered but not offered", () => {
+  it("is offered, on the four-armed body, and stays out of other pickers", () => {
     const deity = getDeity("vishnu");
     expect(deity, "the deity exists").toBeDefined();
-    expect(deity!.available, "and is not offered").toBe(false);
-    expect(getAvailableDeity("vishnu")).toBeUndefined();
-    // His assets are in the registry — so they are validated — and out of
-    // every other deity's pickers.
+    expect(deity!.available, "and is offered").toBe(true);
+    expect(getAvailableDeity("vishnu")).toBeDefined();
+    // His assets never leak into another deity's pickers.
     for (const other of ["ganesha", "shiva"] as const) {
       const offered = listAssets({ deity: other }).map((asset) => asset.id);
       expect(offered.filter((id) => id.startsWith("vishnu."))).toEqual([]);
@@ -198,14 +198,13 @@ describe("the body that has four arms", () => {
     }
   });
 
-  it("renders the whole iconography, which is why the flag is still off", () => {
-    // The default configuration is written and resolvable: four
-    // attributes in four hands, a crown, a garland, a dhoti. What is NOT
-    // ready is the sculpting, and `available` says so.
+  it("ships a default that resolves the whole iconography", () => {
+    // Four attributes in four hands, a crown, a garland, a dhoti — the
+    // configuration a customer opens the Studio to.
     const deity = getDeity("vishnu")!;
-    expect(deity.available).toBe(false);
-    const build = deity.available ? undefined : deity.preparing?.defaultConfiguration;
-    expect(build, "the configuration he will ship with exists").toBeDefined();
+    expect(deity.available).toBe(true);
+    const build = deity.available ? deity.createDefaultConfiguration : undefined;
+    expect(build, "the configuration he ships with exists").toBeDefined();
     const resolved = resolveCharacterPresentation(build!());
     expect(resolved.armSlots).toHaveLength(4);
     const held = resolved.attachments.filter((a) => a.handSlot);

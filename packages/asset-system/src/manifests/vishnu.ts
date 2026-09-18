@@ -34,7 +34,14 @@ const HAND_SOCKETS = [
 
 /** Where the hand closes on the mace's shaft, and how far it may slide. */
 export const GADA_SHAFT_RADIUS = 0.009;
-export const GADA_TRAVEL = 0.06;
+/**
+ * Asymmetric on purpose. The mace's head stands on the ground, so nearly
+ * all of the slide is DOWNWARD — the shaft drops through the fist until
+ * the head lands. Six centimetres each way left it hanging in the air:
+ * the hand is at the hip and the floor is eleven centimetres further.
+ */
+export const GADA_TRAVEL_UP = 0.05;
+export const GADA_TRAVEL_DOWN = 0.24;
 /** The lotus is held by its stem, which is the thinnest thing any hand here takes. */
 export const PADMA_STEM_RADIUS = 0.004;
 /** The conch is held ROUND, in the palm, not pinched. */
@@ -68,7 +75,7 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
         support: "ground",
         grip: {
           axis: [0, 1, 0],
-          travel: { up: GADA_TRAVEL, down: GADA_TRAVEL },
+          travel: { up: GADA_TRAVEL_UP, down: GADA_TRAVEL_DOWN },
           radius: GADA_SHAFT_RADIUS,
         },
       }),
@@ -176,6 +183,10 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
         id: "fingerPoised",
         label: "Poised on a raised finger",
         hand: "hold",
+        // A wheel has a face, and a murti shows it: vertical on the
+        // finger AND turned to look out the statue's front, not caught
+        // at whatever angle the wrist solve left it.
+        facing: "front",
         grip: { axis: [0, 1, 0], radius: 0.006 },
         notes: "The disc rests above the hand; the fingers do not close on it.",
       }),
@@ -215,6 +226,36 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     printability: proto,
   },
 
+
+  {
+    id: "vishnu.forehead.tilaka",
+    version: 1,
+    name: "Urdhva Pundra",
+    description: "The rising tilaka: two white strokes with the red srichurna between them.",
+    kind: { type: "attachment", sockets: ["head.forehead"] },
+    deityCompatibility: ["vishnu"],
+    stage: "prototype",
+    source: { kind: "procedural", generatorId: "vishnu.tilaka" },
+    presentations: [
+      wearable({ id: "worn", label: "Worn", socket: "head.forehead", clearanceM: 0.001 }),
+    ],
+    materialZones: [],
+    category: "ornaments",
+    printability: proto,
+  },
+  {
+    id: "vishnu.hair.flowing",
+    version: 1,
+    name: "Flowing Hair",
+    description: "Long dark hair falling behind the shoulders, under the crown.",
+    kind: { type: "part", slot: "hair" },
+    deityCompatibility: ["vishnu"],
+    stage: "prototype",
+    source: { kind: "procedural", generatorId: "vishnu.hair" },
+    materialZones: ["hair"],
+    category: "features",
+    printability: proto,
+  },
   // ------------------------------------------------------------------ clothing
   {
     id: "vishnu.garment.dhoti",
@@ -231,7 +272,9 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     source: {
       kind: "procedural",
       generatorId: "humanoid.hideWrap",
-      params: { length: 1, hide: 0, dhoti: 1, drape: 1 },
+      // No side sash-fall: on Vishnu's yellow it read as a red blotch
+      // stuck to the thigh. The centre cascade the reference shows stays.
+      params: { length: 1, hide: 0, dhoti: 1, drape: 0, accent: 0 },
     },
     materialZones: ["garment", "garmentAccent", "metal"],
     category: "clothing",
