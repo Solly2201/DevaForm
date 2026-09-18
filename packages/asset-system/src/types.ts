@@ -197,6 +197,21 @@ export interface MeasuredLegEnvelope {
   halfWidth: readonly number[];
   frontZ: readonly number[];
   backZ: readonly number[];
+  /**
+   * How each morph moves the rows — same rows, same order, added at the
+   * morph's current influence. Absent on older assets, which then answer
+   * from the neutral envelope exactly as before.
+   */
+  morphs?: Readonly<
+    Record<
+      string,
+      {
+        halfWidth: readonly number[];
+        frontZ: readonly number[];
+        backZ: readonly number[];
+      }
+    >
+  >;
 }
 
 /** A body asset's measured surfaces, plus how each morph target moves them. */

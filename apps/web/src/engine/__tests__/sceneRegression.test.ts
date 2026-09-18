@@ -212,7 +212,13 @@ const PINNED = {
   // own measured normal now, so the third eye and the ash lie on the
   // skin instead of half inside it, and neither carries its own guess at
   // the angle any more.
-  shiva: { nodes: 335, digest: "7134e963c65ea51d" },
+  //
+  // Re-pinned when the leg envelope learned its morphs: the wrap is now
+  // cut for the body the customer's build actually is (outward morph
+  // contributions only — see sampleLegEnvelope), so its vertices moved
+  // by millimetres. Verified in the Studio before pinning: the hide sits
+  // on the hips, nothing shows through, the tail falls as it did.
+  shiva: { nodes: 335, digest: "60496ec040d6385a" },
 } as const;
 
 describe("protected characters do not move", () => {

@@ -1851,7 +1851,7 @@ function torsoSurfaceMap(positions) {
  * way the torso already has one. Nothing here knows what will be worn
  * over it.
  */
-function legEnvelope(positions) {
+function legEnvelope(positions, forcedWaistY) {
   const pelvis = restFinal.get("pelvis");
   // From the WAIST down, not from the hip joint down.
   //
@@ -1864,12 +1864,20 @@ function legEnvelope(positions) {
   // skin reaches, less a band's thickness so the first row has vertices
   // in it. Taking the spine JOINT instead put the first two rows above
   // any pelvis vertex at all, and they fell back to a default.
-  let waistY = -Infinity;
-  for (let i = 0; i < vertexCount; i += 1) {
-    if (dominantGroup[i] !== "pelvis") continue;
-    waistY = Math.max(waistY, positions[i * 3 + 1]);
+  // A caller measuring a morph VARIANT pins the rows to the heights the
+  // neutral measurement used: a variant that lifts the waist would put
+  // every row somewhere slightly different, and a delta between rows at
+  // different heights is steepest-gradient noise, not a delta. Four
+  // cloth vertices sat inside the hips because of exactly that.
+  let waistY = forcedWaistY;
+  if (waistY === undefined) {
+    waistY = -Infinity;
+    for (let i = 0; i < vertexCount; i += 1) {
+      if (dominantGroup[i] !== "pelvis") continue;
+      waistY = Math.max(waistY, positions[i * 3 + 1]);
+    }
+    waistY += 0.02;
   }
-  waistY += 0.02;
   const ankleY = restFinal.get("leg.left.foot").y;
   // Fine enough that a calf's widest point lands on a row: the span is
   // longer now that it starts at the waist, so the count goes up with it.
@@ -1899,6 +1907,32 @@ function legEnvelope(positions) {
     frontZ: frontZ.map(round),
     backZ: backZ.map(round),
   };
+}
+
+/**
+ * The envelope, and how each morph moves it.
+ *
+ * Measured on the neutral mesh alone it describes a body no customer is
+ * necessarily looking at: an athletic build widens the calves past the
+ * neutral rows, and the garment cut to them showed a window of blue shin
+ * through the dhoti. The same lesson the torso surface learned — deltas
+ * on the same rows, blended by the same influences the mesh is.
+ */
+function legEnvelopeWithMorphs() {
+  const pelvis = restFinal.get("pelvis");
+  const base = legEnvelope(finalMesh.neutral);
+  // The same rows, at the same heights, for every variant.
+  const waistY = base.topY + pelvis.y;
+  const morphs = {};
+  for (const [variant, morphName] of Object.entries(MORPHS)) {
+    const shaped = legEnvelope(finalMesh[variant], waistY);
+    morphs[morphName] = {
+      halfWidth: shaped.halfWidth.map((v, i) => round(v - base.halfWidth[i])),
+      frontZ: shaped.frontZ.map((v, i) => round(v - base.frontZ[i])),
+      backZ: shaped.backZ.map((v, i) => round(v - base.backZ[i])),
+    };
+  }
+  return { ...base, morphs };
 }
 
 /**
@@ -2018,7 +2052,7 @@ await writeFile(
       gripShapes: GRIP_RADII,
       faceAxes: measuredFaceAxes,
       gripSeats,
-      legEnvelope: legEnvelope(finalMesh.neutral),
+      legEnvelope: legEnvelopeWithMorphs(),
       torsoSurface: torsoSurfaceWithMorphs,
       printability: { printSourceAvailable: false },
     },
@@ -2063,7 +2097,7 @@ await writeFile(
       gripShapes: GRIP_RADII,
       faceAxes: measuredFaceAxes,
       gripSeats,
-      legEnvelope: legEnvelope(finalMesh.neutral),
+      legEnvelope: legEnvelopeWithMorphs(),
       torsoSurface: torsoSurfaceWithMorphs,
     },
     null,
@@ -2432,7 +2466,7 @@ await writeFile(
       gripShapes: GRIP_RADII,
       faceAxes: measuredFaceAxes,
       gripSeats: fourArmGripSeats,
-      legEnvelope: legEnvelope(finalMesh.neutral),
+      legEnvelope: legEnvelopeWithMorphs(),
       torsoSurface: torsoSurfaceWithMorphs,
       printability: { printSourceAvailable: false },
     },

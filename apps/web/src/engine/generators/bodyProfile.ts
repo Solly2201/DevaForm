@@ -152,6 +152,8 @@ export interface BodyProfile {
 function sampleLegEnvelope(
   envelope: MeasuredLegEnvelope,
   y: number,
+  /** The morph influences the mesh is currently blended by. */
+  morphs: Readonly<Record<string, number>> = {},
 ): { halfWidth: number; frontZ: number; backZ: number } {
   const rows = envelope.halfWidth.length;
   const span = envelope.bottomY - envelope.topY;
@@ -162,12 +164,43 @@ function sampleLegEnvelope(
   const low = Math.floor(at);
   const high = Math.min(rows - 1, low + 1);
   const t = at - low;
-  const mix = (values: readonly number[]) =>
-    (values[low] ?? 0) * (1 - t) + (values[high] ?? 0) * t;
+  // The neutral rows plus whatever the customer's morphs do to them, on
+  // the same rows, by the same influences the mesh itself is blended by.
+  // A garment cut to the neutral envelope alone showed a window of shin
+  // through the cloth the moment a build widened the calves.
+  //
+  // OUTWARD contributions only. The envelope is a containment bound, and
+  // three numbers per row cannot see bearings: a build that slims the
+  // waist at the sides while leaving the hip's diagonal exactly where it
+  // was would, applied in full, pull the cloth through that diagonal —
+  // four vertices of Shiva's hips sat inside the wrap for precisely this.
+  // A bound a morph pushes outward must follow it (the calf through the
+  // dhoti); a bound a morph retreats from stays where the neutral body
+  // put it, and the cloth hangs a couple of millimetres looser, which is
+  // what cloth does.
+  const mix = (
+    values: readonly number[],
+    outward: 1 | -1,
+    deltas?: (name: string) => readonly number[] | undefined,
+  ) => {
+    const blend = (index: number) => {
+      let value = values[index] ?? 0;
+      if (deltas) {
+        for (const [name, influence] of Object.entries(morphs)) {
+          if (!influence) continue;
+          const moved = (deltas(name)?.[index] ?? 0) * influence;
+          if (moved * outward > 0) value += moved;
+        }
+      }
+      return value;
+    };
+    return blend(low) * (1 - t) + blend(high) * t;
+  };
   return {
-    halfWidth: mix(envelope.halfWidth),
-    frontZ: mix(envelope.frontZ),
-    backZ: mix(envelope.backZ),
+    halfWidth: mix(envelope.halfWidth, 1, (name) => envelope.morphs?.[name]?.halfWidth),
+    frontZ: mix(envelope.frontZ, 1, (name) => envelope.morphs?.[name]?.frontZ),
+    // The back bound grows in the NEGATIVE direction.
+    backZ: mix(envelope.backZ, -1, (name) => envelope.morphs?.[name]?.backZ),
   };
 }
 
@@ -656,7 +689,7 @@ function deriveMeasuredProfile(
     surfaceAt,
     legExtentAt: (y: number) =>
       legEnvelope
-        ? sampleLegEnvelope(legEnvelope, y)
+        ? sampleLegEnvelope(legEnvelope, y, morphs)
         : generatedLegExtent(
             {
               legSpreadX: value("legSpreadX"),
