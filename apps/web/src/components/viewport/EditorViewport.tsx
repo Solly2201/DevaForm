@@ -1,32 +1,37 @@
 "use client";
 
 /**
- * The 3D viewport: the presentation stage with the resolved character
- * standing on it.
+ * The 3D viewport: the live statue, on a transparent canvas over the
+ * stage's fullscreen backdrop.
  *
  * The stage — where the camera is, what light falls on the figure, what
- * room it stands in and how the customer first meets it — comes from a
- * PresentationConfig rather than from constants here. That is what keeps
- * the entry sequence, the backdrop and the hero composition one decision
- * instead of three, and what lets a future deity be given its own room by
- * adding a config rather than by branching a component.
+ * room stands behind it — comes from a PresentationConfig rather than
+ * from constants here. That is what keeps the entry sequence, the
+ * backdrop and the hero composition one decision instead of three, and
+ * what lets a future deity be given its own room by adding a config
+ * rather than by branching a component. The fullscreen layers themselves
+ * — backdrop, vignette, entry video — are hosted by the shell; this is
+ * only the statue.
+ *
+ * The viewport's one presentation duty of its own is measurement: the
+ * stage frame is centred on the STATUE, and only this component knows
+ * where the statue's screen position is — its own container's centre. It
+ * measures that and publishes it (see stageFrame.ts); the fullscreen
+ * layers above and below follow.
  */
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { getPresentation, type PresentationConfig } from "@devaform/asset-system";
+import type { PresentationConfig } from "@devaform/asset-system";
 import { CharacterRoot } from "@/engine/CharacterRoot";
 import type { LightingPresetId } from "@/engine/lighting";
-import { IntroSequence } from "@/presentation/IntroSequence";
-import { StageBackdrop } from "@/presentation/StageBackdrop";
-import { StageVignette } from "@/presentation/StageVignette";
+import { clearStageFrame, measureStageFrame } from "@/presentation/stageFrame";
 import { StageLights } from "@/presentation/StageLights";
 import { StageReadiness } from "@/presentation/StageReadiness";
+import { StageSettle } from "@/presentation/StageSettle";
 import { stageViews } from "@/presentation/stageViews";
-import { StageAlignment, StageSettle } from "@/presentation/StageSettle";
-import { shouldPlayIntro, useStageStore } from "@/presentation/stageStore";
-import { useDeity } from "@/state/deityContext";
+import { useStageStore } from "@/presentation/stageStore";
 import { useUiStore } from "@/state/uiStore";
 
 function CameraCommands({
@@ -58,40 +63,49 @@ function CameraCommands({
   return null;
 }
 
-export function EditorViewport() {
-  const deity = useDeity();
-  const stage = getPresentation(deity?.id);
+export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const lightingPreset = useUiStore((s) => s.lightingPreset);
   const phase = useStageStore((s) => s.phase);
-  const finishSettle = useStageStore((s) => s.finishSettle);
-
-  /**
-   * Whether this visit gets the sequence — decided once, on the client.
-   *
-   * `null` until it is decided, and the video does not mount until then.
-   * Not a nicety: the element starts fetching five megabytes the moment
-   * it exists, and a customer on their second visit of the session has
-   * already seen the temple and should not pay for it again.
-   */
-  const [introAllowed, setIntroAllowed] = useState<boolean | null>(null);
-  useEffect(() => {
-    const allowed = Boolean(stage.intro) && shouldPlayIntro();
-    setIntroAllowed(allowed);
-    // Nothing to hand over from: settle immediately and give them the
-    // stage, which still comes up out of the dark, just quickly.
-    if (!allowed) finishSettle();
-  }, [stage.intro, finishSettle]);
 
   const hasBackdrop = Boolean(stage.backdrop.image);
 
+  // Publish where the statue stands on screen, so the fullscreen frame —
+  // entry video and backdrop alike — centres its mandala there.
+  useEffect(() => {
+    if (!hasBackdrop) return;
+    const measure = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const centerX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+      measureStageFrame(
+        stage.backdrop,
+        { width: window.innerWidth, height: window.innerHeight },
+        centerX,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (containerRef.current) observer.observe(containerRef.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      clearStageFrame();
+    };
+  }, [stage, hasBackdrop]);
+
   return (
-    <div className="relative h-full w-full">
-      {hasBackdrop && <StageBackdrop config={stage.backdrop} />}
+    <div ref={containerRef} className="relative h-full w-full">
       <Canvas
         shadows
         dpr={[1, 2]}
-        camera={{ position: stage.camera.position as unknown as [number, number, number], fov: stage.camera.fov, near: 0.05, far: 50 }}
+        camera={{
+          position: stage.camera.position as unknown as [number, number, number],
+          fov: stage.camera.fov,
+          near: 0.05,
+          far: 50,
+        }}
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: hasBackdrop }}
         className="absolute inset-0 h-full w-full"
         style={{ background: "transparent" }}
@@ -106,7 +120,6 @@ export function EditorViewport() {
           settleMs={stage.intro?.settleMs ?? 900}
           controlsRef={controlsRef}
         />
-        <StageAlignment camera={stage.camera} recedeWithin={stage.backdrop.recedeWithin} />
         <StageReadiness />
         <CameraCommands stage={stage} controlsRef={controlsRef} />
         <CharacterRoot />
@@ -115,7 +128,7 @@ export function EditorViewport() {
             With a backdrop there IS a floor — the one in the frame — and
             a second one drawn over it is a brown ellipse lying on a
             temple pavement. The contact shadow stays either way: it is
-            what marries the figure to whichever floor it is standing on. */}
+            what marries the figure to whichever floor it stands on. */}
         {!hasBackdrop && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.006, 0]} receiveShadow>
             <circleGeometry args={[2.4, 48]} />
@@ -126,17 +139,17 @@ export function EditorViewport() {
           ref={controlsRef}
           target={stage.camera.target as unknown as [number, number, number]}
           enabled={phase === "ready"}
-          enablePan
+          // On a staged backdrop the statue stands where the mandala is;
+          // panning would slide it off its own pedestal. Free viewing is
+          // orbit and dolly, which is what inspecting a statue is.
+          enablePan={!hasBackdrop}
           minDistance={stage.camera.minDistance}
           maxDistance={stage.camera.maxDistance}
+          minPolarAngle={stage.camera.minPolarAngle}
           maxPolarAngle={stage.camera.maxPolarAngle}
           makeDefault
         />
       </Canvas>
-      {stage.intro && introAllowed && phase !== "ready" && (
-        <IntroSequence intro={stage.intro} grade={stage.backdrop.grade} />
-      )}
-      {hasBackdrop && <StageVignette />}
     </div>
   );
 }

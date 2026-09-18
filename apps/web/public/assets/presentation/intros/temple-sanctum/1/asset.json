@@ -2,7 +2,7 @@
   "id": "presentation.intro.templeSanctum",
   "version": 1,
   "name": "Temple Sanctum",
-  "description": "The approach to a temple, through its doors, into the sanctum, and down onto a lit mandala on the floor — which is where the statue stands. No deity appears in it.",
+  "description": "The approach to a temple, through its doors, into the sanctum, and down onto a lit mandala on the floor \u2014 which is where the statue stands. No deity appears in it.",
   "kind": "intro",
   "deityCompatibility": "any",
   "media": {
@@ -10,13 +10,15 @@
     "backdrop": "/assets/presentation/intros/temple-sanctum/1/final.jpg"
   },
   "timing": {
-    "duration": 10.005,
-    "startsAt": 2.55,
-    "lastFrameAt": 9.96
+    "duration": 6.042,
+    "startsAt": 0,
+    "lastFrameAt": 6.02
   },
   "provenance": {
     "type": "imported",
-    "notes": "Generated footage, supplied with the project as entry_vid.MP4. The first two and a half seconds carry a wordmark that is not this product's, which is why playback starts after them; the generator's glyph sits in the bottom-right corner, which is why both the video and the backdrop are shown scaled past the frame edge.",
-    "references": ["apps/web/scripts/build-intro-poster.mjs"]
+    "notes": "Re-encoded from footage supplied with the project as entry_vid.MP4: the opening title segment (which carried a wordmark that is not this product's) is cut through the end of its fade, verified frame-by-frame; the generator's corner glyph is removed in-frame, and the audio track is dropped. No third-party branding survives in the pixels.",
+    "references": [
+      "apps/web/scripts/build-intro-poster.mjs"
+    ]
   }
 }

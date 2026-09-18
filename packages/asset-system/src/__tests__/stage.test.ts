@@ -48,11 +48,13 @@ describe("every stage is a complete description of one", () => {
     expect(stage.camera.settleFrom.dolly).toBeLessThan(1);
     expect(Math.abs(stage.camera.settleFrom.azimuth)).toBeLessThan(0.5);
 
-    // A room that goes away when the camera leaves the angle it is true
-    // from, and a colour to go away TO.
-    expect(stage.backdrop.recedeWithin).toBeGreaterThan(0);
+    // A fixed backdrop, and a ground colour behind its edges. The orbit
+    // is BOUNDED rather than faded — bounds cannot pop.
     expect(stage.backdrop.voidColor).toMatch(/^#[0-9a-f]{6}$/i);
     expect(stage.backdrop.overscan).toBeGreaterThan(0);
+    expect(stage.backdrop.aspect).toBeGreaterThan(1);
+    expect(stage.camera.minPolarAngle).toBeGreaterThan(0);
+    expect(stage.camera.minPolarAngle).toBeLessThan(stage.camera.maxPolarAngle);
   });
 });
 

@@ -35,6 +35,13 @@ export interface StageCamera {
   /** How far under the horizon they may go — never up through the floor. */
   maxPolarAngle: number;
   /**
+   * And the ceiling on how far ABOVE the figure the orbit may go. The
+   * backdrop is a room photographed at eye level; a near-top-down camera
+   * would put the statue's head against the hall's upper storey, which
+   * no stage does. Bounded, not faded — bounds cannot pop.
+   */
+  minPolarAngle: number;
+  /**
    * Where the sequence's camera starts, as an offset from the hero.
    *
    * The settle is the last beat of the entry: the camera eases these last
@@ -48,20 +55,21 @@ export interface StageCamera {
 /**
  * The environment the statue stands in.
  *
- * `image` is the intro's final frame. It is shown in screen space rather
- * than as geometry, because it IS a photograph of a room taken from one
- * point: rebuilding it as a skybox would be rebuilding a perspective that
- * is already correct for the one camera position that matters.
- *
- * Which is also why it recedes. A fixed frame behind a rotating statue is
- * right at the hero angle and wrong everywhere else — the pillars do not
- * move, and the eye notices within about fifteen degrees. So as the
- * camera leaves the hero azimuth the room fades to the dark it was lit
- * out of, and the statue is left on a plain ground to be inspected. The
- * room is for arriving; the dark is for looking closely.
+ * `image` is the intro's final frame, shown in screen space as a FIXED
+ * BACKDROP — the way a product configurator or a photographed murti
+ * presentation works: the statue turns on its stage, the hall behind it
+ * stands still. That reading is deliberate. The frame is a photograph of
+ * a room taken from one point; treating orbiting as "the camera walking
+ * through the hall" would demand parallax the picture cannot give, and
+ * every attempt to paper over that — fading the room out past an angle,
+ * fading it with distance — turned into the environment popping in and
+ * out under the customer's hands. A backdrop that simply IS the stage
+ * has nothing to pop. Rotation and zoom never touch it.
  */
 export interface StageBackdrop {
   image: string;
+  /** The frame's own width over height — 16:9 footage is 1.778. */
+  aspect: number;
   /**
    * How far past the frame edge to scale it, as a fraction.
    *
@@ -81,9 +89,7 @@ export interface StageBackdrop {
    * strength it argues with the figure standing in it.
    */
   grade: string;
-  /** Azimuth from the hero angle, radians, at which the room has gone. */
-  recedeWithin: number;
-  /** The ground colour it recedes to. */
+  /** The ground behind the frame's own edges, on extreme aspect ratios. */
   voidColor: string;
 }
 
@@ -136,21 +142,26 @@ const SANCTUM: PresentationConfig = {
     minDistance: 0.6,
     maxDistance: 5,
     maxPolarAngle: Math.PI * 0.52,
+    minPolarAngle: Math.PI * 0.24,
     settleFrom: { dolly: 0.34, azimuth: 0.1, height: 0.06 },
   },
   backdrop: {
     image: "/assets/presentation/intros/temple-sanctum/1/final.jpg",
+    aspect: 1280 / 720,
     overscan: 0.14,
     offsetY: 0.34,
     grade: "brightness(0.88) saturate(0.92)",
-    recedeWithin: 0.34,
     voidColor: "#0d0b09",
   },
   intro: {
     assetId: "presentation.intro.templeSanctum",
     video: "/assets/presentation/intros/temple-sanctum/1/intro.mp4",
-    startsAt: 2.55,
-    lastFrameAt: 9.96,
+    // The shipped cut opens clean — the footage's original title segment
+    // (cut through the very end of its fade, verified frame-by-frame) and
+    // its generator glyph were removed at the asset level, so nothing
+    // needs skipping and nothing needs hiding.
+    startsAt: 0,
+    lastFrameAt: 6.02,
     handoverMs: 420,
     settleMs: 1500,
   },

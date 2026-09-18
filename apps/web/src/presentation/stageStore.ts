@@ -9,10 +9,6 @@
  * beat of the intro rather than a separate animation, which is what makes
  * the handover invisible.
  *
- * `alignment` is how close the camera still is to the hero angle, and it
- * is here rather than in the scene because the thing that reads it is a
- * DOM layer behind the canvas. One number, written by the renderer and
- * read by the backdrop.
  */
 import { create } from "zustand";
 
@@ -20,8 +16,6 @@ export type StagePhase = "intro" | "settling" | "ready";
 
 interface StageState {
   phase: StagePhase;
-  /** 1 at the hero composition, 0 once the camera has left it. */
-  alignment: number;
   /**
    * Whether there is a statue to hand over TO.
    *
@@ -33,7 +27,6 @@ interface StageState {
   characterReady: boolean;
   beginSettle: () => void;
   finishSettle: () => void;
-  setAlignment: (value: number) => void;
   setCharacterReady: (ready: boolean) => void;
 }
 
@@ -68,12 +61,9 @@ export function markIntroSeen(): void {
 
 export const useStageStore = create<StageState>()((set) => ({
   phase: "intro",
-  alignment: 1,
   beginSettle: () => set((state) => (state.phase === "intro" ? { phase: "settling" } : state)),
   finishSettle: () => set({ phase: "ready" }),
   characterReady: false,
-  setAlignment: (value) =>
-    set((state) => (Math.abs(state.alignment - value) < 0.01 ? state : { alignment: value })),
   setCharacterReady: (ready) =>
     set((state) => (state.characterReady === ready ? state : { characterReady: ready })),
 }));
