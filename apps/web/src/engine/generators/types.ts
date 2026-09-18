@@ -8,6 +8,7 @@ import type {
   Proportions,
   SocketId,
 } from "@devaform/character-schema";
+import type { HandClosure } from "@devaform/asset-system";
 import type { ZoneMaterials } from "../materials";
 import type { BodyProfile } from "./bodyProfile";
 
@@ -23,6 +24,12 @@ export interface HeldItemSpec {
    * treats all three the same is a hand that holds none of them.
    */
   grip?: "grip" | "pinch" | "hold";
+  /**
+   * The hand STATE this attribute asks for — `wrap` (closing on the
+   * radius above) or `poise` (index standing, the item on its tip). See
+   * GripFrame.closure in the presentation vocabulary.
+   */
+  closure?: HandClosure;
   /**
    * How far the item stays that radius along its own axis, each way from
    * the grip, in metres.

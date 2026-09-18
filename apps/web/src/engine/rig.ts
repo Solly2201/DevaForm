@@ -277,11 +277,20 @@ function orientMeasuredFaceSockets(
 
 function orientMeasuredGripSockets(
   sockets: Map<SocketId, THREE.Object3D>,
-  gripAxes: Readonly<Record<string, readonly [number, number, number]>> | undefined,
+  body: AssetDefinition | undefined,
+  held: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>,
 ): void {
-  if (!gripAxes) return;
+  if (!body?.gripAxes) return;
   for (const slot of ARM_SLOTS) {
-    const measured = gripAxes[slot];
+    // WHICH channel depends on which hand state is holding the thing.
+    //
+    // A wrapped hand runs what it holds along the knuckle line; a poised
+    // one runs it up the raised index. The axis was the knuckle line for
+    // everything, so the discus was presented across a hand that had not
+    // been asked to close, which is neither of the two relationships the
+    // reference sheet shows.
+    const poised = held[slot]?.closure === "poise" && body.poiseAxes?.[slot];
+    const measured = poised ? body.poiseAxes?.[slot] : body.gripAxes[slot];
     if (!measured) continue;
     const socket = sockets.get(`arm.${slot}.hand.item` as SocketId);
     if (!socket) continue;
@@ -304,13 +313,19 @@ function orientMeasuredGripSockets(
  */
 function seatMeasuredGrips(
   sockets: Map<SocketId, THREE.Object3D>,
-  seats: AssetDefinition["gripSeats"],
+  body: AssetDefinition | undefined,
   held: Readonly<Partial<Record<ArmSlot, HeldItemSpec>>>,
 ): void {
-  if (!seats) return;
+  if (!body?.gripSeats) return;
   for (const slot of ARM_SLOTS) {
-    const seat = seats[slot];
-    const radius = held[slot]?.radius;
+    const item = held[slot];
+    if (!item) continue;
+    // A poised hand offers its FINGERTIP, and the thing it carries rests
+    // a hair above it — the same sentence as the palm seat, about the
+    // other baked state.
+    const poised = item.closure === "poise" && body.poiseSeats?.[slot];
+    const seat = poised ? body.poiseSeats?.[slot] : body.gripSeats[slot];
+    const radius = poised ? 0 : item.radius;
     if (!seat || radius === undefined) continue;
     const socket = sockets.get(`arm.${slot}.hand.item` as SocketId);
     if (!socket) continue;
@@ -508,8 +523,28 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   root.add(characterRoot);
   const sockets = buildSockets(skeleton, joints, root, baseTop);
 
+  // What each hand will be closing on, known before any geometry exists —
+  // so a hand can be BUILT around what it holds rather than closed to a
+  // fixed diameter and hoped for.
+  const heldByHand: Partial<Record<ArmSlot, HeldItemSpec>> = {};
+  for (const attachment of resolved.attachments) {
+    if (!attachment.handSlot) continue;
+    heldByHand[attachment.handSlot] = {
+      presentationId: attachment.presentation.id,
+      radius: attachment.presentation.grip?.radius,
+      straight: (() => {
+        const travel = attachment.presentation.grip?.travel;
+        if (!travel) return undefined;
+        return Math.max(travel.up ?? 0, travel.down ?? 0) || undefined;
+      })(),
+      grip:
+        attachment.presentation.hand === "none" ? undefined : attachment.presentation.hand,
+      closure: attachment.presentation.grip?.closure ?? "wrap",
+    };
+  }
+
   const bodyAsset = resolveAssetRef(config.parts.body);
-  orientMeasuredGripSockets(sockets, bodyAsset?.gripAxes);
+  orientMeasuredGripSockets(sockets, bodyAsset, heldByHand);
   orientMeasuredFaceSockets(sockets, bodyAsset?.faceAxes);
 
   // Body-fit: torso surfaces for the configured body asset (pure data — no
@@ -527,28 +562,11 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           morphs: config.morphs,
           torsoSurface: bodyAsset.torsoSurface,
           legEnvelope: bodyAsset.legEnvelope,
+          skullEnvelope: bodyAsset.skullEnvelope,
         }
       : undefined,
   );
 
-  // What each hand will be closing on, known before any geometry exists —
-  // so a hand can be BUILT around what it holds rather than closed to a
-  // fixed diameter and hoped for.
-  const heldByHand: Partial<Record<ArmSlot, HeldItemSpec>> = {};
-  for (const attachment of resolved.attachments) {
-    if (!attachment.handSlot) continue;
-    heldByHand[attachment.handSlot] = {
-      presentationId: attachment.presentation.id,
-      radius: attachment.presentation.grip?.radius,
-      straight: (() => {
-        const travel = attachment.presentation.grip?.travel;
-        if (!travel) return undefined;
-        return Math.max(travel.up ?? 0, travel.down ?? 0) || undefined;
-      })(),
-      grip:
-        attachment.presentation.hand === "none" ? undefined : attachment.presentation.hand,
-    };
-  }
 
   const baseCtx: Omit<GeneratorContext, "params"> = {
     materials,
@@ -691,7 +709,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Every part has refined the sockets it owns; now that the hand's own
   // grip socket is where the GLB says it is, seat what the hand holds on
   // the palm rather than in the middle of the hole the fist makes.
-  seatMeasuredGrips(sockets, bodyAsset?.gripSeats, heldByHand);
+  seatMeasuredGrips(sockets, bodyAsset, heldByHand);
 
   for (const mount of socketMounts) {
     const socket = sockets.get(mount.socket);

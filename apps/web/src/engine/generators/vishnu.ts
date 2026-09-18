@@ -13,7 +13,7 @@
  * comments say which panel of it each decision came from.
  */
 import * as THREE from "three";
-import { lathe, mesh, taperedTube } from "../geometry";
+import { lathe, loft, mesh, taperedTube } from "../geometry";
 import type { AttachmentGenerator, GeneratorContext, PartGenerator } from "./types";
 import { walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
 
@@ -142,71 +142,199 @@ export const itemGada: AttachmentGenerator = (ctx) => {
 /**
  * Sudarshana Chakra — the discus, standing on a raised finger.
  *
- * The reference's grip close-up shows it VERTICAL, balanced on the
- * fingertip of a raised index, its plane across the viewer — a wheel
- * presented, not a weapon swung. The manifest declares a hold on a
- * finger's radius; the disc is built wholly above the grip point, so
- * nothing the hand does can put a finger through the blade.
+ * WHAT WAS WRONG. A torus, a flat plate, eight box spokes and twenty-four
+ * thin cones round the edge. Every one of those is the cheapest possible
+ * answer to its part of the shape, and together they read as a gear: a
+ * flat washer with saw teeth. It was also twice the size the reference
+ * gives it, which is why it read as a shield rather than an attribute.
+ *
+ * WHAT IT IS NOW. The reference's attribute panel is a sacred disc built
+ * in concentric terraces — a jewelled outer band, mouldings stepping in
+ * toward a spoked wheel, a raised boss with a cabochon at its heart — and
+ * ringed with broad FLAME petals, not teeth. Terraces rather than a plate
+ * is the whole difference: they give the disc real thickness from the
+ * side and a centre from the front, which is what makes a wheel look
+ * struck rather than cut.
+ *
+ * Built in the XY plane so its face normal is +Z, which is what the
+ * presentation's `facing: "front"` turns out of the statue, and wholly
+ * above y = 0 so it rests on the fingertip the poise seat measures. No
+ * decorative yaw: an empirical quarter-turn once compensated for whatever
+ * spin the wrist solve left, and was wrong the moment the pose changed.
  */
 export const itemChakra: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const stone = ctx.materials.fixed.nagamani;
+  const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
+
+  // Sized off the reference's own front view, where the discus is about
+  // two-thirds of the head's height across. The old 108 mm disc was wider
+  // than Vishnu's face.
+  const RIM = 0.036;
+  const TIP = RIM * 1.3;
   const disc = new THREE.Group();
-  // Clear of the fingertips: the rim's lowest point grazes where a raised
-  // fingertip ends, which is what "balanced on it" looks like.
-  disc.position.y = 0.098;
-  // STANDING and FACING: a torus built in the XY plane already stands
-  // vertical when the presentation drives this asset's +Y up the hand's
-  // channel, and its face normal is the asset's +Z — which is exactly
-  // what the presentation's `facing: "front"` turns out the statue's
-  // front. No decorative yaw here: an empirical quarter-turn used to
-  // compensate for whatever spin the wrist solve left, and became wrong
-  // the moment the pose changed.
-  disc.rotation.y = 0;
+  // The lowest flame tip rests ON the fingertip — a millimetre and a half
+  // of air, so the finger touches the disc rather than entering it.
+  disc.position.y = TIP + 0.0015;
   group.add(disc);
 
-  const RADIUS = 0.054;
-  // Rim.
-  disc.add(mesh(new THREE.TorusGeometry(RADIUS * 0.84, 0.006, 10, 44), metal, {}));
-  // Web.
-  disc.add(
-    mesh(new THREE.CylinderGeometry(RADIUS * 0.8, RADIUS * 0.8, 0.0035, 40), metal, {
-      rotation: [Math.PI / 2, 0, 0],
-    }),
-  );
-  // Flame points round the rim — the serration that reads "Sudarshana"
-  // in the reference's attribute panel. Thin, and many.
-  for (let i = 0; i < 24; i += 1) {
-    const angle = (i / 24) * Math.PI * 2;
+  /**
+   * The terraces.
+   *
+   * Each is a disc of its own radius and depth, centred on the plane, so
+   * the steps read identically from both faces — a presented wheel is
+   * seen from either side as the statue turns.
+   */
+  for (const [radius, depth] of [
+    [RIM, 0.0055],
+    [RIM * 0.83, 0.008],
+    [RIM * 0.6, 0.0105],
+  ] as const) {
     disc.add(
-      mesh(new THREE.ConeGeometry(0.0052, 0.017, 6), metal, {
-        position: [Math.cos(angle) * (RADIUS * 0.93), Math.sin(angle) * (RADIUS * 0.93), 0],
-        rotation: [0, 0, angle - Math.PI / 2],
+      mesh(new THREE.CylinderGeometry(radius, radius, depth, 52), metal, {
+        rotation: [Math.PI / 2, 0, 0],
+      }),
+    );
+  }
+  // Mouldings: a fine torus crisping the edge of each terrace, so the
+  // steps catch light instead of merging into one slab.
+  for (const [radius, at] of [
+    [RIM, 0.0028],
+    [RIM * 0.83, 0.004],
+    [RIM * 0.6, 0.0053],
+  ] as const) {
+    for (const side of [1, -1] as const) {
+      disc.add(
+        mesh(new THREE.TorusGeometry(radius, 0.0016, 8, 52), metal, {
+          position: [0, 0, side * at],
+        }),
+      );
+    }
+  }
+
+  // The jewelled outer band: cabochons set round the widest terrace, on
+  // both faces, with beadwork between them.
+  for (let i = 0; i < 8; i += 1) {
+    const angle = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    for (const side of [1, -1] as const) {
+      disc.add(
+        mesh(new THREE.SphereGeometry(RIM * 0.09, 10, 8), gem, {
+          position: [
+            Math.cos(angle) * RIM * 0.915,
+            Math.sin(angle) * RIM * 0.915,
+            side * 0.0032,
+          ],
+          scale: [0.72, 1, 0.5],
+          rotation: [0, 0, angle - Math.PI / 2],
+        }),
+      );
+    }
+  }
+  for (let i = 0; i < 40; i += 1) {
+    const angle = (i / 40) * Math.PI * 2;
+    for (const side of [1, -1] as const) {
+      disc.add(
+        mesh(new THREE.SphereGeometry(RIM * 0.028, 6, 5), metal, {
+          position: [
+            Math.cos(angle) * RIM * 0.915,
+            Math.sin(angle) * RIM * 0.915,
+            side * 0.0038,
+          ],
+        }),
+      );
+    }
+  }
+
+  // The wheel: spokes that thicken outward, standing proud of the inner
+  // terrace on both faces, meeting a collar at the hub.
+  for (let i = 0; i < 10; i += 1) {
+    const angle = (i / 10) * Math.PI * 2;
+    for (const side of [1, -1] as const) {
+      disc.add(
+        new THREE.Mesh(
+          taperedTube(
+            [
+              [Math.cos(angle) * RIM * 0.13, Math.sin(angle) * RIM * 0.13, side * 0.0055],
+              [Math.cos(angle) * RIM * 0.36, Math.sin(angle) * RIM * 0.36, side * 0.0062],
+              [Math.cos(angle) * RIM * 0.55, Math.sin(angle) * RIM * 0.55, side * 0.0058],
+            ],
+            [RIM * 0.035, RIM * 0.055],
+            10,
+            6,
+          ),
+          metal,
+        ),
+      );
+    }
+  }
+  for (const side of [1, -1] as const) {
+    disc.add(
+      mesh(new THREE.TorusGeometry(RIM * 0.545, 0.0013, 8, 44), metal, {
+        position: [0, 0, side * 0.006],
+      }),
+    );
+  }
+
+  // The hub: a raised boss with a beaded rim and a cabochon at its heart.
+  for (const side of [1, -1] as const) {
+    disc.add(
+      mesh(
+        lathe([
+          [RIM * 0.26, 0],
+          [RIM * 0.25, 0.004],
+          [RIM * 0.18, 0.0075],
+          [RIM * 0.1, 0.009],
+        ]),
+        metal,
+        { rotation: [side * Math.PI * 0.5, 0, 0], scale: [1, side, 1] },
+      ),
+    );
+    for (let i = 0; i < 16; i += 1) {
+      const angle = (i / 16) * Math.PI * 2;
+      disc.add(
+        mesh(new THREE.SphereGeometry(RIM * 0.028, 6, 5), metal, {
+          position: [Math.cos(angle) * RIM * 0.245, Math.sin(angle) * RIM * 0.245, side * 0.0052],
+        }),
+      );
+    }
+    disc.add(
+      mesh(new THREE.SphereGeometry(RIM * 0.11, 14, 12), stone, {
+        position: [0, 0, side * 0.0075],
         scale: [1, 1, 0.55],
       }),
     );
   }
-  // Spokes.
-  for (let i = 0; i < 8; i += 1) {
-    const angle = (i / 8) * Math.PI * 2;
-    disc.add(
-      mesh(new THREE.BoxGeometry(RADIUS * 0.74, 0.0055, 0.005), metal, {
-        position: [Math.cos(angle) * RADIUS * 0.37, Math.sin(angle) * RADIUS * 0.37, 0],
-        rotation: [0, 0, angle],
-      }),
-    );
-  }
-  // Hub, jewelled on BOTH faces: a presented wheel is seen from either
-  // side as the statue turns.
-  disc.add(mesh(new THREE.SphereGeometry(0.012, 14, 12), metal, { scale: [1, 1, 0.55] }));
-  for (const side of [1, -1] as const) {
-    disc.add(
-      mesh(new THREE.SphereGeometry(0.0058, 12, 10), stone, {
-        position: [0, 0, side * 0.0068],
-        scale: [1, 1, 0.5],
-      }),
-    );
+
+  // The flames.
+  //
+  // Broad leaves that swell off the rim and draw to a point, all leaning
+  // the same way — the turning fire of the reference's panel. Thin cones
+  // here are what made the old disc a saw blade.
+  const flame = (from: number, to: number, width: number, lean: number) => {
+    const base = from;
+    const path: [number, number, number][] = [];
+    for (let step = 0; step <= 3; step += 1) {
+      const t = step / 3;
+      const radius = base + (to - base) * t;
+      const angle = lean * t * t;
+      path.push([Math.cos(angle) * radius, Math.sin(angle) * radius, 0]);
+    }
+    const leaf = new THREE.Mesh(taperedTube(path, [width, width * 0.06], 12, 8), metal);
+    leaf.scale.z = 0.5;
+    return leaf;
+  };
+  for (let i = 0; i < 14; i += 1) {
+    const angle = (i / 14) * Math.PI * 2;
+    const big = new THREE.Group();
+    big.rotation.z = angle;
+    big.add(flame(RIM * 0.94, TIP, RIM * 0.115, 0.2));
+    disc.add(big);
+    // A smaller point between each pair, as the reference's rim has.
+    const small = new THREE.Group();
+    small.rotation.z = angle + Math.PI / 14;
+    small.add(flame(RIM * 0.96, RIM * 1.13, RIM * 0.06, 0.16));
+    disc.add(small);
   }
   return group;
 };
@@ -348,118 +476,223 @@ export const itemPadma: AttachmentGenerator = (ctx) => {
 };
 
 /**
- * Kirita mukuta — the crown, as the reference's own detail panel builds
- * it: a broad jewelled band gripping the brow, a fluted drum above it, a
- * taller domed tier, and a bud finial; a great red stone at the front of
- * the band and rosettes over the temples.
+ * Kirita mukuta — the crown, rebuilt against the head it is worn on.
+ *
+ * WHAT WAS WRONG. The first one was a band, a drum and a dome built as
+ * circles of `headRadius × a fraction`, centred on the crown socket. Three
+ * things follow from that and all three were visible in the Studio: a head
+ * is not round, so the band cut the temples; a head is not centred on its
+ * own socket, so the band sat through the forehead in front and hung in
+ * the air behind, leaving the whole brow bare; and a fraction of a mean
+ * radius is not a proportion, so the whole thing came out the size of a
+ * cap. It read as a small pointed hat pushed to the back of the skull.
+ *
+ * WHAT IT IS NOW. The body measures its own skull — half-width and how far
+ * the skin reaches front and back, at every height (see skullEnvelope) —
+ * and the crown is built on that:
+ *
+ *   • a BAND seated above the ears and sized by the widest thing it
+ *     passes, with a jewelled pendant descending onto the brow at the
+ *     centre front, which is how the reference's lower rim meets the face;
+ *   • a DRUM leaning outward and upward off it, ribbed down its face and
+ *     scalloped at its rim — the broad jewelled fan of the front view;
+ *   • a KUMBHA, the bellied pot the side view shows standing on the drum;
+ *   • a FINIAL: collar, bud, neck, point.
+ *
+ * Heights come from the brow and the top of the skull; widths from the
+ * skull's own silhouette; the ellipse the whole thing is turned on is the
+ * one the head actually has. The only authored numbers are proportions,
+ * read off `references/ref_vishnu.png`: the crown stands about two and a
+ * half times the height of the brow-to-crown dome, and the drum is about
+ * a third wider than the head.
  */
 export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   const metal = ctx.materials.get("metal");
   const stone = ctx.materials.fixed.nagamani;
   const gem = ctx.materials.get("gem");
   const group = new THREE.Group();
-  const skull = ctx.body.headRadius;
-  // The socket sits near the top of the skull; the band grips at the
-  // brow, most of a radius lower. Sized by what CONTAINS the skull —
-  // headRadius is a mean, and a band built at the mean cuts the temples.
-  const seat = -skull * 0.72;
-  const around = skull * 1.24;
+  const body = ctx.body;
 
-  // --- the band ----------------------------------------------------------
+  // --- the head, in the crown socket's own space --------------------------
+  // The socket is the crown's origin; the skull is measured from the head
+  // joint. One conversion, here, rather than a guess per tier.
+  const section = (y: number) => {
+    const measured = body.skullAt(y + body.crownSocketY);
+    const front = measured.frontZ - body.crownSocketZ;
+    const back = measured.backZ - body.crownSocketZ;
+    return {
+      halfWidth: measured.halfWidth,
+      halfDepth: (front - back) / 2,
+      centreZ: (front + back) / 2,
+    };
+  };
+  const BROW = body.browY - body.crownSocketY;
+  const SKULL_TOP = body.skullTopY - body.crownSocketY;
+  /** The height the whole crown is proportioned in: brow to crown of head. */
+  const RISE = Math.max(0.02, SKULL_TOP - BROW);
+
+  // The band sits just ABOVE the ears — that is where a kirita's lower rim
+  // runs, with the ear and its kundala left clear below it — and it must
+  // CONTAIN everything it passes, which is the recurring lesson of every
+  // band ornament in this codebase.
+  const BAND_BOTTOM = BROW + RISE * 0.02;
+  const BAND_TOP = BROW + RISE * 0.43;
+  let seatWidth = 0;
+  let seatDepth = 0;
+  let seatZ = 0;
+  for (let step = 0; step <= 6; step += 1) {
+    const at = section(BAND_BOTTOM + ((BAND_TOP - BAND_BOTTOM) * step) / 6);
+    if (at.halfWidth > seatWidth) seatWidth = at.halfWidth;
+    if (at.halfDepth > seatDepth) {
+      seatDepth = at.halfDepth;
+      seatZ = at.centreZ;
+    }
+  }
+  /**
+   * The crown is a RIGID object: one ellipse, one axis, all the way up.
+   *
+   * Following the skull's own centre line upward would shear the tiers
+   * backward as the cranium leans away, which is a hat melting rather
+   * than a crown standing. The band contains the head where it grips;
+   * above that the head is simply inside.
+   */
+  const GAP = 0.0035;
+  const R = seatWidth + GAP;
+  // How much deeper than wide. Damped: the measured depth includes the
+  // brow's own forward reach, and growing THAT with every flare makes a
+  // crown that reads well from the front and like a bonnet from the side.
+  const aspect = 1 + (seatDepth / seatWidth - 1) * 0.72;
+  /** One ring of the crown. Width and depth flare at different rates. */
+  const ring = (y: number, radius: number) => ({
+    y,
+    rx: radius,
+    rz: (R + (radius - R) * 0.62) * aspect,
+    z: seatZ,
+  });
+  /** A point on a ring, at a bearing measured from the front. */
+  const on = (bearing: number, radius: number): V3 => {
+    const shape = ring(0, radius);
+    return [Math.sin(bearing) * shape.rx, 0, seatZ + Math.cos(bearing) * shape.rz];
+  };
+
+  /**
+   * The tiers, as fractions of the brow-to-crown rise.
+   *
+   * The DRUM's own height is the number that decides whether this reads
+   * as a kirita or as a coronet. Two passes at it were half as tall as
+   * they were wide and both came back from the Studio looking like a
+   * European crown with a knob on; the reference's drum is nearly as tall
+   * as it is broad, and the flare is modest — a quarter wider than the
+   * head, not half again.
+   */
+  const DRUM_TOP = SKULL_TOP + RISE * 0.72;
+  const KUMBHA_TOP = DRUM_TOP + RISE * 0.72;
+  const TIP = KUMBHA_TOP + RISE * 0.62;
+  /** The drum's widest, about a quarter wider than the skull. */
+  const FLARE = 1.18;
+
+  // --- the band -----------------------------------------------------------
   group.add(
     mesh(
-      lathe([
-        [around * 0.94, seat - skull * 0.12],
-        [around * 1.03, seat],
-        [around * 1.06, seat + skull * 0.2],
-        [around * 1.0, seat + skull * 0.42],
-      ]),
+      loft(
+        [
+          ring(BAND_BOTTOM - 0.003, R * 0.96),
+          ring(BAND_BOTTOM, R),
+          ring(BAND_BOTTOM + (BAND_TOP - BAND_BOTTOM) * 0.5, R * 1.035),
+          ring(BAND_TOP, R * 1.02),
+        ],
+        44,
+        4,
+      ),
       metal,
       {},
     ),
   );
-  // Bead rows top and bottom of the band.
-  for (const at of [seat - skull * 0.08, seat + skull * 0.38]) {
-    for (let i = 0; i < 26; i += 1) {
-      const angle = (i / 26) * Math.PI * 2;
+  // Bead rows along both edges of the band.
+  for (const [at, radius] of [
+    [BAND_BOTTOM + 0.0015, R * 1.005],
+    [BAND_TOP - 0.002, R * 1.03],
+  ] as const) {
+    for (let i = 0; i < 34; i += 1) {
+      const bearing = (i / 34) * Math.PI * 2;
+      const point = on(bearing, radius);
       group.add(
-        mesh(new THREE.SphereGeometry(skull * 0.045, 8, 6), metal, {
-          position: [Math.cos(angle) * around * 1.03, at, Math.sin(angle) * around * 1.03],
+        mesh(new THREE.SphereGeometry(R * 0.035, 8, 6), metal, {
+          position: [point[0], at, point[2]],
         }),
       );
     }
   }
-  // Small stones round the band…
-  for (let i = 0; i < 10; i += 1) {
-    const angle = (i / 10) * Math.PI * 2 + Math.PI / 10;
+  // Cabochons round the band — and none at the front, where the brow
+  // ornament goes.
+  for (let i = 1; i < 12; i += 1) {
+    const bearing = (i / 12) * Math.PI * 2;
+    const point = on(bearing, R * 1.035);
     group.add(
-      mesh(new THREE.SphereGeometry(skull * 0.06, 10, 8), gem, {
+      mesh(new THREE.SphereGeometry(R * 0.075, 10, 8), gem, {
         position: [
-          Math.cos(angle) * around * 1.05,
-          seat + skull * 0.18,
-          Math.sin(angle) * around * 1.05,
+          point[0],
+          BAND_BOTTOM + (BAND_TOP - BAND_BOTTOM) * 0.5,
+          point[2],
         ],
-        scale: [1, 1.2, 0.4],
-        rotation: [0, -angle + Math.PI / 2, 0],
-      }),
-    );
-  }
-  // …and the great red stone at the front, in a gold bezel.
-  group.add(
-    mesh(new THREE.SphereGeometry(skull * 0.16, 14, 12), metal, {
-      position: [0, seat + skull * 0.2, around * 1.0],
-      scale: [1, 1.25, 0.42],
-    }),
-  );
-  group.add(
-    mesh(new THREE.SphereGeometry(skull * 0.11, 14, 12), stone, {
-      position: [0, seat + skull * 0.21, around * 1.07],
-      scale: [1, 1.3, 0.45],
-    }),
-  );
-  // Rosettes over the temples — the winged discs of the reference.
-  for (const side of [1, -1] as const) {
-    const rosette = new THREE.Group();
-    rosette.position.set(side * around * 1.04, seat + skull * 0.58, 0);
-    rosette.rotation.z = side * -0.18;
-    group.add(rosette);
-    rosette.add(
-      mesh(new THREE.TorusGeometry(skull * 0.3, skull * 0.055, 8, 24), metal, {
-        rotation: [0, Math.PI / 2, 0],
-      }),
-    );
-    rosette.add(
-      mesh(new THREE.SphereGeometry(skull * 0.09, 10, 8), gem, {
-        scale: [0.45, 1, 1],
+        scale: [1, 1.25, 0.42],
+        rotation: [0, -bearing, 0],
       }),
     );
   }
 
-  // --- the tiers ---------------------------------------------------------
-  // First: a fluted drum.
+  // --- the drum: the broad leaning fan -------------------------------------
+  // Concave, not conical. A straight taper reads as a bucket; what makes
+  // this shape a kirita is that it LEAVES the head slowly and then opens,
+  // so the silhouette swings outward toward the rim.
+  const drumAt = (t: number) => R * (1 + (FLARE - 1) * t * t);
+  const drumY = (t: number) => BAND_TOP + (DRUM_TOP - BAND_TOP) * t;
   group.add(
     mesh(
-      lathe([
-        [around * 0.92, seat + skull * 0.42],
-        [around * 1.02, seat + skull * 0.7],
-        [around * 0.92, seat + skull * 1.16],
-        [around * 0.72, seat + skull * 1.42],
-      ]),
+      loft(
+        [
+          ring(BAND_TOP - 0.001, R * 1.015),
+          ring(drumY(0.3), drumAt(0.3)),
+          ring(drumY(0.62), drumAt(0.62)),
+          ring(drumY(0.88), drumAt(0.88)),
+          ring(DRUM_TOP, R * FLARE),
+        ],
+        44,
+        5,
+      ),
       metal,
       {},
     ),
   );
-  for (let i = 0; i < 14; i += 1) {
-    const angle = (i / 14) * Math.PI * 2;
+  // Cabochons across the drum's face, as the reference's own crown detail
+  // sets them.
+  for (let i = 0; i < 8; i += 1) {
+    const bearing = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    const point = on(bearing, drumAt(0.5) * 1.01);
+    group.add(
+      mesh(new THREE.SphereGeometry(R * 0.085, 10, 8), gem, {
+        position: [point[0], drumY(0.5), point[2]],
+        scale: [1, 1.3, 0.4],
+        rotation: [0, -bearing, 0],
+      }),
+    );
+  }
+  // Ribs down the drum — the fluting that keeps a broad gold surface from
+  // reading as a bell.
+  for (let i = 0; i < 20; i += 1) {
+    const bearing = (i / 20) * Math.PI * 2;
+    const low = on(bearing, R * 1.03);
+    const mid = on(bearing, drumAt(0.55) * 1.01);
+    const high = on(bearing, R * FLARE * 1.005);
     group.add(
       new THREE.Mesh(
         taperedTube(
           [
-            [Math.cos(angle) * around * 1.0, seat + skull * 0.52, Math.sin(angle) * around * 1.0],
-            [Math.cos(angle) * around * 0.97, seat + skull * 0.94, Math.sin(angle) * around * 0.97],
-            [Math.cos(angle) * around * 0.74, seat + skull * 1.38, Math.sin(angle) * around * 0.74],
+            [low[0], BAND_TOP + 0.001, low[2]],
+            [mid[0], drumY(0.55), mid[2]],
+            [high[0], DRUM_TOP - 0.001, high[2]],
           ],
-          [skull * 0.05, skull * 0.028],
+          [R * 0.055, R * 0.04],
           10,
           6,
         ),
@@ -467,52 +700,224 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
       ),
     );
   }
-  // A bead ring between the tiers.
-  for (let i = 0; i < 20; i += 1) {
-    const angle = (i / 20) * Math.PI * 2;
-    group.add(
-      mesh(new THREE.SphereGeometry(skull * 0.045, 8, 6), metal, {
-        position: [
-          Math.cos(angle) * around * 0.74,
-          seat + skull * 1.44,
-          Math.sin(angle) * around * 0.74,
-        ],
-      }),
-    );
-  }
-  // Second: the taller dome, drawn to a waist.
+  // A moulding where the drum's rim turns — the line the petals rise from.
   group.add(
     mesh(
-      lathe([
-        [around * 0.7, seat + skull * 1.44],
-        [around * 0.66, seat + skull * 1.76],
-        [around * 0.52, seat + skull * 2.2],
-        [around * 0.34, seat + skull * 2.56],
-        [around * 0.19, seat + skull * 2.78],
-      ]),
+      loft(
+        [
+          ring(DRUM_TOP - RISE * 0.05, R * FLARE),
+          ring(DRUM_TOP - RISE * 0.02, R * FLARE * 1.045),
+          ring(DRUM_TOP, R * FLARE * 1.02),
+        ],
+        44,
+        3,
+      ),
       metal,
       {},
     ),
   );
-  // Front stone on the dome too, smaller.
-  group.add(
-    mesh(new THREE.SphereGeometry(skull * 0.08, 12, 10), stone, {
-      position: [0, seat + skull * 1.82, around * 0.64],
-      scale: [1, 1.3, 0.45],
+  /**
+   * The crested rim.
+   *
+   * LEAVES, not spikes. A cone standing on a rim is a paper crown, and
+   * the first two attempts at this edge were exactly that — the Studio
+   * showed a coronet. What the reference has is a cut edge: broad petals,
+   * wide where they leave the drum, drawn to a point, and flattened
+   * radially so they read as foliage rather than as horns.
+   */
+  const petal = (bearing: number, height: number, width: number, lean: number) => {
+    const at = on(bearing, R * FLARE * 1.01);
+    const leaf = new THREE.Group();
+    leaf.position.set(at[0], DRUM_TOP - RISE * 0.03, at[2]);
+    leaf.rotation.y = -bearing;
+    leaf.rotation.x = -lean;
+    // A LATHED silhouette, because the silhouette is the whole point: a
+    // tapered tube balloons at its base and caps its tip with a dome, and
+    // eleven of those round the rim read as thorns — which is what two
+    // passes at this edge came back from the Studio looking like.
+    const blade = mesh(
+      lathe(
+        [
+          [width * 0.98, 0],
+          [width, height * 0.22],
+          [width * 0.78, height * 0.52],
+          [width * 0.42, height * 0.78],
+          [width * 0.14, height * 0.94],
+          [0, height],
+        ],
+        14,
+      ),
+      metal,
+      {},
+    );
+    leaf.add(blade);
+    leaf.scale.z = 0.28;
+    return leaf;
+  };
+  for (let i = 0; i < 11; i += 1) {
+    const bearing = (i / 11) * Math.PI * 2;
+    group.add(petal(bearing, RISE * 0.27, R * 0.34, 0.12));
+    group.add(petal(bearing + Math.PI / 11, RISE * 0.14, R * 0.2, 0.18));
+  }
+
+  // --- the brow ornament ---------------------------------------------------
+  // The pointed shield over the brow with its red cabochon, and the
+  // pendant that descends from it onto the forehead: the one piece of
+  // this crown a devotee looks straight at. Flat AGAINST the crown, not
+  // standing off it — a cone on the forehead is a party hat.
+  const frontZ = seatZ + ring(0, R).rz;
+  const brow = new THREE.Group();
+  brow.position.set(0, BAND_BOTTOM, frontZ * 1.01);
+  brow.rotation.x = -0.24;
+  group.add(brow);
+  const shield = new THREE.Mesh(
+    taperedTube(
+      [
+        [0, -RISE * 0.1, 0],
+        [0, RISE * 0.16, 0.002],
+        [0, RISE * 0.72, 0],
+      ],
+      [R * 0.4, R * 0.02],
+      12,
+      9,
+    ),
+    metal,
+  );
+  shield.scale.z = 0.36;
+  brow.add(shield);
+  brow.add(
+    mesh(new THREE.SphereGeometry(R * 0.2, 14, 12), metal, {
+      position: [0, RISE * 0.17, 0.003],
+      scale: [1, 1.25, 0.36],
     }),
   );
-  // Finial: neck, bud, tip.
+  brow.add(
+    mesh(new THREE.SphereGeometry(R * 0.13, 14, 12), stone, {
+      position: [0, RISE * 0.17, 0.006],
+      scale: [1, 1.3, 0.42],
+    }),
+  );
+  // The pendant, hanging below the band onto the brow itself.
+  brow.add(
+    mesh(new THREE.SphereGeometry(R * 0.11, 12, 10), metal, {
+      position: [0, -RISE * 0.13, 0.001],
+      scale: [1, 1.2, 0.4],
+    }),
+  );
+  brow.add(
+    mesh(new THREE.SphereGeometry(R * 0.065, 12, 10), gem, {
+      position: [0, -RISE * 0.13, 0.004],
+      scale: [1, 1.2, 0.45],
+    }),
+  );
+
+  // --- the kumbha ----------------------------------------------------------
+  // Above the head the crown is its own object, so it turns on a circle:
+  // an ellipse up here would read as a squashed pot from three-quarters.
+  //
+  // A BELLIED pot with a waist, not a dome. Two attempts at this tier came
+  // back as a smooth cap on a cylinder and the whole crown read as a
+  // European coronet; what makes the reference's silhouette Vaishnava is
+  // that the tower keeps changing its mind — out at the belly, in at the
+  // neck, out again at the bud.
+  const potR = R * FLARE * 0.72;
+  // ON the drum, not inside it. Sunk to the rim the pot was completely
+  // hidden behind its own lid and the crown read as drum → cap → finial,
+  // with the middle tier missing.
+  const potBase = DRUM_TOP + RISE * 0.09;
+  const potSpan = KUMBHA_TOP - potBase;
+  // The lid: the drum's mouth closed from its rim to the pot's foot, so
+  // nothing looks down a well from three-quarters.
   group.add(
     mesh(
       lathe([
-        [around * 0.18, seat + skull * 2.78],
-        [around * 0.12, seat + skull * 2.88],
-        [around * 0.17, seat + skull * 3.04],
-        [around * 0.1, seat + skull * 3.2],
-        [0, seat + skull * 3.32],
+        [R * FLARE * 1.02, DRUM_TOP - RISE * 0.02],
+        [R * FLARE * 0.94, DRUM_TOP + RISE * 0.02],
+        [potR * 0.9, potBase],
+        [potR * 0.78, potBase + RISE * 0.02],
       ]),
       metal,
-      {},
+      { position: [0, 0, seatZ] },
+    ),
+  );
+  group.add(
+    mesh(
+      lathe([
+        [potR * 0.76, potBase],
+        [potR * 0.95, potBase + potSpan * 0.2],
+        [potR, potBase + potSpan * 0.42],
+        [potR * 0.88, potBase + potSpan * 0.62],
+        [potR * 0.58, potBase + potSpan * 0.82],
+        [potR * 0.46, KUMBHA_TOP],
+      ]),
+      metal,
+      { position: [0, 0, seatZ] },
+    ),
+  );
+  // Flutes over the pot's belly — the chased gold of the reference.
+  for (let i = 0; i < 16; i += 1) {
+    const bearing = (i / 16) * Math.PI * 2;
+    const dx = Math.sin(bearing);
+    const dz = Math.cos(bearing);
+    group.add(
+      new THREE.Mesh(
+        taperedTube(
+          [
+            [dx * potR * 0.78, potBase + potSpan * 0.06, seatZ + dz * potR * 0.78],
+            [dx * potR * 1.0, potBase + potSpan * 0.42, seatZ + dz * potR * 1.0],
+            [dx * potR * 0.6, potBase + potSpan * 0.8, seatZ + dz * potR * 0.6],
+          ],
+          [R * 0.04, R * 0.028],
+          10,
+          6,
+        ),
+        metal,
+      ),
+    );
+  }
+  // Bead collars at the pot's foot and its neck.
+  for (const [at, radius, count] of [
+    [potBase + potSpan * 0.06, potR * 0.8, 20],
+    [KUMBHA_TOP, potR * 0.48, 16],
+  ] as const) {
+    for (let i = 0; i < count; i += 1) {
+      const bearing = (i / count) * Math.PI * 2;
+      group.add(
+        mesh(new THREE.SphereGeometry(R * 0.04, 8, 6), metal, {
+          position: [Math.sin(bearing) * radius, at, seatZ + Math.cos(bearing) * radius],
+        }),
+      );
+    }
+  }
+  // A stone on the belly of the pot, smaller than the brow's.
+  group.add(
+    mesh(new THREE.SphereGeometry(R * 0.1, 12, 10), stone, {
+      position: [0, potBase + potSpan * 0.42, seatZ + potR * 0.96],
+      scale: [1, 1.3, 0.45],
+    }),
+  );
+
+  // --- the finial ----------------------------------------------------------
+  // Collar, neck, bud, point — four separated things, because a single
+  // smooth taper is a knob and this is the top of a tower.
+  const span = TIP - KUMBHA_TOP;
+  group.add(
+    mesh(
+      lathe([
+        [potR * 0.46, KUMBHA_TOP - 0.001],
+        [potR * 0.66, KUMBHA_TOP + span * 0.07],
+        [potR * 0.62, KUMBHA_TOP + span * 0.14],
+        [potR * 0.3, KUMBHA_TOP + span * 0.24],
+        [potR * 0.26, KUMBHA_TOP + span * 0.36],
+        [potR * 0.48, KUMBHA_TOP + span * 0.5],
+        [potR * 0.44, KUMBHA_TOP + span * 0.6],
+        [potR * 0.18, KUMBHA_TOP + span * 0.7],
+        [potR * 0.22, KUMBHA_TOP + span * 0.8],
+        [potR * 0.09, KUMBHA_TOP + span * 0.9],
+        [0, TIP],
+      ]),
+      metal,
+      { position: [0, 0, seatZ] },
     ),
   );
   return group;
@@ -576,30 +981,46 @@ export const ornamentTilaka: AttachmentGenerator = (ctx) => {
 export const featureHairFlowing: PartGenerator = (ctx) => {
   const hair = ctx.materials.get("hair");
   const group = new THREE.Group();
-  const skull = ctx.body.headRadius;
-  const centre = new THREE.Vector3(0, ctx.body.headCenterY, ctx.body.headCenterZ);
+  const body = ctx.body;
+  const skull = body.headRadius;
+  const centre = new THREE.Vector3(0, body.headCenterY, body.headCenterZ);
 
   // The cap: a shell over the back three-quarters of the skull.
-  // The cap, as explicit tufts on MY OWN bearings rather than a sphere
-  // sweep: two attempts at phiStart arithmetic each draped hair over the
-  // brow like a helmet brim, because a sweep's zero is the geometry's
-  // convention and these angles are mine. Bearing 0 is the front;
-  // everything here sits from the temples round the back.
+  //
+  // On the MEASURED skull, and below the brow — which is where a crown's
+  // band comes down. Sized off a mean radius and stacked above the head
+  // centre, these tufts reached a quarter of a radius further out than
+  // the kirita's band and showed as black lumps THROUGH the gold, from
+  // every angle. Hair belongs to the sides, the nape and the fall; the
+  // crown owns the top, and the two only meet if one of them guesses.
+  //
+  // Bearing 0 is the front; everything here sits from the temples round
+  // the back. Two attempts at phiStart arithmetic each draped hair over
+  // the brow like a helmet brim, because a sweep's zero is the geometry's
+  // convention and these angles are mine.
+  const capTop = Math.min(body.browY, body.skullTopY) - skull * 0.08;
   for (const row of [
-    { y: 0.28, r: 0.94, size: 0.32, from: 0.62, count: 7 },
-    { y: 0.2, r: 0.98, size: 0.36, from: 0.56, count: 8 },
+    { y: capTop, size: 0.3, from: 0.56, count: 13 },
+    { y: capTop - skull * 0.36, size: 0.34, from: 0.5, count: 14 },
+    { y: capTop - skull * 0.74, size: 0.3, from: 0.5, count: 12 },
   ]) {
+    const at = body.skullAt(row.y);
     for (let i = 0; i < row.count; i += 1) {
       const t = row.count === 1 ? 0.5 : i / (row.count - 1);
       const bearing = Math.PI * (row.from + (2 - 2 * row.from) * t);
+      const reach = Math.abs(Math.sin(bearing)) * at.halfWidth;
+      const depth =
+        Math.cos(bearing) > 0
+          ? Math.cos(bearing) * (at.frontZ - body.headCenterZ)
+          : Math.cos(bearing) * (body.headCenterZ - at.backZ);
       group.add(
         mesh(new THREE.SphereGeometry(skull * row.size, 12, 10), hair, {
           position: [
-            centre.x + Math.sin(bearing) * skull * row.r,
-            centre.y + skull * row.y,
-            centre.z + Math.cos(bearing) * skull * row.r,
+            Math.sin(bearing) * reach * 0.94,
+            row.y,
+            body.headCenterZ + depth * 0.94,
           ],
-          scale: [1, 1.15, 1],
+          scale: [1, 1.1, 1],
         }),
       );
     }
@@ -608,7 +1029,7 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   // The fall: locks from the nape, curving out over the shoulders and
   // down the back. Deterministic variation — no randomness, the same
   // statue every time.
-  const LOCKS = 11;
+  const LOCKS = 15;
   for (let i = 0; i < LOCKS; i += 1) {
     const t = i / (LOCKS - 1);
     const angle = Math.PI * (0.6 + 0.8 * t); // round the back of the skull
@@ -622,7 +1043,7 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
       [x0 * 1.1 + sway * 2, centre.y - skull * 0.6 - drop * 0.55, z0 - skull * 0.5],
       [x0 * 0.85, centre.y - skull * 0.6 - drop, z0 - skull * 0.42],
     ];
-    group.add(new THREE.Mesh(taperedTube(path, [skull * 0.16, skull * 0.05], 12, 7), hair));
+    group.add(new THREE.Mesh(taperedTube(path, [skull * 0.22, skull * 0.07], 12, 7), hair));
   }
   return [{ joint: "head", object: group }];
 };

@@ -46,9 +46,17 @@
     "faceDivine",
     "bodyAscetic",
     "gripFrontLeft",
+    "gripBackLeft",
     "gripFrontRight",
+    "gripBackRight",
     "cradleFrontLeft",
-    "cradleFrontRight"
+    "cradleBackLeft",
+    "cradleFrontRight",
+    "cradleBackRight",
+    "poiseFrontLeft",
+    "poiseBackLeft",
+    "poiseFrontRight",
+    "poiseBackRight"
   ],
   "bodyProfile": {
     "base": {
@@ -77,6 +85,10 @@
       "headCenterY": 0.07147,
       "headCenterZ": 0.00662,
       "headRadius": 0.04022,
+      "crownSocketY": 0.07071,
+      "crownSocketZ": -0.01501,
+      "browY": 0.0294,
+      "skullTopY": 0.08271,
       "thighTopRadius": 0.06748,
       "thighMidRadius": 0.05978,
       "kneeRadius": 0.03485,
@@ -115,6 +127,10 @@
         "headCenterY": 0.00013,
         "headCenterZ": -0.00036,
         "headRadius": 0.0001,
+        "crownSocketY": 0,
+        "crownSocketZ": 0,
+        "browY": 0,
+        "skullTopY": 0.0001,
         "thighTopRadius": -0.0001,
         "thighMidRadius": -0.00345,
         "kneeRadius": 0.00087,
@@ -152,6 +168,10 @@
         "headCenterY": 0.00012,
         "headCenterZ": 0.0002,
         "headRadius": -0.00017,
+        "crownSocketY": 0,
+        "crownSocketZ": 0,
+        "browY": 0,
+        "skullTopY": 0.00009,
         "thighTopRadius": -0.00089,
         "thighMidRadius": 0.00044,
         "kneeRadius": -0.00147,
@@ -189,6 +209,10 @@
         "headCenterY": 0.00012,
         "headCenterZ": 0.0002,
         "headRadius": -0.00017,
+        "crownSocketY": 0,
+        "crownSocketZ": 0,
+        "browY": 0,
+        "skullTopY": 0.00009,
         "thighTopRadius": -0.00014,
         "thighMidRadius": 0.00256,
         "kneeRadius": 0.00074,
@@ -226,6 +250,10 @@
         "headCenterY": 0.00012,
         "headCenterZ": -0.00009,
         "headRadius": -0.00003,
+        "crownSocketY": 0,
+        "crownSocketZ": 0,
+        "browY": 0,
+        "skullTopY": 0.00009,
         "thighTopRadius": -0.00058,
         "thighMidRadius": 0.00186,
         "kneeRadius": 0.00087,
@@ -263,6 +291,10 @@
         "headCenterY": -0.00002,
         "headCenterZ": 0.00358,
         "headRadius": -0.00021,
+        "crownSocketY": 0,
+        "crownSocketZ": 0,
+        "browY": 0,
+        "skullTopY": 0.00009,
         "thighTopRadius": -0.00013,
         "thighMidRadius": -0.00013,
         "kneeRadius": -0.00011,
@@ -300,6 +332,10 @@
         "headCenterY": 0.00012,
         "headCenterZ": -0.00018,
         "headRadius": 0.00002,
+        "crownSocketY": 0,
+        "crownSocketZ": 0,
+        "browY": 0,
+        "skullTopY": 0.00009,
         "thighTopRadius": -0.0005,
         "thighMidRadius": -0.00411,
         "kneeRadius": 0.00006,
@@ -338,6 +374,78 @@
   "gripShapes": {
     "grip": 0.007,
     "cradle": 0.03
+  },
+  "poiseAxes": {
+    "frontLeft": [
+      0,
+      -1,
+      0
+    ],
+    "frontRight": [
+      0,
+      -1,
+      0
+    ],
+    "backLeft": [
+      -0.19867,
+      -0.98007,
+      0
+    ],
+    "backRight": [
+      0.19867,
+      -0.98007,
+      0
+    ]
+  },
+  "poiseSeats": {
+    "frontLeft": {
+      "point": [
+        0.02392,
+        -0.09996,
+        -0.02126
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "frontRight": {
+      "point": [
+        -0.02392,
+        -0.09996,
+        -0.02126
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "backLeft": {
+      "point": [
+        0.00358,
+        -0.10272,
+        -0.02126
+      ],
+      "normal": [
+        -0.19867,
+        -0.98007,
+        0
+      ]
+    },
+    "backRight": {
+      "point": [
+        -0.00358,
+        -0.10272,
+        -0.02126
+      ],
+      "normal": [
+        0.19867,
+        -0.98007,
+        0
+      ]
+    }
   },
   "faceAxes": {
     "head.forehead": [
@@ -917,6 +1025,68 @@
         ]
       }
     }
+  },
+  "skullEnvelope": {
+    "topY": 0.08271,
+    "step": 0.005,
+    "y0": 0,
+    "halfWidth": [
+      0.04497,
+      0.04615,
+      0.0465,
+      0.0479,
+      0.04803,
+      0.04779,
+      0.04038,
+      0.04068,
+      0.03988,
+      0.03914,
+      0.03914,
+      0.03754,
+      0.03745,
+      0.03426,
+      0.03278,
+      0.02854,
+      0.02309
+    ],
+    "frontZ": [
+      0.07054,
+      0.06984,
+      0.06647,
+      0.06261,
+      0.05998,
+      0.06066,
+      0.06148,
+      0.0615,
+      0.06123,
+      0.06007,
+      0.05934,
+      0.05723,
+      0.05542,
+      0.05253,
+      0.04804,
+      0.04251,
+      0.02462
+    ],
+    "backZ": [
+      -0.04136,
+      -0.04374,
+      -0.04645,
+      -0.04923,
+      -0.04923,
+      -0.05075,
+      -0.04218,
+      -0.05075,
+      -0.04421,
+      -0.05076,
+      -0.04252,
+      -0.04668,
+      -0.03585,
+      -0.03929,
+      -0.03929,
+      -0.02671,
+      -0.02671
+    ]
   },
   "torsoSurface": {
     "minY": -0.26,

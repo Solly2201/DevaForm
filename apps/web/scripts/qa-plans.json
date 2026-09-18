@@ -343,5 +343,100 @@
         ]
       }
     ]
+  },
+  "vishnu": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "vishnu-regal",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "vishnu-head",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "vishnu-hands",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "vishnu-chakra",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "backRightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
+      },
+      {
+        "name": "vishnu-shankha",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "backLeftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
+      },
+      {
+        "name": "vishnu-gada",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "vishnu-padma",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "leftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      }
+    ]
   }
 }

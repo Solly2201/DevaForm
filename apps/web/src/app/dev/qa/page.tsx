@@ -27,6 +27,7 @@ import {
   ARM_SLOTS,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
+  createDefaultVishnuConfiguration,
   mudraArmRotations,
   type CharacterConfiguration,
   type Vec3,
@@ -44,6 +45,19 @@ import {
 import { applyMorphInfluences } from "@/engine/skinning";
 import { SceneEnvironment } from "@/engine/SceneEnvironment";
 import { subscribeGlbCache } from "@/engine/glbCache";
+
+/**
+ * The camera, as ONE object.
+ *
+ * Not an inline literal on <Canvas>. A fresh literal every render makes
+ * react-three-fiber reconcile a fresh camera, so the component that
+ * frames the shot and the loop that draws it end up holding different
+ * cameras — and the sheet comes back framed on whatever the first,
+ * unmeasured render guessed, while every report says otherwise. Three QA
+ * runs were read as geometry bugs before the frames were compared with
+ * the pixels.
+ */
+const CAMERA = { position: [0, 0.6, 2] as [number, number, number], fov: 38, near: 0.02, far: 50 };
 
 /** Where the camera stands, as a bearing around the figure. */
 const VIEWS: Record<string, number> = {
@@ -82,6 +96,8 @@ const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> 
   // whether the fingers are actually round the thing they hold.
   rightHand: { joints: ["arm.frontRight.hand"], span: 0.2 },
   leftHand: { joints: ["arm.frontLeft.hand"], span: 0.2 },
+  backRightHand: { joints: ["arm.backRight.hand"], span: 0.2 },
+  backLeftHand: { joints: ["arm.backLeft.hand"], span: 0.2 },
   waist: { joints: ["pelvis"], span: 0.42 },
   feet: { joints: ["leg.left.foot", "leg.right.foot"], span: 0.35 },
 };
@@ -105,7 +121,9 @@ function configFor(params: URLSearchParams): CharacterConfiguration {
   const config =
     deity === "ganesha"
       ? createDefaultGaneshaConfiguration()
-      : createDefaultShivaConfiguration();
+      : deity === "vishnu"
+        ? createDefaultVishnuConfiguration()
+        : createDefaultShivaConfiguration();
   const pose = params.get("pose");
   if (pose) {
     // Exactly what the editor does when a pose is chosen: the preset
@@ -242,7 +260,7 @@ function Frame({
   bearing: number;
   centre: { x: number; y: number };
   span: number;
-  onFramed: () => void;
+  onFramed: (key: string) => void;
 }) {
   const camera = useThree((state) => state.camera);
   useEffect(() => {
@@ -266,8 +284,80 @@ function Frame({
     );
     camera.lookAt(target);
     camera.updateProjectionMatrix();
-    onFramed();
+    // WHICH frame this is, not merely that one happened.
+    //
+    // A boolean was true from the first render — before the rig had been
+    // measured — so a capture could be published against the fallback
+    // camera while the real one was still a commit behind. Two sheets in
+    // one run framed a hem where a head had been asked for. The key names
+    // the frame, and the capture waits for the key it is about.
+    onFramed(frameKey(bearing, centre, span));
+    // The centre's COMPONENTS, not the object: the caller rebuilds it
+    // every render and an identity dependency would re-aim the camera on
+    // every commit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, bearing, centre.x, centre.y, span, onFramed]);
+  return null;
+}
+
+/** A frame, named by what it looks at — see Frame's onFramed. */
+function frameKey(bearing: number, centre: { x: number; y: number }, span: number): string {
+  return [bearing, centre.x, centre.y, span].map((value) => value.toFixed(5)).join("/");
+}
+
+/**
+ * Hand the rendered frame to the capture script.
+ *
+ * INSIDE the canvas, deliberately. This lived in the page component,
+ * read `document.querySelector("canvas")` and trusted a 500 ms timer to
+ * mean the camera had moved — and it published pictures taken from the
+ * previous frame's camera while reporting the current one, so a sheet
+ * asked for a head returned a hem and the report said "head". Here there
+ * is one timeline: the camera this component reads IS the camera the
+ * buffer was drawn with, and it says where that camera stood, so a frame
+ * and its picture can no longer disagree.
+ */
+function Publish({
+  ready,
+  frame,
+  warnings,
+}: {
+  ready: boolean;
+  frame: Record<string, unknown>;
+  warnings: readonly string[];
+}) {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  const camera = useThree((state) => state.camera);
+  const key = JSON.stringify(frame);
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    // A capture already published is withdrawn the moment the thing it
+    // was a picture of changes, so a rebuild can never be read as the
+    // render that preceded it.
+    delete w.__devaformQa;
+    if (!ready) return;
+    // Let the framed camera render, then read the buffer: the canvas is
+    // created with preserveDrawingBuffer so the last frame survives.
+    const timer = setTimeout(() => {
+      w.__devaformQaWarnings = warnings;
+      // DRAW the frame that is about to be photographed.
+      //
+      // Reading whatever happened to be in the buffer meant trusting that
+      // the render loop had run since the camera moved, and it had not:
+      // every close-up in a sheet came back framed on the first,
+      // unmeasured guess while the report named the frame that had been
+      // asked for. A capture surface should not be a spectator of its own
+      // render.
+      scene.updateMatrixWorld(true);
+      camera.updateMatrixWorld(true);
+      gl.render(scene, camera);
+      w.__devaformQaFrame = { ...frame, camera: camera.position.toArray() };
+      w.__devaformQa = gl.domElement.width ? gl.domElement.toDataURL("image/png") : "FAILED";
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, key, warnings, gl, scene, camera]);
   return null;
 }
 
@@ -304,30 +394,16 @@ function QaCapture() {
   const centre = report?.centre ?? { x: 0, y: height * 0.5 };
   const span = height * focus.span;
   const bearing = (view * Math.PI) / 180;
-  const [framed, setFramed] = useState(false);
-  const onFramed = useMemo(() => () => setFramed(true), []);
-
-  useEffect(() => {
-    // A GLB that has not arrived yet means a rebuild is coming, and a
-    // capture taken now is a picture of a figure with no body in it.
-    if (!report || !framed || report.pending.length > 0) return;
-    // Let the framed camera render, then read the buffer: the canvas is
-    // created with preserveDrawingBuffer so the last frame survives.
-    const timer = setTimeout(() => {
-      const canvas = document.querySelector<HTMLCanvasElement>("canvas");
-      const w = window as unknown as Record<string, unknown>;
-      w.__devaformQaWarnings = report.warnings;
-      w.__devaformQa = canvas?.width ? canvas.toDataURL("image/png") : "FAILED";
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [report, framed, view, focus]);
+  const [framed, setFramed] = useState<string | null>(null);
+  const onFramed = useMemo(() => (key: string) => setFramed(key), []);
+  const wanted = frameKey(bearing, centre, span);
 
   return (
     <div className="h-dvh w-dvw bg-[#14100d]">
       <Canvas
         shadows
         dpr={1}
-        camera={{ position: [0, 0.6, 2], fov: 38, near: 0.02, far: 50 }}
+        camera={CAMERA}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
         className="h-full w-full"
       >
@@ -351,6 +427,11 @@ function QaCapture() {
           />
         ))}
         <Figure config={config} focus={focus.joints} onReady={setReport} />
+        <Publish
+          ready={report !== null && report.pending.length === 0 && framed === wanted}
+          frame={{ centre, span, height, view, framed: wanted }}
+          warnings={report?.warnings ?? []}
+        />
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.006, 0]} receiveShadow>
           <circleGeometry args={[2.4, 48]} />
           <meshStandardMaterial color="#1a1512" roughness={0.95} />

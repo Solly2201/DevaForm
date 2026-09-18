@@ -4,7 +4,15 @@
  * A procedural hand is built in whatever mudra it was asked for. A mesh
  * hand is already modelled, so closing it is a deformation — and a body
  * mesh that can close its hands says so by exposing `grip<ArmSlot>` and
- * `cradle<ArmSlot>` morph targets, plus the radii it baked them at.
+ * `cradle<ArmSlot>` morph targets, plus the radii it baked them at. Per
+ * ARM SLOT, and every slot the body has: the four-armed mesh shipped only
+ * the front pair's targets, so the back hands were never closed at all
+ * and held their attributes in an open rest palm.
+ *
+ * A body may also bake states that are not closures — `poise<ArmSlot>`,
+ * the raised index a discus balances on — which an attribute asks for by
+ * name through its presentation rather than by pretending to be six
+ * millimetres thick.
  *
  * WHY TWO. A hand closed on a staff and a hand closed on a conch are not
  * the same hand scaled: one fist dialled to a fraction travels from an
@@ -21,7 +29,7 @@ import {
   type HandsConfiguration,
   type MudraId,
 } from "@devaform/character-schema";
-import type { AssetDefinition } from "@devaform/asset-system";
+import type { AssetDefinition, HandClosure } from "@devaform/asset-system";
 
 /**
  * How closed each mudra's hand is when it is holding NOTHING.
@@ -70,18 +78,28 @@ export function gripBlend(
 export function handMorphInfluences(
   hands: HandsConfiguration,
   body: AssetDefinition | undefined,
-  /** What each hand is holding, and how thick it is where the hand closes. */
-  held: Readonly<Partial<Record<ArmSlot, { radius?: number }>>> = {},
+  /** What each hand is holding, how thick it is, and which state holds it. */
+  held: Readonly<
+    Partial<Record<ArmSlot, { radius?: number; closure?: HandClosure }>>
+  > = {},
 ): Record<string, number> {
   const available = new Set(body?.morphTargets ?? []);
   const influences: Record<string, number> = {};
   for (const slot of ARM_SLOTS) {
-    const targets = ["grip", "cradle"].filter((shape) =>
+    const targets = ["grip", "cradle", "poise"].filter((shape) =>
       available.has(shapeTarget(shape, slot)),
     );
     if (targets.length === 0) continue;
     for (const shape of targets) influences[shapeTarget(shape, slot)] = 0;
 
+    // A hand state that is not a closure does not blend with one: a
+    // poised hand is a whole baked shape, and half of it plus half a
+    // fist is neither.
+    const poise = shapeTarget("poise", slot);
+    if (held[slot]?.closure === "poise" && available.has(poise)) {
+      influences[poise] = 1;
+      continue;
+    }
     const radius = held[slot]?.radius;
     const blend = radius === undefined ? undefined : gripBlend(body?.gripShapes, radius);
     if (blend) {
@@ -112,7 +130,9 @@ export function morphInfluences(
   configured: Readonly<Record<string, number>>,
   hands: HandsConfiguration,
   body: AssetDefinition | undefined,
-  held: Readonly<Partial<Record<ArmSlot, { radius?: number }>>> = {},
+  held: Readonly<
+    Partial<Record<ArmSlot, { radius?: number; closure?: HandClosure }>>
+  > = {},
 ): Record<string, number> {
   return { ...handMorphInfluences(hands, body, held), ...configured };
 }

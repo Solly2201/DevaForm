@@ -130,7 +130,33 @@ export interface GripFrame {
   roll?: number;
   travel?: { up?: number; down?: number };
   radius?: number;
+  /**
+   * WHICH hand state holds it.
+   *
+   * `wrap` — the default — is a hand closing round something, and the
+   * radius above says how thick that something is. `poise` is a hand
+   * that is not closing at all: three fingers and the thumb shut, the
+   * index standing, and the attribute balanced on its tip.
+   *
+   * A discus needs the second and cannot be described by the first. Its
+   * presentation used to declare a six-millimetre radius so the hand
+   * would close on "a finger", which produced a fist shut on nothing
+   * beside a floating wheel — the hand had no relationship to the thing
+   * it was supposedly holding. Saying which state an attribute asks for
+   * is one word, and the body already ships a seat and a channel for
+   * each state it can bake.
+   */
+  closure?: HandClosure;
 }
+
+/**
+ * The hand states a body can be asked for.
+ *
+ * Deliberately short. Each one has to be a real baked shape with its own
+ * measured seat, so the vocabulary grows only when a body can honour it.
+ */
+export const HAND_CLOSURES = ["wrap", "poise"] as const;
+export type HandClosure = (typeof HAND_CLOSURES)[number];
 
 /** A grounded presentation stands beside the figure, clear of it. */
 export interface GroundedStand {
@@ -326,16 +352,18 @@ export function isHandheld(presentation: AttributePresentation): boolean {
  * unbounded travel.
  */
 export function resolveGripFrame(presentation: AttributePresentation): Required<
-  Omit<GripFrame, "travel" | "radius">
+  Omit<GripFrame, "travel" | "radius" | "closure">
 > & {
   travel: { up: number; down: number };
   radius: number | undefined;
+  closure: HandClosure;
 } {
   const grip = presentation.grip ?? {};
   return {
     origin: grip.origin ?? [0, 0, 0],
     axis: grip.axis ?? [0, 1, 0],
     roll: grip.roll ?? 0,
+    closure: grip.closure ?? "wrap",
     travel: {
       up: grip.travel?.up ?? Number.POSITIVE_INFINITY,
       down: grip.travel?.down ?? Number.POSITIVE_INFINITY,

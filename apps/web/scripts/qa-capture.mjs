@@ -71,6 +71,19 @@ page.on("pageerror", (error) => consoleErrors.push(String(error)));
 const report = [];
 let failures = 0;
 
+// Warm the route before the first shot counts.
+//
+// The first navigation of a run pays for the dev server compiling
+// /dev/qa and for the body GLB arriving cold, and a sheet whose first
+// view is a costume with nobody in it has been published twice. This
+// render is thrown away; every shot after it is measured against a
+// server that has already done that work.
+await page.goto(`${BASE}/dev/qa?${new URLSearchParams(plan.shots[0]?.params ?? {})}`, {
+  waitUntil: "networkidle0",
+  timeout: 180_000,
+});
+await page.waitForFunction(() => window.__devaformQa, { timeout: 120_000 }).catch(() => null);
+
 for (const shot of plan.shots) {
   const query = new URLSearchParams(shot.params ?? {});
   for (const view of shot.views ?? ["front"]) {
@@ -82,6 +95,7 @@ for (const shot of plan.shots) {
       .then(async (handle) => ({
         image: await handle.jsonValue(),
         warnings: await page.evaluate(() => window.__devaformQaWarnings ?? []),
+        frame: await page.evaluate(() => window.__devaformQaFrame ?? null),
       }))
       .catch(() => null);
     const name = `${shot.name}-${view}${shot.params?.focus ? `-${shot.params.focus}` : ""}.png`;
@@ -94,7 +108,7 @@ for (const shot of plan.shots) {
       path.join(outDir, name),
       Buffer.from(result.image.split(",")[1], "base64"),
     );
-    report.push({ name, url, warnings: result.warnings });
+    report.push({ name, url, frame: result.frame, warnings: result.warnings });
     const flag = result.warnings.length ? ` ⚠ ${result.warnings.length}` : "";
     console.log(`  wrote   ${name}${flag}`);
     for (const warning of result.warnings) console.log(`            ${warning}`);

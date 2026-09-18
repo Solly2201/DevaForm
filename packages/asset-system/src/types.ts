@@ -136,6 +136,19 @@ export interface MeasuredBodySurfaces {
    */
   headCenterZ: number;
   headRadius: number;
+  /**
+   * Head-joint-local heights of the landmarks headwear is placed by: the
+   * crown socket, the brow, and the top of the skull.
+   *
+   * A crown is authored in ITS socket's space and has to talk about the
+   * head's — where the band grips, how far the fan may rise — and a
+   * fraction of headRadius standing in for either is how the kirita
+   * ended up seated behind the hairline with the whole forehead bare.
+   */
+  crownSocketY: number;
+  crownSocketZ: number;
+  browY: number;
+  skullTopY: number;
   /** The leg a wrapped garment has to follow, joint to joint. */
   thighTopRadius: number;
   thighMidRadius: number;
@@ -190,6 +203,25 @@ export interface MeasuredTorsoSurface {
  * furthest either leg reaches sideways at that height; `frontZ`/`backZ`
  * are the furthest forward and back, relative to the pelvis joint.
  */
+/**
+ * The head's silhouette as a stack of rows, head-joint-local.
+ *
+ * Rows run upward from `y0` in steps of `step`; each carries the widest
+ * half-width at that height and how far the skin reaches front and back.
+ * Ears are in it, deliberately: a band that clears the measured
+ * silhouette cannot cut one.
+ */
+export interface MeasuredSkullEnvelope {
+  /** Head-joint-local height of the top of the head. */
+  topY: number;
+  /** Height of the first row, and the gap between rows. */
+  y0: number;
+  step: number;
+  halfWidth: readonly number[];
+  frontZ: readonly number[];
+  backZ: readonly number[];
+}
+
 export interface MeasuredLegEnvelope {
   /** Pelvis-local heights of the first and last rows. */
   topY: number;
@@ -336,6 +368,33 @@ export interface AssetDefinition {
   gripSeats?: Readonly<
     Record<string, { point: readonly [number, number, number]; normal: readonly [number, number, number] }>
   >;
+  /**
+   * Body-slot assets: what a POISED hand offers, per arm slot.
+   *
+   * The other baked hand state. `gripSeats` answers "where does a thing
+   * of radius r rest in a closed hand"; this answers "where does a thing
+   * balanced on a raised finger rest, and which way is that finger
+   * pointing" — the discus of the reference sheet, which a closing hand
+   * cannot present at all. Same shape as gripSeats/gripAxes on purpose:
+   * a hand state is a seat plus a channel, whichever state it is.
+   */
+  poiseSeats?: Readonly<
+    Record<string, { point: readonly [number, number, number]; normal: readonly [number, number, number] }>
+  >;
+  poiseAxes?: Readonly<Record<string, readonly [number, number, number]>>;
+  /**
+   * Body-slot assets: the head's own silhouette, head-joint-local, at a
+   * stack of heights — half-width, and how far the skin reaches front
+   * and back.
+   *
+   * What headwear has to go ROUND. `headRadius` is the mean of two
+   * half-extents and a crown built on it cuts the temples; worse, a head
+   * is not centred on its own joint, so a ring centred there sits through
+   * the forehead at the front and hangs in the air behind. Both were
+   * visible on the kirita, and both are measurements rather than
+   * opinions.
+   */
+  skullEnvelope?: MeasuredSkullEnvelope;
   /** Body-slot assets: this mesh's torso and neck, measured all round. */
   torsoSurface?: MeasuredTorsoSurface;
   /**

@@ -21,6 +21,7 @@ import type {
   MeasuredBodyProfile,
   MeasuredBodySurfaces,
   MeasuredLegEnvelope,
+  MeasuredSkullEnvelope,
   MeasuredTorsoSurface,
 } from "@devaform/asset-system";
 
@@ -146,6 +147,65 @@ export interface BodyProfile {
    * from behind while looking perfectly fitted from the front.
    */
   legExtentAt(pelvisLocalY: number): { halfWidth: number; frontZ: number; backZ: number };
+  /**
+   * Head-joint-local heights of the landmarks headwear is placed by.
+   * `crownSocketY/Z` is where the crown socket sits, so geometry authored
+   * in socket space can convert; `browY` is where a band grips; and
+   * `skullTopY` is where the head stops.
+   */
+  crownSocketY: number;
+  crownSocketZ: number;
+  browY: number;
+  skullTopY: number;
+  /**
+   * The head's own silhouette at a height, head-joint-local: how wide it
+   * is and how far the skin reaches front and back.
+   *
+   * What a crown has to go ROUND. A head is neither round nor centred on
+   * its joint, and a band built at `headRadius` around the socket sits
+   * through the forehead at the front while hanging in the air behind —
+   * which is exactly what the kirita did.
+   */
+  skullAt(headLocalY: number): { halfWidth: number; frontZ: number; backZ: number };
+}
+
+/** Read a measured skull envelope at a height, linearly between rows. */
+function sampleSkullEnvelope(
+  envelope: MeasuredSkullEnvelope,
+  y: number,
+): { halfWidth: number; frontZ: number; backZ: number } {
+  const rows = envelope.halfWidth.length;
+  const at = Math.min(
+    rows - 1,
+    Math.max(0, (y - envelope.y0) / (envelope.step || 1)),
+  );
+  const low = Math.floor(at);
+  const high = Math.min(rows - 1, low + 1);
+  const t = at - low;
+  const mix = (values: readonly number[]) =>
+    (values[low] ?? 0) * (1 - t) + (values[high] ?? 0) * t;
+  return {
+    halfWidth: mix(envelope.halfWidth),
+    frontZ: mix(envelope.frontZ),
+    backZ: mix(envelope.backZ),
+  };
+}
+
+/**
+ * The skull of a body that did not measure one: the sphere its own head
+ * generator drew, which is the honest answer for a procedural head.
+ */
+function generatedSkullAt(
+  head: { headCenterY: number; headCenterZ: number; headRadius: number },
+  y: number,
+): { halfWidth: number; frontZ: number; backZ: number } {
+  const offset = (y - head.headCenterY) / head.headRadius;
+  const across = Math.sqrt(Math.max(0, 1 - offset * offset)) * head.headRadius;
+  return {
+    halfWidth: across,
+    frontZ: head.headCenterZ + across,
+    backZ: head.headCenterZ - across,
+  };
 }
 
 /** Read a measured leg envelope at a height, linearly between rows. */
@@ -239,6 +299,12 @@ function generatedLegExtent(
  * factor those pieces need to sit on it.
  */
 export const REFERENCE_SKULL = { radius: 0.067, centerY: 0.055, centerZ: -0.007 };
+
+/**
+ * The skull a procedural body's own head generator draws — stated once,
+ * so the profile and the sphere the crown is fitted to cannot drift.
+ */
+const HEAD = { headCenterY: 0.063, headCenterZ: 0, headRadius: 0.067 };
 
 /** How much bigger or smaller this body's skull is than the reference. */
 export function headFit(body: Pick<BodyProfile, "headRadius">): number {
@@ -356,6 +422,7 @@ export function deriveBodyProfile(
     morphs: Readonly<Record<string, number>>;
     torsoSurface?: MeasuredTorsoSurface;
     legEnvelope?: MeasuredLegEnvelope;
+    skullEnvelope?: MeasuredSkullEnvelope;
   },
 ): BodyProfile {
   if (measured) {
@@ -364,6 +431,7 @@ export function deriveBodyProfile(
       measured.morphs,
       measured.torsoSurface,
       measured.legEnvelope,
+      measured.skullEnvelope,
     );
   }
   // The athletic (masculine human) body declares itself via its params —
@@ -457,9 +525,9 @@ export function deriveBodyProfile(
     // The socket the stylised skeleton declares (see sockets.ts).
     necklaceSocketY: 0.12,
     necklaceSocketZ: 0.01,
-    headCenterY: 0.063,
-    headCenterZ: 0,
-    headRadius: 0.067,
+    headCenterY: HEAD.headCenterY,
+    headCenterZ: HEAD.headCenterZ,
+    headRadius: HEAD.headRadius,
     bellyHalfWidthAt,
     bellySurfaceZAt,
     chestSurfaceZAt,
@@ -481,6 +549,13 @@ export function deriveBodyProfile(
         neckRadius,
       }),
     legExtentAt: (y: number) => generatedLegExtent(legs, y),
+    // The stylised skeleton's own head sockets (see sockets.ts), and the
+    // sphere this body's head generator draws.
+    crownSocketY: 0.172,
+    crownSocketZ: -0.005,
+    browY: 0.07,
+    skullTopY: HEAD.headCenterY + HEAD.headRadius,
+    skullAt: (y: number) => generatedSkullAt(HEAD, y),
   };
 }
 
@@ -554,6 +629,7 @@ function deriveMeasuredProfile(
   morphs: Readonly<Record<string, number>>,
   torsoSurface?: MeasuredTorsoSurface,
   legEnvelope?: MeasuredLegEnvelope,
+  skullEnvelope?: MeasuredSkullEnvelope,
 ): BodyProfile {
   const value = (key: keyof MeasuredBodySurfaces): number => {
     let total = measured.base[key];
@@ -687,6 +763,21 @@ function deriveMeasuredProfile(
     torsoSurfaceZAt,
     torsoBackZAt,
     surfaceAt,
+    crownSocketY: value("crownSocketY"),
+    crownSocketZ: value("crownSocketZ"),
+    browY: value("browY"),
+    skullTopY: value("skullTopY"),
+    skullAt: (y: number) =>
+      skullEnvelope
+        ? sampleSkullEnvelope(skullEnvelope, y)
+        : generatedSkullAt(
+            {
+              headCenterY: value("headCenterY"),
+              headCenterZ: value("headCenterZ"),
+              headRadius: value("headRadius"),
+            },
+            y,
+          ),
     legExtentAt: (y: number) =>
       legEnvelope
         ? sampleLegEnvelope(legEnvelope, y, morphs)
@@ -807,9 +898,9 @@ function deriveAthleticProfile(
     // The socket the stylised skeleton declares (see sockets.ts).
     necklaceSocketY: 0.12,
     necklaceSocketZ: 0.01,
-    headCenterY: 0.063,
-    headCenterZ: 0,
-    headRadius: 0.067,
+    headCenterY: HEAD.headCenterY,
+    headCenterZ: HEAD.headCenterZ,
+    headRadius: HEAD.headRadius,
     bellyHalfWidthAt,
     bellySurfaceZAt,
     chestSurfaceZAt,
@@ -831,5 +922,12 @@ function deriveAthleticProfile(
         neckRadius,
       }),
     legExtentAt: (y: number) => generatedLegExtent(legs, y),
+    // The stylised skeleton's own head sockets (see sockets.ts), and the
+    // sphere this body's head generator draws.
+    crownSocketY: 0.172,
+    crownSocketZ: -0.005,
+    browY: 0.07,
+    skullTopY: HEAD.headCenterY + HEAD.headRadius,
+    skullAt: (y: number) => generatedSkullAt(HEAD, y),
   };
 }

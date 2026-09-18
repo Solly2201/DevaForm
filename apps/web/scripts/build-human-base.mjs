@@ -482,8 +482,24 @@ const CURL_ANGLES = [0.78, 0.95, 0.62]; // radians at full grip, per segment
  */
 const GRIP_RADII = { grip: 0.007, cradle: 0.03 };
 
+/**
+ * The hand STATES this body ships, beyond closing on a cylinder.
+ *
+ * Two closures answer "how thick is the thing" and nothing else, and
+ * some attributes are not held by thickness at all. A discus is balanced
+ * on a raised finger — the reference sheet's own chakra grip — and a
+ * hand that only knows how to shut cannot do it: dialled tight it is a
+ * fist closed on nothing beside a floating wheel, which is exactly what
+ * the Studio showed. So `poise` is baked as a real shape too: three
+ * fingers and the thumb closed, the index left standing, and the seat it
+ * offers is the INDEX FINGERTIP rather than the palm.
+ */
+const POISE = { radius: GRIP_RADII.grip, extend: 2, thumb: 1.25 };
+
 /** Where each hand's closure was baked around, in MakeHuman space. */
 const bakedSeats = {};
+/** Where a poised hand offers its fingertip, and which way it points. */
+const bakedPoise = {};
 
 /**
  * A hand closed onto a cylinder of a given radius.
@@ -493,7 +509,7 @@ const bakedSeats = {};
  * measured rather than assumed. A finger that cannot reach takes all the
  * flexion it has.
  */
-function handClosedOn(positions, prefix, radiusMetres) {
+function handClosedOn(positions, prefix, radiusMetres, options = {}) {
   const { fingers, normal } = palmNormal(prefix);
   const lateral = v3(`${prefix}-finger-2-1`).sub(v3(`${prefix}-finger-5-1`)).normalize();
   const out = new Float32Array(positions);
@@ -643,7 +659,9 @@ function handClosedOn(positions, prefix, radiusMetres) {
     // comes over and presses. So it is authored, once, per shape, and
     // left alone.
     if (finger === 1) {
-      const authored = radiusMetres <= (GRIP_RADII.grip + GRIP_RADII.cradle) / 2 ? 1.15 : 0.7;
+      const authored =
+        options.thumb ??
+        (radiusMetres <= (GRIP_RADII.grip + GRIP_RADII.cradle) / 2 ? 1.15 : 0.7);
       for (const { vertex, delta } of skinned(authored)) {
         out[vertex * 3] += delta.x;
         out[vertex * 3 + 1] += delta.y;
@@ -652,6 +670,23 @@ function handClosedOn(positions, prefix, radiusMetres) {
       if (process.env.DEVAFORM_GRIP_DEBUG) {
         console.log(`    ${prefix} r=${(radiusMetres * 1000).toFixed(0)}mm thumb f=${authored} (authored)`);
       }
+      continue;
+    }
+    // A finger the STATE holds straight does not search for contact: it
+    // is not closing on anything. This is the index of a poised hand,
+    // and the thing it carries rests on its tip.
+    if (options.extend === finger) {
+      const along = fingers.clone();
+      let reach = -Infinity;
+      for (const [baseIndex, weight] of rigWeights[`finger${finger}-3.${side}`] ?? []) {
+        if (weight <= 0.2) continue;
+        const vertex = inverseParentMap[baseIndex];
+        if (vertex < 0) continue;
+        reach = Math.max(reach, vertexAt(positions, vertex).dot(along));
+      }
+      const knuckle = v3(`${prefix}-finger-${finger}-1`);
+      const tip = knuckle.clone().addScaledVector(along, reach - knuckle.dot(along));
+      bakedPoise[prefix] = { tip, along: along.clone() };
       continue;
     }
     // FIRST contact, not last. A finger that closes past the surface
@@ -744,6 +779,8 @@ const GRIPS = {
   gripFrontRight: handClosedOn(meshes.neutral.positions, "r", GRIP_RADII.grip),
   cradleFrontLeft: handClosedOn(meshes.neutral.positions, "l", GRIP_RADII.cradle),
   cradleFrontRight: handClosedOn(meshes.neutral.positions, "r", GRIP_RADII.cradle),
+  poiseFrontLeft: handClosedOn(meshes.neutral.positions, "l", POISE.radius, POISE),
+  poiseFrontRight: handClosedOn(meshes.neutral.positions, "r", POISE.radius, POISE),
 };
 
 // The closed hands travel the same road as the variants: retargeted into
@@ -1324,6 +1361,39 @@ function measure(positions) {
     radius: (craniumX.half + craniumZ.half) / 2,
   };
 
+  /**
+   * The head, as something worn ROUND it has to fit.
+   *
+   * `cranium.radius` is the mean of two half-extents, and this codebase
+   * has now paid three times for an ornament built at a mean: limb bands
+   * sank into forearms, and the kirita cut through the temples. A crown
+   * is not a sphere on a sphere — it seats at the brow, clears the ears,
+   * and flares wider than the skull — so it needs the PROFILE: how wide
+   * and how deep the head actually is at every height it passes, in the
+   * head joint's own frame. Ears included, because a band that clears
+   * the measured silhouette cannot cut one.
+   */
+  const headZero = restFinal.get("head").z;
+  const skullStep = 0.005;
+  let skullTop = headY;
+  for (const point of slice(positions, headY, headY + 0.4, "head")) {
+    skullTop = Math.max(skullTop, point[1]);
+  }
+  const skullRows = [];
+  for (let y = headY; y <= skullTop + skullStep; y += skullStep) {
+    const band = slice(positions, y - skullStep * 0.7, y + skullStep * 0.7, "head");
+    if (band.length < 8) continue;
+    const x = extent(band, 0);
+    const z = extent(band, 2);
+    skullRows.push({
+      y: y - headY,
+      halfWidth: Math.max(x.hi, -x.lo),
+      frontZ: z.hi - headZero,
+      backZ: z.lo - headZero,
+    });
+  }
+  const skull = { topY: skullTop - headY, rows: skullRows };
+
   const armBand = limbBand(positions, "arm.frontLeft.upper", "arm.frontLeft.upper", "arm.frontLeft.forearm", 0.34);
   const wristBand = limbBand(positions, "arm.frontLeft.forearm", "arm.frontLeft.forearm", "arm.frontLeft.hand", 0.86);
   const ankleBand = limbBand(positions, "leg.left.shin", "leg.left.shin", "leg.left.foot", 0.92);
@@ -1378,6 +1448,7 @@ function measure(positions) {
     wristBand,
     ankleBand,
     cranium,
+    skull,
     leg,
     neckRadius,
     neckCentreZ: neckBaseZ,
@@ -1682,6 +1753,40 @@ for (const side of SIDES) {
 }
 
 /**
+ * What a POISED hand offers, and which way it offers it.
+ *
+ * The same statement as `gripSeats`/`gripAxes`, for the other baked hand
+ * state: the point is the raised index fingertip and the direction is the
+ * finger's own, so a disc balanced there is balanced on the finger the
+ * bake actually straightened rather than on a number authored beside it.
+ */
+const poiseSeats = {};
+const poiseAxes = {};
+for (const side of SIDES) {
+  const prefix = side.mh === "L" ? "l" : "r";
+  const baked = bakedPoise[prefix];
+  if (!baked) continue;
+  const turn = rotation.get(`arm.${side.arm}.hand`);
+  const handRest = restFinal.get(`arm.${side.arm}.hand`);
+  const point = handRest
+    .clone()
+    .add(
+      baked.tip
+        .clone()
+        .sub(restFor("neutral").get(`arm.${side.arm}.hand`))
+        .applyQuaternion(turn)
+        .multiplyScalar(scale * heightFix.neutral),
+    )
+    .sub(handRest);
+  const along = baked.along.clone().applyQuaternion(turn).normalize();
+  poiseSeats[side.arm] = {
+    point: [point.x, point.y, point.z].map(round),
+    normal: [along.x, along.y, along.z].map(round),
+  };
+  poiseAxes[side.arm] = [along.x, along.y, along.z].map(round);
+}
+
+/**
  * The BodyProfile block the engine consumes, in the exact local spaces its
  * generators expect: belly relative to the spine joint, chest relative to
  * the chest joint, collar seat relative to the necklace socket. Everything
@@ -1731,6 +1836,13 @@ function profileBlock(m) {
     headCenterY: m.cranium.centerY,
     headCenterZ: m.cranium.centerZ,
     headRadius: m.cranium.radius,
+    // Where the crown socket and the brow actually sit on this head, so
+    // headwear authored in socket space can talk about the skull's own
+    // heights without a constant standing in for either.
+    crownSocketY: sockets["head.crown"].y,
+    crownSocketZ: sockets["head.crown"].z,
+    browY: sockets["head.forehead"].y,
+    skullTopY: m.skull.topY,
     // The leg a wrapped garment has to follow.
     thighTopRadius: m.leg.thighTopRadius,
     thighMidRadius: m.leg.thighMidRadius,
@@ -1936,6 +2048,25 @@ function legEnvelopeWithMorphs() {
 }
 
 /**
+ * The skull's own silhouette, as a flat block the engine can sample.
+ *
+ * Head-joint-local, one row per five millimetres, ears included. What
+ * reads it is headwear that has to go ROUND the head rather than sit on
+ * an idealised sphere — see profileBlock's note on means.
+ */
+function skullEnvelope() {
+  const measured = measurements.neutral.skull;
+  return {
+    topY: round(measured.topY),
+    step: round(measured.rows.length > 1 ? measured.rows[1].y - measured.rows[0].y : 0.005),
+    y0: round(measured.rows[0]?.y ?? 0),
+    halfWidth: measured.rows.map((row) => round(row.halfWidth)),
+    frontZ: measured.rows.map((row) => round(row.frontZ)),
+    backZ: measured.rows.map((row) => round(row.backZ)),
+  };
+}
+
+/**
  * The torso surface, and how each morph moves it.
  *
  * Everything that walks over the skin reads this map, and a map of the
@@ -2001,7 +2132,22 @@ await writeFile(path.join(OUT_DIR, "model.glb"), Buffer.from(glb));
 function round(value) {
   return Number(value.toFixed(5));
 }
-const round_ = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, round(v)]));
+/**
+ * Round a measurement, whatever shape it arrived in.
+ *
+ * The blocks written to asset.json are not all flat any more — the skull
+ * ships a row per height — and a rounder that assumed a number per key
+ * threw on the first nested one.
+ */
+const roundAny = (value) => {
+  if (typeof value === "number") return round(value);
+  if (Array.isArray(value)) return value.map(roundAny);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, roundAny(v)]));
+  }
+  return value;
+};
+const round_ = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, roundAny(v)]));
 const roundMorphs = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([name, delta]) => [name, round_(delta)]));
 
@@ -2050,9 +2196,12 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       gripAxes,
       gripShapes: GRIP_RADII,
+      poiseAxes,
+      poiseSeats,
       faceAxes: measuredFaceAxes,
       gripSeats,
       legEnvelope: legEnvelopeWithMorphs(),
+      skullEnvelope: skullEnvelope(),
       torsoSurface: torsoSurfaceWithMorphs,
       printability: { printSourceAvailable: false },
     },
@@ -2095,9 +2244,12 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       gripAxes,
       gripShapes: GRIP_RADII,
+      poiseAxes,
+      poiseSeats,
       faceAxes: measuredFaceAxes,
       gripSeats,
       legEnvelope: legEnvelopeWithMorphs(),
+      skullEnvelope: skullEnvelope(),
       torsoSurface: torsoSurfaceWithMorphs,
     },
     null,
@@ -2204,8 +2356,28 @@ for (const [variant, name] of Object.entries(MORPHS)) {
     Array.from(finalMesh.neutral, (value, index) => finalMesh[variant][index] - value),
   );
 }
+/**
+ * The closures are PER HAND, and on this body that means four of them.
+ *
+ * The back arm is the front arm's own geometry copied, so a morph that
+ * moved the original moved the copy too — one target named
+ * `gripFrontLeft` closed both left hands, and no target existed for
+ * either back hand at all. `handMorphInfluences` therefore found nothing
+ * to dial for `backLeft`/`backRight` and skipped them, which is why the
+ * rear hands stayed in the open rest pose whatever they were given to
+ * hold: the conch sat against a flat palm with the fingers splayed past
+ * it, and the discus hand never closed on anything.
+ *
+ * So each closure is split at the copy: the front target keeps the
+ * original island, and a back target of its own carries the same
+ * deformation, turned the way the copy is turned.
+ */
+const fourArmGripMorphs = new Map();
 for (const [name, posed] of Object.entries(finalGrips)) {
-  fourArmMorphs.set(name, Array.from(finalMesh.neutral, (value, index) => posed[index] - value));
+  fourArmGripMorphs.set(
+    name,
+    Array.from(finalMesh.neutral, (value, index) => posed[index] - value),
+  );
 }
 const fourArmWeights = new Map();
 for (const [joint, weights] of groupWeights) fourArmWeights.set(joint, Array.from(weights));
@@ -2217,14 +2389,18 @@ for (const [, back] of FOUR_ARM_PAIRS) {
 const fourArmRest = new Map();
 for (const [joint, position] of restFinal) fourArmRest.set(joint, position.clone());
 
+/** Which new vertex each copied one became, per pair. */
+const fourArmCopies = new Map();
+
 for (const [front, back] of FOUR_ARM_PAIRS) {
   const island = armIsland(front);
   const move = backArmTransform(front);
+  fourArmCopies.set(back, { front, turn: move.turn, copyOf: new Map() });
   for (const joint of armChain(front)) {
     fourArmRest.set(joint.replace(front, back), move.apply(restFinal.get(joint)));
   }
 
-  const copyOf = new Map();
+  const copyOf = fourArmCopies.get(back).copyOf;
   const point = new THREE.Vector3();
   for (const vertex of island) {
     const index = fourArmPositions.length / 3;
@@ -2265,6 +2441,30 @@ for (const [front, back] of FOUR_ARM_PAIRS) {
     const c = copyOf.get(source[corner + 2]);
     if (a === undefined || b === undefined || c === undefined) continue;
     fourArmIndices.push(a, b, c);
+  }
+}
+
+// The closures, split front from back now that the copies exist.
+for (const [name, deltas] of fourArmGripMorphs) {
+  const suffix = name.replace(/^(grip|cradle|poise)/, "");
+  const shape = name.slice(0, name.length - suffix.length);
+  const slot = suffix[0].toLowerCase() + suffix.slice(1);
+  const front = new Array(fourArmPositions.length).fill(0);
+  for (let i = 0; i < deltas.length; i += 1) front[i] = deltas[i];
+  fourArmMorphs.set(name, front);
+  for (const [back, { front: fromSlot, turn, copyOf }] of fourArmCopies) {
+    if (fromSlot !== slot) continue;
+    const mirrored = new Array(fourArmPositions.length).fill(0);
+    const point = new THREE.Vector3();
+    for (const [source, copy] of copyOf) {
+      point
+        .set(deltas[source * 3], deltas[source * 3 + 1], deltas[source * 3 + 2])
+        .applyQuaternion(turn);
+      mirrored[copy * 3] = point.x;
+      mirrored[copy * 3 + 1] = point.y;
+      mirrored[copy * 3 + 2] = point.z;
+    }
+    fourArmMorphs.set(`${shape}${back[0].toUpperCase()}${back.slice(1)}`, mirrored);
   }
 }
 
@@ -2408,6 +2608,8 @@ await writeFile(path.join(FOUR_ARM_OUT, "model.glb"), Buffer.from(fourArmGlb));
 // themselves is what the front hands measured, turned the same way.
 const fourArmGripAxes = { ...gripAxes };
 const fourArmGripSeats = { ...gripSeats };
+const fourArmPoiseAxes = { ...poiseAxes };
+const fourArmPoiseSeats = { ...poiseSeats };
 for (const [front, back] of FOUR_ARM_PAIRS) {
   const { turn } = backArmTransform(front);
   const spin = (vector) =>
@@ -2417,6 +2619,13 @@ for (const [front, back] of FOUR_ARM_PAIRS) {
     fourArmGripSeats[back] = {
       point: spin(gripSeats[front].point),
       normal: spin(gripSeats[front].normal),
+    };
+  }
+  if (poiseAxes[front]) fourArmPoiseAxes[back] = spin(poiseAxes[front]);
+  if (poiseSeats[front]) {
+    fourArmPoiseSeats[back] = {
+      point: spin(poiseSeats[front].point),
+      normal: spin(poiseSeats[front].normal),
     };
   }
 }
@@ -2464,9 +2673,12 @@ await writeFile(
       bodyProfile: { base: round_(profileBase), morphs: roundMorphs(profileMorphs) },
       gripAxes: fourArmGripAxes,
       gripShapes: GRIP_RADII,
+      poiseAxes: fourArmPoiseAxes,
+      poiseSeats: fourArmPoiseSeats,
       faceAxes: measuredFaceAxes,
       gripSeats: fourArmGripSeats,
       legEnvelope: legEnvelopeWithMorphs(),
+      skullEnvelope: skullEnvelope(),
       torsoSurface: torsoSurfaceWithMorphs,
       printability: { printSourceAvailable: false },
     },

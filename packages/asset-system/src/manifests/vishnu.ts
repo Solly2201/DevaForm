@@ -170,13 +170,19 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     /**
      * The one attribute here that is NOT gripped.
      *
-     * The reference shows the discus balanced on a raised index finger,
-     * spinning — and that is the only honest way to present a disc with
-     * a hand: a fist closed round its rim would put fingers through the
-     * blade, and a disc big enough to read at statue distance has no
-     * handle to take. So it declares a HOLD whose grip radius is the
-     * finger's, not the disc's: the hand closes on nothing, the disc sits
-     * above it, and no geometry passes through any other.
+     * The reference shows the discus balanced on a raised index finger —
+     * and that is the only honest way to present a disc with a hand: a
+     * fist closed round its rim would put fingers through the blade, and
+     * a disc big enough to read at statue distance has no handle to take.
+     *
+     * Saying so as a RADIUS did not work. The presentation used to claim
+     * the disc was six millimetres thick so the closure would shut on
+     * "a finger", and the Studio showed exactly what that means: a fist
+     * closed on nothing beside a wheel floating over it, with no visible
+     * relationship between the two. The hand state is a fact about the
+     * hand, not a lie about the object, so it is named: `poise` — three
+     * fingers and the thumb closed, the index standing, the disc on its
+     * tip, with the body's own measurement of where that tip is.
      */
     presentations: [
       handheld({
@@ -187,8 +193,8 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
         // finger AND turned to look out the statue's front, not caught
         // at whatever angle the wrist solve left it.
         facing: "front",
-        grip: { axis: [0, 1, 0], radius: 0.006 },
-        notes: "The disc rests above the hand; the fingers do not close on it.",
+        grip: { axis: [0, 1, 0], closure: "poise" },
+        notes: "Balanced on the raised index; the fingers do not close on it.",
       }),
     ],
     materialZones: ["metal"],
