@@ -88,6 +88,18 @@ export interface GeneratorContext {
    * one-body constants (see bodyProfile.ts).
    */
   body: BodyProfile;
+  /**
+   * Where a joint sits in its parent's frame, ON THIS BODY.
+   *
+   * Not the stylised table. A body brings its own skeleton — the
+   * four-armed mesh's second pair is its first pair MOVED, and lands at
+   * offsets the stylised rig's mirrored back arms do not share — so a
+   * generator that asks the global table gets the right answer for the
+   * front arms and a nine-degree error for the back ones. Which is
+   * exactly what it got: the rear bangles sat two centimetres off the
+   * arm's own line, out of square, half inside the flesh.
+   */
+  jointOffset(child: JointId): readonly [number, number, number];
 }
 
 /**

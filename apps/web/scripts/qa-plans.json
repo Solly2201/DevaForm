@@ -436,6 +436,93 @@
           "front",
           "threeQuarter"
         ]
+      },
+      {
+        "name": "vishnu-shoulders",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "backShoulders"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "vishnu-shoulder-left",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "backLeftShoulder"
+        },
+        "views": [
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "vishnu-hair",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head"
+        },
+        "views": [
+          "backThreeQuarter"
+        ]
+      }
+    ]
+  },
+  "vishnu-arms": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "arms-vishnu",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "backShoulders"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "arms-shiva",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "arms": "4",
+          "focus": "backShoulders"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "arms-ganesha",
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "focus": "backShoulders"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
       }
     ]
   }

@@ -15,6 +15,7 @@
 import * as THREE from "three";
 import { lathe, loft, mesh, taperedTube } from "../geometry";
 import type { AttachmentGenerator, GeneratorContext, PartGenerator } from "./types";
+import type { BodyProfile } from "./bodyProfile";
 import { walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
 
 type V3 = [number, number, number];
@@ -535,7 +536,7 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   // runs, with the ear and its kundala left clear below it — and it must
   // CONTAIN everything it passes, which is the recurring lesson of every
   // band ornament in this codebase.
-  const BAND_BOTTOM = BROW + RISE * 0.02;
+  const BAND_BOTTOM = kiritaBandBottom(body) - body.crownSocketY;
   const BAND_TOP = BROW + RISE * 0.43;
   let seatWidth = 0;
   let seatDepth = 0;
@@ -970,80 +971,172 @@ export const ornamentTilaka: AttachmentGenerator = (ctx) => {
 };
 
 /**
+ * Where the kirita's lower rim runs, on any head.
+ *
+ * Said once, because two things need it: the crown, which seats its band
+ * there, and the hair, which has to come out from UNDER it. When each of
+ * them worked it out separately the hair was a guess at where a crown it
+ * knows nothing about might be — and it guessed wrong, which is why it
+ * showed through the gold.
+ */
+export function kiritaBandBottom(body: BodyProfile): number {
+  const rise = Math.max(0.02, body.skullTopY - body.browY);
+  return body.browY + rise * 0.02;
+}
+
+/**
  * Vishnu's hair: long, dark, falling behind the shoulders.
  *
- * The reference's back view shows loose waves to the mid-back under the
- * crown — none of Shiva's piled jata. A close cap over the measured
- * skull, a visible hairline round the face, and long locks down the
- * back. The crown covers the top; what this asset owns is the sides, the
- * nape and the fall.
+ * WHAT WAS WRONG. Rows of spheres over the skull and a fan of tapered
+ * tubes below it. Spheres read as bubbles — a row of them is a row of
+ * bubbles, not a head of hair — and a tapered tube is a rope: perfectly
+ * round, perfectly straight, perfectly rigid. The Studio showed exactly
+ * that: black bobbles under the crown and stiff strips hanging off them,
+ * with the topmost bobbles standing proud of the kirita's band.
+ *
+ * WHAT IT IS NOW.
+ *
+ *   • A SHELL over the back of the skull — one continuous surface swept
+ *     on the body's own measured skull, open at the face, thin where the
+ *     crown presses on it and thickening as it falls clear. A surface
+ *     has a silhouette; a heap of spheres has a lumpy outline.
+ *   • LOCKS that wave. Each is a group of strands sharing one path, the
+ *     path itself curving out over the shoulder and back in, and the
+ *     whole lock flattened across so its section is a lock's rather than
+ *     a rope's.
+ *
+ * Nothing here is random: the same statue every time.
  */
 export const featureHairFlowing: PartGenerator = (ctx) => {
   const hair = ctx.materials.get("hair");
   const group = new THREE.Group();
   const body = ctx.body;
   const skull = body.headRadius;
-  const centre = new THREE.Vector3(0, body.headCenterY, body.headCenterZ);
 
-  // The cap: a shell over the back three-quarters of the skull.
-  //
-  // On the MEASURED skull, and below the brow — which is where a crown's
-  // band comes down. Sized off a mean radius and stacked above the head
-  // centre, these tufts reached a quarter of a radius further out than
-  // the kirita's band and showed as black lumps THROUGH the gold, from
-  // every angle. Hair belongs to the sides, the nape and the fall; the
-  // crown owns the top, and the two only meet if one of them guesses.
-  //
-  // Bearing 0 is the front; everything here sits from the temples round
-  // the back. Two attempts at phiStart arithmetic each draped hair over
-  // the brow like a helmet brim, because a sweep's zero is the geometry's
-  // convention and these angles are mine.
-  const capTop = Math.min(body.browY, body.skullTopY) - skull * 0.08;
-  for (const row of [
-    { y: capTop, size: 0.3, from: 0.56, count: 13 },
-    { y: capTop - skull * 0.36, size: 0.34, from: 0.5, count: 14 },
-    { y: capTop - skull * 0.74, size: 0.3, from: 0.5, count: 12 },
-  ]) {
-    const at = body.skullAt(row.y);
-    for (let i = 0; i < row.count; i += 1) {
-      const t = row.count === 1 ? 0.5 : i / (row.count - 1);
-      const bearing = Math.PI * (row.from + (2 - 2 * row.from) * t);
-      const reach = Math.abs(Math.sin(bearing)) * at.halfWidth;
-      const depth =
-        Math.cos(bearing) > 0
-          ? Math.cos(bearing) * (at.frontZ - body.headCenterZ)
-          : Math.cos(bearing) * (body.headCenterZ - at.backZ);
-      group.add(
-        mesh(new THREE.SphereGeometry(skull * row.size, 12, 10), hair, {
-          position: [
-            Math.sin(bearing) * reach * 0.94,
-            row.y,
-            body.headCenterZ + depth * 0.94,
-          ],
-          scale: [1, 1.1, 1],
-        }),
+  /** The skull at a height, as the hair has to lie on it. */
+  const at = (y: number) => {
+    const measured = body.skullAt(y);
+    return {
+      halfWidth: measured.halfWidth,
+      centreZ: (measured.frontZ + measured.backZ) / 2,
+      halfDepth: (measured.frontZ - measured.backZ) / 2,
+    };
+  };
+
+  // Under the crown at the top, and clear of it below. The band's own
+  // rim is the seam; hair above it is hair inside the gold.
+  const TOP = kiritaBandBottom(body) - skull * 0.03;
+  const NAPE = body.headCenterY - skull * 1.5;
+  /**
+   * How far the hair stands off the skull at a height.
+   *
+   * Thin under the crown, where a band is pressing on it; full below,
+   * where it is only hair; and drawn back in at the very bottom so the
+   * shell's own rim tucks under the locks instead of ending on a
+   * straight cut across the back.
+   */
+  const thickness = (t: number) =>
+    skull * (0.02 + 0.42 * Math.sin(Math.min(1, t * 1.18) * Math.PI * 0.62));
+  /**
+   * Which bearings the hair covers. Zero is the FRONT, and the face is
+   * left open — a sweep's own zero is the geometry's convention, and two
+   * earlier attempts at phiStart arithmetic draped hair over the brow
+   * like a helmet brim.
+   */
+  const FROM = Math.PI * 0.5;
+  const TO = Math.PI * 1.5;
+
+  // --- the shell ----------------------------------------------------------
+  const ROWS = 14;
+  const COLUMNS = 26;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let row = 0; row <= ROWS; row += 1) {
+    const t = row / ROWS;
+    const y = TOP + (NAPE - TOP) * t;
+    const ring = at(y);
+    const stand = thickness(t);
+    for (let column = 0; column <= COLUMNS; column += 1) {
+      const bearing = FROM + ((TO - FROM) * column) / COLUMNS;
+      // A shallow wave round the head, so the surface has locks in it
+      // rather than being a swim cap.
+      const wave = Math.cos(bearing * 5) * skull * 0.035 * t;
+      const out = stand + wave;
+      positions.push(
+        Math.sin(bearing) * (ring.halfWidth + out),
+        y,
+        ring.centreZ + Math.cos(bearing) * (ring.halfDepth + out),
       );
     }
   }
+  const stride = COLUMNS + 1;
+  for (let row = 0; row < ROWS; row += 1) {
+    for (let column = 0; column < COLUMNS; column += 1) {
+      const a = row * stride + column;
+      const b = a + 1;
+      const c = a + stride;
+      const d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+  const shell = new THREE.BufferGeometry();
+  shell.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  shell.setIndex(indices);
+  shell.computeVertexNormals();
+  // Seen from inside as well: the customer turns the statue, and the
+  // parting at the back of an open shell shows its own underside.
+  group.add(new THREE.Mesh(shell, hair));
 
-  // The fall: locks from the nape, curving out over the shoulders and
-  // down the back. Deterministic variation — no randomness, the same
-  // statue every time.
-  const LOCKS = 15;
+  // --- the fall -----------------------------------------------------------
+  /**
+   * One lock: a few strands on a shared path, waved down the back and
+   * flattened across.
+   */
+  const lock = (bearing: number, phase: number, drop: number, width: number) => {
+    const ring = at(NAPE);
+    const ox = Math.sin(bearing) * (ring.halfWidth + thickness(1));
+    const oz = ring.centreZ + Math.cos(bearing) * (ring.halfDepth + thickness(1));
+    const away = Math.sign(ox) || 1;
+    const strands = new THREE.Group();
+    for (const side of [-1, 0, 1] as const) {
+      const path: V3[] = [];
+      const STEPS = 7;
+      for (let step = 0; step <= STEPS; step += 1) {
+        const t = step / STEPS;
+        // An S: out over the shoulder, back in below it, and a wave
+        // across the whole fall. A lock that only goes down is a rope.
+        const flare = Math.sin(t * Math.PI * 0.9) * skull * 0.5 * away;
+        const sway = Math.sin(t * Math.PI * 1.9 + phase) * skull * 0.3;
+        path.push([
+          ox + flare + sway + side * width * 0.8,
+          NAPE - drop * t + Math.sin(t * Math.PI * 2.2 + phase) * skull * 0.05,
+          oz - skull * 0.55 * t * t + Math.cos(t * Math.PI * 1.5 + phase) * skull * 0.16 * t,
+        ]);
+      }
+      strands.add(
+        new THREE.Mesh(taperedTube(path, [width, width * 0.35], 14, 9), hair),
+      );
+    }
+    return strands;
+  };
+
+  const LOCKS = 9;
   for (let i = 0; i < LOCKS; i += 1) {
     const t = i / (LOCKS - 1);
-    const angle = Math.PI * (0.6 + 0.8 * t); // round the back of the skull
-    const sway = Math.sin(i * 2.4) * 0.008;
-    const x0 = Math.cos(angle) * skull * 0.92;
-    const z0 = centre.z + Math.sin(angle) * -skull * 0.92;
-    const drop = 0.16 + 0.05 * Math.sin(i * 1.7 + 1);
-    const path: V3[] = [
-      [x0, centre.y + skull * 0.25, z0],
-      [x0 * 1.25 + sway, centre.y - skull * 0.6, z0 - skull * 0.35],
-      [x0 * 1.1 + sway * 2, centre.y - skull * 0.6 - drop * 0.55, z0 - skull * 0.5],
-      [x0 * 0.85, centre.y - skull * 0.6 - drop, z0 - skull * 0.42],
-    ];
-    group.add(new THREE.Mesh(taperedTube(path, [skull * 0.22, skull * 0.07], 12, 7), hair));
+    const bearing = FROM + 0.1 + (TO - FROM - 0.2) * t;
+    group.add(
+      lock(
+        bearing,
+        i * 1.7,
+        skull * (3.2 + 1.0 * Math.sin(i * 1.3)),
+        skull * (0.26 + 0.07 * Math.cos(i * 2.1)),
+      ),
+    );
+  }
+  // Two shorter locks forward of the ears, as the reference's face
+  // close-up has them.
+  for (const side of [1, -1] as const) {
+    group.add(lock(side * Math.PI * 0.46, side * 0.7, skull * 1.6, skull * 0.16));
   }
   return [{ joint: "head", object: group }];
 };

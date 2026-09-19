@@ -98,6 +98,15 @@ const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> 
   leftHand: { joints: ["arm.frontLeft.hand"], span: 0.2 },
   backRightHand: { joints: ["arm.backRight.hand"], span: 0.2 },
   backLeftHand: { joints: ["arm.backLeft.hand"], span: 0.2 },
+  // The arm ROOTS, where a copied limb meets a torso it was not grown
+  // from. The defect this frames is invisible from the front.
+  backShoulders: {
+    joints: ["arm.backLeft.upper", "arm.backRight.upper"],
+    span: 0.42,
+  },
+  backLeftShoulder: { joints: ["arm.backLeft.upper"], span: 0.26 },
+  backRightShoulder: { joints: ["arm.backRight.upper"], span: 0.26 },
+  shoulders: { joints: ["arm.frontLeft.upper", "arm.frontRight.upper"], span: 0.42 },
   waist: { joints: ["pelvis"], span: 0.42 },
   feet: { joints: ["leg.left.foot", "leg.right.foot"], span: 0.35 },
 };

@@ -108,7 +108,18 @@ const PINNED = {
   // lotus seat. Same node count, same everything else — the whole statue
   // is one translation lower. See support.test.ts, which now holds every
   // pose of both deities to actual contact.
-  ganesha: { nodes: 371, digest: "8aafabab8d6e2991" },
+  //
+  // Re-pinned when the band ornaments learned to be worn RATHER than
+  // threaded. A torus's major radius is the centre line of its own tube,
+  // so every armlet, bangle and anklet in this product was built at the
+  // limb's measured radius with half its thickness inside the flesh; and
+  // a vanki built as a torus is a doughnut, as thick as it is wide. They
+  // are flat bands now, sized from the inside, seated on the limb's own
+  // direction rather than laid flat at a height. Ganesha and Shiva were
+  // both looked at before pinning: nothing else about either of them
+  // moved, and their jewellery sits on their arms instead of through
+  // them.
+  ganesha: { nodes: 371, digest: "11a0733e5c216ec2" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
@@ -218,7 +229,18 @@ const PINNED = {
   // contributions only — see sampleLegEnvelope), so its vertices moved
   // by millimetres. Verified in the Studio before pinning: the hide sits
   // on the hips, nothing shows through, the tail falls as it did.
-  shiva: { nodes: 335, digest: "60496ec040d6385a" },
+  //
+  // Re-pinned when the band ornaments learned to be worn RATHER than
+  // threaded. A torus's major radius is the centre line of its own tube,
+  // so every armlet, bangle and anklet in this product was built at the
+  // limb's measured radius with half its thickness inside the flesh; and
+  // a vanki built as a torus is a doughnut, as thick as it is wide. They
+  // are flat bands now, sized from the inside, seated on the limb's own
+  // direction rather than laid flat at a height. Ganesha and Shiva were
+  // both looked at before pinning: nothing else about either of them
+  // moved, and their jewellery sits on their arms instead of through
+  // them.
+  shiva: { nodes: 335, digest: "183cd2e87fa80b7a" },
 } as const;
 
 describe("protected characters do not move", () => {

@@ -333,19 +333,96 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
 // JEWELLERY SETS (parts — follow their joints)
 // ---------------------------------------------------------------------------
 
-function bandRing(ctx: GeneratorContext, radius: number, tube: number, withGem = false): THREE.Group {
+/** Air between a band and the skin it is worn on, metres. */
+const BAND_CLEARANCE = 0.0015;
+
+/**
+ * A band worn round a limb of a measured radius.
+ *
+ * SIZED FROM THE INSIDE. A torus's major radius is the centre line of
+ * its own tube, so a ring built AT the limb's radius has half its
+ * thickness inside the limb — five and a half millimetres of gold buried
+ * in a wrist, on every band ornament in this product, on every deity.
+ * The measurement says where the skin is; the ring is placed so its
+ * inner surface clears it.
+ *
+ * This is the fourth time the same sentence has had to be written down
+ * about this codebase: an ornament that goes round something is sized by
+ * what CONTAINS it. A radius that contains the limb still has to contain
+ * the ornament's own body.
+ */
+function bandRing(ctx: GeneratorContext, limbRadius: number, width: number, withGem = false): THREE.Group {
   const g = new THREE.Group();
+  const inner = limbRadius + BAND_CLEARANCE;
+  // A vanki is a BAND: wide across the limb and thin off it. Built as a
+  // torus it was a doughnut — as thick as it was wide — so on a
+  // thirty-four millimetre arm it stood a centimetre proud all round and
+  // read as a hoop hung on the shoulder rather than an armlet worn on it.
+  const thickness = Math.max(0.0022, width * 0.42);
+  const half = width;
   g.add(
-    mesh(new THREE.TorusGeometry(radius, tube, 10, 26), ctx.materials.get("metal"), {
-      rotation: [Math.PI / 2, 0, 0],
-    }),
+    mesh(
+      lathe([
+        [inner, -half],
+        [inner + thickness, -half * 0.72],
+        [inner + thickness, half * 0.72],
+        [inner, half],
+      ], 30),
+      ctx.materials.get("metal"),
+      {},
+    ),
   );
   if (withGem) {
-    const gem = gemStud(ctx, tube * 1.5);
-    gem.position.set(0, tube * 0.4, radius);
+    const gem = gemStud(ctx, thickness * 1.9);
+    gem.position.set(0, 0, inner + thickness * 0.6);
     g.add(gem);
   }
   return g;
+}
+
+/**
+ * Where a band sits on a limb, and which way that limb actually runs.
+ *
+ * A limb is not a plumb line: a forearm leaves its joint at four degrees
+ * off vertical and a thigh at more. A ring laid flat at a measured
+ * HEIGHT therefore sits beside the bone rather than round it, and tilts
+ * across the limb instead of square to it — which is a millimetre and a
+ * half of error on a wrist, all of it spent on the side the clearance
+ * was meant for.
+ *
+ * The body measures the height; the skeleton knows the direction; this
+ * puts the two together. Nothing is authored.
+ */
+function bandFrame(
+  ctx: GeneratorContext,
+  child: JointId,
+  offsetY: number,
+): { position: THREE.Vector3; quaternion: THREE.Quaternion } {
+  // THIS body's skeleton, not the stylised table: the four-armed mesh's
+  // second pair is its first pair moved, and its joints do not agree
+  // with the stylised rig's mirrored back arms. Asking the global table
+  // put every rear band two centimetres off the arm's own line and nine
+  // degrees out of square — which is a bangle through a wrist.
+  const axis = new THREE.Vector3(...ctx.jointOffset(child)).normalize();
+  const along = Math.abs(axis.y) > 1e-6 ? offsetY / axis.y : offsetY;
+  return {
+    position: axis.clone().multiplyScalar(along),
+    // The ring's own up is the limb's own direction.
+    quaternion: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis),
+  };
+}
+
+/** Seat a band on the limb its joint leads to. */
+function seatBand(
+  ctx: GeneratorContext,
+  band: THREE.Group,
+  child: JointId,
+  offsetY: number,
+): THREE.Group {
+  const frame = bandFrame(ctx, child, offsetY);
+  band.position.copy(frame.position);
+  band.quaternion.copy(frame.quaternion);
+  return band;
 }
 
 /**
@@ -385,7 +462,7 @@ export const armletsVanki: PartGenerator = (ctx) => {
     // Seat and girth come from the body being worn, not from this
     // generator: the same vanki fits a heavy build and a lean human.
     const band = bandRing(ctx, ctx.body.armBandRadius, 0.0065, true);
-    band.position.y = ctx.body.armBandOffsetY;
+    seatBand(ctx, band, `arm.${slot}.forearm`, ctx.body.armBandOffsetY);
     parts.push({ joint: `arm.${slot}.upper`, object: band });
   }
   return parts;
@@ -400,7 +477,7 @@ export const braceletsKada: PartGenerator = (ctx) => {
     // palm. The forearm→hand joint offset is 0.14, so the band rests just
     // above the wrist line.
     const band = bandRing(ctx, ctx.body.wristBandRadius, 0.0055);
-    band.position.y = ctx.body.wristBandOffsetY;
+    seatBand(ctx, band, `arm.${slot}.hand`, ctx.body.wristBandOffsetY);
     parts.push({ joint: `arm.${slot}.forearm`, object: band });
   }
   return parts;
@@ -411,16 +488,16 @@ export const ankletsPayal: PartGenerator = (ctx) => {
   for (const slot of ["left", "right"] as const) {
     const band = bandRing(ctx, ctx.body.ankleBandRadius, 0.006);
     band.position.y = ctx.body.ankleBandOffsetY;
-    // Tiny bells
+    // The foot's own joint has no child to aim at; an anklet sits square
+    // on the ankle, which the foot joint already is.
+    // Tiny bells, hung off the band's own outside rather than the
+    // limb's — they belong to the anklet, not to the leg.
+    const hang = ctx.body.ankleBandRadius + BAND_CLEARANCE + 0.006;
     for (let i = 0; i < 6; i++) {
       const angle = (i / 6) * Math.PI * 2;
       band.add(
         mesh(new THREE.SphereGeometry(0.0045, 8, 6), ctx.materials.get("metal"), {
-          position: [
-            Math.cos(angle) * (ctx.body.ankleBandRadius + 0.002),
-            -0.008,
-            Math.sin(angle) * (ctx.body.ankleBandRadius + 0.002),
-          ],
+          position: [Math.cos(angle) * hang, -0.008, Math.sin(angle) * hang],
         }),
       );
     }

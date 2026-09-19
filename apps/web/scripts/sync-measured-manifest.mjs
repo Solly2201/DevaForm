@@ -25,6 +25,14 @@ const repo = path.resolve(here, "../../..");
 
 const TARGETS = [
   {
+    asset: path.join(here, "../public/assets/foundations/bodies/human4/1/asset.json"),
+    manifest: path.join(repo, "packages/character-schema/src/skeletons.ts"),
+    marker: "humanoid.body.human4 backArmRest",
+    // The joints themselves, not a field holding them: the schema's table
+    // IS this object.
+    inline: "backArmRest",
+  },
+  {
     asset: path.join(here, "../public/assets/foundations/bodies/human/1/asset.json"),
     manifest: path.join(repo, "packages/asset-system/src/manifests/shared.ts"),
     marker: "humanoid.body.human",
@@ -69,15 +77,23 @@ for (const target of TARGETS) {
     process.exitCode = 1;
     continue;
   }
-  const body = target.fields
-    .filter((field) => built[field] !== undefined)
-    .map((field) => `    ${field}: ${literal(built[field], 2)},`)
-    .join("\n");
+  // Two shapes of destination: a manifest ENTRY, where each measured
+  // field becomes a property of the asset; and a plain TABLE, where the
+  // measured object is the whole block.
+  const indent = target.inline ? "  " : "    ";
+  const body = target.inline
+    ? Object.entries(built[target.inline] ?? {})
+        .map(([key, value]) => `${indent}${JSON.stringify(key)}: ${literal(value, 1)},`)
+        .join("\n")
+    : target.fields
+        .filter((field) => built[field] !== undefined)
+        .map((field) => `${indent}${field}: ${literal(built[field], 2)},`)
+        .join("\n");
   const replaced =
-    source.slice(0, start + open.length) + "\n" + body + "\n    " + source.slice(end);
+    source.slice(0, start + open.length) + "\n" + body + "\n" + indent + source.slice(end);
   if (replaced !== source) {
     await writeFile(target.manifest, replaced);
     changed += 1;
   }
-  console.log(`  ${changed ? "updated" : "unchanged"}  ${target.marker}`);
+  console.log(`  ${replaced !== source ? "updated" : "unchanged"}  ${target.marker}`);
 }

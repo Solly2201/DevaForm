@@ -21,6 +21,7 @@
 import * as THREE from "three";
 import {
   ARM_SLOTS,
+  getJoint,
   isJointId,
   type ArmSlot,
   type CharacterConfiguration,
@@ -568,7 +569,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   );
 
 
+  /** This body's own joint table — see GeneratorContext.jointOffset. */
+  const jointOffsetOf = (child: JointId): readonly [number, number, number] => {
+    const joint = skeleton.joints.find((entry) => entry.id === child);
+    return (joint?.position ?? getJoint(child).position) as readonly [number, number, number];
+  };
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
+    jointOffset: jointOffsetOf,
     materials,
     proportions: config.proportions,
     morphs: config.morphs,

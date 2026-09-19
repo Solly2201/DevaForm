@@ -30,7 +30,9 @@ export function ViewportOverlay() {
           // WHICH view they are looking from. Six identical buttons said
           // nothing about where the camera was, so the only way to find
           // out was to click one and compare.
-          const active = view === currentView;
+          // Reset lands on the hero composition, which IS the ¾ view, so
+          // the rail agrees with where the camera actually is.
+          const active = view === currentView || (view === "threeQuarter" && currentView === "reset");
           return (
             <button
               key={view}
@@ -47,6 +49,18 @@ export function ViewportOverlay() {
             </button>
           );
         })}
+        {/* The way back. A customer who has orbited, zoomed and panned
+            somewhere unhelpful needs one control that undoes all three,
+            and the stage already knows its own composition. */}
+        <span aria-hidden className="mx-0.5 my-1 w-px bg-surface-700" />
+        <button
+          type="button"
+          onClick={() => requestCameraView("reset")}
+          title="Return to the stage's own view"
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-400 transition-colors hover:bg-surface-700 hover:text-saffron-400"
+        >
+          Reset
+        </button>
       </div>
       <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-2 rounded-xl border border-surface-700/80 bg-surface-900/85 px-3 py-2 backdrop-blur">
         <label

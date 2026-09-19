@@ -2293,9 +2293,100 @@ console.log(`  measurements -> ${MEASURE_OUT}`);
  * little further out as well, which is what stops four hanging arms from
  * reading as two arms with a shadow.
  */
-const BACK_ARM_DROP = 0.052;
-const BACK_ARM_DEPTH = 0.062;
-const BACK_ARM_SPLAY = 0.2;
+/**
+ * MEASURED against the torso they have to come out of, not chosen.
+ *
+ * The first numbers put the rear shoulder joint sixteen millimetres
+ * BEHIND the back of the ribcage and five centimetres below the front
+ * one — so the rear arms grew out of the flank at nipple height with a
+ * crease where they entered, and from behind they read as branches
+ * pushed through the sides. A human torso is 12 cm deep at the shoulder
+ * and its shoulder joint already sits well forward in that; there is
+ * room for a second root a few centimetres back, and no more.
+ *
+ * At this depth the rear joint sits about a centimetre INSIDE the back
+ * surface, and the two roots are under five centimetres apart — close
+ * enough that one deltoid mass covers both, which is exactly how the
+ * stylised four-armed body does it.
+ */
+const BACK_ARM_DROP = 0.022;
+const BACK_ARM_DEPTH = 0.038;
+const BACK_ARM_SPLAY = 0.16;
+/**
+ * The shoulder the copy has to BRING WITH IT.
+ *
+ * A deltoid belongs half to the arm and half to the chest, so it never
+ * passed the "carried by this arm" test and the copied limb arrived with
+ * no shoulder at all: a tube, entering the torso at a hard edge. These
+ * take the cap as well — everything with a real share of the arm within
+ * a deltoid's reach of the joint.
+ */
+const SHOULDER_CAP_SHARE = 0.16;
+const SHOULDER_CAP_REACH = 0.085;
+/**
+ * How far the copy's open rim is drawn IN toward its own shoulder joint.
+ *
+ * A copied arm is a shell, and a shell has an edge. Left on the skin the
+ * edge showed as a blade of triangles between the neck and the arm;
+ * pushed a few millimetres under the skin it still crossed back out,
+ * because the top of the shoulder slopes the same way the copy travels.
+ * So the rim is CINCHED: it closes toward the joint, which is a
+ * centimetre inside the ribcage, and the funnel it makes is capped. The
+ * copy becomes a closed volume with nothing to see into and no edge to
+ * see at all.
+ *
+ * Cinched HARD, because the joint sits near the side of the ribcage: a
+ * ring drawn only part of the way in still stood two centimetres proud
+ * of the flank, and its cap triangles showed as a sliver above the arm.
+ * Collapsed almost onto the joint, the whole funnel is inside the body
+ * and what remains outside it is the flare from the skin to the limb —
+ * which is the deltoid.
+ */
+const SHOULDER_CINCH = 0.08;
+/**
+ * Which way is INTO the body at each vertex of the neutral mesh.
+ *
+ * Tucking the copy's rim toward the chest joint buried it everywhere the
+ * skin faces outward from the spine and nowhere else: on top of the
+ * shoulder, "toward the chest" runs ALONG the surface, so the rim stayed
+ * on it and a few triangles stood up as a fin. A surface is tucked under
+ * itself along its own normal.
+ */
+const neutralNormals = (() => {
+  const normals = new Float32Array(vertexCount * 3);
+  const indices = meshes.neutral.indices;
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const face = new THREE.Vector3();
+  const at = (index, into) =>
+    into.set(
+      finalMesh.neutral[index * 3],
+      finalMesh.neutral[index * 3 + 1],
+      finalMesh.neutral[index * 3 + 2],
+    );
+  for (let i = 0; i < indices.length; i += 3) {
+    at(indices[i], a);
+    at(indices[i + 1], b);
+    at(indices[i + 2], c);
+    // A cross product IS the area-weighted normal.
+    face.copy(b).sub(a).cross(c.clone().sub(a));
+    for (const corner of [indices[i], indices[i + 1], indices[i + 2]]) {
+      normals[corner * 3] += face.x;
+      normals[corner * 3 + 1] += face.y;
+      normals[corner * 3 + 2] += face.z;
+    }
+  }
+  const one = new THREE.Vector3();
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    one.set(normals[vertex * 3], normals[vertex * 3 + 1], normals[vertex * 3 + 2]);
+    if (one.lengthSq() > 1e-12) one.normalize();
+    normals[vertex * 3] = one.x;
+    normals[vertex * 3 + 1] = one.y;
+    normals[vertex * 3 + 2] = one.z;
+  }
+  return normals;
+})();
 const FOUR_ARM_OUT = path.resolve("public/assets/foundations/bodies/human4/1");
 
 /** Every joint of one arm chain, in build order. */
@@ -2332,13 +2423,41 @@ function backArmTransform(slot) {
  */
 function armIsland(slot) {
   const chain = armChain(slot);
-  const island = new Set();
+  const shoulder = restFinal.get(`arm.${slot}.upper`);
+  /** vertex -> how much of it this arm owns, 0..1. */
+  const island = new Map();
   for (let vertex = 0; vertex < vertexCount; vertex += 1) {
     let carried = 0;
     for (const joint of chain) carried += groupWeights.get(joint)?.[vertex] ?? 0;
-    if (carried > 0.55) island.add(vertex);
+    if (carried > 0.55) {
+      island.set(vertex, carried);
+      continue;
+    }
+    if (carried < SHOULDER_CAP_SHARE) continue;
+    // The cap, bounded to a deltoid's reach of the joint: a threshold
+    // alone would carry half a ribcage along and turn a second pair of
+    // arms into a second torso.
+    const dx = finalMesh.neutral[vertex * 3] - shoulder.x;
+    const dy = finalMesh.neutral[vertex * 3 + 1] - shoulder.y;
+    const dz = finalMesh.neutral[vertex * 3 + 2] - shoulder.z;
+    if (dx * dx + dy * dy + dz * dz < SHOULDER_CAP_REACH * SHOULDER_CAP_REACH) {
+      island.set(vertex, carried);
+    }
   }
   return island;
+}
+
+/**
+ * How much of the move a vertex takes.
+ *
+ * The arm proper goes the whole way; the cap's outer rim does not move at
+ * all, so it stays ON the torso's own skin and there is no seam and no
+ * open edge to see into. Everything between is the blend — and that
+ * blend, a surface flaring from the chest out to a limb, IS the deltoid.
+ */
+function shoulderBlend(share) {
+  const t = Math.min(1, Math.max(0, (share - SHOULDER_CAP_SHARE) / (0.55 - SHOULDER_CAP_SHARE)));
+  return t * t * (3 - 2 * t);
 }
 
 const FOUR_ARM_PAIRS = [
@@ -2402,7 +2521,9 @@ for (const [front, back] of FOUR_ARM_PAIRS) {
 
   const copyOf = fourArmCopies.get(back).copyOf;
   const point = new THREE.Vector3();
-  for (const vertex of island) {
+  const inward = new THREE.Vector3();
+  const backShoulder = move.apply(restFinal.get(`arm.${front}.upper`));
+  for (const [vertex, share] of island) {
     const index = fourArmPositions.length / 3;
     copyOf.set(vertex, index);
     point.set(
@@ -2410,7 +2531,17 @@ for (const [front, back] of FOUR_ARM_PAIRS) {
       finalMesh.neutral[vertex * 3 + 1],
       finalMesh.neutral[vertex * 3 + 2],
     );
-    const moved = move.apply(point);
+    const blend = shoulderBlend(share);
+    const base = move.apply(point);
+    // The rim closes toward the joint; the arm proper goes where it goes.
+    // Between them the surface flares from inside the ribcage out to a
+    // limb, which is what a deltoid is.
+    const moved = inward
+      .copy(base)
+      .sub(backShoulder)
+      .multiplyScalar(SHOULDER_CINCH)
+      .add(backShoulder)
+      .lerp(base, blend);
     fourArmPositions.push(moved.x, moved.y, moved.z);
     fourArmColours.push(
       fourArmColours[vertex * 3],
@@ -2422,25 +2553,75 @@ for (const [front, back] of FOUR_ARM_PAIRS) {
     // arms and shears the back ones.
     for (const deltas of fourArmMorphs.values()) {
       point.set(deltas[vertex * 3], deltas[vertex * 3 + 1], deltas[vertex * 3 + 2]);
-      point.applyQuaternion(move.turn);
+      point.lerp(point.clone().applyQuaternion(move.turn), blend);
       deltas.push(point.x, point.y, point.z);
     }
-    // Every joint gains a slot for the new vertex; the arm's own joints
-    // hand theirs to the copied chain.
+    /**
+     * Every joint gains a slot for the new vertex; the arm's own joints
+     * hand theirs to the copied chain.
+     *
+     * The TORSO keeps its share. A deltoid belongs half to the chest and
+     * half to the arm, and binding the whole cap to the arm would tear
+     * the shoulder off the body the moment the arm lifted — which is
+     * exactly what a raised back pair does.
+     */
     for (const [joint, weights] of fourArmWeights) {
-      weights[index] = joint.startsWith(`arm.${back}.`)
-        ? (groupWeights.get(joint.replace(back, front))?.[vertex] ?? 0)
-        : 0;
+      if (joint.startsWith(`arm.${back}.`)) {
+        weights[index] = groupWeights.get(joint.replace(back, front))?.[vertex] ?? 0;
+      } else if (joint.startsWith("arm.")) {
+        weights[index] = 0;
+      } else {
+        weights[index] = groupWeights.get(joint)?.[vertex] ?? 0;
+      }
     }
   }
 
   const source = meshes.neutral.indices;
+  const copied = [];
   for (let corner = 0; corner < source.length; corner += 3) {
     const a = copyOf.get(source[corner]);
     const b = copyOf.get(source[corner + 1]);
     const c = copyOf.get(source[corner + 2]);
     if (a === undefined || b === undefined || c === undefined) continue;
+    copied.push(a, b, c);
     fourArmIndices.push(a, b, c);
+  }
+
+  /**
+   * And close it.
+   *
+   * The island's boundary is every edge with exactly one triangle on it
+   * — the cut where the copy stops being a copy of anything. Cinched, it
+   * is already a small ring around the joint inside the ribcage; fanned
+   * to a point at the joint it is a closed volume, and a closed volume
+   * has no edge to catch the light and nothing to see into.
+   */
+  const edges = new Map();
+  for (let corner = 0; corner < copied.length; corner += 3) {
+    const tri = [copied[corner], copied[corner + 1], copied[corner + 2]];
+    for (let i = 0; i < 3; i += 1) {
+      const from = tri[i];
+      const to = tri[(i + 1) % 3];
+      const key = from < to ? `${from}:${to}` : `${to}:${from}`;
+      const seen = edges.get(key);
+      if (seen) seen.count += 1;
+      else edges.set(key, { from, to, count: 1 });
+    }
+  }
+  const hub = fourArmPositions.length / 3;
+  fourArmPositions.push(backShoulder.x, backShoulder.y, backShoulder.z);
+  fourArmColours.push(
+    fourArmColours[hub * 0] ?? 1,
+    fourArmColours[1] ?? 1,
+    fourArmColours[2] ?? 1,
+  );
+  for (const deltas of fourArmMorphs.values()) deltas.push(0, 0, 0);
+  for (const [joint, weights] of fourArmWeights) {
+    weights[hub] = joint === `arm.${back}.upper` ? 1 : 0;
+  }
+  for (const { from, to, count } of edges.values()) {
+    if (count !== 1) continue;
+    fourArmIndices.push(hub, to, from);
   }
 }
 
@@ -2630,6 +2811,25 @@ for (const [front, back] of FOUR_ARM_PAIRS) {
   }
 }
 
+/**
+ * Where the second pair's joints ended up, shipped rather than printed.
+ *
+ * The schema has to place these joints exactly where this build put them
+ * — a joint an inch from the mesh's own is a hand in the wrong place for
+ * every pose ever written — and it used to learn them by a person copying
+ * a console dump into a TypeScript file. Copies drift; this one is now
+ * written into the asset and carried across by
+ * scripts/sync-measured-manifest.mjs, the same way every other
+ * measurement is.
+ */
+const backArmRest = {};
+for (const [, back] of FOUR_ARM_PAIRS) {
+  for (const joint of armChain(back)) {
+    const parent = fourArmParent[joint];
+    const local = fourArmRest.get(joint).clone().sub(fourArmRest.get(parent));
+    backArmRest[joint] = [round(local.x), round(local.y), round(local.z)];
+  }
+}
 const fourArmBounds = new THREE.Box3().setFromBufferAttribute(
   fourArmGeometry.getAttribute("position"),
 );
@@ -2675,6 +2875,7 @@ await writeFile(
       gripShapes: GRIP_RADII,
       poiseAxes: fourArmPoiseAxes,
       poiseSeats: fourArmPoiseSeats,
+      backArmRest,
       faceAxes: measuredFaceAxes,
       gripSeats: fourArmGripSeats,
       legEnvelope: legEnvelopeWithMorphs(),
@@ -2692,13 +2893,4 @@ console.log(
   `  ${fourArmVertexCount + eyeVertexCount} verts, ${(fourArmIndices.length + eyeGeometry.getIndex().count) / 3} tris, ` +
     `${fourArmOrder.length} bones, four arms`,
 );
-console.log("  back-arm rest positions (paste into HUMAN_FOUR_ARM_POSITIONS):");
-for (const [, back] of FOUR_ARM_PAIRS) {
-  for (const joint of armChain(back)) {
-    const parent = fourArmParent[joint];
-    const local = fourArmRest.get(joint).clone().sub(fourArmRest.get(parent));
-    console.log(
-      `    "${joint}": [${round(local.x)}, ${round(local.y)}, ${round(local.z)}],`,
-    );
-  }
-}
+console.log(`  back-arm rest positions: ${Object.keys(backArmRest).length} joints -> asset.json`);

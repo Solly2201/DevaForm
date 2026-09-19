@@ -21,7 +21,8 @@
  */
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { PresentationConfig } from "@devaform/asset-system";
 import { CharacterRoot } from "@/engine/CharacterRoot";
@@ -71,6 +72,74 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
 
   const hasBackdrop = Boolean(stage.backdrop.image);
 
+  /**
+   * How far the framing may travel from the stage's own composition.
+   *
+   * A statue on a photographed floor cannot be walked away from: the room
+   * does not parallax, so a target that wanders leaves the figure beside
+   * its pedestal rather than on it. These are the bounds inside which the
+   * framing is the customer's — about a hand's breadth sideways and
+   * forward, and most of the figure's height vertically, which is what
+   * "bring the face into frame" needs.
+   */
+  const keepFramingOnStage = useCallback(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const [tx, ty, tz] = stage.camera.target;
+    const LATERAL = 0.34;
+    const VERTICAL = 0.55;
+    const clamp = (value: number, centre: number, span: number) =>
+      Math.min(centre + span, Math.max(centre - span, value));
+    const x = clamp(controls.target.x, tx, LATERAL);
+    const y = clamp(controls.target.y, ty, VERTICAL);
+    const z = clamp(controls.target.z, tz, LATERAL);
+    if (x !== controls.target.x || y !== controls.target.y || z !== controls.target.z) {
+      // Move the CAMERA with the clamp, or the orbit distance changes
+      // under the customer's hand as they push against the bound.
+      controls.object.position.add(
+        new THREE.Vector3(x - controls.target.x, y - controls.target.y, z - controls.target.z),
+      );
+      controls.target.set(x, y, z);
+    }
+    setMoved(true);
+  }, [stage.camera.target]);
+
+  /** Whether the customer has taken the camera anywhere yet. */
+  const [moved, setMoved] = useState(false);
+
+  const cameraProps = useMemo(
+    () => ({
+      position: stage.camera.position as unknown as [number, number, number],
+      fov: stage.camera.fov,
+      near: 0.05,
+      far: 50,
+    }),
+    [stage.camera],
+  );
+
+  /**
+   * Dev-only handle, beside the stores'. "Pan is enabled" and "the view
+   * moved" are different claims, and only the second one is the product
+   * working — scripts/qa-camera.mjs drags a real mouse and reads this.
+   */
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    (window as unknown as { __devaformStage?: unknown }).__devaformStage = () => ({
+      position: stage.camera.position,
+      target: stage.camera.target,
+    });
+    (window as unknown as { __devaformCamera?: unknown }).__devaformCamera = () => {
+      const controls = controlsRef.current;
+      if (!controls) return null;
+      const object = controls.object as THREE.PerspectiveCamera;
+      return {
+        position: object.position.toArray().map((n) => Number(n.toFixed(4))),
+        target: controls.target.toArray().map((n) => Number(n.toFixed(4))),
+        distance: Number(object.position.distanceTo(controls.target).toFixed(4)),
+      };
+    };
+  }, [stage.camera]);
+
   // Publish where the statue stands on screen, so the fullscreen frame —
   // entry and backdrop alike — centres its mandala there.
   useEffect(() => {
@@ -97,15 +166,39 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
 
   return (
     <div ref={containerRef} className="relative h-full w-full">
+      {/*
+        How to move the camera, said once.
+
+        Right-drag is where every 3D tool puts pan and almost nobody
+        discovers it on their own — least of all in a browser, where
+        right-drag usually means a context menu. The line is quiet, it is
+        outside the composition, and it goes as soon as the customer has
+        moved the camera at all.
+      */}
+      {phase === "ready" && (
+        <p
+          aria-hidden
+          className="pointer-events-none absolute bottom-4 left-4 z-10 text-[10px] uppercase tracking-[0.18em] text-stone-500"
+          style={{ opacity: moved ? 0 : 0.85, transition: "opacity 600ms ease-out" }}
+        >
+          Drag to turn · Right-drag to move · Scroll to zoom
+        </p>
+      )}
       <Canvas
         shadows
         dpr={[1, 2]}
-        camera={{
-          position: stage.camera.position as unknown as [number, number, number],
-          fov: stage.camera.fov,
-          near: 0.05,
-          far: 50,
-        }}
+        /**
+         * ONE camera.
+         *
+         * An inline literal here is a new object every render, and
+         * react-three-fiber reconciles a fresh camera when it changes —
+         * so the component that moves the camera and the controls that
+         * orbit it end up holding different ones. "Reset" put the view
+         * back on a camera nobody was rendering with, which is why it
+         * landed near the hero composition rather than on it. The same
+         * defect cost three misread QA sheets on /dev/qa.
+         */
+        camera={cameraProps}
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: hasBackdrop }}
         className="absolute inset-0 h-full w-full"
         style={{ background: "transparent" }}
@@ -139,14 +232,41 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
           ref={controlsRef}
           target={stage.camera.target as unknown as [number, number, number]}
           enabled={phase === "ready"}
-          // On a staged backdrop the statue stands where the mandala is;
-          // panning would slide it off its own pedestal. Free viewing is
-          // orbit and dolly, which is what inspecting a statue is.
-          enablePan={!hasBackdrop}
+          /**
+           * ORBIT, PAN AND DOLLY — all three.
+           *
+           * Panning was switched off wherever there was a backdrop, on
+           * the reasoning that the statue stands on a painted mandala and
+           * sliding it off its own pedestal looks wrong. That is true,
+           * and it is not worth what it cost: a customer who has zoomed
+           * in on a crown had no way to bring the face into frame, and
+           * right-drag — which is where every 3D tool puts pan — did
+           * nothing at all.
+           *
+           * So pan is on, and BOUNDED instead (see keepFramingOnStage):
+           * the target may move far enough to re-frame the figure and no
+           * further, which keeps the feet near the mandala while giving
+           * back the third axis of navigation. Screen-space panning,
+           * because dragging a statue should move it the way the hand
+           * moved.
+           */
+          enablePan
+          screenSpacePanning
+          panSpeed={0.8}
+          /**
+           * No inertia. drei turns damping on by default, and a damped
+           * pan keeps translating the rig for a second after the hand
+           * lets go — which meant "Reset" set the hero composition and
+           * then drifted off it, further on each press. It also coasts
+           * into the framing bounds and has to be clamped every frame.
+           * A configurator wants the view to go where it is put.
+           */
+          enableDamping={false}
           minDistance={stage.camera.minDistance}
           maxDistance={stage.camera.maxDistance}
           minPolarAngle={stage.camera.minPolarAngle}
           maxPolarAngle={stage.camera.maxPolarAngle}
+          onChange={keepFramingOnStage}
           makeDefault
         />
       </Canvas>

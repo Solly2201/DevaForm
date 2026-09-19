@@ -8,7 +8,7 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { SKELETON, activeArmSlots, getSocket, type JointId } from "@devaform/character-schema";
+import { SKELETON, activeArmSlots, getJoint, getSocket, type JointId } from "@devaform/character-schema";
 import { AVAILABLE_DEITIES, getAsset } from "@devaform/asset-system";
 
 /** Default configuration used for thumbnail materials/context. */
@@ -91,6 +91,9 @@ export async function buildAssetObject(
     // A thumbnail shows one asset, not a character: every arm the count
     // asks for is rendered, because there is no body here to contradict it.
     armSlots: activeArmSlots(config.arms),
+    // A thumbnail has no body to bring a skeleton, so the stylised
+    // table is the honest answer here — the picture is of the asset.
+    jointOffset: (child) => getJoint(child).position,
     held: {},
     seated: false,
     garment: "full",
