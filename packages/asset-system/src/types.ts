@@ -8,6 +8,7 @@
  */
 import type { DeityId, MaterialZone, PartSlot, SocketId } from "@devaform/character-schema";
 import { defaultPresentationFor, type AttributePresentation } from "./presentation";
+import type { SpatialOccupancy } from "./spatial";
 
 /** Lifecycle stage of an asset version. */
 export type AssetStage =
@@ -407,6 +408,13 @@ export interface AssetDefinition {
    * from behind while looking well fitted from the front.
    */
   legEnvelope?: MeasuredLegEnvelope;
+  /**
+   * EXPERIMENTAL: the asset's spatial claims — occupied material, kept
+   * voids, clearance and contact regions (see spatial.ts). Read only by
+   * validation tooling; nothing in placement or resolution consults it,
+   * and an asset without one behaves exactly as every asset always has.
+   */
+  spatial?: SpatialOccupancy;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
   /** Categorization for the editor UI. */
