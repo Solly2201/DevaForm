@@ -73,7 +73,7 @@ const note = (severity, area, detail) => {
 const settle = (ms = 260) => new Promise((r) => setTimeout(r, ms));
 
 // --- get into the Studio, past the entry ----------------------------------
-await page.goto(`${BASE}/studio/${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
+await page.goto(`${BASE}/studio?form=${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
 await page
   .waitForSelector('[data-testid="stage-intro"]', { timeout: 20_000 })
   .then(async () => {

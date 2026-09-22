@@ -24,7 +24,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/studio/ganesha"
+              href="/studio"
               className="rounded-xl bg-saffron-500 px-6 py-3 text-sm font-semibold text-surface-950 transition-colors hover:bg-saffron-400"
             >
               Enter Divine Studio
@@ -92,7 +92,7 @@ export default function LandingPage() {
           {DEITIES.map((deity) => (
             <Link
               key={deity.id}
-              href={deity.available ? `/studio/${deity.id}` : "/deities"}
+              href={deity.available ? `/studio?form=${deity.id}` : "/deities"}
               className={`rounded-xl border p-3 text-center transition-colors ${
                 deity.available
                   ? "border-saffron-700/60 bg-surface-900 hover:border-saffron-500"

@@ -32,7 +32,7 @@ export function SiteNav() {
           Account
         </Link>
         <Link
-          href="/studio/ganesha"
+          href="/studio"
           className="rounded-lg bg-saffron-500 px-4 py-1.5 text-sm font-semibold text-surface-950 transition-colors hover:bg-saffron-400"
         >
           Divine Studio

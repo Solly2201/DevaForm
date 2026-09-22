@@ -1,5 +1,6 @@
 "use client";
 
+import { DIVINE_FORM_CATEGORY } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
 import { useUiStore } from "@/state/uiStore";
 import { CategoryIcon } from "./CategoryIcon";
@@ -14,7 +15,11 @@ export function CategorySidebar() {
       className="flex h-full w-20 flex-col items-stretch gap-1 overflow-y-auto border-r border-surface-800 bg-surface-900 p-2"
       aria-label="Customization categories"
     >
-      {deity.categories.map((category) => {
+      {/* WHICH form, then everything about it. The deity is a choice in
+          the editor rather than the route the editor lives at, so it
+          belongs in the same rail — at the top, because it is the first
+          thing a creation is. */}
+      {[DIVINE_FORM_CATEGORY, ...deity.categories].map((category) => {
         const active = category.id === activeCategoryId;
         return (
           <button

@@ -56,7 +56,7 @@ export default function DeitiesPage() {
               </div>
             );
             return deity.available ? (
-              <Link key={deity.id} href={`/studio/${deity.id}`} className="h-full">
+              <Link key={deity.id} href={`/studio?form=${deity.id}`} className="h-full">
                 {card}
               </Link>
             ) : (

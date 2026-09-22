@@ -6,6 +6,23 @@
 import { HAND_ITEM_SOCKETS } from "@devaform/character-schema";
 import type { EditorCategory } from "./types";
 
+/**
+ * The form itself, offered in every deity's editor.
+ *
+ * Divine Studio is ONE editor. Which god is being made is a choice
+ * inside it, beside every other choice — not a route a customer has to
+ * find their way to. It is declared here rather than repeated in each
+ * deity's list because it is the same category for all of them, and the
+ * registry of deities is what fills it.
+ */
+export const DIVINE_FORM_CATEGORY: EditorCategory = {
+  id: "form",
+  label: "Divine Form",
+  icon: "form",
+  description: "Which divine form you are creating",
+  content: { type: "form" },
+};
+
 export const GANESHA_EDITOR_CATEGORIES: readonly EditorCategory[] = [
   {
     id: "head",

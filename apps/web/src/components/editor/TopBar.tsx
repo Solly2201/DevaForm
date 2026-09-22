@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { captureViewport } from "@/engine/capture";
 import { createCharacter, createShare, saveCharacter } from "@/lib/characterApi";
+import { DIVINE_FORM_CATEGORY } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
 import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
@@ -53,6 +54,7 @@ export function TopBar() {
   const canRedo = useStore(temporal, (s) => s.futureStates.length > 0);
 
   const setExportDialogOpen = useUiStore((s) => s.setExportDialogOpen);
+  const setActiveCategory = useUiStore((s) => s.setActiveCategory);
   const showStatus = useUiStore((s) => s.showStatus);
 
   const [saving, setSaving] = useState(false);
@@ -225,11 +227,13 @@ export function TopBar() {
 
       <div className="mx-2 h-6 w-px bg-surface-700" />
 
+      {/* The form being made, and the way to change it — which is now a
+          category in this editor rather than a route out of it. */}
       <button
         type="button"
-        onClick={() => leaveTo("/deities", "another deity")}
+        onClick={() => setActiveCategory(DIVINE_FORM_CATEGORY.id)}
         className="rounded-full border border-surface-700 px-2.5 py-0.5 text-[11px] font-medium text-stone-400 transition-colors hover:border-saffron-600 hover:text-saffron-400"
-        title="Change deity"
+        title="Choose a divine form"
       >
         {deity.name}
       </button>

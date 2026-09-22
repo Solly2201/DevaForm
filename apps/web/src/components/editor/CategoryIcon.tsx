@@ -12,6 +12,15 @@ export function CategoryIcon({ icon, className = "h-5 w-5" }: { icon: string; cl
     strokeLinejoin: "round" as const,
   };
   switch (icon) {
+    case "form":
+      // A lit lamp: the form being invoked.
+      return (
+        <svg {...common}>
+          <path d="M12 3c1.6 1.8 2.4 3.2 2.4 4.6A2.4 2.4 0 0 1 12 10a2.4 2.4 0 0 1-2.4-2.4C9.6 6.2 10.4 4.8 12 3Z" />
+          <path d="M4.5 14h15l-1.4 5.2a2 2 0 0 1-1.9 1.4H7.8a2 2 0 0 1-1.9-1.4L4.5 14Z" />
+          <path d="M8 14v-1.2A4 4 0 0 1 12 9a4 4 0 0 1 4 3.8V14" />
+        </svg>
+      );
     case "head":
       return (
         <svg {...common}>

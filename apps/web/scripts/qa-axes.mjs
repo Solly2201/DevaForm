@@ -31,7 +31,7 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1200, height: 900 },
 });
 const page = await browser.newPage();
-await page.goto(`${BASE}/studio/${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
+await page.goto(`${BASE}/studio?form=${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
 await page
   .waitForSelector('[data-testid="stage-intro"]', { timeout: 20_000 })
   .then(async () => {

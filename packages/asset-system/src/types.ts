@@ -480,5 +480,14 @@ export interface EditorCategory {
     | { type: "hands" }
     | { type: "pose" }
     | { type: "materials" }
-    | { type: "base" };
+    | { type: "base" }
+    /**
+     * WHICH divine form is being made.
+     *
+     * The one category that is not about a part of the character but
+     * about which character it is. It belongs in the same list because
+     * that is where a customer looks for it — the editor is one place and
+     * the deity is a thing you choose in it, not a URL you have to find.
+     */
+    | { type: "form" };
 }

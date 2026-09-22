@@ -181,7 +181,9 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
       {phase === "ready" && (
         <p
           aria-hidden
-          className="pointer-events-none absolute bottom-4 left-4 z-10 text-[10px] uppercase tracking-[0.18em] text-stone-500"
+          // Top-left, where nothing else lives: at the bottom it wrapped
+          // onto two lines and ran into the camera rail on a narrow window.
+          className="pointer-events-none absolute left-4 top-4 z-10 whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-stone-500"
           style={{ opacity: moved ? 0 : 0.85, transition: "opacity 600ms ease-out" }}
         >
           Drag to turn · Right-drag to move · Scroll to zoom

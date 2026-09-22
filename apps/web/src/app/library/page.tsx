@@ -16,6 +16,7 @@ import {
   renameCharacter,
   type CharacterSummary,
 } from "@/lib/characterApi";
+import { ConfirmDialog, type Confirmation } from "@/components/editor/ConfirmDialog";
 import { SiteNav } from "@/components/site/SiteNav";
 import { useEditorStore } from "@/state/editorStore";
 
@@ -133,6 +134,7 @@ export default function LibraryPage() {
   const [creations, setCreations] = useState<CharacterSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -163,7 +165,8 @@ export default function LibraryPage() {
       const loaded = await loadCharacter(creation.id);
       adoptLoadedCharacter({ id: loaded.id, name: loaded.name, config: loaded.config });
       useEditorStore.temporal.getState().clear();
-      router.push(`/studio/${loaded.config.deity}`);
+      // The creation carries its own form; the editor follows it.
+      router.push("/studio");
     });
 
   const handleDuplicate = (creation: CharacterSummary) =>
@@ -173,11 +176,24 @@ export default function LibraryPage() {
       await refresh();
     });
 
+  /**
+   * Deleting asks in the product, not in the browser.
+   *
+   * `window.confirm` carries the page's URL in its title, cannot be
+   * styled, and blocks the whole tab — the same reason the Studio stopped
+   * using it for New.
+   */
   const handleDelete = (creation: CharacterSummary) =>
-    withBusy(creation.id, async () => {
-      if (!window.confirm(`Delete “${creation.name}”? This cannot be undone.`)) return;
-      await deleteCharacter(creation.id);
-      await refresh();
+    setConfirmation({
+      title: "Delete this creation?",
+      body: `“${creation.name}” will be removed from your library. This cannot be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () =>
+        void withBusy(creation.id, async () => {
+          await deleteCharacter(creation.id);
+          await refresh();
+        }),
     });
 
   const handleRename = (creation: CharacterSummary, name: string) =>
@@ -224,7 +240,7 @@ export default function LibraryPage() {
               Enter Divine Studio and shape your first form.
             </p>
             <Link
-              href="/studio/ganesha"
+              href="/studio"
               className="mt-6 rounded-xl bg-saffron-500 px-5 py-2.5 text-sm font-semibold text-surface-950 hover:bg-saffron-400"
             >
               Create your first Ganesha
@@ -248,6 +264,7 @@ export default function LibraryPage() {
           </div>
         )}
       </main>
+      <ConfirmDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} />
     </div>
   );
 }

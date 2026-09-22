@@ -84,6 +84,16 @@ export interface EditorState {
   setCharacterName: (name: string) => void;
   /** Reset to a fresh configuration (the active deity's default). */
   newCharacter: (config?: CharacterConfiguration) => void;
+  /**
+   * Make a different divine form.
+   *
+   * A fresh creation of that deity, never a translation of this one: the
+   * forms do not share a configuration — four arms, a different skeleton,
+   * attributes that exist for one and not the other — and a merged one
+   * would be a character neither of them is. Whether unsaved work may be
+   * discarded is the caller's question to ask; this is the doing of it.
+   */
+  switchDeity: (deityId: string) => void;
   adoptLoadedCharacter: (input: {
     id: string;
     name: string;
@@ -289,6 +299,19 @@ export const useEditorStore = create<EditorState>()(
       newCharacter: (config) =>
         set(() => {
           const next = config ?? createBootstrapConfiguration();
+          return {
+            config: next,
+            characterId: null,
+            characterName: defaultName(next),
+            dirty: false,
+          };
+        }),
+
+      switchDeity: (deityId) =>
+        set(() => {
+          const deity = AVAILABLE_DEITIES.find((entry) => entry.id === deityId);
+          if (!deity) return {};
+          const next = deity.createDefaultConfiguration();
           return {
             config: next,
             characterId: null,

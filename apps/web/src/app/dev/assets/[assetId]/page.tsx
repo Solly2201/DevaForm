@@ -235,7 +235,7 @@ export default function AssetInspectorPage({
           {asset.stage}
         </span>
         <Link
-          href={`/studio/${deityId}`}
+          href={`/studio?form=${deityId}`}
           className="rounded-lg bg-saffron-500 px-3 py-1 text-xs font-semibold text-surface-950 hover:bg-saffron-400"
         >
           Test in Divine Studio

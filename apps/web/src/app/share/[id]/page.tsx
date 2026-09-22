@@ -45,7 +45,8 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     newCharacter(share.config);
     setCharacterName(`${share.name} (shared)`);
     useEditorStore.temporal.getState().clear();
-    router.push(`/studio/${share.config.deity}`);
+    // The shared creation carries its own form; the editor follows it.
+    router.push("/studio");
   };
 
   return (
@@ -57,7 +58,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
             <p className="font-display text-2xl text-stone-300">This share could not be found.</p>
             <p className="mt-2 text-sm text-stone-500">{error}</p>
             <Link
-              href="/studio/ganesha"
+              href="/studio"
               className="mt-6 inline-block rounded-xl bg-saffron-500 px-5 py-2.5 text-sm font-semibold text-surface-950 hover:bg-saffron-400"
             >
               Create your own

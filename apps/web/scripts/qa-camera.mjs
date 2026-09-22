@@ -43,7 +43,7 @@ const consoleErrors = [];
 page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
 page.on("pageerror", (e) => consoleErrors.push(String(e)));
 
-await page.goto(`${BASE}/studio/${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
+await page.goto(`${BASE}/studio?form=${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
 await page
   .waitForSelector('[data-testid="stage-intro"]', { timeout: 20_000 })
   .then(async () => {

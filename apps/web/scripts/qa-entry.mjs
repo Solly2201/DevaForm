@@ -98,7 +98,7 @@ if (impatient) {
   });
 }
 
-await page.goto(`${BASE}/studio/${deity}`, {
+await page.goto(`${BASE}/studio?form=${deity}`, {
   waitUntil: impatient ? "domcontentloaded" : "networkidle0",
   timeout: 180_000,
 });

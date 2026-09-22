@@ -14,6 +14,7 @@ import {
   listAssets,
   presentationsOf,
   resolveCharacterPresentation,
+  DIVINE_FORM_CATEGORY,
   type EditorCategory,
 } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
@@ -31,6 +32,7 @@ import { AssetGrid } from "./AssetGrid";
 import { SegmentedControl } from "@/components/controls/SegmentedControl";
 import { SliderControl } from "@/components/controls/SliderControl";
 import { BasePanel } from "./panels/BasePanel";
+import { DivineFormPanel } from "./panels/DivineFormPanel";
 import { HandsPanel } from "./panels/HandsPanel";
 import { MaterialsPanel } from "./panels/MaterialsPanel";
 import { JointGroupSection, PosePresetsSection } from "./panels/PosePanel";
@@ -514,6 +516,8 @@ function useSubsections(category: EditorCategory): Subsection[] {
       return [{ id: "materials", label: "Color", node: <MaterialsPanel /> }];
     case "base":
       return [{ id: "base", label: "Base", node: <BasePanel /> }];
+    case "form":
+      return [{ id: "form", label: "Divine Form", node: <DivineFormPanel /> }];
   }
 }
 
@@ -603,7 +607,8 @@ export function CustomizationPanel() {
   const deity = useDeity();
   const activeCategoryId = useUiStore((s) => s.activeCategoryId);
   const category =
-    deity.categories.find((c) => c.id === activeCategoryId) ?? deity.categories[0];
+    [DIVINE_FORM_CATEGORY, ...deity.categories].find((c) => c.id === activeCategoryId) ??
+    deity.categories[0];
   if (!category) return null;
 
   return (
