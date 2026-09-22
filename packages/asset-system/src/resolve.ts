@@ -112,6 +112,31 @@ export interface ResolvedCharacter {
   issues: readonly ResolutionIssue[];
 }
 
+/**
+ * Arms whose hand the engine turns onto something, and therefore whose
+ * wrist is not the customer's to set.
+ *
+ * A hand holding a chakra is aimed down the item's own axis, and a hand
+ * showing abhaya is aimed at the devotee — see applyGripOrientations and
+ * applyGestureOrientations. Both solve the arm AFTER the pose is applied,
+ * so a rotation written onto such a wrist is overwritten before the frame
+ * is drawn. That is correct behaviour and a terrible thing to do silently:
+ * the slider moved, the statue did not, and nothing said why.
+ *
+ * So it is derived here, once, from the resolution both the engine and
+ * the editor already consume, rather than inferred separately in each.
+ */
+export function solvedArms(resolved: ResolvedCharacter): ReadonlySet<ArmSlot> {
+  const solved = new Set<ArmSlot>();
+  for (const attachment of resolved.attachments) {
+    if (attachment.handSlot) solved.add(attachment.handSlot);
+  }
+  for (const slot of resolved.armSlots) {
+    if (isGestureMudra(resolved.hands[slot]?.mudra ?? "open")) solved.add(slot);
+  }
+  return solved;
+}
+
 // ---------------------------------------------------------------------------
 // Resolution
 // ---------------------------------------------------------------------------

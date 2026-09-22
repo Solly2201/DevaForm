@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { getPresentation, PRESENTATIONS } from "@devaform/asset-system";
 import { LIGHTING_PRESETS, getLightingPreset } from "@/engine/lighting";
+import { heroComposition } from "@/presentation/heroFraming";
 import { stageViews } from "@/presentation/stageViews";
 
 describe("a stage names lighting the renderer has", () => {
@@ -37,23 +38,36 @@ describe("a stage names lighting the renderer has", () => {
 
 describe("the named views come from the stage", () => {
   const stage = getPresentation("shiva");
-  const views = stageViews(stage);
+  // A figure on the stage, as the engine measures one — the views are a
+  // composition about a statue, and without one there is nothing to
+  // compose about. See heroFraming.test.ts for the composition itself.
+  const figure = {
+    footY: 0,
+    topY: 1.1,
+    headY: 0.92,
+    centreX: 0,
+    centreZ: 0,
+    radius: 0.24,
+  };
+  const frame = { figure, aspect: 16 / 9 };
+  const views = stageViews(stage, frame);
 
   it("resets to exactly where the entry sequence settled", () => {
-    expect(views.reset.position).toEqual([...stage.camera.position]);
-    expect(views.reset.target).toEqual([...stage.camera.target]);
+    const hero = heroComposition(stage.camera, figure, frame.aspect);
+    expect(views.reset.position).toEqual(hero.position);
+    expect(views.reset.target).toEqual(hero.target);
     expect(views.threeQuarter).toEqual(views.reset);
   });
 
   it("swings the same camera about the figure", () => {
-    const [tx, , tz] = stage.camera.target;
+    const [tx, , tz] = views.reset.target;
     const distance = (view: { position: [number, number, number] }) =>
       Math.hypot(view.position[0] - tx, view.position[2] - tz);
     const hero = distance(views.reset);
     for (const id of ["front", "back", "left", "right"] as const) {
       expect(distance(views[id]), `${id} is the same distance out`).toBeCloseTo(hero, 5);
       expect(views[id].position[1], `${id} is at the same height`).toBeCloseTo(
-        stage.camera.position[1],
+        views.reset.position[1],
         5,
       );
     }
@@ -63,14 +77,22 @@ describe("the named views come from the stage", () => {
   });
 
   it("frames the face on the head, which is the one view that is not the hero", () => {
-    expect(views.face.target[1]).toBeGreaterThan(stage.camera.target[1]);
+    expect(views.face.target[1]).toBeGreaterThan(figure.headY);
     expect(views.face).not.toEqual(views.reset);
+  });
+
+  it("falls back to the stage's own coordinates with nobody measured", () => {
+    const bare = stageViews(stage);
+    expect(bare.reset.position).toEqual([...stage.camera.position]);
+    expect(bare.reset.target).toEqual([...stage.camera.target]);
   });
 
   it("gives every deity the same derivation", () => {
     for (const deity of ["ganesha", "shiva", "vishnu", "nobody"]) {
-      const theirs = stageViews(getPresentation(deity));
-      expect(theirs.reset.position, deity).toEqual([...getPresentation(deity).camera.position]);
+      const theirs = stageViews(getPresentation(deity), frame);
+      expect(theirs.reset.position, deity).toEqual(
+        heroComposition(getPresentation(deity).camera, figure, frame.aspect).position,
+      );
     }
   });
 });

@@ -27,6 +27,7 @@ import {
   type CharacterConfiguration,
   type HandsConfiguration,
   type JointId,
+  type PoseConfiguration,
   type SkeletonDefinition,
   type SocketId,
   type Vec3,
@@ -997,12 +998,24 @@ export function handGripChannel(rig: CharacterRig, slot: ArmSlot): THREE.Vector3
  * One ordering, in one place. It used to live in three call sites that
  * each had to remember it — and a call site that forgot to settle the
  * planted items left a trishul hanging in the air.
+ *
+ * THE POSE IS AN ARGUMENT, not a property of the rig. A rig is built for
+ * a structure — which body, which attributes, which arms — and a joint
+ * the customer bends changes none of those, so the rig is not rebuilt for
+ * it. This used to re-apply `rig.resolved.pose`, the pose as it stood the
+ * moment the rig was built, which meant every bend of a knee or twist of
+ * a torso re-asserted the pose the customer was trying to change and the
+ * sliders moved nothing. Callers pass the pose they want applied; the
+ * pose the rig was built with is only the default.
  */
-export function poseRig(rig: CharacterRig): HandSolution[] {
-  applyPose(rig.joints, {
-    preset: rig.resolved.pose.presetId,
-    jointOverrides: rig.resolved.pose.joints as Record<string, Vec3>,
-  });
+export function poseRig(rig: CharacterRig, pose?: PoseConfiguration): HandSolution[] {
+  applyPose(
+    rig.joints,
+    pose ?? {
+      preset: rig.resolved.pose.presetId,
+      jointOverrides: rig.resolved.pose.joints as Record<string, Vec3>,
+    },
+  );
   const degrees = (radians: number) => Math.round((radians * 180) / Math.PI);
   rig.poseWarnings.length = 0;
 

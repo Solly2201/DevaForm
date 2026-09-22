@@ -443,9 +443,25 @@ interface Subsection {
  * categories flow through the same derivation.
  */
 function useSubsections(category: EditorCategory): Subsection[] {
-  const deity = useDeity();
   const arms = useEditorStore((s) => s.config.arms);
+  const body = useEditorStore((s) => s.config.parts.body);
   const active = activeArmSlots(arms);
+
+  /**
+   * The anatomy the figure is actually built on.
+   *
+   * Not the deity's declared skeleton, which is a statement about the
+   * form rather than about the statue: Shiva's declares four arms and the
+   * human body he is built on has two, so the Pose panel offered sliders
+   * for a Back Left Arm that no rig had — they moved, and nothing else
+   * did. The resolution is what the engine builds from, so it is what the
+   * editor offers.
+   */
+  const anatomy = useMemo(() => {
+    const resolved = resolveCharacterPresentation(useEditorStore.getState().config);
+    return { skeleton: resolved.skeleton, armSlots: new Set<string>(resolved.armSlots) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [body, arms]);
   const socketSubsections = (sockets: readonly SocketId[], allowNone: boolean): Subsection[] =>
     sockets
       .filter((socket) => {
@@ -501,17 +517,26 @@ function useSubsections(category: EditorCategory): Subsection[] {
       ];
     case "hands":
       return [{ id: "hands", label: "Hands", node: <HandsPanel /> }];
-    case "pose":
+    case "pose": {
       // Presets first, then joint control organized by semantic body part
-      // (grouping declared on the active deity's skeleton — data-driven).
+      // (grouping declared on the skeleton itself — data-driven), and only
+      // the parts this figure HAS: an arm the body does not carry is not
+      // a body part the customer can bend.
+      const groups = anatomy.skeleton.uiGroups.filter((group) =>
+        group.joints.some((joint) => {
+          const slot = /^arm\.([A-Za-z]+)\./.exec(joint.id)?.[1];
+          return !slot || anatomy.armSlots.has(slot);
+        }),
+      );
       return [
         { id: "presets", label: "Presets", node: <PosePresetsSection /> },
-        ...deity.skeleton.uiGroups.map((group) => ({
+        ...groups.map((group) => ({
           id: `joints:${group.label}`,
           label: group.label,
           node: <JointGroupSection joints={group.joints} />,
         })),
       ];
+    }
     case "materials":
       return [{ id: "materials", label: "Color", node: <MaterialsPanel /> }];
     case "base":

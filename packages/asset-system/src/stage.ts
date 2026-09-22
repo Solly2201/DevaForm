@@ -22,13 +22,60 @@
  * an animation and a re-creation of its last moment.
  */
 
+/**
+ * How the figure is COMPOSED in the frame.
+ *
+ * A hero camera parked at a fixed position frames exactly one figure.
+ * Ganesha is shorter and a great deal broader than Vishnu, and the
+ * distance that put a comfortable margin round the one pressed the other
+ * against the top and bottom of the frame — his finial cropped, his lotus
+ * on the edge. The fix is not a second set of coordinates per deity, which
+ * is the same mistake written three times; it is to say what the picture
+ * should LOOK like and let the distance follow from the figure that is
+ * actually standing there. Then a customer who adds a taller crown, or a
+ * deity that ships next year, is framed by the same statement.
+ */
+export interface StageFraming {
+  /**
+   * How much of the frame the figure fills, as a fraction — height and
+   * width both, whichever binds first. Under one, by the margin a
+   * photographer would leave: a statue that touches the frame edge reads
+   * as too big for the room it is in.
+   */
+  fill: number;
+  /**
+   * Where the camera looks, as a fraction of the figure's own height
+   * measured up from its feet. A little above the waist: high enough that
+   * the face is not at the very top of the frame, low enough that the
+   * figure is not standing on the bottom edge.
+   */
+  lookAt: number;
+  /**
+   * The same statement for the portrait view, about the HEAD rather than
+   * the figure — how much of the frame the head and its crown fill, and
+   * where in that span to look.
+   */
+  portrait: { fill: number; lookAt: number };
+}
+
 /** Where the camera sits when the entry sequence has settled. */
 export interface StageCamera {
-  /** Hero position, metres, in the statue's own space. */
+  /**
+   * The hero ANGLE, and the composition's fallback.
+   *
+   * What is authored here is the direction the figure is seen from —
+   * three-quarters, a little above the waist — because that is a
+   * statement about the statue's good side and is true of any figure.
+   * How far back the camera stands is not: that is measured from the
+   * figure (see `framing`), and these coordinates are what frames it
+   * until it has been measured.
+   */
   position: readonly [number, number, number];
-  /** What it looks at. */
+  /** What it looks at, before the figure is measured. */
   target: readonly [number, number, number];
   fov: number;
+  /** What the picture should look like, whoever is standing in it. */
+  framing: StageFraming;
   /** How close and how far the customer may take it. */
   minDistance: number;
   maxDistance: number;
@@ -216,11 +263,18 @@ const SANCTUM: PresentationConfig = {
   deityCompatibility: "any",
   lighting: "sanctum",
   camera: {
-    // Three-quarters, a little above the waist, far enough back that the
-    // base and the finial are both comfortably inside the frame.
+    // Three-quarters, a little above the waist. The distance here is only
+    // what frames the stage before a figure has been measured on it; the
+    // hero composition is `framing`, and it is met from wherever the
+    // figure standing there requires.
     position: [1.32, 0.94, 1.96],
     target: [0, 0.6, 0],
     fov: 36,
+    framing: {
+      fill: 0.78,
+      lookAt: 0.55,
+      portrait: { fill: 0.72, lookAt: 0.46 },
+    },
     minDistance: 0.6,
     maxDistance: 5,
     maxPolarAngle: Math.PI * 0.52,

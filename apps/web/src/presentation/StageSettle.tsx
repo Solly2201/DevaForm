@@ -20,23 +20,32 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { StageCamera } from "@devaform/asset-system";
+import type { HeroComposition } from "./heroFraming";
 import { useStageStore } from "./stageStore";
 
 /** Smooth at both ends, and slower at the end than at the start. */
 const ease = (t: number): number => 1 - Math.pow(1 - t, 3);
 
 export function StageSettle({
-  camera: hero,
+  camera,
+  hero,
   settleMs,
   controlsRef,
 }: {
+  /** The stage's own camera: the lens, and how far off the hero to start. */
   camera: StageCamera;
+  /**
+   * WHERE the settle lands — composed from the figure actually standing
+   * there rather than parked at the stage's authored coordinates, so the
+   * entry ends on the same frame the Studio then holds. See heroFraming.
+   */
+  hero: HeroComposition;
   settleMs: number;
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
 }) {
   const phase = useStageStore((state) => state.phase);
   const finishSettle = useStageStore((state) => state.finishSettle);
-  const camera = useThree((state) => state.camera);
+  const view = useThree((state) => state.camera);
   const started = useRef<number | null>(null);
 
   // Where the sequence's camera comes FROM: a touch further out, a touch
@@ -50,25 +59,25 @@ export function StageSettle({
     const radius = to.current.clone().sub(target);
     const spun = radius
       .clone()
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), hero.settleFrom.azimuth)
-      .multiplyScalar(1 + hero.settleFrom.dolly);
-    from.current.copy(target).add(spun).setY(to.current.y + hero.settleFrom.height);
-    if (phase !== "ready") camera.position.copy(from.current);
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), camera.settleFrom.azimuth)
+      .multiplyScalar(1 + camera.settleFrom.dolly);
+    from.current.copy(target).add(spun).setY(to.current.y + camera.settleFrom.height);
+    if (phase !== "ready") view.position.copy(from.current);
     // Only when the hero composition itself changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hero]);
+  }, [hero, camera]);
 
   useFrame((_, delta) => {
     if (phase !== "settling") return;
     started.current = (started.current ?? 0) + delta * 1000;
     const t = Math.min(1, started.current / settleMs);
-    camera.position.lerpVectors(from.current, to.current, ease(t));
+    view.position.lerpVectors(from.current, to.current, ease(t));
     const controls = controlsRef.current;
     if (controls) {
       controls.target.set(...hero.target);
       controls.update();
     } else {
-      camera.lookAt(...hero.target);
+      view.lookAt(...hero.target);
     }
     if (t >= 1) finishSettle();
   });

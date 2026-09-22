@@ -27,11 +27,13 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { PresentationConfig } from "@devaform/asset-system";
 import { CharacterRoot } from "@/engine/CharacterRoot";
 import type { LightingPresetId } from "@/engine/lighting";
+import { heroComposition, type HeroComposition } from "@/presentation/heroFraming";
 import { StageEnvironment } from "@/presentation/StageEnvironment";
 import { StageLights } from "@/presentation/StageLights";
 import { StageReadiness } from "@/presentation/StageReadiness";
 import { StageSettle } from "@/presentation/StageSettle";
 import { stageViews } from "@/presentation/stageViews";
+import { isMeasured } from "@/engine/figureExtent";
 import { useStageStore } from "@/presentation/stageStore";
 import { useUiStore } from "@/state/uiStore";
 
@@ -47,19 +49,31 @@ function SeeEveryLayer() {
 function CameraCommands({
   stage,
   controlsRef,
+  onMove,
 }: {
   stage: PresentationConfig;
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  onMove: () => void;
 }) {
   const command = useUiStore((s) => s.cameraCommand);
   const camera = useThree((s) => s.camera);
   const phase = useStageStore((s) => s.phase);
+  const figure = useStageStore((s) => s.figure);
+  const size = useThree((s) => s.size);
 
   useEffect(() => {
     // The sequence owns the camera until it has settled; a view command
     // arriving mid-intro would fight it.
     if (phase !== "ready") return;
-    const view = stageViews(stage)[command.view];
+    // And nonce 0 is the store's initial value rather than a command
+    // anybody issued. Acting on it the moment the stage became ready
+    // raced the figure's measurement: the camera landed on the authored
+    // coordinates, counted itself as the customer's own framing, and the
+    // composed hero never arrived — so the statue sat at a target the
+    // camera was not standing back for. AdoptHero owns the opening
+    // frame; this owns the buttons.
+    if (command.nonce === 0) return;
+    const view = stageViews(stage, { figure, aspect: size.width / size.height })[command.view];
     camera.position.set(...view.position);
     const controls = controlsRef.current;
     if (controls) {
@@ -68,7 +82,51 @@ function CameraCommands({
     } else {
       camera.lookAt(...view.target);
     }
+    onMove();
+    // A view command is a camera move the customer asked for. Re-running
+    // it because the window was resized, or because a crown finished
+    // loading, is not — so only the command itself is a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command, camera, controlsRef, stage, phase]);
+
+  return null;
+}
+
+/**
+ * Stand the camera in the composed hero shot.
+ *
+ * Only while the composition is still the stage's to make: the moment the
+ * customer takes hold of the camera it is theirs, and a figure measured a
+ * beat later — a crown that finished loading, a preset that sat the
+ * statue down — must not pull the view out of their hands. Before that it
+ * matters a great deal, because the stage's authored coordinates frame
+ * nobody in particular and the measured ones frame whoever is there.
+ */
+function AdoptHero({
+  hero,
+  controlsRef,
+  touched,
+}: {
+  hero: HeroComposition;
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  touched: React.RefObject<boolean>;
+}) {
+  const camera = useThree((s) => s.camera);
+  const phase = useStageStore((s) => s.phase);
+
+  useEffect(() => {
+    // `settling` is the entry easing onto this same composition — see
+    // StageSettle. Two things moving one camera is one thing too many.
+    if (touched.current || phase === "settling") return;
+    camera.position.set(...hero.position);
+    const controls = controlsRef.current;
+    if (controls) {
+      controls.target.set(...hero.target);
+      controls.update();
+    } else {
+      camera.lookAt(...hero.target);
+    }
+  }, [hero, phase, camera, controlsRef, touched]);
 
   return null;
 }
@@ -78,6 +136,31 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lightingPreset = useUiStore((s) => s.lightingPreset);
   const phase = useStageStore((s) => s.phase);
+  const figure = useStageStore((s) => s.figure);
+
+  /**
+   * The picture this stage is composing, of the figure actually on it.
+   *
+   * The aspect ratio belongs in it because a tall narrow window frames a
+   * standing figure quite differently from a wide one: which dimension
+   * binds changes, and with it how far back the camera has to stand.
+   */
+  const [aspect, setAspect] = useState(16 / 9);
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const box = entry?.contentRect;
+      if (box && box.height > 0) setAspect(box.width / box.height);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const hero = useMemo(
+    () => heroComposition(stage.camera, figure, aspect),
+    [stage.camera, figure, aspect],
+  );
 
   /**
    * A BUILT room, or a plain ground.
@@ -102,9 +185,16 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   const keepFramingOnStage = useCallback(() => {
     const controls = controlsRef.current;
     if (!controls) return;
-    const [tx, ty, tz] = stage.camera.target;
-    const LATERAL = 0.34;
-    const VERTICAL = 0.55;
+    const [tx, ty, tz] = hero.target;
+    // Measured off the figure rather than fixed, for the same reason the
+    // distance is: "most of the figure's height" is a different number of
+    // metres for a short broad Ganesha and a tall Vishnu, and a constant
+    // that lets one of them bring its face into frame will not let the
+    // other. The floors are what a stage with nobody measured on it gets.
+    const LATERAL = isMeasured(figure) ? Math.max(0.3, figure.radius) : 0.34;
+    const VERTICAL = isMeasured(figure)
+      ? Math.max(0.45, (figure.topY - figure.footY) * 0.5)
+      : 0.55;
     const clamp = (value: number, centre: number, span: number) =>
       Math.min(centre + span, Math.max(centre - span, value));
     const x = clamp(controls.target.x, tx, LATERAL);
@@ -118,11 +208,23 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
       );
       controls.target.set(x, y, z);
     }
-    setMoved(true);
-  }, [stage.camera.target]);
+  }, [hero.target, figure]);
 
-  /** Whether the customer has taken the camera anywhere yet. */
+  /**
+   * Whether the customer has taken the camera anywhere yet.
+   *
+   * Set when a drag, a pinch or a wheel BEGINS, not on every change the
+   * controls report. The settle, the view buttons and the framing clamp
+   * all move the camera without anyone touching it; counting those as
+   * "moved" hid the navigation hint before it could be read, and would
+   * let the stage mistake its own composition for the customer's.
+   */
+  const touched = useRef(false);
   const [moved, setMoved] = useState(false);
+  const takeCamera = useCallback(() => {
+    touched.current = true;
+    setMoved(true);
+  }, []);
 
   const cameraProps = useMemo(
     () => ({
@@ -142,8 +244,10 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     (window as unknown as { __devaformStage?: unknown }).__devaformStage = () => ({
-      position: stage.camera.position,
-      target: stage.camera.target,
+      position: hero.position,
+      target: hero.target,
+      authored: { position: stage.camera.position, target: stage.camera.target },
+      figure,
     });
     // Put the camera somewhere, for a scripted orbit — the QA sweep has
     // to drive the real controls rather than a camera of its own.
@@ -165,7 +269,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
         distance: Number(object.position.distanceTo(controls.target).toFixed(4)),
       };
     };
-  }, [stage.camera]);
+  }, [stage.camera, hero, figure]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full">
@@ -215,12 +319,14 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
         />
         <StageSettle
           camera={stage.camera}
+          hero={hero}
           settleMs={stage.intro?.settleMs ?? 900}
           controlsRef={controlsRef}
         />
         <StageReadiness />
         <SeeEveryLayer />
-        <CameraCommands stage={stage} controlsRef={controlsRef} />
+        <AdoptHero hero={hero} controlsRef={controlsRef} touched={touched} />
+        <CameraCommands stage={stage} controlsRef={controlsRef} onMove={takeCamera} />
         {environment && <StageEnvironment config={environment} pivot={stage.pivot} />}
         <CharacterRoot />
         <ContactShadows position={[0, -0.002, 0]} opacity={0.62} scale={3.2} blur={2.4} far={1.6} />
@@ -237,7 +343,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
         )}
         <OrbitControls
           ref={controlsRef}
-          target={stage.camera.target as unknown as [number, number, number]}
+          target={hero.target}
           enabled={phase === "ready"}
           /**
            * ORBIT, PAN AND DOLLY — all three.
@@ -274,6 +380,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
           minPolarAngle={stage.camera.minPolarAngle}
           maxPolarAngle={stage.camera.maxPolarAngle}
           onChange={keepFramingOnStage}
+          onStart={takeCamera}
           makeDefault
         />
       </Canvas>

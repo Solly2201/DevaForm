@@ -6,11 +6,19 @@
  * (see character-schema), so future rigs bring their own hierarchy —
  * nothing here is deity-specific. Joint sliders write real euler rotations
  * (clamped to joint limits) into pose.jointOverrides.
+ *
+ * A WRIST THAT IS SPOKEN FOR SAYS SO. A hand holding an attribute or
+ * showing a mudra is aimed by the engine after the pose is applied, so a
+ * rotation written onto it is overwritten before the frame is drawn. It
+ * used to offer the slider anyway: it moved, the statue did not, and
+ * nothing explained the difference. The joint is shown held instead, with
+ * what is holding it — see solvedArms.
  */
 import {
   type JointDefinition,
   type JointId,
 } from "@devaform/character-schema";
+import { resolveCharacterPresentation, solvedArms } from "@devaform/asset-system";
 import { effectiveJointRotation } from "@/engine/pose";
 import { SliderControl } from "@/components/controls/SliderControl";
 import { useDeity } from "@/state/deityContext";
@@ -67,13 +75,22 @@ export function PosePresetsSection() {
   );
 }
 
-function JointControls({ joint }: { joint: JointDefinition }) {
+function JointControls({ joint, held }: { joint: JointDefinition; held: string | null }) {
   const pose = useEditorStore((s) => s.config.pose);
   const setJointOverride = useEditorStore((s) => s.setJointOverride);
   const clearJointOverride = useEditorStore((s) => s.clearJointOverride);
   const rotation = effectiveJointRotation(pose, joint.id);
   const hasOverride = pose.jointOverrides[joint.id] !== undefined;
   const limits = [joint.limits?.x, joint.limits?.y, joint.limits?.z] as const;
+
+  if (held) {
+    return (
+      <section className="rounded-lg border border-surface-800 bg-surface-900 p-3">
+        <h4 className="text-xs font-semibold text-stone-400">{joint.label}</h4>
+        <p className="mt-1 text-[11px] leading-relaxed text-stone-500">{held}</p>
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-lg border border-surface-800 bg-surface-850 p-3">
@@ -114,12 +131,35 @@ function JointControls({ joint }: { joint: JointDefinition }) {
   );
 }
 
+/** The hand joint of an arm, e.g. "arm.frontRight.hand". */
+const HAND_JOINT = /^arm\.([A-Za-z]+)\.hand$/;
+
 /** All joints of one semantic body part (e.g. "Left Leg"), stacked. */
 export function JointGroupSection({ joints }: { joints: readonly JointDefinition[] }) {
+  const config = useEditorStore((s) => s.config);
+
+  // Only worth resolving for a group that contains a hand — which is to
+  // say, for the arms and for nothing else.
+  const hasHand = joints.some((joint) => HAND_JOINT.test(joint.id));
+  const solved: ReadonlySet<string> = hasHand
+    ? solvedArms(resolveCharacterPresentation(config))
+    : new Set<string>();
+
+  const heldReason = (joint: JointDefinition): string | null => {
+    const slot = HAND_JOINT.exec(joint.id)?.[1];
+    if (!slot || !solved.has(slot)) return null;
+    const holding = config.attachments.find(
+      (attachment) => attachment.socket === `arm.${slot}.hand.item`,
+    );
+    return holding
+      ? "Aimed by what this hand is holding. Empty the hand to adjust the wrist."
+      : "Aimed by the gesture this hand is making. Choose an open hand to adjust the wrist.";
+  };
+
   return (
     <div className="space-y-3">
       {joints.map((joint) => (
-        <JointControls key={joint.id} joint={joint} />
+        <JointControls key={joint.id} joint={joint} held={heldReason(joint)} />
       ))}
     </div>
   );

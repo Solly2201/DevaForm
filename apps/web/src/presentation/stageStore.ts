@@ -11,6 +11,7 @@
  *
  */
 import { create } from "zustand";
+import type { FigureExtent } from "@/engine/figureExtent";
 
 export type StagePhase = "intro" | "settling" | "ready";
 
@@ -25,9 +26,32 @@ interface StageState {
    * until the figure is standing in it.
    */
   characterReady: boolean;
+  /**
+   * How big the statue on the stage is, in metres — measured off the
+   * built figure, never authored. The stage composes its picture from
+   * this (see heroFraming.ts) so that a short broad deity and a tall
+   * narrow one are both framed by the same statement about the picture
+   * rather than by two sets of coordinates.
+   */
+  figure: FigureExtent | null;
   beginSettle: () => void;
   finishSettle: () => void;
   setCharacterReady: (ready: boolean) => void;
+  setFigure: (figure: FigureExtent | null) => void;
+}
+
+/** Two measurements of the same statue, to within a tenth of a millimetre. */
+function sameFigure(a: FigureExtent | null, b: FigureExtent | null): boolean {
+  if (a === null || b === null) return a === b;
+  const near = (x: number, y: number) => Math.abs(x - y) < 1e-4;
+  return (
+    near(a.footY, b.footY) &&
+    near(a.topY, b.topY) &&
+    near(a.headY, b.headY) &&
+    near(a.centreX, b.centreX) &&
+    near(a.centreZ, b.centreZ) &&
+    near(a.radius, b.radius)
+  );
 }
 
 /**
@@ -81,4 +105,7 @@ export const useStageStore = create<StageState>()((set) => ({
   characterReady: false,
   setCharacterReady: (ready) =>
     set((state) => (state.characterReady === ready ? state : { characterReady: ready })),
+  figure: null,
+  setFigure: (figure) =>
+    set((state) => (sameFigure(state.figure, figure) ? state : { figure })),
 }));

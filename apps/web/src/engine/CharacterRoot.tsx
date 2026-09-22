@@ -101,7 +101,7 @@ export function CharacterRoot() {
   // Pose: in-place joint rotation updates — joints, gestures, grips and
   // planted attributes, in the one order poseRig defines.
   useEffect(() => {
-    poseRig(rig);
+    poseRig(rig, pose);
   }, [rig, pose, hands]);
 
   // Morphs: in-place GPU influence updates (no geometry rebuild). Hand
