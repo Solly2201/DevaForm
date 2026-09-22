@@ -27,13 +27,22 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { PresentationConfig } from "@devaform/asset-system";
 import { CharacterRoot } from "@/engine/CharacterRoot";
 import type { LightingPresetId } from "@/engine/lighting";
-import { clearStageFrame, measureStageFrame } from "@/presentation/stageFrame";
+import { StageEnvironment } from "@/presentation/StageEnvironment";
 import { StageLights } from "@/presentation/StageLights";
 import { StageReadiness } from "@/presentation/StageReadiness";
 import { StageSettle } from "@/presentation/StageSettle";
 import { stageViews } from "@/presentation/stageViews";
 import { useStageStore } from "@/presentation/stageStore";
 import { useUiStore } from "@/state/uiStore";
+
+/** The camera sees every layer; the lights do not. */
+function SeeEveryLayer() {
+  const camera = useThree((state) => state.camera);
+  useEffect(() => {
+    camera.layers.enableAll();
+  }, [camera]);
+  return null;
+}
 
 function CameraCommands({
   stage,
@@ -70,7 +79,15 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   const lightingPreset = useUiStore((s) => s.lightingPreset);
   const phase = useStageStore((s) => s.phase);
 
-  const hasBackdrop = Boolean(stage.backdrop.image);
+  /**
+   * A BUILT room, or a plain ground.
+   *
+   * The screen-space backdrop is gone from the Studio: a photograph is
+   * correct for one camera position and the customer moves. A stage that
+   * declares an environment gets it as geometry, anchored to the stage's
+   * own pivot; one that does not gets the dark disc it always had.
+   */
+  const environment = stage.environment;
 
   /**
    * How far the framing may travel from the stage's own composition.
@@ -128,6 +145,16 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
       position: stage.camera.position,
       target: stage.camera.target,
     });
+    // Put the camera somewhere, for a scripted orbit — the QA sweep has
+    // to drive the real controls rather than a camera of its own.
+    (window as unknown as { __devaformSetCamera?: unknown }).__devaformSetCamera = (
+      position: [number, number, number],
+    ) => {
+      const controls = controlsRef.current;
+      if (!controls) return;
+      controls.object.position.set(...position);
+      controls.update();
+    };
     (window as unknown as { __devaformCamera?: unknown }).__devaformCamera = () => {
       const controls = controlsRef.current;
       if (!controls) return null;
@@ -139,30 +166,6 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
       };
     };
   }, [stage.camera]);
-
-  // Publish where the statue stands on screen, so the fullscreen frame —
-  // entry and backdrop alike — centres its mandala there.
-  useEffect(() => {
-    if (!hasBackdrop) return;
-    const measure = () => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      const centerX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-      measureStageFrame(
-        stage.backdrop,
-        { width: window.innerWidth, height: window.innerHeight },
-        centerX,
-      );
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    if (containerRef.current) observer.observe(containerRef.current);
-    window.addEventListener("resize", measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-      clearStageFrame();
-    };
-  }, [stage, hasBackdrop]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full">
@@ -199,14 +202,14 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
          * defect cost three misread QA sheets on /dev/qa.
          */
         camera={cameraProps}
-        gl={{ antialias: true, preserveDrawingBuffer: true, alpha: hasBackdrop }}
+        gl={{ antialias: true, preserveDrawingBuffer: true }}
         className="absolute inset-0 h-full w-full"
         style={{ background: "transparent" }}
       >
         <StageLights
           presetId={lightingPreset as LightingPresetId}
           settleMs={stage.intro?.settleMs ?? 900}
-          transparent={hasBackdrop}
+          transparent={false}
         />
         <StageSettle
           camera={stage.camera}
@@ -214,7 +217,9 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
           controlsRef={controlsRef}
         />
         <StageReadiness />
+        <SeeEveryLayer />
         <CameraCommands stage={stage} controlsRef={controlsRef} />
+        {environment && <StageEnvironment config={environment} pivot={stage.pivot} />}
         <CharacterRoot />
         <ContactShadows position={[0, -0.002, 0]} opacity={0.62} scale={3.2} blur={2.4} far={1.6} />
         {/* A ground disc only when there is no room behind the figure.
@@ -222,7 +227,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
             a second one drawn over it is a brown ellipse lying on a
             temple pavement. The contact shadow stays either way: it is
             what marries the figure to whichever floor it stands on. */}
-        {!hasBackdrop && (
+        {!environment && (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.006, 0]} receiveShadow>
             <circleGeometry args={[2.4, 48]} />
             <meshStandardMaterial color="#160f0a" roughness={0.96} />

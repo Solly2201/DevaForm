@@ -16,7 +16,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { getPresentation } from "@devaform/asset-system";
 import { PresentationEntry } from "@/presentation/PresentationEntry";
-import { StageBackdrop } from "@/presentation/StageBackdrop";
 import { StageVignette } from "@/presentation/StageVignette";
 import { shouldShowEntry, useStageStore } from "@/presentation/stageStore";
 import { useDeity } from "@/state/deityContext";
@@ -62,8 +61,6 @@ export function EditorShell() {
     if (!allowed) finishSettle();
   }, [stage.intro, finishSettle]);
 
-  const hasBackdrop = Boolean(stage.backdrop.image);
-
   /**
    * The chrome is not merely invisible during the entry — it is not
    * THERE.
@@ -102,8 +99,6 @@ export function EditorShell() {
 
   return (
     <div className="relative flex h-dvh flex-col bg-surface-950 text-stone-200">
-      {hasBackdrop && <StageBackdrop config={stage.backdrop} />}
-      {hasBackdrop && <StageVignette />}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         {!chromeHidden && (
           <div style={chrome}>
@@ -119,6 +114,9 @@ export function EditorShell() {
           {/* Transparent: the fixed backdrop behind it is the stage. */}
           <main className="relative min-w-0 flex-1">
             <EditorViewport stage={stage} />
+            {/* The frame's edge, over the room rather than under it: the
+                canvas is opaque now that the hall is geometry. */}
+            <StageVignette />
             {/* Not merely invisible: not there. A control faded to zero
                 is still in the tab order, and a customer who has not
                 arrived yet could reach the camera presets with a Tab. */}

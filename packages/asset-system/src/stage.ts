@@ -94,6 +94,46 @@ export interface StageBackdrop {
 }
 
 /**
+ * The room, as GEOMETRY.
+ *
+ * WHY IT IS NO LONGER A PHOTOGRAPH. The backdrop was the entry's final
+ * frame shown in screen space — correct for exactly one camera position,
+ * which is the one it was taken from. That is a defensible way to stand a
+ * statue in a hall and an indefensible way to let someone walk round it:
+ * the floor's painted mandala keeps the perspective of the hero angle
+ * while the base standing on it takes the perspective of wherever the
+ * customer has moved to, so at ninety degrees the two disagree and the
+ * figure reads as sliding across a picture. Every attempt to hide that —
+ * fading the room past an angle, fading it with distance — made the
+ * temple pop to black under the customer's hands instead.
+ *
+ * So the sanctum is built. It is cheap geometry, deliberately: a floor,
+ * a painted circle, a ring of columns, a wall, an oculus and its shaft.
+ * What it buys is that every angle is a real angle — the floor is under
+ * the feet from all of them, there is no void to rotate into, and
+ * nothing has to be faded to hide a seam.
+ *
+ * ANCHORED TO THE STAGE, not to the character. The pivot is the
+ * presentation's, the figure stands at it, and neither knows about the
+ * other: a character carries no stage, and a stage carries no character.
+ */
+export interface StageEnvironment {
+  /** How far the floor reaches, metres. */
+  floorRadius: number;
+  floorColor: string;
+  /** The painted circle the figure stands on. */
+  mandala: { radius: number; color: string; ringColor: string; rings: number };
+  /** The colonnade: how many, how far out, how tall, how thick. */
+  columns: { count: number; radius: number; height: number; thickness: number; color: string };
+  /** The hall beyond them — a wall the camera can never get outside. */
+  wall: { radius: number; height: number; color: string };
+  /** The opening the light comes through, and the shaft it makes. */
+  oculus: { radius: number; height: number; color: string; shaftOpacity: number };
+  /** Oil lamps on the floor, which is what warms a dark hall. */
+  lamps: { count: number; radius: number; color: string };
+}
+
+/**
  * The entry sequence, and how it hands over.
  *
  * NOTHING PLAYS. The approach into the sanctum is a strip of stills and
@@ -143,7 +183,23 @@ export interface PresentationConfig {
   lighting: string;
   camera: StageCamera;
   backdrop: StageBackdrop;
+  /**
+   * The room the statue stands in, built rather than photographed.
+   *
+   * A stage that declares one is orbited; a stage that does not falls
+   * back to a plain ground, which is what a deity with no room of its
+   * own gets.
+   */
+  environment?: StageEnvironment;
   intro?: StageIntro;
+  /**
+   * Where the stage turns, in world metres.
+   *
+   * The camera orbits this and the environment is anchored to it. It is
+   * the PRESENTATION's pivot, not the character's: a saved creation
+   * carries no stage, and moving the stage must never move the figure.
+   */
+  pivot: readonly [number, number, number];
 }
 
 /**
@@ -179,6 +235,25 @@ const SANCTUM: PresentationConfig = {
     grade: "brightness(0.88) saturate(0.92)",
     voidColor: "#0d0b09",
   },
+  /**
+   * The sanctum, in numbers. Read off the entry's own last frame: a dark
+   * warm hall, a cream circle on the floor, sandstone columns round it,
+   * and a single shaft from an opening overhead.
+   */
+  environment: {
+    floorRadius: 9,
+    floorColor: "#181209",
+    // Under the lotus base rather than around it: a painted circle the
+    // figure stands on, not a plate it stands in front of.
+    mandala: { radius: 0.62, color: "#7a684d", ringColor: "#4d341a", rings: 4 },
+    columns: { count: 16, radius: 3.7, height: 5.2, thickness: 0.26, color: "#2f2418" },
+    // Far enough back and dark enough that the figure separates from it.
+    // A wall the same value as the statue is a wall the statue is lost in.
+    wall: { radius: 9, height: 7.2, color: "#0b0805" },
+    oculus: { radius: 0.9, height: 6.8, color: "#ffe2ab", shaftOpacity: 0.17 },
+    lamps: { count: 12, radius: 1.75, color: "#ffb454" },
+  },
+  pivot: [0, 0, 0],
   intro: {
     assetId: "presentation.intro.templeSanctum",
     // The shipped cut opens clean — the footage's original title segment

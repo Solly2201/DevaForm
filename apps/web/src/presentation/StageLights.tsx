@@ -11,7 +11,7 @@
  * layer that reaches into materials to fade them is a presentation layer
  * that owns the character.
  */
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 import { SceneEnvironment } from "@/engine/SceneEnvironment";
@@ -33,6 +33,16 @@ export function StageLights({
   const group = useRef<THREE.Group | null>(null);
   const level = useRef(phase === "ready" ? 1 : 0);
   const scene = useThree((state) => state.scene);
+
+  // The character's rig lights the CHARACTER. A directional does not
+  // fall off, so the same key that models a statue a metre tall also
+  // lands on a wall nine metres behind it; the room is on its own layer
+  // and keeps its own lamps.
+  useEffect(() => {
+    group.current?.traverse((node) => {
+      if ((node as THREE.Light).isLight) node.layers.set(0);
+    });
+  });
 
   useFrame((_, delta) => {
     const wanted = phase === "intro" ? 0 : 1;

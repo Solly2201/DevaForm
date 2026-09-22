@@ -32,7 +32,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PresentationConfig, StageIntro } from "@devaform/asset-system";
-import { frameLayerStyle } from "./stageFrame";
+import { clearStageFrame, frameLayerStyle, measureStageFrame } from "./stageFrame";
 import {
   beginApproach,
   easeApproach,
@@ -139,6 +139,28 @@ export function PresentationEntry({ stage }: { stage: PresentationConfig }) {
   const [fading, setFading] = useState(false);
   const [gentle] = useState(() => prefersReducedMotion());
   const travelPx = gentle ? intro.reducedTravelPx : intro.travelPx;
+
+  /**
+   * The frame's own placement.
+   *
+   * Measured HERE, because the entry is the only thing that shows a
+   * photograph now — the Studio's room is built. Centred on the window,
+   * which during the entry is the whole of it.
+   */
+  useEffect(() => {
+    const measure = () =>
+      measureStageFrame(
+        stage.backdrop,
+        { width: window.innerWidth, height: window.innerHeight },
+        window.innerWidth / 2,
+      );
+    measure();
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      clearStageFrame();
+    };
+  }, [stage.backdrop]);
 
   /** Arriving: fade this layer, and let the stage rise underneath. */
   const arrive = useCallback(() => {
