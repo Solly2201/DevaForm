@@ -58,6 +58,7 @@ import {
   applyMorphInfluences,
   bindSkinnedMeshToJoints,
   collectSkinnedMeshes,
+  deformedVertex,
   socketNameToSocketId,
 } from "./skinning";
 import { morphInfluences } from "./morphs";
@@ -92,6 +93,19 @@ export interface PlantedAttachment {
   axis: THREE.Vector3;
   /** How far the hand may slide before it reaches something no one grips. */
   travel: { up: number; down: number };
+  /**
+   * For an attribute standing on its OWN — no hand on it — which side of
+   * the figure it stands on and how much air it keeps from the figure's
+   * skin.
+   *
+   * Measured against the POSED body rather than the body profile. The
+   * profile describes a figure standing up: its widest statement is a
+   * chest or a hip, and a seated figure's knees reach half again as far.
+   * A staff set down beside a meditating Shiva at chest width stands in
+   * his thigh, which is exactly where the trishul was found. Absent when
+   * a hand is on the item — then the hand decides where it is.
+   */
+  stand?: { side: number; clearanceM: number };
 }
 
 export interface CharacterRig {
@@ -761,6 +775,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     }
 
     if (standsOnGround(presentation)) {
+      let standsAt: { side: number; clearanceM: number } | undefined;
       if (!attachment.handSlot) {
         // Standing on its own: beside the figure, clear of it.
         //
@@ -785,8 +800,12 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
             : presentation.stand?.side === "left"
               ? 1
               : -1;
+        // The profile's answer, which is right for a figure standing up
+        // and is refined against the posed skin once there is a pose —
+        // see `standClear` in settlePlantedAttachments.
         renderable.position.x = side * clear;
         renderable.position.z = 0;
+        standsAt = { side, clearanceM: presentation.stand?.clearanceM ?? 0.045 };
       }
       const frame = resolveGripFrame(presentation);
       planted.push({
@@ -799,6 +818,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           ? frame.travel
           : // Nothing is holding it, so nothing limits where it stands.
             { up: Number.POSITIVE_INFINITY, down: Number.POSITIVE_INFINITY },
+        stand: standsAt,
       });
     }
   }
@@ -895,7 +915,15 @@ function faceHeldItems(rig: CharacterRig): void {
  * declares, because a shaft stops being shaft where the trident begins.
  */
 export function settlePlantedAttachments(rig: CharacterRig): void {
-  for (const { object, rest, buttBelowAnchor: drop, baseTop, axis, travel } of rig.planted) {
+  // Measured once per settle, and only when something actually stands on
+  // its own beside the figure.
+  let reach: number | null = null;
+  const bodyReach = (): number => {
+    if (reach === null) reach = standClear(rig);
+    return reach;
+  };
+
+  for (const { object, rest, buttBelowAnchor: drop, baseTop, axis, travel, stand } of rig.planted) {
     const parent = object.parent;
     if (!parent) continue;
     parent.updateWorldMatrix(true, false);
@@ -915,7 +943,50 @@ export function settlePlantedAttachments(rig: CharacterRig): void {
       .multiplyScalar(slide)
       .applyQuaternion(worldQuaternion.invert())
       .add(rest);
+
+    // And out far enough to be BESIDE the figure in the pose it is in.
+    //
+    // Where it stands was decided at build time from the body profile,
+    // which describes a figure standing up. A pose that folds the legs
+    // out sideways reaches half again as far as any profile measurement,
+    // and the trishul set down beside a meditating Shiva stood in his
+    // thigh. The profile's answer is kept as the floor — a staff never
+    // moves closer than it — and the posed skin pushes it out from there.
+    if (stand) {
+      const wanted = stand.side * Math.max(Math.abs(rest.x), bodyReach() + stand.clearanceM);
+      object.position.x += wanted - rest.x;
+    }
   }
+}
+
+/**
+ * How far the POSED figure reaches sideways, in statue-root metres.
+ *
+ * The skin only. Cloth pools and a garment's hem is not something a staff
+ * has to stand clear of; ornaments are on the skin already. Walked with a
+ * stride, because this answers a question asked in centimetres and a
+ * fourteen-thousand-vertex body says the same thing at every seventh
+ * vertex.
+ */
+function standClear(rig: CharacterRig): number {
+  const point = new THREE.Vector3();
+  let widest = 0;
+  for (const mesh of rig.bodyMeshes) {
+    const position = mesh.geometry?.getAttribute("position");
+    if (!position) continue;
+    mesh.updateWorldMatrix(true, false);
+    const stride = Math.max(1, Math.floor(position.count / 2000));
+    for (let vertex = 0; vertex < position.count; vertex += stride) {
+      if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) {
+        deformedVertex(mesh, vertex, point).applyMatrix4(mesh.matrixWorld);
+      } else {
+        point.fromBufferAttribute(position, vertex).applyMatrix4(mesh.matrixWorld);
+      }
+      const across = Math.abs(rig.root.worldToLocal(point.clone()).x);
+      if (across > widest) widest = across;
+    }
+  }
+  return widest;
 }
 
 /**

@@ -42,7 +42,7 @@ import {
 } from "@devaform/character-schema";
 import { deityRuntime } from "./deities";
 import { resolveAssetRef } from "./registry";
-import { isHandheld, type AttributePresentation } from "./presentation";
+import { isHandheld, standsOnGround, type AttributePresentation } from "./presentation";
 import { presentationsOf, type AssetDefinition, type AssetTransform } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -173,6 +173,34 @@ function handIsFree(
 ): boolean {
   if (occupied.has(slot)) return false;
   return !isGestureMudra(hands[slot]?.mudra ?? "open");
+}
+
+/**
+ * Can this POSE sustain this presentation?
+ *
+ * A separate question from "does the hand accept it", and the one the
+ * meditating Shiva was never asked. His trishul is a planted staff — its
+ * weight is on the base and the hand only steadies it, which is why the
+ * hand slides along the shaft instead of lifting the whole weapon — so
+ * the shaft runs from the ground up past the hand whatever the figure is
+ * doing. Standing, that line is beside the body and the pose is the one
+ * the presentation was authored for. Sitting, the figure's lap and knees
+ * are IN that line, and the shaft came up through his thigh.
+ *
+ * No offset could have fixed it: the shaft's path is the consequence of
+ * where its butt is and where the hand is, and both are correct. What was
+ * wrong was the presentation — the pose does not support a staff planted
+ * beside a seated figure and steadied by a hand in its lap. So it is not
+ * chosen, and the resolver falls through to one the pose does support:
+ * the trishul declares that it can simply stand, and it stands.
+ *
+ * Stated about the PHYSICS rather than about a deity or a pose id: any
+ * attribute whose weight goes to the ground and whose hand only steadies
+ * it needs a figure standing over that ground.
+ */
+function poseSustains(presentation: AttributePresentation, seated: boolean): boolean {
+  if (!seated) return true;
+  return !(isHandheld(presentation) && standsOnGround(presentation));
 }
 
 /** Does this presentation accept being anchored at this socket? */
@@ -328,6 +356,7 @@ export function resolveCharacterPresentation(
     let chosen = presentations.find(
       (p) =>
         anchorAccepts(p, requested, skeleton) &&
+        poseSustains(p, pose.seated) &&
         (!isHandheld(p) || (requestedHand !== undefined && handIsFree(hands, requestedHand, occupied))),
     );
     let socket = chosen ? anchorSocket(chosen, requested) : requested;
@@ -337,7 +366,11 @@ export function resolveCharacterPresentation(
     //    would rather stand than be handed to someone else.
     if (!chosen) {
       const independent = presentations.find(
-        (p) => p.autoSelectable && !isHandheld(p) && anchorAccepts(p, anchorSocket(p, requested), skeleton),
+        (p) =>
+          p.autoSelectable &&
+          !isHandheld(p) &&
+          poseSustains(p, pose.seated) &&
+          anchorAccepts(p, anchorSocket(p, requested), skeleton),
       );
       if (independent) {
         chosen = independent;
@@ -353,7 +386,9 @@ export function resolveCharacterPresentation(
 
     // 3. A hand-agnostic attribute may move to a hand that is free.
     if (!chosen) {
-      const movable = presentations.find((p) => p.autoSelectable && p.mobile && isHandheld(p));
+      const movable = presentations.find(
+        (p) => p.autoSelectable && p.mobile && isHandheld(p) && poseSustains(p, pose.seated),
+      );
       const free = movable
         ? armSlots.find((slot) => handIsFree(hands, slot, occupied))
         : undefined;

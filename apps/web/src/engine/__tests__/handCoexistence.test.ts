@@ -1,5 +1,5 @@
 /**
- * A hand is not standing in another hand's attribute.
+ * Nothing on the statue is standing inside anything else on it.
  *
  * WHY THIS IS A DIFFERENT QUESTION FROM EVERY OTHER GRIP TEST. `grip.test`
  * asks whether the hand holding a thing closes on it. `handReach` asks
@@ -168,6 +168,35 @@ function handSurface(rig: CharacterRig, slot: ArmSlot): THREE.Vector3[] {
   return points;
 }
 
+/**
+ * The figure's own skin, posed, in world space.
+ *
+ * The body meshes only — cloth pools and an ornament is on the skin
+ * already, so neither is something a staff set down beside the figure has
+ * to stand clear of.
+ */
+function bodySurface(rig: CharacterRig): THREE.Vector3[] {
+  const points: THREE.Vector3[] = [];
+  const target = new THREE.Vector3();
+  for (const mesh of rig.bodyMeshes) {
+    const position = mesh.geometry?.getAttribute("position");
+    if (!position) continue;
+    mesh.updateWorldMatrix(true, false);
+    const stride = Math.max(1, Math.floor(position.count / 4000));
+    for (let vertex = 0; vertex < position.count; vertex += stride) {
+      if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) {
+        deformedVertex(mesh, vertex, target);
+        points.push(mesh.localToWorld(target.clone()));
+      } else {
+        points.push(
+          new THREE.Vector3().fromBufferAttribute(position, vertex).applyMatrix4(mesh.matrixWorld),
+        );
+      }
+    }
+  }
+  return points;
+}
+
 /** An attribute's own surface, sampled evenly enough to be honest. */
 function attributeSurface(node: THREE.Object3D): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
@@ -300,6 +329,80 @@ describe("no hand stands in another hand's attribute", () => {
  * and then builds the same shape every time is the same dead control
  * wearing different words.
  */
+/**
+ * An attribute set down BESIDE the figure is beside it.
+ *
+ * The trishul is a planted staff: its weight is on the base and the hand
+ * only steadies it, so the shaft runs from the ground up past the hand
+ * whatever the figure is doing. Standing, that line is beside the body.
+ * Sitting, it is not — the meditating Shiva's shaft came up through his
+ * thigh, and no offset could have fixed it, because both ends of the
+ * shaft were exactly where they belonged. What was wrong was that the
+ * pose was never asked whether it could support the presentation.
+ *
+ * It is asked now (`poseSustains`), and the trishul stands on its own
+ * instead. Where it stands is measured against the POSED skin rather than
+ * the body profile — a profile describes a figure standing up, and a
+ * padmasana knee reaches half again as far as any chest.
+ *
+ * This is the measurement, for every pose that sets something down.
+ */
+describe("nothing stands inside the figure", () => {
+  const CLEAR_OF_BODY_M = 0.01;
+  /**
+   * How many attributes were actually found standing on their own.
+   *
+   * Most poses set nothing down, so an empty result is not a failure per
+   * pose. It is a failure overall: this test exists because a trishul
+   * stood in a thigh, and a run that measured no standing attributes at
+   * all has stopped watching for that.
+   */
+  let stoodMeasured = 0;
+
+  const subjects = [
+    { label: "shiva", make: createDefaultShivaConfiguration, presets: SHIVA_POSE_PRESETS },
+    { label: "ganesha", make: createDefaultGaneshaConfiguration, presets: POSE_PRESETS },
+    { label: "vishnu", make: createDefaultVishnuConfiguration, presets: VISHNU_POSE_PRESETS },
+  ] as const;
+
+  for (const subject of subjects) {
+    for (const preset of subject.presets) {
+      it(`${subject.label} · ${preset.id}`, async () => {
+        const { rig, materials } = await rigFor(posedWith(subject.make(), preset.id));
+        try {
+          const skin = bodySurface(rig);
+          expect(skin.length, "there is a body to measure against").toBeGreaterThan(0);
+
+          for (const attachment of rig.resolved.attachments) {
+            // Only what stands on its OWN. A worn ornament is meant to
+            // touch — that is what wearing is — and a held item is in a
+            // hand, which handCoexistence already measures.
+            if (attachment.handSlot) continue;
+            if (attachment.presentation.mode !== "grounded") continue;
+            let node: THREE.Object3D | null = null;
+            rig.root.traverse((object) => {
+              if (object.name === `attachment:${attachment.asset.id}`) node = object;
+            });
+            if (node === null) continue;
+            stoodMeasured += 1;
+            const gap = closestApproach(attributeSurface(node), skin, CELL_M);
+            expect(
+              gap,
+              `${attachment.asset.id} stands ${(gap * 1000).toFixed(1)} mm from the skin`,
+            ).toBeGreaterThanOrEqual(CLEAR_OF_BODY_M);
+          }
+        } finally {
+          materials.dispose();
+        }
+      }, 90_000);
+    }
+  }
+
+  it("the measurement found attributes standing on their own", () => {
+    expect(stoodMeasured).toBeGreaterThan(0);
+  });
+});
+
 describe("a chosen mudra reaches the built hand", () => {
   it("ganesha's blessing front right builds a different hand for every mudra", async () => {
     const shapes = new Map<string, string>();
