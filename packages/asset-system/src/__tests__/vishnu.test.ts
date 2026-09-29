@@ -14,6 +14,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  SCHEMA_VERSION,
   VISHNU_POSE_PRESETS,
   type CharacterConfiguration,
   type SocketId,
@@ -40,7 +41,7 @@ const HANDS: readonly SocketId[] = [
 /** A Vishnu configuration on a given body, with an attribute in each hand. */
 function vishnu(bodyId: string, preset: string): CharacterConfiguration {
   return {
-    schemaVersion: 1,
+    schemaVersion: SCHEMA_VERSION,
     deity: "vishnu",
     arms: { count: 4 },
     parts: {

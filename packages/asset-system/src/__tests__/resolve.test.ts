@@ -11,11 +11,14 @@
 import { describe, expect, it } from "vitest";
 import {
   ARM_SLOTS,
+  MUDRAS,
   SHIVA_POSE_PRESETS,
   POSE_PRESETS,
+  activeArmSlots,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
   isGestureMudra,
+  posedWith,
   type ArmSlot,
   type CharacterConfiguration,
   type SocketId,
@@ -25,10 +28,15 @@ import { isHandheld } from "../presentation";
 import { getAsset } from "../registry";
 import { armOptionsFor, getAvailableDeity } from "../deities";
 
-const withPose = (config: CharacterConfiguration, preset: string | null): CharacterConfiguration => ({
-  ...config,
-  pose: { preset, jointOverrides: {} },
-});
+/**
+ * Choosing a pose, the way the product chooses one.
+ *
+ * Not a bare `pose.preset` assignment: that produces a configuration the
+ * editor cannot make, because choosing a pose also brings its gestures
+ * into the hands and seeds the arms that carry them. See `posedWith`.
+ */
+const withPose = (config: CharacterConfiguration, preset: string | null): CharacterConfiguration =>
+  posedWith(config, preset);
 
 const attachmentFor = (
   resolved: ReturnType<typeof resolveCharacterPresentation>,
@@ -298,5 +306,82 @@ describe("pose x attribute matrix", () => {
       if (!holding) continue;
       expect(isGestureMudra(resolved.hands[slot].mudra), `${poseId}/${slot}`).toBe(false);
     }
+  });
+});
+
+/**
+ * Every mudra the panel offers is a mudra the statue can be put in.
+ *
+ * Ganesha's default pose is the blessing, and the blessing declares a
+ * gesture for the front right hand. That declaration used to be re-applied
+ * over the configuration on every resolution, so four of the six buttons
+ * in the Hands panel set the configuration, lit up, and changed nothing —
+ * the resolver put abhaya back before anything was built. A control that
+ * cannot be told apart from a broken hand solver is worse than a missing
+ * one.
+ *
+ * The pose's gesture is a default now, applied when the pose is chosen
+ * (see `posedWith`), and what the customer does afterwards stands. This is
+ * the claim, for every hand of every deity in every pose it offers.
+ */
+describe("every offered mudra actually reaches the statue", () => {
+  const cases = [
+    { deity: "ganesha", make: createDefaultGaneshaConfiguration, presets: POSE_PRESETS },
+    { deity: "shiva", make: createDefaultShivaConfiguration, presets: SHIVA_POSE_PRESETS },
+  ] as const;
+
+  for (const subject of cases) {
+    for (const preset of subject.presets) {
+      it(`${subject.deity} · ${preset.id}`, () => {
+        const posed = withPose(subject.make(), preset.id);
+        for (const slot of activeArmSlots(posed.arms)) {
+          for (const mudra of MUDRAS) {
+            const chosen: CharacterConfiguration = {
+              ...posed,
+              hands: { ...posed.hands, [slot]: { mudra } },
+              /**
+               * Empty-handed, every hand of them.
+               *
+               * The question here is only whether the POSE overrides the
+               * customer's choice, and an attribute in the scene answers
+               * a different one: a hand that becomes free is somewhere
+               * the resolver may legitimately move an attribute released
+               * by another, and the hand then adopts that item's grip.
+               * That is the product working — it is just not this test.
+               */
+              attachments: posed.attachments.filter(
+                (attachment) => !attachment.socket.startsWith("arm."),
+              ),
+            };
+            const resolved = resolveCharacterPresentation(chosen);
+            expect(
+              resolved.hands[slot].mudra,
+              `${preset.id}: ${slot} asked for ${mudra}`,
+            ).toBe(mudra);
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * And a hand that gestures still cannot be holding something.
+   *
+   * The rule the pose override was protecting is real — nobody shows a
+   * palm to a devotee with a trident in the same fist — it was simply
+   * being enforced in the wrong place. It is the HAND's state that
+   * forbids it, and that is still true whoever set it.
+   */
+  it("a hand the customer set to bless lets go of what it held", () => {
+    const config = createDefaultShivaConfiguration();
+    const blessing: CharacterConfiguration = {
+      ...config,
+      pose: { preset: "shiva.standing", jointOverrides: {} },
+      hands: { ...config.hands, frontRight: { mudra: "abhaya" } },
+    };
+    const resolved = resolveCharacterPresentation(blessing);
+    expect(resolved.hands.frontRight.mudra).toBe("abhaya");
+    const trishul = attachmentFor(resolved, "shiva.attribute.trishul");
+    expect(trishul?.handSlot, "not in the blessing hand").not.toBe("frontRight");
   });
 });

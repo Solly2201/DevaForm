@@ -59,12 +59,14 @@ vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {
 
 import {
   ARM_SLOTS,
+  MUDRAS,
   POSE_PRESETS,
   SHIVA_POSE_PRESETS,
   VISHNU_POSE_PRESETS,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
   createDefaultVishnuConfiguration,
+  posedWith,
   type ArmSlot,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
@@ -283,4 +285,54 @@ describe("no hand stands in another hand's attribute", () => {
       expect(pairsSeen.get(deity.label) ?? 0).toBeGreaterThan(0);
     });
   }
+});
+
+/**
+ * And the chosen mudra reaches the GEOMETRY, not just the resolution.
+ *
+ * The chain the brief asks for is UI option → semantic gesture →
+ * resolved hand → pose → final geometry, and the resolver answers only
+ * the middle of it. Ganesha's front right hand is the one that was
+ * broken — its default pose declares a gesture for it — so it is the one
+ * held to account here: six mudras, six distinct hands actually built.
+ *
+ * Distinctness is the claim that matters. A hand that resolves correctly
+ * and then builds the same shape every time is the same dead control
+ * wearing different words.
+ */
+describe("a chosen mudra reaches the built hand", () => {
+  it("ganesha's blessing front right builds a different hand for every mudra", async () => {
+    const shapes = new Map<string, string>();
+    for (const mudra of MUDRAS) {
+      const base = posedWith(createDefaultGaneshaConfiguration(), "blessing");
+      const config: CharacterConfiguration = {
+        ...base,
+        hands: { ...base.hands, frontRight: { mudra } },
+        // Empty-handed, so what is measured is the hand and not what the
+        // resolver decided to put in it.
+        attachments: base.attachments.filter((a) => !a.socket.startsWith("arm.")),
+      };
+      const { rig, materials } = await rigFor(config);
+      try {
+        expect(rig.hands.frontRight.mudra, `${mudra} survived resolution`).toBe(mudra);
+        const points = handSurface(rig, "frontRight");
+        expect(points.length, `${mudra} built a hand`).toBeGreaterThan(0);
+        // Where the fingers actually ended up, to a tenth of a millimetre.
+        const box = new THREE.Box3().setFromPoints(points);
+        const wrist = rig.joints
+          .get("arm.frontRight.hand")!
+          .getWorldPosition(new THREE.Vector3());
+        const shape = [box.min, box.max]
+          .flatMap((corner) => corner.clone().sub(wrist).toArray())
+          .map((n) => n.toFixed(4))
+          .join(",");
+        shapes.set(mudra, shape);
+      } finally {
+        materials.dispose();
+      }
+    }
+    expect(new Set(shapes.values()).size, `distinct hands: ${[...shapes.keys()].join(", ")}`).toBe(
+      MUDRAS.length,
+    );
+  }, 120_000);
 });

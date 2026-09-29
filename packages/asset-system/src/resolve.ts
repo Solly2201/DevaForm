@@ -9,7 +9,7 @@
  * consequences of editing one thing at a time — and something has to
  * reconcile them.
  *
- * Until now three separate places did: `resolveHands` in the schema, the
+ * Until now three separate places did: hand resolution in the schema, the
  * attachment loop in `buildRig`, and the wrist solvers in `pose.ts`. Each
  * knew a piece, none knew the whole, and the renderer sequenced them. So
  * "a blessing hand lets go of the trishul, which then stands on the base
@@ -29,7 +29,6 @@ import {
   garmentFitOf,
   getSkeleton,
   isGestureMudra,
-  resolveHands,
   type ArmSlot,
   type CharacterConfiguration,
   type GarmentFit,
@@ -159,17 +158,20 @@ export const GROUND_SOCKET: SocketId = "base.platform";
  * also carrying a trident. Everything else is available: attaching an item
  * sets the hand's mudra, so a hand configured to `open` with nothing in it
  * is free to close around whatever is put in it.
+ *
+ * ONE source for the answer: the hand's own mudra. A pose's declared
+ * gestures used to be a second one, consulted here and again below, and
+ * they said the same thing for a different reason — that a pose's
+ * suggestion outranked the configuration. It does not; it is applied when
+ * the pose is chosen and lives in the configuration afterwards, so asking
+ * the hand is asking the pose too.
  */
 function handIsFree(
   hands: HandsConfiguration,
   slot: ArmSlot,
   occupied: ReadonlySet<ArmSlot>,
-  gestured: ReadonlySet<ArmSlot>,
 ): boolean {
   if (occupied.has(slot)) return false;
-  // A gesture the POSE declared is part of that pose's identity and wins.
-  if (gestured.has(slot)) return false;
-  // A gesture the CUSTOMER chose for a hand also means that hand gestures.
   return !isGestureMudra(hands[slot]?.mudra ?? "open");
 }
 
@@ -263,15 +265,18 @@ export function resolveCharacterPresentation(
     garment: garmentFitOf(preset),
   };
 
-  // A preset that raises a blessing arm is asserting that the hand
-  // blesses, whatever the configuration still says it grips. Resolve once,
-  // here, and every consumer agrees.
-  const hands = resolveHands(config.hands, preset) as HandsConfiguration;
-  const gestured = new Set<ArmSlot>(
-    Object.entries(preset?.gestures ?? {})
-      .filter(([, mudra]) => mudra !== undefined)
-      .map(([slot]) => slot as ArmSlot),
-  );
+  /**
+   * What the hands are doing is the CONFIGURATION's answer, and only its
+   * answer.
+   *
+   * A pose's declared gestures used to be re-applied over the hands here,
+   * on every resolution — which made a preset's suggestion permanent and
+   * four of the six mudras unselectable on any hand a pose had an opinion
+   * about. They are applied when the pose is CHOSEN now
+   * (`applyPoseGestures`), so by the time anything is resolved the
+   * configuration already says what the customer means.
+   */
+  const hands = config.hands;
 
   // --- parts that absorb other parts --------------------------------------
   const integratedFeatures = new Set<string>();
@@ -323,7 +328,7 @@ export function resolveCharacterPresentation(
     let chosen = presentations.find(
       (p) =>
         anchorAccepts(p, requested, skeleton) &&
-        (!isHandheld(p) || (requestedHand !== undefined && handIsFree(hands, requestedHand, occupied, gestured))),
+        (!isHandheld(p) || (requestedHand !== undefined && handIsFree(hands, requestedHand, occupied))),
     );
     let socket = chosen ? anchorSocket(chosen, requested) : requested;
     let handSlot = chosen && isHandheld(chosen) ? requestedHand : undefined;
@@ -350,7 +355,7 @@ export function resolveCharacterPresentation(
     if (!chosen) {
       const movable = presentations.find((p) => p.autoSelectable && p.mobile && isHandheld(p));
       const free = movable
-        ? armSlots.find((slot) => handIsFree(hands, slot, occupied, gestured))
+        ? armSlots.find((slot) => handIsFree(hands, slot, occupied))
         : undefined;
       if (movable && free) {
         chosen = movable;
@@ -386,13 +391,13 @@ export function resolveCharacterPresentation(
   }
 
   // --- hand states the resolved attachments imply -------------------------
-  // A hand holding something adopts the grip its presentation declares —
-  // unless the POSE has already declared what that hand is doing, in which
-  // case nothing is in it and there is nothing to adopt.
+  // A hand holding something adopts the grip its presentation declares.
+  // A hand that gestures never reaches here holding anything: handIsFree
+  // refused it the item in the first place.
   const resolvedHands = { ...hands } as Record<ArmSlot, { mudra: MudraId }>;
   for (const attachment of attachments) {
     const slot = attachment.handSlot;
-    if (!slot || gestured.has(slot)) continue;
+    if (!slot) continue;
     if (attachment.presentation.hand === "none") continue;
     resolvedHands[slot] = { mudra: attachment.presentation.hand };
   }

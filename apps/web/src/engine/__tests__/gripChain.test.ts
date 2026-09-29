@@ -30,6 +30,7 @@ vi.mock("three/examples/jsm/loaders/GLTFLoader.js", () => ({
 import * as THREE from "three";
 import {
   createDefaultShivaConfiguration,
+  posedWith,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
 import { GROUND_SOCKET, getAsset } from "@devaform/asset-system";
@@ -246,13 +247,16 @@ describe("a hand grips the shaft, never the head", () => {
 
 describe("a hand that is blessing is not also gripping", () => {
   it("stands what it held, if standing is something that item can do", () => {
-    const config = humanShiva();
-    config.pose = { preset: "shiva.blessing", jointOverrides: {} } as CharacterConfiguration["pose"];
-    const { rig, materials } = posedRig(config);
+    // Chosen the way the editor chooses it: a pose arrives with the
+    // gestures it declares (see `posedWith`). Setting `pose.preset` alone
+    // describes a configuration the product cannot produce — and used to
+    // pass here only because the resolver quietly re-imposed the pose's
+    // gestures over the hands on every build, which is the behaviour that
+    // made four of the six mudras unselectable.
+    const { rig, materials } = posedRig(posedWith(humanShiva(), "shiva.blessing"));
 
-    // The pose says both front hands are gesturing; the configuration
-    // still says they grip. The pose wins, and the rig agrees with the
-    // wrist solver because both read the same resolved hands.
+    // Both front hands gesture, and the rig agrees with the wrist solver
+    // because both read the same hands.
     expect(rig.hands.frontRight.mudra).toBe("abhaya");
     expect(rig.hands.frontLeft.mudra).toBe("varada");
     expect(rig.held).toHaveLength(0);

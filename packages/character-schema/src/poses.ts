@@ -8,8 +8,8 @@
  * solves the wrist for whatever arm the pose provides. See
  * GESTURE_MUDRAS below.
  */
-import type { ArmSlot, JointId } from "./skeleton";
-import type { MudraId, Vec3 } from "./configuration";
+import { ARM_SLOTS, type ArmSlot, type JointId } from "./skeleton";
+import type { CharacterConfiguration, MudraId, Vec3 } from "./configuration";
 
 /**
  * How the cloth is worn in a pose.
@@ -108,38 +108,42 @@ export function handThumbAxis(slot: ArmSlot): Vec3 {
 }
 
 /**
- * What each hand is actually DOING, once the pose and the configuration
- * are reconciled.
+ * The hands a pose ARRIVES with.
  *
- * The division is: the POSE decides whether a hand gestures at all, and
- * the CUSTOMER decides which gesture it is.
+ * A pose that raises a blessing arm is asserting that the hand blesses —
+ * it is the whole identity of that pose — so choosing it puts that
+ * gesture in the hand, and the arm and the palm agree from the first
+ * frame. A hand already showing a gesture keeps the one it has: somebody
+ * who chose varada and then chose the blessing pose gets their varada on
+ * the raised arm, which is what they asked for twice.
  *
- * A preset that raises an abhaya arm is asserting that the hand blesses —
- * it is the whole identity of that pose — so a configuration still saying
- * that hand grips loses, and rightly: nobody shows a palm to a devotee
- * with a trident in the same fist. But if the customer has chosen a
- * DIFFERENT gesture for that hand, they have already agreed the hand
- * blesses and are only saying how. Overriding that put a varada palm on
- * an arm the editor had just swung into abhaya, and the two disagreed by
- * thirty-six degrees.
+ * APPLIED WHEN THE POSE IS CHOSEN, and never again. It used to run on
+ * every resolution, over the configuration, and that is a different
+ * statement entirely: it meant the pose did not suggest a gesture, it
+ * ENFORCED one, forever. On Ganesha — whose default pose is the blessing
+ * — the front right hand offered six mudras in the panel and honoured
+ * two. Choosing Open, Cradle, Stem Hold or Weapon Grip set the
+ * configuration, lit the button, and changed nothing on the statue,
+ * because the resolver put abhaya back before anything was built. Four
+ * dead controls, indistinguishable from a bug in the hand solver.
  *
- * Resolve once, here, and every consumer agrees: the hand solver, the
- * hand generator, and the resolver deciding whether a hand can hold
- * anything.
+ * A default belongs at the moment of choosing. After that the
+ * configuration is what the customer means, and the resolver's job is to
+ * build it rather than to argue with it.
  */
-export function resolveHands<T extends Record<string, { mudra: MudraId }>>(
+export function applyPoseGestures<T extends Record<string, { mudra: MudraId }>>(
   hands: T,
   preset: PosePreset | undefined,
 ): T {
   if (!preset?.gestures) return hands;
-  const resolved = { ...hands } as Record<string, { mudra: MudraId }>;
+  const arrived = { ...hands } as Record<string, { mudra: MudraId }>;
   for (const [slot, mudra] of Object.entries(preset.gestures)) {
-    const current = resolved[slot];
+    const current = arrived[slot];
     if (!mudra || !current) continue;
-    if (isGestureMudra(current.mudra)) continue; // already a gesture: theirs
-    resolved[slot] = { ...current, mudra };
+    if (isGestureMudra(current.mudra)) continue; // already gesturing: theirs
+    arrived[slot] = { ...current, mudra };
   }
-  return resolved as T;
+  return arrived as T;
 }
 
 /** True when this mudra is a gesture — a statement, not a grip. */
@@ -198,6 +202,37 @@ export const GESTURE_MUDRAS: Partial<Record<MudraId, MudraGesture>> = {
     palm: [0, -0.342, 0.94],
   },
 };
+
+/**
+ * A configuration WEARING a pose — the whole of what choosing one does.
+ *
+ * Three things happen together and they have to keep happening together,
+ * so they live here rather than in the editor: the preset is recorded,
+ * its gestures arrive in the hands, and the hands that gesture seed the
+ * arm rotations that carry them. Skip the last and a pose puts a blessing
+ * palm somewhere no palm can be shown from; skip the middle and the pose
+ * has no opinion at all.
+ *
+ * Joint overrides are CLEARED, because they were relative tweaks on the
+ * pose being left and mean something else on the one arriving — except
+ * the gesture arms, which are not tweaks but the gesture itself.
+ *
+ * Shared with the tests deliberately. A test that sets `pose.preset` by
+ * hand is describing a configuration the product cannot produce, and the
+ * three failures that appeared when the resolver stopped overriding hands
+ * were all of exactly that kind.
+ */
+export function posedWith(
+  config: CharacterConfiguration,
+  presetId: string | null,
+): CharacterConfiguration {
+  const hands = applyPoseGestures(config.hands, presetId ? getPosePreset(presetId) : undefined);
+  const jointOverrides: Partial<Record<JointId, Vec3>> = {};
+  for (const slot of ARM_SLOTS) {
+    Object.assign(jointOverrides, mudraArmRotations(hands[slot]?.mudra ?? "open", slot) ?? {});
+  }
+  return { ...config, hands, pose: { preset: presetId, jointOverrides } };
+}
 
 const mirror = (v: Vec3): Vec3 => [v[0], -v[1], -v[2]];
 

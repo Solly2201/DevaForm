@@ -11,11 +11,43 @@ import {
   characterConfigurationSchema,
   type CharacterConfiguration,
 } from "./configuration";
+import { applyPoseGestures, getPosePreset } from "./poses";
 
 type Migration = (raw: Record<string, unknown>) => Record<string, unknown>;
 
 /** Keyed by *source* version: MIGRATIONS[1] migrates v1 -> v2. */
-const MIGRATIONS: Record<number, Migration> = {};
+const MIGRATIONS: Record<number, Migration> = {
+  /**
+   * v1 -> v2: a pose's gestures become part of the configuration.
+   *
+   * Under v1 a preset's declared gestures were re-imposed over the hands
+   * on EVERY resolution, so what a stored creation looked like was not
+   * what it said: a v1 Ganesha could record `frontRight: "grip"` and be
+   * drawn showing an abhaya palm, because the blessing preset put the
+   * gesture back before anything was built. That is also why four of the
+   * six mudras could not be chosen — see `applyPoseGestures`.
+   *
+   * The resolver obeys the configuration now, which means an untouched v1
+   * creation would open looking different from the day it was saved. So
+   * the migration writes down what v1 was actually DRAWING: the preset's
+   * gestures, applied once, exactly as the old resolver applied them. A
+   * creation reopens identical, and is thereafter editable.
+   */
+  1: (raw) => {
+    const pose = raw.pose as { preset?: string | null } | undefined;
+    const hands = raw.hands as Record<string, { mudra: string }> | undefined;
+    if (!pose?.preset || !hands) return raw;
+    const preset = getPosePreset(pose.preset);
+    if (!preset) return raw;
+    return {
+      ...raw,
+      hands: applyPoseGestures(
+        hands as Record<string, { mudra: never }>,
+        preset,
+      ) as unknown as Record<string, unknown>,
+    };
+  },
+};
 
 export class ConfigurationParseError extends Error {
   constructor(

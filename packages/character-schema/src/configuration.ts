@@ -14,7 +14,7 @@ import { z } from "zod";
 import { ARM_SLOTS, isJointId, type ArmSlot } from "./skeleton";
 import { isSocketId } from "./sockets";
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /**
  * Deities a configuration may reference — widened as deities are added.

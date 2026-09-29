@@ -154,6 +154,75 @@ describe("configuration serialization", () => {
     expect(restored.hands.frontLeft.mudra).toBe("open");
   });
 
+  /**
+   * A creation saved under v1 opens looking exactly as it did.
+   *
+   * v1 let a pose's declared gestures be re-imposed over the hands on
+   * every resolution, so a stored configuration could SAY one thing and
+   * be DRAWN as another: a Ganesha recording `frontRight: "grip"` in the
+   * blessing pose was drawn showing an abhaya palm. v2 obeys the
+   * configuration, which would have changed that creation's appearance
+   * the first time it was reopened — so the migration writes down what v1
+   * was actually drawing.
+   */
+  it("a v1 creation keeps the hands it was drawn with", () => {
+    const v1: Record<string, unknown> = {
+      ...createDefaultGaneshaConfiguration(),
+      schemaVersion: 1,
+      // The blessing pose, with a hand the old resolver overrode.
+      pose: { preset: "blessing", jointOverrides: {} },
+      hands: {
+        frontLeft: { mudra: "hold" },
+        frontRight: { mudra: "grip" },
+        backLeft: { mudra: "pinch" },
+        backRight: { mudra: "grip" },
+      },
+    };
+    const restored = deserializeConfiguration(JSON.stringify(v1));
+    expect(restored.schemaVersion).toBe(SCHEMA_VERSION);
+    // What v1 DREW there: the blessing's own gesture.
+    expect(restored.hands.frontRight.mudra).toBe("abhaya");
+    // And every hand the pose had no opinion about is untouched.
+    expect(restored.hands.frontLeft.mudra).toBe("hold");
+    expect(restored.hands.backLeft.mudra).toBe("pinch");
+    expect(restored.hands.backRight.mudra).toBe("grip");
+  });
+
+  it("a v1 creation in a pose with no gestures is carried over unchanged", () => {
+    const v1: Record<string, unknown> = {
+      ...createDefaultGaneshaConfiguration(),
+      schemaVersion: 1,
+      pose: { preset: "standing", jointOverrides: {} },
+      hands: {
+        frontLeft: { mudra: "hold" },
+        frontRight: { mudra: "grip" },
+        backLeft: { mudra: "pinch" },
+        backRight: { mudra: "open" },
+      },
+    };
+    const restored = deserializeConfiguration(JSON.stringify(v1));
+    expect(restored.hands.frontRight.mudra).toBe("grip");
+    expect(restored.hands.backRight.mudra).toBe("open");
+  });
+
+  /**
+   * And a v2 creation is not migrated twice. The gesture a customer
+   * deliberately changed after choosing the pose is theirs, and a
+   * migration that ran again would take it back.
+   */
+  it("a v2 creation keeps a hand the customer changed after choosing the pose", () => {
+    const v2 = {
+      ...createDefaultGaneshaConfiguration(),
+      pose: { preset: "blessing", jointOverrides: {} },
+      hands: {
+        ...createDefaultGaneshaConfiguration().hands,
+        frontRight: { mudra: "grip" as const },
+      },
+    };
+    const restored = deserializeConfiguration(JSON.stringify(v2));
+    expect(restored.hands.frontRight.mudra).toBe("grip");
+  });
+
   it("rejects invalid material colors", () => {
     const config = createDefaultGaneshaConfiguration();
     const tampered = {

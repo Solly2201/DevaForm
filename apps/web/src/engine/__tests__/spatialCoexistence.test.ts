@@ -46,6 +46,7 @@ vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {
 import {
   ARM_SLOTS,
   createDefaultShivaConfiguration,
+  posedWith,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
 import {
@@ -262,9 +263,12 @@ describe("the semantic layer is untouched", () => {
     // stands on the ground — a SEMANTIC choice. Nothing in engine/spatial
     // accepts a configuration, a pose or a registry; it can only measure
     // a placement someone else already made.
-    const config = createDefaultShivaConfiguration();
-    config.pose = { preset: "shiva.blessing", jointOverrides: {} } as CharacterConfiguration["pose"];
-    const { rig, materials } = await rigFor(config);
+    // Posed the way the editor poses: choosing a pose brings its declared
+    // gestures into the hands, which is what makes the blessing hand let
+    // go. See `posedWith`.
+    const { rig, materials } = await rigFor(
+      posedWith(createDefaultShivaConfiguration(), "shiva.blessing"),
+    );
     const trishul = rig.resolved.attachments.find((a) => a.asset.id === "shiva.attribute.trishul");
     expect(trishul?.presentation.id).toBe("grounded");
     const held = await rigFor(createDefaultShivaConfiguration());

@@ -13,6 +13,7 @@ import {
   armChainJoints,
   getPalette,
   mudraArmRotations,
+  posedWith,
   type ArmSlot,
   type AttachmentConfiguration,
   type BaseConfiguration,
@@ -169,23 +170,7 @@ export const useEditorStore = create<EditorState>()(
         ),
 
       setPosePreset: (presetId) =>
-        set((state) =>
-          mutateConfig(state, (config) => {
-            // Changing preset clears overrides — they were relative tweaks
-            // on the previous preset and rarely make sense on the new one.
-            // A GESTURE is not a tweak, though: a hand chosen to bless goes
-            // on blessing, and its arm has to come with it or the pose puts
-            // the hand somewhere no palm can be shown from.
-            const jointOverrides: Record<string, Vec3> = {};
-            for (const slot of ARM_SLOTS) {
-              Object.assign(
-                jointOverrides,
-                mudraArmRotations(config.hands[slot]?.mudra ?? "open", slot) ?? {},
-              );
-            }
-            return { ...config, pose: { preset: presetId, jointOverrides } };
-          }),
-        ),
+        set((state) => mutateConfig(state, (config) => posedWith(config, presetId))),
 
       setJointOverride: (joint, rotation) =>
         set((state) =>
