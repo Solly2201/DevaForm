@@ -66,7 +66,44 @@ export default function DeitiesPage() {
             );
           })}
         </div>
+
+        {/*
+          What the product does, said once.
+
+          These three statements were the landing page's, and the landing
+          page is gone — the root is the Studio now. They are kept because
+          they are the only place the journey PAST the editor is stated:
+          a customer looking at a catalogue of gods is entitled to know
+          that what they make is kept, shareable and headed somewhere
+          physical. Inside the Studio they would be an advertisement; here
+          they are an answer.
+        */}
+        <section className="mt-12 grid gap-4 border-t border-surface-800/60 pt-8 md:grid-cols-3">
+          {[
+            {
+              title: "Customize",
+              body: "Heads, eyes, mudras, held attributes, crowns, jewellery, clothing, poses and materials — every option is real and live in 3D.",
+            },
+            {
+              title: "Keep & Share",
+              body: "Save creations to your library with real previews, return to them anytime, and share a link that reconstructs the exact configuration.",
+            },
+            {
+              title: "Toward the Statue",
+              body: "Every creation stores the exact component versions needed to manufacture it. Export renders, configurations and posed 3D models today.",
+            },
+          ].map((feature) => (
+            <div key={feature.title}>
+              <h2 className="font-display text-lg text-saffron-500">{feature.title}</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-stone-400">{feature.body}</p>
+            </div>
+          ))}
+        </section>
       </main>
+
+      <footer className="border-t border-surface-800/60 px-6 py-8 text-center text-xs text-stone-600">
+        DevaForm — Where the Divine Takes Form.
+      </footer>
     </div>
   );
 }

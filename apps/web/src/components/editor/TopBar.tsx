@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
@@ -216,14 +215,22 @@ export function TopBar() {
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-surface-800 bg-surface-900 px-4">
-      <Link href="/" className="flex items-baseline gap-1.5">
+      {/* The mark, and NOT a link.
+
+          It used to go to the root, which was a landing page a customer
+          might reasonably want; the root is the Studio now, so following
+          it would reload the editor they are already in — discarding
+          unsaved work on a click that promises nothing. Every other way
+          out of here goes through `leaveTo`, which asks first. A brand
+          that cannot ask should not navigate. */}
+      <span className="flex items-baseline gap-1.5">
         <span className="font-display text-lg font-semibold tracking-wide text-saffron-500">
           DevaForm
         </span>
         <span className="hidden text-[10px] uppercase tracking-widest text-stone-600 lg:inline">
           Divine Studio
         </span>
-      </Link>
+      </span>
 
       <div className="mx-2 h-6 w-px bg-surface-700" />
 

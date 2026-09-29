@@ -15,7 +15,7 @@ export default function AssetRegistryPage() {
     <div className="min-h-dvh bg-surface-950 px-6 py-8 text-stone-200 md:px-10">
       <div className="mx-auto max-w-6xl">
         <p className="text-[11px] uppercase tracking-widest text-stone-600">
-          DevaForm internal · <Link href="/" className="underline">home</Link>
+          DevaForm internal · <Link href="/studio" className="underline">Studio</Link>
         </p>
         <h1 className="mt-1 font-display text-2xl text-stone-100">Asset Registry</h1>
 

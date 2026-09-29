@@ -4,7 +4,10 @@ import Link from "next/link";
 export function SiteNav() {
   return (
     <header className="flex h-16 items-center justify-between px-6 md:px-10">
-      <Link href="/" className="flex items-baseline gap-2">
+      {/* The mark goes to the product, not to a landing page: there is
+          no longer one, and the root simply resolves here. Naming the
+          destination saves the customer a redirect. */}
+      <Link href="/studio" className="flex items-baseline gap-2">
         <span className="font-display text-xl font-semibold tracking-wide text-saffron-500">
           DevaForm
         </span>
