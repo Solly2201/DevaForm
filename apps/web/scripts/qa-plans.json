@@ -525,5 +525,26 @@
         ]
       }
     ]
+  },
+  "vishnu-chakra": {
+    "width": 700,
+    "height": 700,
+    "shots": [
+      {
+        "name": "chakra",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "backRightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "backThreeQuarter",
+          "back"
+        ]
+      }
+    ]
   }
 }
