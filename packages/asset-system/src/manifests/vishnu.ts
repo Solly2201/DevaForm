@@ -187,14 +187,27 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     presentations: [
       handheld({
         id: "fingerPoised",
-        label: "Poised on a raised finger",
+        label: "Spinning on a raised finger",
         hand: "hold",
-        // A wheel has a face, and a murti shows it: vertical on the
-        // finger AND turned to look out the statue's front, not caught
-        // at whatever angle the wrist solve left it.
-        facing: "front",
-        grip: { axis: [0, 1, 0], closure: "poise" },
-        notes: "Balanced on the raised index; the fingers do not close on it.",
+        /**
+         * THE DISCUS SPINS FLAT, and this one declaration is what says so.
+         *
+         * The asset is drawn in its own XY plane with its face normal
+         * along +Z, and `axis` names the asset-local direction that runs
+         * UP the grip channel. Naming the normal puts the disc horizontal
+         * on a vertical axis — a plate spinning on a fingertip, which is
+         * what references/vishnu.jpg shows. Naming +Y, as this used to,
+         * stood it on its rim like a cartwheel.
+         *
+         * No `facing`. That spends the free spin about the channel to aim
+         * an item's +Z out the statue's front, which is exactly right for
+         * a conch or a wheel presented face-on and meaningless here: the
+         * free spin IS about the disc's own normal now, and a disc is
+         * symmetric about that. Asking for a facing would be asking a
+         * spinning wheel which spoke should face the devotee.
+         */
+        grip: { axis: [0, 0, 1], closure: "poise" },
+        notes: "Balanced and turning on the raised index; the fingers do not close on it.",
       }),
     ],
     materialZones: ["metal"],

@@ -185,6 +185,10 @@ export function createDefaultVishnuConfiguration(): CharacterConfiguration {
     attachments: [
       { socket: "head.crown", asset: { assetId: "vishnu.crown.kirita", version: 1 } },
       { socket: "head.forehead", asset: { assetId: "vishnu.forehead.tilaka", version: 1 } },
+      // The throat is not bare in any view of either reference: a gold
+      // collar sits above the garland, and without it the chest reads as
+      // a blue torso with a flower chain laid on it.
+      { socket: "chest.necklace", asset: { assetId: "ganesha.necklace.haram", version: 2 } },
       { socket: "chest.mala", asset: { assetId: "vishnu.garland.vaijayanti", version: 1 } },
       // Front pair low: the mace steadied on the ground, the lotus held
       // out. Back pair raised: the discus and the conch.

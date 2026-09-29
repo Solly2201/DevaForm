@@ -157,11 +157,25 @@ export const itemGada: AttachmentGenerator = (ctx) => {
  * side and a centre from the front, which is what makes a wheel look
  * struck rather than cut.
  *
- * Built in the XY plane so its face normal is +Z, which is what the
- * presentation's `facing: "front"` turns out of the statue, and wholly
- * above y = 0 so it rests on the fingertip the poise seat measures. No
- * decorative yaw: an empirical quarter-turn once compensated for whatever
- * spin the wrist solve left, and was wrong the moment the pose changed.
+ * IT SPINS FLAT. The discus is balanced on the raised fingertip and
+ * turning, so its axis is vertical and its face is horizontal — see
+ * references/vishnu.jpg, where the wheel reads as an ellipse above the
+ * hand because that is what a spinning disc seen from below looks like.
+ * It stood on its rim before, like a cartwheel, which is a wheel being
+ * shown rather than a discus being held.
+ *
+ * The geometry does not know any of that. It is built in its own XY
+ * plane with its face normal along +Z, and the PRESENTATION says which of
+ * its axes runs up the grip channel — `axis: [0, 0, 1]`, the normal —
+ * which is the same mechanism a trishul uses to say the opposite about
+ * its shaft. Nothing here is rotated for the camera, and nothing is
+ * rotated for a pose.
+ *
+ * What the generator owns is where its own origin is: the disc is lifted
+ * half its own thickness along that axis, so the point that lands on the
+ * fingertip is the centre of its underside — the point a spinning plate
+ * actually touches a finger at. The thickness is the generator's to know;
+ * the manifest states only the relationship.
  */
 export const itemChakra: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
@@ -174,10 +188,14 @@ export const itemChakra: AttachmentGenerator = (ctx) => {
   // than Vishnu's face.
   const RIM = 0.036;
   const TIP = RIM * 1.3;
+  /** The deepest terrace — what the disc is thickest at its centre. */
+  const CORE_DEPTH = 0.0105;
   const disc = new THREE.Group();
-  // The lowest flame tip rests ON the fingertip — a millimetre and a half
-  // of air, so the finger touches the disc rather than entering it.
-  disc.position.y = TIP + 0.0015;
+  // Lifted half its own thickness along its NORMAL, so the centre of its
+  // underside is the asset's origin and therefore the point that lands on
+  // the fingertip. A millimetre and a half of air, so the finger touches
+  // the disc rather than entering it.
+  disc.position.z = CORE_DEPTH / 2 + 0.0015;
   group.add(disc);
 
   /**
@@ -579,18 +597,24 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   /**
    * The tiers, as fractions of the brow-to-crown rise.
    *
-   * The DRUM's own height is the number that decides whether this reads
-   * as a kirita or as a coronet. Two passes at it were half as tall as
-   * they were wide and both came back from the Studio looking like a
-   * European crown with a knob on; the reference's drum is nearly as tall
-   * as it is broad, and the flare is modest — a quarter wider than the
-   * head, not half again.
+   * A KIRITA NARROWS. That is the whole silhouette, and getting it
+   * backwards is what made this crown read as a gold basket: the tower
+   * widened as it rose, a quarter wider at the rim than at the band, and
+   * a vessel that opens upward with a lid on it is a basket however it is
+   * chased. The reference is unambiguous in every one of its four views —
+   * the mukuta leaves the brow at its widest and draws in all the way to
+   * the bud, and the only thing that reaches outward is the crest at the
+   * bottom.
+   *
+   * So the tower TAPERS, and it is tall: a kirita's height is what
+   * distinguishes a god's crown from a king's coronet, and this one
+   * stands a little over a head above the brow.
    */
-  const DRUM_TOP = SKULL_TOP + RISE * 0.72;
-  const KUMBHA_TOP = DRUM_TOP + RISE * 0.72;
-  const TIP = KUMBHA_TOP + RISE * 0.62;
-  /** The drum's widest, about a quarter wider than the skull. */
-  const FLARE = 1.18;
+  const DRUM_TOP = SKULL_TOP + RISE * 1.25;
+  const KUMBHA_TOP = DRUM_TOP + RISE * 0.52;
+  const TIP = KUMBHA_TOP + RISE * 0.58;
+  /** What the tower keeps of its width by the time it reaches the top. */
+  const TAPER = 0.5;
 
   // --- the band -----------------------------------------------------------
   group.add(
@@ -642,11 +666,12 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     );
   }
 
-  // --- the drum: the broad leaning fan -------------------------------------
-  // Concave, not conical. A straight taper reads as a bucket; what makes
-  // this shape a kirita is that it LEAVES the head slowly and then opens,
-  // so the silhouette swings outward toward the rim.
-  const drumAt = (t: number) => R * (1 + (FLARE - 1) * t * t);
+  // --- the tower ------------------------------------------------------------
+  // It leaves the band at very nearly the band's own width, holds that
+  // for the first stretch, and then draws in — so the silhouette is a
+  // shoulder rather than a straight cone. A cone from the brow to the bud
+  // is a witch's hat; what the reference has is a tower with a waist.
+  const drumAt = (t: number) => R * (1 - (1 - TAPER) * Math.pow(t, 1.45));
   const drumY = (t: number) => BAND_TOP + (DRUM_TOP - BAND_TOP) * t;
   group.add(
     mesh(
@@ -656,7 +681,7 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
           ring(drumY(0.3), drumAt(0.3)),
           ring(drumY(0.62), drumAt(0.62)),
           ring(drumY(0.88), drumAt(0.88)),
-          ring(DRUM_TOP, R * FLARE),
+          ring(DRUM_TOP, drumAt(1)),
         ],
         44,
         5,
@@ -669,10 +694,10 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   // sets them.
   for (let i = 0; i < 8; i += 1) {
     const bearing = (i / 8) * Math.PI * 2 + Math.PI / 8;
-    const point = on(bearing, drumAt(0.5) * 1.01);
+    const point = on(bearing, drumAt(0.42) * 1.01);
     group.add(
       mesh(new THREE.SphereGeometry(R * 0.085, 10, 8), gem, {
-        position: [point[0], drumY(0.5), point[2]],
+        position: [point[0], drumY(0.42), point[2]],
         scale: [1, 1.3, 0.4],
         rotation: [0, -bearing, 0],
       }),
@@ -684,7 +709,7 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     const bearing = (i / 20) * Math.PI * 2;
     const low = on(bearing, R * 1.03);
     const mid = on(bearing, drumAt(0.55) * 1.01);
-    const high = on(bearing, R * FLARE * 1.005);
+    const high = on(bearing, drumAt(1) * 1.005);
     group.add(
       new THREE.Mesh(
         taperedTube(
@@ -706,9 +731,9 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     mesh(
       loft(
         [
-          ring(DRUM_TOP - RISE * 0.05, R * FLARE),
-          ring(DRUM_TOP - RISE * 0.02, R * FLARE * 1.045),
-          ring(DRUM_TOP, R * FLARE * 1.02),
+          ring(DRUM_TOP - RISE * 0.05, drumAt(1)),
+          ring(DRUM_TOP - RISE * 0.02, drumAt(1) * 1.09),
+          ring(DRUM_TOP, drumAt(1) * 1.04),
         ],
         44,
         3,
@@ -718,18 +743,24 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     ),
   );
   /**
-   * The crested rim.
+   * The crest, at the BAND.
    *
-   * LEAVES, not spikes. A cone standing on a rim is a paper crown, and
-   * the first two attempts at this edge were exactly that — the Studio
-   * showed a coronet. What the reference has is a cut edge: broad petals,
-   * wide where they leave the drum, drawn to a point, and flattened
-   * radially so they read as foliage rather than as horns.
+   * This used to ring the tower's top rim, and a ring of points around
+   * the highest thing on a crown is a coronet whatever the points are
+   * shaped like — it was the second half of why this read as a basket
+   * with a lid. On a kirita the cut foliage rises from the BROW, fanning
+   * out beside the head while the tower draws in above it, and the two
+   * opposed movements are the whole gesture of the silhouette.
+   *
+   * LEAVES, not spikes: broad where they leave the band, drawn to a
+   * point, and flattened radially so they read as foliage rather than as
+   * horns. Leaning well out, because a crest that hugs the tower is
+   * moulding rather than a crest.
    */
   const petal = (bearing: number, height: number, width: number, lean: number) => {
-    const at = on(bearing, R * FLARE * 1.01);
+    const at = on(bearing, R * 1.03);
     const leaf = new THREE.Group();
-    leaf.position.set(at[0], DRUM_TOP - RISE * 0.03, at[2]);
+    leaf.position.set(at[0], BAND_TOP - RISE * 0.02, at[2]);
     leaf.rotation.y = -bearing;
     leaf.rotation.x = -lean;
     // A LATHED silhouette, because the silhouette is the whole point: a
@@ -755,10 +786,15 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     leaf.scale.z = 0.28;
     return leaf;
   };
+  // Tallest at the front, where a devotee looks, and shortening round the
+  // back: a crest of one height all the way round is a collar.
   for (let i = 0; i < 11; i += 1) {
     const bearing = (i / 11) * Math.PI * 2;
-    group.add(petal(bearing, RISE * 0.27, R * 0.34, 0.12));
-    group.add(petal(bearing + Math.PI / 11, RISE * 0.14, R * 0.2, 0.18));
+    // 1 at the front, 0 at the back.
+    const forward = (Math.cos(bearing) + 1) / 2;
+    const scale = 0.62 + forward * 0.55;
+    group.add(petal(bearing, RISE * 0.86 * scale, R * 0.32, 0.72));
+    group.add(petal(bearing + Math.PI / 11, RISE * 0.46 * scale, R * 0.2, 0.86));
   }
 
   // --- the brow ornament ---------------------------------------------------
@@ -774,9 +810,9 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   const shield = new THREE.Mesh(
     taperedTube(
       [
-        [0, -RISE * 0.1, 0],
-        [0, RISE * 0.16, 0.002],
-        [0, RISE * 0.72, 0],
+        [0, -RISE * 0.02, 0],
+        [0, RISE * 0.2, 0.002],
+        [0, RISE * 0.74, 0],
       ],
       [R * 0.4, R * 0.02],
       12,
@@ -798,19 +834,10 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
       scale: [1, 1.3, 0.42],
     }),
   );
-  // The pendant, hanging below the band onto the brow itself.
-  brow.add(
-    mesh(new THREE.SphereGeometry(R * 0.11, 12, 10), metal, {
-      position: [0, -RISE * 0.13, 0.001],
-      scale: [1, 1.2, 0.4],
-    }),
-  );
-  brow.add(
-    mesh(new THREE.SphereGeometry(R * 0.065, 12, 10), gem, {
-      position: [0, -RISE * 0.13, 0.004],
-      scale: [1, 1.2, 0.45],
-    }),
-  );
+  // No pendant below the band. There was one, descending onto the brow,
+  // and it hung squarely over the tilaka — see `kiritaBandBottom`. A
+  // crown ornament that covers the deity's own mark is an ornament in the
+  // wrong place, however well it is made.
 
   // --- the kumbha ----------------------------------------------------------
   // Above the head the crown is its own object, so it turns on a circle:
@@ -821,7 +848,7 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   // European coronet; what makes the reference's silhouette Vaishnava is
   // that the tower keeps changing its mind — out at the belly, in at the
   // neck, out again at the bud.
-  const potR = R * FLARE * 0.72;
+  const potR = drumAt(1) * 1.16;
   // ON the drum, not inside it. Sunk to the rim the pot was completely
   // hidden behind its own lid and the crown read as drum → cap → finial,
   // with the middle tier missing.
@@ -832,8 +859,8 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   group.add(
     mesh(
       lathe([
-        [R * FLARE * 1.02, DRUM_TOP - RISE * 0.02],
-        [R * FLARE * 0.94, DRUM_TOP + RISE * 0.02],
+        [drumAt(1) * 1.04, DRUM_TOP - RISE * 0.02],
+        [drumAt(1) * 0.98, DRUM_TOP + RISE * 0.02],
         [potR * 0.9, potBase],
         [potR * 0.78, potBase + RISE * 0.02],
       ]),
@@ -941,19 +968,29 @@ export const ornamentTilaka: AttachmentGenerator = (ctx) => {
   const skull = ctx.body.headRadius;
   const curve = (y: number) => -(y * y) / (2 * skull);
   const RELIEF = 0.0018;
-  const HEIGHT = skull * 0.62;
+  /**
+   * Nearly the whole forehead, which is what the reference shows and what
+   * the crown's rim now leaves room for.
+   *
+   * It was built at two thirds of this and sat in the lower third of the
+   * brow, because the crown's band came down over everything above it —
+   * so the mark was drawn small enough to survive in the strip that was
+   * left. With the rim at the hairline the strip is the forehead, and the
+   * pundra rises the length of it.
+   */
+  const HEIGHT = skull * 0.92;
 
   for (const side of [1, -1] as const) {
     const path: V3[] = [];
     const STEPS = 10;
     for (let i = 0; i <= STEPS; i += 1) {
       const t = i / STEPS;
-      const y = (t - 0.35) * HEIGHT;
+      const y = (t - 0.12) * HEIGHT;
       // A narrow U: together at the bottom, apart above.
-      const spread = skull * (0.05 + 0.17 * Math.pow(t, 0.7));
+      const spread = skull * (0.05 + 0.2 * Math.pow(t, 0.7));
       path.push([side * spread, y, RELIEF + curve(y)]);
     }
-    const stroke = new THREE.Mesh(taperedTube(path, [0.0024, 0.0018], 12, 8), ivory);
+    const stroke = new THREE.Mesh(taperedTube(path, [0.0032, 0.0024], 12, 8), ivory);
     stroke.scale.z = 0.5;
     group.add(stroke);
   }
@@ -961,10 +998,10 @@ export const ornamentTilaka: AttachmentGenerator = (ctx) => {
   const centre: V3[] = [];
   for (let i = 0; i <= 8; i += 1) {
     const t = i / 8;
-    const y = (t - 0.3) * HEIGHT * 0.8;
+    const y = (t - 0.08) * HEIGHT * 0.78;
     centre.push([0, y, RELIEF + 0.0005 + curve(y)]);
   }
-  const line = new THREE.Mesh(taperedTube(centre, [0.0022, 0.0014], 12, 8), red);
+  const line = new THREE.Mesh(taperedTube(centre, [0.0028, 0.0018], 12, 8), red);
   line.scale.z = 0.5;
   group.add(line);
   return group;
@@ -978,10 +1015,18 @@ export const ornamentTilaka: AttachmentGenerator = (ctx) => {
  * them worked it out separately the hair was a guess at where a crown it
  * knows nothing about might be — and it guessed wrong, which is why it
  * showed through the gold.
+ *
+ * ABOVE THE FOREHEAD, not on the brow. It sat on the brow, and the whole
+ * forehead was gold: the urdhva pundra was built, placed on the measured
+ * forehead and correct in every way except that nobody could see it,
+ * because a band and a pendant were lying over it. The mark is the single
+ * strongest thing on this face that says which deity it belongs to, and
+ * the reference shows it in full with the crown's rim clear above it. So
+ * the rim runs at the hairline and the forehead belongs to the tilaka.
  */
 export function kiritaBandBottom(body: BodyProfile): number {
   const rise = Math.max(0.02, body.skullTopY - body.browY);
-  return body.browY + rise * 0.02;
+  return body.browY + rise * 0.46;
 }
 
 /**
@@ -1100,43 +1145,52 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
     const strands = new THREE.Group();
     for (const side of [-1, 0, 1] as const) {
       const path: V3[] = [];
-      const STEPS = 7;
+      const STEPS = 9;
+      // EACH STRAND ON ITS OWN WAVE. They used to share one, offset only
+      // sideways, and three tubes moving in lockstep are one wide tube:
+      // the fall read as a flat black plank hanging beside the face
+      // rather than as hair. A lock's strands go roughly together and not
+      // exactly together, and that difference is the whole of what makes
+      // it look like hair.
+      const own = phase + side * 0.9;
       for (let step = 0; step <= STEPS; step += 1) {
         const t = step / STEPS;
         // An S: out over the shoulder, back in below it, and a wave
         // across the whole fall. A lock that only goes down is a rope.
         const flare = Math.sin(t * Math.PI * 0.9) * skull * 0.5 * away;
-        const sway = Math.sin(t * Math.PI * 1.9 + phase) * skull * 0.3;
+        const sway = Math.sin(t * Math.PI * 1.9 + own) * skull * 0.46;
         path.push([
-          ox + flare + sway + side * width * 0.8,
-          NAPE - drop * t + Math.sin(t * Math.PI * 2.2 + phase) * skull * 0.05,
-          oz - skull * 0.55 * t * t + Math.cos(t * Math.PI * 1.5 + phase) * skull * 0.16 * t,
+          ox + flare + sway + side * width * 0.7,
+          NAPE - drop * t + Math.sin(t * Math.PI * 2.2 + own) * skull * 0.08,
+          oz - skull * 0.55 * t * t + Math.cos(t * Math.PI * 1.5 + own) * skull * 0.22 * t,
         ]);
       }
       strands.add(
-        new THREE.Mesh(taperedTube(path, [width, width * 0.35], 14, 9), hair),
+        new THREE.Mesh(taperedTube(path, [width, width * 0.3], 14, 9), hair),
       );
     }
     return strands;
   };
 
-  const LOCKS = 9;
+  // More of them, and each thinner: nine wide locks cover the same back
+  // as fourteen narrow ones and read as a cape instead of as hair.
+  const LOCKS = 14;
   for (let i = 0; i < LOCKS; i += 1) {
     const t = i / (LOCKS - 1);
-    const bearing = FROM + 0.1 + (TO - FROM - 0.2) * t;
+    const bearing = FROM + 0.08 + (TO - FROM - 0.16) * t;
     group.add(
       lock(
         bearing,
-        i * 1.7,
-        skull * (3.2 + 1.0 * Math.sin(i * 1.3)),
-        skull * (0.26 + 0.07 * Math.cos(i * 2.1)),
+        i * 1.31,
+        skull * (3.1 + 1.1 * Math.sin(i * 0.9)),
+        skull * (0.15 + 0.05 * Math.cos(i * 2.1)),
       ),
     );
   }
   // Two shorter locks forward of the ears, as the reference's face
   // close-up has them.
   for (const side of [1, -1] as const) {
-    group.add(lock(side * Math.PI * 0.46, side * 0.7, skull * 1.6, skull * 0.16));
+    group.add(lock(side * Math.PI * 0.46, side * 0.7, skull * 1.6, skull * 0.1));
   }
   return [{ joint: "head", object: group }];
 };

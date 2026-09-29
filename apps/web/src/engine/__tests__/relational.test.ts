@@ -48,30 +48,34 @@ function find(rig: CharacterRig, name: string): THREE.Object3D | null {
   return found;
 }
 
-describe("a presented wheel faces the devotee", () => {
+describe("a presented wheel spins on the finger", () => {
   /**
-   * The chakra is authored in the XY plane so its face normal is its own
-   * +Z; the presentation carries its +Y up the hand's channel and spends
-   * the free spin about that channel until the +Z looks out of the
-   * statue. Three separate statements, and if any of them drifts the
-   * disc is edge-on from the front — which is the difference between a
-   * murti showing its wheel and a plate stuck to a hand.
+   * The chakra is authored in its own XY plane so its face normal is its
+   * own +Z, and the presentation carries THAT up the hand's channel: the
+   * axis stands vertical and the disc lies flat, turning on the raised
+   * fingertip. That is what references/vishnu.jpg shows — the wheel reads
+   * as an ellipse above the hand, which is a spinning disc seen from
+   * below.
+   *
+   * It used to stand on its rim with its face turned out of the statue,
+   * which is a wheel being DISPLAYED rather than a discus being held; the
+   * declaration that decides between the two is one axis in the manifest,
+   * and these are what hold it.
    */
-  it("stands vertical with its face out of the statue's front", () => {
+  it("stands on a vertical axis with its face level", () => {
     const rig = built(createDefaultVishnuConfiguration());
     const disc = find(rig, "attachment:vishnu.attribute.chakra");
     expect(disc, "the chakra is in the rig").not.toBeNull();
     disc!.updateWorldMatrix(true, false);
 
     const basis = new THREE.Matrix4().extractRotation(disc!.matrixWorld);
-    const up = new THREE.Vector3(0, 1, 0).applyMatrix4(basis).normalize();
-    const face = new THREE.Vector3(0, 0, 1).applyMatrix4(basis).normalize();
+    const spin = new THREE.Vector3(0, 0, 1).applyMatrix4(basis).normalize();
+    const across = new THREE.Vector3(1, 0, 0).applyMatrix4(basis).normalize();
 
-    // Vertical: the disc's own up runs up the world.
-    expect(up.dot(new THREE.Vector3(0, 1, 0))).toBeGreaterThan(0.999);
-    // Facing: its normal looks out the front, and is horizontal.
-    expect(face.dot(new THREE.Vector3(0, 0, 1))).toBeGreaterThan(0.999);
-    expect(Math.abs(face.y)).toBeLessThan(0.01);
+    // The disc's own normal runs up the world: it spins about vertical.
+    expect(spin.dot(new THREE.Vector3(0, 1, 0))).toBeGreaterThan(0.999);
+    // And its face is level, so nothing has rolled it onto its edge.
+    expect(Math.abs(across.y)).toBeLessThan(0.01);
   });
 
   it("is a disc in that plane, not a plate in another", () => {
@@ -79,12 +83,12 @@ describe("a presented wheel faces the devotee", () => {
     const disc = find(rig, "attachment:vishnu.attribute.chakra")!;
     const box = new THREE.Box3().setFromObject(disc);
     const size = box.getSize(new THREE.Vector3());
-    // Thin along the world Z — which is what "its face points at you"
-    // means, measured rather than asserted.
-    expect(size.z).toBeLessThan(size.x * 0.5);
-    expect(size.z).toBeLessThan(size.y * 0.5);
+    // Thin along the world Y — which is what "it lies flat" means,
+    // measured rather than asserted.
+    expect(size.y).toBeLessThan(size.x * 0.5);
+    expect(size.y).toBeLessThan(size.z * 0.5);
     // And round in the plane it lies in.
-    expect(Math.abs(size.x - size.y)).toBeLessThan(size.x * 0.12);
+    expect(Math.abs(size.x - size.z)).toBeLessThan(size.x * 0.12);
   });
 
   it("rests on the hand rather than in it", () => {

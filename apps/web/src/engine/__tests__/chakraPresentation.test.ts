@@ -1,21 +1,19 @@
 /**
  * The discus is presented, not merely attached.
  *
- * Three claims, and each one is a way the Sudarshana has been wrong
- * before:
+ * Two claims about its ORIENTATION and one about its CONTACT, and each
+ * one is a way the Sudarshana has been wrong before:
  *
- *  1. IT FACES THE STATUE'S FRONT. A wheel has a face and a murti shows
- *     it. `worldUpright` fixes two of the item's three degrees of freedom
- *     and leaves the spin about the vertical channel wherever the arm
- *     solve happened to put it — which for a shaft is nothing and for a
- *     discus is the difference between the attribute presenting itself
- *     and the attribute caught half-profile. `facing: "front"` spends
- *     that free spin deliberately, and this measures the result in WORLD
- *     space: the claim is about the statue's front, not the camera's, so
- *     it has to hold with no camera in the scene at all.
+ *  1. IT SPINS FLAT. The discus is balanced on a raised fingertip and
+ *     turning, so its axis is vertical and its face is horizontal — see
+ *     references/vishnu.jpg. It stood on its rim before, like a
+ *     cartwheel: a wheel being shown rather than a discus being held.
+ *     Measured in WORLD space, because the claim is about the statue and
+ *     not about where anybody is standing; it has to hold with no camera
+ *     in the scene at all, and therefore through any orbit.
  *
- *  2. IT STANDS UPRIGHT. A discus lying flat, or tipped, reads as
- *     dropped.
+ *  2. ITS FACE IS LEVEL. A disc tipped off its axis reads as dropped
+ *     rather than spun.
  *
  *  3. IT TOUCHES THE FINGER IT IS BALANCED ON. The presentation once
  *     declared a six-millimetre grip radius so a fist would close on
@@ -25,7 +23,7 @@
  *     number now rather than a hope.
  *
  * Measured on BOTH sides, because the hands are mirrored and the rig is
- * not: a spin correction that works on the right and inverts on the left
+ * not: an orientation that works on the right and inverts on the left
  * passes any test that only looks at one of them.
  */
 import { readFileSync } from "node:fs";
@@ -145,26 +143,33 @@ describe("the Sudarshana is presented", () => {
         try {
           const held = rig.resolved.attachments.find((a) => a.asset.id === CHAKRA);
           expect(held?.handSlot, "the discus is in the hand it was put in").toBe(slot);
-          expect(held?.presentation.facing).toBe("front");
+          // The normal runs up the channel; nothing spends the free spin.
+          expect(held?.presentation.grip?.axis).toEqual([0, 0, 1]);
+          expect(held?.presentation.facing ?? "free").toBe("free");
 
           const node = find(rig, `attachment:${CHAKRA}`);
           expect(node, "the discus is in the scene").not.toBeNull();
           node!.updateWorldMatrix(true, true);
 
-          // 1. Its face looks out the statue's front. World +Z, and the
-          //    only tolerance is the arm's own lean.
-          const face = new THREE.Vector3(0, 0, 1).transformDirection(node!.matrixWorld);
-          const degrees = (THREE.MathUtils.radToDeg(face.angleTo(new THREE.Vector3(0, 0, 1))));
+          // 1. Its axis — the disc's own normal, asset-local +Z — stands
+          //    vertical, so the disc lies flat and spins about it.
+          const spin = new THREE.Vector3(0, 0, 1).transformDirection(node!.matrixWorld);
+          const off = THREE.MathUtils.radToDeg(spin.angleTo(new THREE.Vector3(0, 1, 0)));
           expect(
-            Math.min(degrees, 180 - degrees),
-            `the discus looks ${degrees.toFixed(1)}° off the front`,
+            Math.min(off, 180 - off),
+            `the discus spins ${off.toFixed(1)}° off vertical`,
           ).toBeLessThan(12);
 
-          // 2. And it stands upright: its own axis is vertical, so the
-          //    wheel is a wheel rather than a plate.
-          const axis = new THREE.Vector3(0, 1, 0).transformDirection(node!.matrixWorld);
-          const tilt = THREE.MathUtils.radToDeg(axis.angleTo(new THREE.Vector3(0, 1, 0)));
-          expect(Math.min(tilt, 180 - tilt), `the discus is ${tilt.toFixed(1)}° off upright`).toBeLessThan(12);
+          // 2. And its face is level: the disc's own in-plane directions
+          //    stay horizontal, which is the same claim from the other
+          //    side and catches a disc rolled onto its edge.
+          for (const local of [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0)]) {
+            const across = local.clone().transformDirection(node!.matrixWorld);
+            const fromLevel = Math.abs(90 - THREE.MathUtils.radToDeg(
+              across.angleTo(new THREE.Vector3(0, 1, 0)),
+            ));
+            expect(fromLevel, `the disc's face is ${fromLevel.toFixed(1)}° off level`).toBeLessThan(12);
+          }
 
           // 3. And it rests ON the finger.
           const tip = fingertipY(rig, slot);
