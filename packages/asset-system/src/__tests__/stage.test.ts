@@ -21,10 +21,78 @@ import {
   createDefaultShivaConfiguration,
 } from "@devaform/character-schema";
 import { DEITIES } from "../deities";
-import { getPresentation, PRESENTATIONS } from "../stage";
+import { getPresentation, orbitBounds, PRESENTATIONS } from "../stage";
 
 const PUBLIC_DIR = join(__dirname, "..", "..", "..", "..", "apps", "web", "public");
 const asFile = (url: string) => join(PUBLIC_DIR, url.replace(/^\//, ""));
+
+/**
+ * The customer stays in the room.
+ *
+ * The orbit's far bound and the colonnade's radius are two numbers that
+ * have to agree, and for a while they did not: a maximum of five metres
+ * with columns at 3.7 m meant the last stretch of zoom-out carried the
+ * camera THROUGH the colonnade, where the nearest pillar stands half a
+ * metre from the lens and fills the frame. The statue was hidden behind a
+ * column at every azimuth, and the defect was invisible in the source
+ * because neither number is wrong on its own.
+ *
+ * So one of them is derived now, and this is what holds it: whatever a
+ * stage authors, the distance the Studio actually hands the controls
+ * keeps the camera inside the ring with air to spare.
+ */
+describe("the orbit stays inside the room it is orbiting in", () => {
+  it.each(PRESENTATIONS.map((stage) => stage.id))("%s", (id) => {
+    const stage = PRESENTATIONS.find((entry) => entry.id === id)!;
+    const bounds = orbitBounds(stage);
+
+    expect(bounds.minDistance).toBe(stage.camera.minDistance);
+    expect(bounds.maxDistance).toBeLessThanOrEqual(stage.camera.maxDistance);
+    expect(bounds.minDistance).toBeLessThan(bounds.maxDistance);
+
+    const columns = stage.environment?.columns;
+    if (!columns) {
+      // A stage with no room of its own is bounded only by its author.
+      expect(bounds.maxDistance).toBe(stage.camera.maxDistance);
+      return;
+    }
+
+    // The widest part of a column is its base and capital, at one and a
+    // half times the shaft — the same figure the lathe profile uses.
+    const innerFace = columns.radius - columns.thickness * 1.5;
+    expect(
+      bounds.maxDistance,
+      "the camera never reaches the colonnade",
+    ).toBeLessThan(innerFace);
+    expect(
+      innerFace - bounds.maxDistance,
+      "and keeps clear air between itself and the nearest column",
+    ).toBeGreaterThanOrEqual(0.5);
+
+    // And the authored maximum is still reachable — a bound that silently
+    // halves the zoom range is as much a defect as one that overshoots.
+    expect(
+      bounds.maxDistance / stage.camera.maxDistance,
+      "the room does not quietly take the zoom range away",
+    ).toBeGreaterThan(0.9);
+  });
+
+  /**
+   * The hero composition is composed INSIDE the same bound.
+   *
+   * heroFraming clamps the measured distance to the authored maximum; if
+   * the room were tighter than that clamp, the opening shot itself would
+   * be standing outside the colonnade and no customer input would be
+   * needed to break it.
+   */
+  it.each(PRESENTATIONS.map((stage) => stage.id))(
+    "%s: the authored maximum is a distance the room allows",
+    (id) => {
+      const stage = PRESENTATIONS.find((entry) => entry.id === id)!;
+      expect(orbitBounds(stage).maxDistance).toBe(stage.camera.maxDistance);
+    },
+  );
+});
 
 describe("every stage is a complete description of one", () => {
   it.each(PRESENTATIONS.map((stage) => stage.id))("%s", (id) => {

@@ -24,25 +24,45 @@ import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import type { PresentationConfig } from "@devaform/asset-system";
+import { orbitBounds, type PresentationConfig } from "@devaform/asset-system";
 import { CharacterRoot } from "@/engine/CharacterRoot";
 import type { LightingPresetId } from "@/engine/lighting";
 import { heroComposition, type HeroComposition } from "@/presentation/heroFraming";
 import { StageEnvironment } from "@/presentation/StageEnvironment";
 import { StageLights } from "@/presentation/StageLights";
 import { StageReadiness } from "@/presentation/StageReadiness";
+import { StageRender } from "@/presentation/StageRender";
 import { StageSettle } from "@/presentation/StageSettle";
 import { stageViews } from "@/presentation/stageViews";
 import { isMeasured } from "@/engine/figureExtent";
 import { useStageStore } from "@/presentation/stageStore";
 import { useUiStore } from "@/state/uiStore";
 
-/** The camera sees every layer; the lights do not. */
-function SeeEveryLayer() {
+/**
+ * A dev-only handle on the renderer itself.
+ *
+ * Beside `__devaformRig` and `__devaformCamera`, and for the same reason:
+ * a claim about what the Studio COSTS — draw calls, triangles, how many
+ * shadow maps, how big their frusta are — cannot be made from the source.
+ * The lighting defect this exists to measure was invisible in the code
+ * and obvious in `renderer.info`, and a number nobody can read again is a
+ * number that drifts. See scripts/qa-stage.mjs.
+ */
+function RendererHandle() {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
   useEffect(() => {
-    camera.layers.enableAll();
-  }, [camera]);
+    if (process.env.NODE_ENV === "production") return;
+    (window as unknown as { __devaformRenderer?: unknown }).__devaformRenderer = () => ({
+      gl,
+      scene,
+      camera,
+    });
+    return () => {
+      delete (window as unknown as { __devaformRenderer?: unknown }).__devaformRenderer;
+    };
+  }, [gl, scene, camera]);
   return null;
 }
 
@@ -171,6 +191,15 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
    * own pivot; one that does not gets the dark disc it always had.
    */
   const environment = stage.environment;
+
+  /**
+   * How far the customer may take the camera, in the room they are in.
+   *
+   * Not `stage.camera.maxDistance` directly: that says what the
+   * composition wants, and the stage says whether the hall has room for
+   * it. See `orbitBounds` — this is the one place the Studio asks.
+   */
+  const orbit = useMemo(() => orbitBounds(stage), [stage]);
 
   /**
    * How far the framing may travel from the stage's own composition.
@@ -324,7 +353,12 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
           controlsRef={controlsRef}
         />
         <StageReadiness />
-        <SeeEveryLayer />
+        {/* Takes the frame loop over: the room and the figure are drawn
+            in separate passes so each is lit by its own rig. Must sit
+            above the things it draws only in the sense that it must be
+            mounted — the passes read the whole scene. */}
+        <StageRender />
+        <RendererHandle />
         <AdoptHero hero={hero} controlsRef={controlsRef} touched={touched} />
         <CameraCommands stage={stage} controlsRef={controlsRef} onMove={takeCamera} />
         {environment && <StageEnvironment config={environment} pivot={stage.pivot} />}
@@ -375,8 +409,8 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
            * A configurator wants the view to go where it is put.
            */
           enableDamping={false}
-          minDistance={stage.camera.minDistance}
-          maxDistance={stage.camera.maxDistance}
+          minDistance={orbit.minDistance}
+          maxDistance={orbit.maxDistance}
           minPolarAngle={stage.camera.minPolarAngle}
           maxPolarAngle={stage.camera.maxPolarAngle}
           onChange={keepFramingOnStage}

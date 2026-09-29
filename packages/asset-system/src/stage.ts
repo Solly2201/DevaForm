@@ -276,7 +276,10 @@ const SANCTUM: PresentationConfig = {
       portrait: { fill: 0.72, lookAt: 0.46 },
     },
     minDistance: 0.6,
-    maxDistance: 5,
+    // How far back a customer may stand. Bounded again by the room they
+    // are standing in — see `orbitBounds`, which is what the Studio
+    // actually gives the controls.
+    maxDistance: 4.4,
     maxPolarAngle: Math.PI * 0.52,
     minPolarAngle: Math.PI * 0.24,
     settleFrom: { dolly: 0.34, azimuth: 0.1, height: 0.06 },
@@ -300,7 +303,13 @@ const SANCTUM: PresentationConfig = {
     // Under the lotus base rather than around it: a painted circle the
     // figure stands on, not a plate it stands in front of.
     mandala: { radius: 0.62, color: "#7a684d", ringColor: "#4d341a", rings: 4 },
-    columns: { count: 16, radius: 3.7, height: 5.2, thickness: 0.26, color: "#2f2418" },
+    // Far enough out that the customer can stand back from the statue
+    // without standing OUTSIDE the hall. At the old 3.7 m the orbit's own
+    // maximum of five metres put the camera beyond the colonnade, and a
+    // near column — half a metre from the lens — filled the frame while
+    // the statue it was supposed to frame disappeared behind it. See
+    // `orbitBounds`: the two numbers are now held to each other.
+    columns: { count: 18, radius: 5.4, height: 5.6, thickness: 0.26, color: "#2f2418" },
     // Far enough back and dark enough that the figure separates from it.
     // A wall the same value as the statue is a wall the statue is lost in.
     wall: { radius: 9, height: 7.2, color: "#0b0805" },
@@ -327,6 +336,52 @@ const SANCTUM: PresentationConfig = {
     sourceVideo: "/assets/presentation/intros/temple-sanctum/1/intro.mp4",
   },
 };
+
+/**
+ * How close and how far the customer may take the camera — in the room
+ * they are actually in.
+ *
+ * The authored `minDistance`/`maxDistance` say what the COMPOSITION wants:
+ * near enough to read a crown's gemstones, far enough to see the whole
+ * figure with the hall around it. What they cannot know is whether the
+ * stage they belong to has that much room, and for a while it did not: a
+ * maximum of five metres and a colonnade at 3.7 m meant the last metre
+ * and a half of zoom put the camera OUTSIDE the ring of columns, where
+ * the nearest one stands half a metre from the lens and fills the frame.
+ * The statue vanished behind a pillar, at every azimuth, and no amount of
+ * relighting could have helped.
+ *
+ * Two authored numbers that have to agree are two numbers that will stop
+ * agreeing. So only one of them is authored, and the other is measured
+ * off the room: the camera may go as far as the colonnade's inner face,
+ * less a margin — close enough to a column and it looms even when it is
+ * not between you and the figure.
+ *
+ * A stage with no room of its own is not bounded by one.
+ */
+export function orbitBounds(stage: PresentationConfig): {
+  minDistance: number;
+  maxDistance: number;
+} {
+  const { minDistance, maxDistance } = stage.camera;
+  const columns = stage.environment?.columns;
+  if (!columns) return { minDistance, maxDistance };
+  // The lathe's widest point is its base and capital, at one and a half
+  // times the shaft's thickness — the same number the profile is built
+  // from, read here rather than restated.
+  const innerFace = columns.radius - columns.thickness * 1.5;
+  const roomLimit = Math.max(minDistance, innerFace - COLONNADE_MARGIN_M);
+  return { minDistance, maxDistance: Math.min(maxDistance, roomLimit) };
+}
+
+/**
+ * How much clear air to keep between the camera and the nearest column.
+ *
+ * Not about intersection — the camera never reaches a column — but about
+ * looming: a five-metre pillar a hand's breadth outside the frustum still
+ * dominates the edge of the picture and the light falling on it.
+ */
+const COLONNADE_MARGIN_M = 0.6;
 
 export const PRESENTATIONS: readonly PresentationConfig[] = [SANCTUM];
 

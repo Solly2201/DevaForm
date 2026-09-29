@@ -83,13 +83,43 @@ export function StageLights({
             color={light.color}
             userData={{ full: light.intensity }}
             castShadow={light.castShadow ?? false}
+            /**
+             * The shadow map frames the FIGURE, and now contains only the
+             * figure.
+             *
+             * It always framed the figure — three metres across, which is
+             * generous for a statue a metre and a bit tall — but until the
+             * two-pass render (see StageRender) the whole sanctum was
+             * rasterised into it and sampled out of it, and a colonnade
+             * 5.4 m out has no business in a three-metre map. With the
+             * room gone the box can be drawn round the statue and its
+             * base, which is what buys the resolution that models a face:
+             * two metres over 2048 texels is a shade under a millimetre.
+             *
+             * `bottom` reaches a little below the mandala so a seated
+             * figure's shadow has somewhere to fall; `top` clears the
+             * tallest crown the product makes.
+             */
             shadow-mapSize={[2048, 2048]}
             shadow-camera-near={0.1}
-            shadow-camera-far={10}
-            shadow-camera-left={-1.5}
-            shadow-camera-right={1.5}
-            shadow-camera-top={2}
-            shadow-camera-bottom={-1}
+            shadow-camera-far={8}
+            shadow-camera-left={-1}
+            shadow-camera-right={1}
+            shadow-camera-top={1.8}
+            shadow-camera-bottom={-0.25}
+            /**
+             * And the two biases a soft shadow map needs.
+             *
+             * There were none. A statue is a single closed surface lit by
+             * a key at a grazing angle, which is the exact case that
+             * produces acne — the banding that used to crawl over the
+             * shoulders and the crown at certain azimuths. `normalBias`
+             * is the one that matters here because it offsets along the
+             * surface normal, so it costs nothing on the flat and
+             * everything where the light grazes.
+             */
+            shadow-bias={-0.0004}
+            shadow-normalBias={0.018}
           />
         ))}
       </group>
