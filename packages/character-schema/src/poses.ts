@@ -265,9 +265,33 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontLeft.upper": [18 * D, -6 * D, 42 * D],
       "arm.frontLeft.forearm": [-74 * D, 0, 0],
       "arm.frontLeft.hand": [-26 * D, 0, 8 * D],
-      // Back arms raised holding attributes
-      "arm.backLeft.upper": [-38 * D, -14 * D, 52 * D],
-      "arm.backRight.upper": [-38 * D, 14 * D, -52 * D],
+      /**
+       * The back arms REACH OUT, and that is the whole of what stops the
+       * parashu standing in the abhaya palm.
+       *
+       * They used to swing forward and inboard: the back-right hand came
+       * to rest fifty millimetres from the front-right hand in the
+       * horizontal plane, and a shaft presented upright out of one of
+       * them has nowhere to go but through the other. Measured, the axe
+       * cleared the blessing hand by 2.3 mm — which is to say it did not.
+       * No grip frame, hand solver or item offset could have fixed that;
+       * the two hands were in the same place, and the shaft was simply
+       * telling the truth about where it was being held.
+       *
+       * So the shoulder carries the hand a hand's breadth further out and
+       * as much again BEHIND the blessing hand, which is where classical
+       * iconography puts the upper pair anyway: the lower hands address
+       * the devotee, the upper ones hold the attributes clear of them.
+       *
+       * The elbow keeps its bend, deliberately. The first fix opened it
+       * instead, and buying the clearance that way straightened both back
+       * arms into a wingspan — measured clear, and visibly wrong: the axe
+       * ended up at the end of an outstretched arm rather than raised
+       * beside the shoulder. Depth is the axis that was free here, and
+       * spending it costs the silhouette nothing.
+       */
+      "arm.backLeft.upper": [-38 * D, 22 * D, 62 * D],
+      "arm.backRight.upper": [-38 * D, -22 * D, -62 * D],
       "arm.backLeft.forearm": [-68 * D, 0, 0],
       "arm.backRight.forearm": [-68 * D, 0, 0],
       "arm.backLeft.hand": [-14 * D, 0, 0],
@@ -311,9 +335,12 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontRight.upper": [24 * D, 0, -46 * D],
       "arm.frontRight.forearm": [-84 * D, -26 * D, 0],
       "arm.frontRight.hand": [-58 * D, 0, 0],
-      "arm.backLeft.upper": [-30 * D, -10 * D, 48 * D],
+      // Out and clear, for the same reason as the blessing's: a seated
+      // figure's front hands rest low and close, and the attributes above
+      // them had a seven-millimetre margin. See the blessing preset.
+      "arm.backLeft.upper": [-30 * D, -10 * D, 60 * D],
       "arm.backLeft.forearm": [-62 * D, 0, 0],
-      "arm.backRight.upper": [-30 * D, 10 * D, -48 * D],
+      "arm.backRight.upper": [-30 * D, 10 * D, -60 * D],
       "arm.backRight.forearm": [-62 * D, 0, 0],
       spine: [4 * D, 0, 0],
       head: [8 * D, 0, 0],
@@ -374,9 +401,11 @@ export const POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontRight.upper": [12 * D, 0, -70 * D],
       "arm.frontRight.forearm": [-26 * D, 0, 0],
       "arm.frontRight.hand": [-10 * D, 0, -30 * D],
-      "arm.backLeft.upper": [-46 * D, -12 * D, 62 * D],
+      // A dancer's upper arms are the widest of all four poses, and they
+      // were the ones nearest to closing on the lotus stem.
+      "arm.backLeft.upper": [-46 * D, 4 * D, 66 * D],
       "arm.backLeft.forearm": [-64 * D, 0, 0],
-      "arm.backRight.upper": [-46 * D, 12 * D, -62 * D],
+      "arm.backRight.upper": [-46 * D, -4 * D, -66 * D],
       "arm.backRight.forearm": [-64 * D, 0, 0],
       head: [0, 10 * D, 5 * D],
       trunkMid: [4 * D, 26 * D, 0],
@@ -466,9 +495,12 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
       "arm.frontRight.upper": [24 * D, 0, -46 * D],
       "arm.frontRight.forearm": [-84 * D, -26 * D, 0],
       "arm.frontRight.hand": [-58 * D, 0, 0],
-      "arm.backLeft.upper": [-30 * D, -10 * D, 48 * D],
+      // Out and clear, for the same reason as the blessing's: a seated
+      // figure's front hands rest low and close, and the attributes above
+      // them had a seven-millimetre margin. See the blessing preset.
+      "arm.backLeft.upper": [-30 * D, -10 * D, 60 * D],
       "arm.backLeft.forearm": [-62 * D, 0, 0],
-      "arm.backRight.upper": [-30 * D, 10 * D, -48 * D],
+      "arm.backRight.upper": [-30 * D, 10 * D, -60 * D],
       "arm.backRight.forearm": [-62 * D, 0, 0],
       spine: [4 * D, 0, 0],
       head: [8 * D, 0, 0],
@@ -483,9 +515,33 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
       // Both gesture arms come from the gestures themselves.
       ...gestureArm("abhaya", "frontRight"),
       ...gestureArm("varada", "frontLeft"),
-      // Back arms raised holding attributes
-      "arm.backLeft.upper": [-38 * D, -14 * D, 52 * D],
-      "arm.backRight.upper": [-38 * D, 14 * D, -52 * D],
+      /**
+       * The back arms REACH OUT, and that is the whole of what stops the
+       * parashu standing in the abhaya palm.
+       *
+       * They used to swing forward and inboard: the back-right hand came
+       * to rest fifty millimetres from the front-right hand in the
+       * horizontal plane, and a shaft presented upright out of one of
+       * them has nowhere to go but through the other. Measured, the axe
+       * cleared the blessing hand by 2.3 mm — which is to say it did not.
+       * No grip frame, hand solver or item offset could have fixed that;
+       * the two hands were in the same place, and the shaft was simply
+       * telling the truth about where it was being held.
+       *
+       * So the shoulder carries the hand a hand's breadth further out and
+       * as much again BEHIND the blessing hand, which is where classical
+       * iconography puts the upper pair anyway: the lower hands address
+       * the devotee, the upper ones hold the attributes clear of them.
+       *
+       * The elbow keeps its bend, deliberately. The first fix opened it
+       * instead, and buying the clearance that way straightened both back
+       * arms into a wingspan — measured clear, and visibly wrong: the axe
+       * ended up at the end of an outstretched arm rather than raised
+       * beside the shoulder. Depth is the axis that was free here, and
+       * spending it costs the silhouette nothing.
+       */
+      "arm.backLeft.upper": [-38 * D, 22 * D, 62 * D],
+      "arm.backRight.upper": [-38 * D, -22 * D, -62 * D],
       "arm.backLeft.forearm": [-68 * D, 0, 0],
       "arm.backRight.forearm": [-68 * D, 0, 0],
       "arm.backLeft.hand": [-14 * D, 0, 0],

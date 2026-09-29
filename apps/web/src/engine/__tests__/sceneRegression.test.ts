@@ -119,7 +119,19 @@ const PINNED = {
   // both looked at before pinning: nothing else about either of them
   // moved, and their jewellery sits on their arms instead of through
   // them.
-  ganesha: { nodes: 371, digest: "11a0733e5c216ec2" },
+  //
+  // Re-pinned when the back arms learned to reach OUT. Ganesha's blessing
+  // used to hold the parashu 2.3 mm from its own abhaya palm — measured,
+  // not judged — because the two arms put their hands within fifty
+  // millimetres of each other in the horizontal plane, and a shaft
+  // presented upright out of one had nowhere to go but through the other.
+  // Three of the five poses moved their upper pair further out and a
+  // little behind, which is where the iconography puts it: the lower
+  // hands address the devotee, the upper ones hold the attributes clear.
+  // Nothing else about Ganesha changed — no asset, no socket, no ornament,
+  // no front arm, no node — and handCoexistence.test.ts now holds every
+  // pose of every deity to real daylight between the two.
+  ganesha: { nodes: 371, digest: "fd586b8761f96299" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
