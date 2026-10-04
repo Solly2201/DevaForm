@@ -423,13 +423,33 @@ await settle(300);
 // New over unsaved work must ask — in the product, not in the browser.
 // The work has to actually BE unsaved, so the configuration is changed
 // and the change confirmed before New is pressed.
+//
+// Through a NAMED control, not by clicking the first eight buttons of
+// whichever panel happened to be open. That is what this did, and the
+// panel left open by the preceding steps is often one whose first
+// buttons are subsection tabs — so the sweep reported "could not make
+// the creation dirty" about a product in which changing the base works
+// perfectly. A harness that cries wolf is worse than no harness.
 const beforeDirty = await config();
-for (let attempt = 0; attempt < 8; attempt += 1) {
+await page.evaluate(() => {
+  [...document.querySelectorAll("button")]
+    .find((node) => node.textContent?.trim() === "Base")
+    ?.click();
+});
+await settle(400);
+// Every base style in turn until one of them is not the current one.
+// Picking a fixed tile is not enough: this sweep has already clicked
+// every picker in every category by now, so the creation is sitting on
+// whichever base happened to be last in the list.
+const bases = await page.evaluate(
+  () => [...([...document.querySelectorAll("aside")].pop()?.querySelectorAll("button") ?? [])].length,
+);
+for (let tile = 0; tile < bases; tile += 1) {
   await page.evaluate((at) => {
-    const panels = document.querySelectorAll("aside");
-    panels[panels.length - 1]?.querySelectorAll("button")[at]?.click();
-  }, attempt);
-  await settle(400);
+    const panel = [...document.querySelectorAll("aside")].pop();
+    panel?.querySelectorAll("button")[at]?.click();
+  }, tile);
+  await settle(350);
   if ((await config()) !== beforeDirty) break;
 }
 report_journeyDirty = (await config()) !== beforeDirty;
