@@ -86,6 +86,30 @@ const press = (label) =>
 
 console.log("\nmake and change");
 await intoStudio(`${BASE}/studio?form=shiva`);
+
+/**
+ * THIS HARNESS NEEDS THE DEV BUILD, and says so instead of crashing.
+ *
+ * Every check below reads `window.__devaformStore`, which is a dev-only
+ * handle — `editorStore.ts` only publishes it when NODE_ENV is not
+ * production. Pointed at a production server it used to die on an
+ * uncaught TypeError four steps in, which reads as "the round trip is
+ * broken" when what is broken is the harness's own assumption. A QA
+ * script that cannot run should say that it cannot run.
+ */
+const hasHandle = await page
+  .waitForFunction(() => Boolean(window.__devaformStore), { timeout: 20_000 })
+  .then(() => true)
+  .catch(() => false);
+if (!hasHandle) {
+  console.error("");
+  console.error("This journey reads the Studio's own store through a dev-only handle,");
+  console.error("and this server is not serving the dev build. Run `pnpm dev` and");
+  console.error("point DEVAFORM_URL at it. Nothing was tested.");
+  await browser.close();
+  process.exit(2);
+}
+
 check((await config()) !== null, "the Studio exposes the creation it is holding");
 
 // A change the round trip has to carry: a different base, and a name.
