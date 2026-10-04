@@ -6,13 +6,16 @@
  * mouth, one brow line — which is to say no choice at all about the part
  * of a statue a devotee looks at. The Face panel had a single slider.
  *
- * WHAT IT IS NOT. It is not a per-deity head. Vishnu and Shiva wear the
- * same measured human skull, and a brow that only fits one of them would
- * be a brow authored against a body rather than against a face. Every
- * shape here is built from the body's OWN measurements — `skullAt` for
- * the silhouette at a height, `browY` for where a brow sits, `headRadius`
- * for scale — so the same asset fits any head the engine can measure, and
- * fits it differently because the head is different.
+ * WHAT IT IS NOT. It is not a set of numbers authored against one face.
+ * The deities need not share a skull, a body or a pair of hands — what is
+ * worth sharing is the MECHANISM, and a brow that only fits the head it
+ * was drawn on is a brow authored against a body rather than against a
+ * face. Every shape here is built from the body's OWN measurements —
+ * `skullAt` for the silhouette at a height, `browY` for where a brow
+ * sits, `headRadius` for scale — so one asset fits any head the engine
+ * can measure, and fits it differently because the head is different. A
+ * deity that wants a brow of its own can have one without any of this
+ * changing.
  *
  * THE VARIANTS ARE PARAMETERS, not copies. One generator, a handful of
  * numbers, and the manifest spends them: that is how Shiva's two jata

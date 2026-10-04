@@ -136,18 +136,18 @@ describe("every offered feature variant is its own shape", () => {
   }
 
   /**
-   * And they are the SAME assets on both faces.
+   * NOT offered to a face that has no brow ridge.
    *
-   * The point of building a feature from the measured skull is that one
-   * set serves every human-faced deity. A brow that had to be authored
-   * per deity would be a brow authored against a body.
+   * What used to stand here as well was an assertion that the two
+   * human-faced deities are offered the IDENTICAL list of brows. That is
+   * a constraint nobody asked for: the deities need not share a skull, a
+   * body or a pair of hands, and a brow authored for one of them alone
+   * would be a perfectly good asset. What is worth protecting is the
+   * MECHANISM — that a feature is built from the measurement of the head
+   * wearing it — and `head.test.ts` holds each deity's own brow to its
+   * own measured face, which is that claim without the mandate.
    */
-  it("the brows are shared between the deities that have a face for them", () => {
-    const shiva = listAssets({ deity: "shiva", slot: "brows" }).map((a) => a.id);
-    const vishnu = listAssets({ deity: "vishnu", slot: "brows" }).map((a) => a.id);
-    expect(shiva.length).toBeGreaterThan(1);
-    expect(vishnu).toEqual(shiva);
-    // And not offered to a deity with no human face to put them on.
+  it("are not offered to a face that has no brow ridge", () => {
     expect(listAssets({ deity: "ganesha", slot: "brows" })).toEqual([]);
   });
 
