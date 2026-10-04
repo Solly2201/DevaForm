@@ -314,7 +314,17 @@ const PINNED = {
   // radius alone says how the band reads, and it is seated proud of the
   // skin. Same node count: the same two brows, in a different shape and
   // a different place.
-  shiva: { nodes: 373, digest: "445ea164764dbe90" },
+  //
+  // And again when Shiva put his clothes on. His default was the tiger
+  // skin alone, which left both legs bare; ref3 shows a cream dhoti to
+  // the ankle under it, an ochre sash, and the hide over the top, in all
+  // four views. Eleven nodes more: the dhoti column, its hem border, its
+  // fan, and the sash.
+  // The serpent moves with it: at a fifth of the neck's radius it was
+  // thinner through the wrap than the mala hanging over it, which is a
+  // gold cord round a neck and not the torque the reference sheet labels.
+  // Same nodes, a thicker snake.
+  shiva: { nodes: 384, digest: "2ff7234ba8012259" },
 } as const;
 
 describe("protected characters do not move", () => {

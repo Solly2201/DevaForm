@@ -1045,7 +1045,14 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
   // How thick the serpent is, scaled to the neck it is worn on. A girth
   // authored in absolute metres is a python on a slim body and a worm on
   // a broad one; a fraction of the wearer's own neck is a serpent on both.
-  const thick = body.neckRadius * 0.22;
+  //
+  // A TORQUE'S GIRTH, not a cord's. At about a fifth of the neck's radius
+  // this came out twenty-two millimetres through the thickest part of the
+  // wrap, and against a mala of nine-millimetre beads hanging over it the
+  // serpent read as the thinner of the two — a gold rope round the neck
+  // rather than the thing the reference sheet labels a torque. There, its
+  // body is between a quarter and a third of the neck's own width.
+  const thick = body.neckRadius * 0.3;
   // Every section of the hood and head below is a multiple of the
   // serpent's own girth, so a hood is always about twice as wide as the
   // body behind it whatever body the serpent is worn on.

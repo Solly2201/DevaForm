@@ -94,11 +94,24 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
       // one the reference's own face leads with.
       brows: { assetId: "humanoid.brows.strong", version: 1 },
       hands: null,
-      // The skin IS the garment. A cream dhoti under it made the hide
-      // read as a belt over a cream cylinder; the layered dhoti-and-hide
-      // of ref3 is still offered, and still loads for anything saved
-      // with it.
-      lowerGarment: { assetId: "shiva.garment.vyaghracharma", version: 1 },
+      /**
+       * THE DRESS ref3 ACTUALLY SHOWS: cream dhoti to the ankle, the
+       * spotted hide slung over the hips, ochre sash with a hanging
+       * panel. All four views on that sheet have it, and the waist panel
+       * calls out drapery with natural folds across every body variant.
+       *
+       * The skin alone was the default for a while, on the grounds that
+       * a cream dhoti under it made the hide read as a belt over a cream
+       * cylinder. That was true of the cylinder: the dhoti had no hem
+       * border, a front fan three and a half centimetres wide, and knee
+       * bands cut tight enough that a posed leg came through them. It has
+       * all three now, so the layer underneath is a garment and the hide
+       * is worn over it rather than strapped round it.
+       *
+       * The hide alone is still offered, and anything saved wearing it
+       * still loads wearing it.
+       */
+      lowerGarment: { assetId: "shiva.garment.tigerHide", version: 1 },
       // Bare-chested ascetic by default — the rudraksha and serpent read
       // against skin, as in classical iconography.
       upperGarment: null,
