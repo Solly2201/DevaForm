@@ -1404,12 +1404,40 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
 };
 
 /**
- * Vaijayanti — the long garland, white and pink.
+ * Vaijayanti — the vanamala, and it hangs down the FRONT.
  *
- * The reference's garland is jasmine-white with bands of pink, falling
- * past the waist. Blooms with volume, threaded on a route walked over
- * the measured torso — flattened petals rendered as painted dashes, and
- * a row of plain beads reads as a third mala.
+ * WHAT WAS WRONG. It was effectively invisible, and not for any of the
+ * reasons that usually hide a thing. It was generated, it was on the
+ * right socket, it was the right size, it was outside the skin, and it
+ * was made of the right materials. Measured, it occupied y 696–966 mm on
+ * a figure 1231 mm tall — and its route put the LOWEST point of the loop
+ * at bearing −3.14, which is the back of the figure, not the belly the
+ * comment above it claimed. So the garland hung down Vishnu's back, where
+ * its bottom fifty millimetres were swallowed by the dhoti's waistband,
+ * and at the front it sat at the collarbone, where the gold kantha
+ * covers it. From every camera a customer uses, all that showed were two
+ * small clusters of flowers near the armpits.
+ *
+ * WHAT THE REFERENCE SHOWS. A vanamala: two strands leaving both
+ * shoulders, falling down the CHEST, converging in a long narrow U that
+ * reaches the middle of the thigh. It is the most prominent ornament on
+ * the figure in all four views of `references/ref_vishnu.png`, and the
+ * jewellery panel shows it flanking the gold necklaces rather than
+ * hiding behind them.
+ *
+ * SO IT IS TWO THINGS JOINED, because it is two things physically. The
+ * part that RESTS — over the shoulders and round the back of the neck —
+ * is a surface walk, and gets the measured body and the true surface
+ * normal that `walkSurface` now applies. The part that HANGS is not on
+ * the body at all, and pretending it is was the original error: below the
+ * chest it is held off the body by gravity, not by the skin, so it is
+ * placed on a plumb line that clears what is worn underneath.
+ *
+ * WORN OVER, which is the layering this needed. Two things are under it
+ * and both are measured rather than assumed: the kantha, whose gauge is a
+ * fraction of the same neck radius this reads, and the lower garment,
+ * whose front the hanging line is held clear of. `necklaceLayering.test`
+ * measures the true distance to both.
  */
 export const ornamentVaijayanti: AttachmentGenerator = (ctx: GeneratorContext) => {
   const white = ctx.materials.fixed.ivory;
@@ -1419,34 +1447,141 @@ export const ornamentVaijayanti: AttachmentGenerator = (ctx: GeneratorContext) =
   const body = ctx.body;
   const neckBase = body.necklaceSocketY + body.neckBaseOffsetY;
 
-  // Down the chest, round low over the belly, and back up.
+  /** How big a bloom is, and therefore how far its thread must stand off. */
+  const BLOOM = 0.009;
+  /**
+   * Clearance over the COLLAR, where the two overlap.
+   *
+   * The kantha's own gauge is written as fractions of the neck's radius —
+   * a band of 0.13 and a turning allowance on top — so its outer surface
+   * stands a little under a third of that radius proud of the skin. A
+   * garland worn over it has to start outside that, and saying so in the
+   * same unit means a thicker neck moves both together.
+   */
+  const overCollar = body.neckRadius * 0.34;
+
+  /** Where the garland stops resting on the body and starts to hang. */
+  const departY = neckBase - 0.22;
+  /**
+   * The plumb line it falls on, and it has to clear the DHOTI.
+   *
+   * The first attempt hung it a bloom's breadth in front of the chest,
+   * which looked right and was not: the chest's own front is 102 mm in
+   * the chest joint's frame, the lower garment reaches 112 mm in WORLD,
+   * and those are not the same number. The chest joint sits
+   * twenty-eight millimetres BEHIND the body's centre line — it is a
+   * spine joint — so a garland hung at chest-local 120 lands at world 92
+   * and spends the whole of its fall inside the dhoti, which is exactly
+   * where it was.
+   *
+   * So it is measured from the thing it has to clear. A wrapped lower
+   * garment occupies `dhotiRadius` about the PELVIS, and the pelvis's
+   * place in the chest's frame is the sum of the two joint offsets
+   * between them — the same honest conversion the kamarbandh does rather
+   * than assume. Nothing here is a world-space constant, so a body with
+   * a different spine carries the garland with it.
+   */
+  const [, , chestInSpineZ] = ctx.jointOffset("chest");
+  const [, , spineInPelvisZ] = ctx.jointOffset("spine");
+  const pelvisZ = -(chestInSpineZ + spineInPelvisZ);
+  const hangZ = pelvisZ + body.dhotiRadius + BLOOM + 0.008;
+  /** The bottom of the loop: the middle of the thigh, as the sheet has it. */
+  const bottomY = neckBase - 0.52;
+
+  /**
+   * The arc that rests: front-left, over the shoulder, round the nape,
+   * over the other shoulder, and down to front-right. Bearings increase
+   * toward the figure's left, so this is one continuous sweep.
+   */
   const route: SurfaceWaypoint[] = [
-    { bearing: -0.35, y: neckBase - 0.01 },
-    { bearing: -0.8, y: neckBase - 0.1 },
-    { bearing: -1.35, y: neckBase - 0.2 },
-    { bearing: -3.14, y: neckBase - 0.27 },
-    { bearing: -4.85, y: neckBase - 0.2 },
-    { bearing: -5.5, y: neckBase - 0.1 },
-    { bearing: -5.93, y: neckBase - 0.01 },
+    { bearing: 0.62, y: departY },
+    { bearing: 1.15, y: neckBase - 0.13 },
+    { bearing: 1.75, y: neckBase - 0.055 },
+    { bearing: 2.6, y: neckBase - 0.02 },
+    { bearing: Math.PI, y: neckBase - 0.014 },
+    { bearing: Math.PI * 2 - 2.6, y: neckBase - 0.02 },
+    { bearing: Math.PI * 2 - 1.75, y: neckBase - 0.055 },
+    { bearing: Math.PI * 2 - 1.15, y: neckBase - 0.13 },
+    { bearing: Math.PI * 2 - 0.62, y: departY },
   ];
-  const walk = walkSurface(body, route, () => 0.011, 110);
+  // Thick where the collar is under it, a bloom's breadth where it is
+  // only on skin.
+  const walk = walkSurface(
+    body,
+    route,
+    (t) => {
+      const nape = 1 - Math.abs(t - 0.5) * 2;
+      return BLOOM + overCollar * Math.max(0, nape) ** 0.7;
+    },
+    96,
+  );
+
   const toSocket = (point: THREE.Vector3): V3 => [
     point.x,
     point.y - body.necklaceSocketY,
     point.z - body.necklaceSocketZ,
   ];
-  const points = walk.points.map(toSocket);
+  const resting = walk.points.map(toSocket);
+  const first = resting[0] as V3;
+  const last = resting[resting.length - 1] as V3;
 
+  /**
+   * And the fall, which is not on the body.
+   *
+   * Three stations a side, drawing in toward the centre as a hanging loop
+   * does, meeting under the sternum. The curve through them is the same
+   * limited cubic the surface walk uses, so the join at the chest is a
+   * continuation rather than a corner.
+   */
+  const hang = (from: V3, to: V3): V3[] => {
+    const socketY = (y: number) => y - body.necklaceSocketY;
+    const socketZ = hangZ - body.necklaceSocketZ;
+    return [
+      // The strands stay APART most of the way down and gather only at
+      // the end, which is what the reference's two parallel falls do. An
+      // earlier version drew them in from the waist and the garland read
+      // as one thin cord down the middle of the dhoti.
+      [from[0] * 1.02, socketY(departY - 0.08), socketZ],
+      [from[0] * 0.95, socketY(departY - 0.2), socketZ],
+      [from[0] * 0.72, socketY(bottomY + 0.05), socketZ - 0.003],
+      [from[0] * 0.3, socketY(bottomY + 0.012), socketZ - 0.007],
+      [0, socketY(bottomY), socketZ - 0.009],
+      [to[0] * 0.3, socketY(bottomY + 0.012), socketZ - 0.007],
+      [to[0] * 0.72, socketY(bottomY + 0.05), socketZ - 0.003],
+      [to[0] * 0.95, socketY(departY - 0.2), socketZ],
+      [to[0] * 1.02, socketY(departY - 0.08), socketZ],
+    ];
+  };
+
+  // One closed thread: down the right side of the fall, round the bottom,
+  // up the left, and over the shoulders back to where it started.
+  const thread = [...hang(last, first), ...resting];
+  const curve = new THREE.CatmullRomCurve3(
+    thread.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
+    true,
+    "catmullrom",
+    0.5,
+  );
+
+  /**
+   * Blooms spaced along the THREAD rather than per control point.
+   *
+   * The old version stepped every third sample of a fixed-count walk, so
+   * the flowers bunched wherever the route happened to be sampled
+   * densely. A garland is strung at a spacing, and the spacing is what
+   * makes it read as one.
+   */
+  const length = curve.getLength();
+  const SPACING = BLOOM * 1.95;
+  const count = Math.max(24, Math.round(length / SPACING));
   const PETALS = 5;
-  for (let i = 0; i < points.length; i += 3) {
-    const at = points[i]!;
-    const step = Math.floor(i / 3);
-    // Bands: two white blooms, one pink, a leaf — repeating.
-    const kind = step % 4;
+  for (let i = 0; i < count; i += 1) {
+    const at = curve.getPointAt(i / count);
+    const kind = i % 4;
     if (kind === 3) {
       group.add(
-        mesh(new THREE.SphereGeometry(0.006, 8, 6), leaf, {
-          position: at,
+        mesh(new THREE.SphereGeometry(BLOOM * 0.66, 8, 6), leaf, {
+          position: [at.x, at.y, at.z],
           scale: [0.7, 1.5, 0.5],
           rotation: [0, (i * 0.7) % Math.PI, 0.4],
         }),
@@ -1455,25 +1590,25 @@ export const ornamentVaijayanti: AttachmentGenerator = (ctx: GeneratorContext) =
     }
     const material = kind === 2 ? pink : white;
     const head = new THREE.Group();
-    head.position.set(at[0], at[1], at[2]);
+    head.position.copy(at);
     head.rotation.set(0.5, (i * 1.1) % Math.PI, 0);
     for (let petal = 0; petal < PETALS; petal += 1) {
       const angle = (petal / PETALS) * Math.PI * 2;
       head.add(
-        mesh(new THREE.SphereGeometry(0.006, 8, 6), material, {
-          position: [Math.cos(angle) * 0.006, 0, Math.sin(angle) * 0.006],
+        mesh(new THREE.SphereGeometry(BLOOM * 0.66, 8, 6), material, {
+          position: [Math.cos(angle) * BLOOM * 0.66, 0, Math.sin(angle) * BLOOM * 0.66],
           scale: [1.15, 0.8, 1],
           rotation: [0, -angle, 0],
         }),
       );
     }
     head.add(
-      mesh(new THREE.SphereGeometry(0.004, 8, 6), kind === 2 ? white : pink, {
-        position: [0, 0.003, 0],
+      mesh(new THREE.SphereGeometry(BLOOM * 0.44, 8, 6), kind === 2 ? white : pink, {
+        position: [0, BLOOM * 0.33, 0],
       }),
     );
     group.add(head);
   }
-  // A hundred and seventy-seven flowers. See geometry.collapse.
+  // Every bloom in one mesh per material. See geometry.collapse.
   return collapse(group);
 };
