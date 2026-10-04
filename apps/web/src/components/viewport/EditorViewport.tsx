@@ -363,7 +363,17 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
         <CameraCommands stage={stage} controlsRef={controlsRef} onMove={takeCamera} />
         {environment && <StageEnvironment config={environment} pivot={stage.pivot} />}
         <CharacterRoot />
-        <ContactShadows position={[0, -0.002, 0]} opacity={0.62} scale={3.2} blur={2.4} far={1.6} />
+        {/* The shadow that marries the figure to the floor — and NOT while
+            the entry is covering both. ContactShadows renders the whole
+            scene into a render target of its own on every frame, which is
+            a second full pass over a third of a million triangles, and it
+            went on doing it behind an opaque picture of a temple while
+            the customer scrolled. It costs nothing to arrive with the
+            statue: the settle ramps the light up over a second and a
+            half, and the shadow comes up with it. */}
+        {phase !== "intro" && (
+          <ContactShadows position={[0, -0.002, 0]} opacity={0.62} scale={3.2} blur={2.4} far={1.6} />
+        )}
         {/* A ground disc only when there is no room behind the figure.
             With a backdrop there IS a floor — the one in the frame — and
             a second one drawn over it is a brown ellipse lying on a

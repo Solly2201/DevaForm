@@ -9,13 +9,13 @@
  * - pose: applied in place on joints (no rebuild)
  * - materials: mutated in place on shared zone materials (no rebuild)
  *
- * GLB assets load asynchronously; a cache subscription bumps a counter so
- * the rig rebuilds once the mesh arrives.
+ * GLB assets load asynchronously, and the rig WAITS for the ones this
+ * configuration needs rather than being built twice — see `needed` below.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
-import { subscribeGlbCache } from "./glbCache";
+import { getGlb, subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 import {
   buildRig,
@@ -42,6 +42,47 @@ export function CharacterRoot() {
 
   const [glbVersion, setGlbVersion] = useState(0);
   useEffect(() => subscribeGlbCache(() => setGlbVersion((v) => v + 1)), []);
+
+  /**
+   * The GLB files this configuration is going to ask for.
+   *
+   * Read off the configuration's own asset references, before anything is
+   * built — which is the point. Rig assembly is synchronous and loading is
+   * not, so the rig used to be built IMMEDIATELY, omit the meshes that had
+   * not arrived, and then be built all over again when they did.
+   *
+   * Measured on Ganesha, whose sculpted head is an 84,000-triangle GLB:
+   * two builds, 1.0 s and 1.1 s, each one a single unbroken task. The
+   * first is pure waste — nobody ever sees a rig with the head missing,
+   * because the entry is still covering the stage — and the second landed
+   * in the middle of the customer's scroll through the entry, where it
+   * froze the sequence outright: two animation frames in 1.7 seconds.
+   *
+   * So the build waits for what it needs. One build, and it happens while
+   * the customer is still at the temple doors instead of halfway down the
+   * hall.
+   */
+  const needed = useMemo(() => {
+    const refs = [...Object.values(parts), ...attachments.map((a) => a.asset)];
+    const paths = new Set<string>();
+    for (const ref of refs) {
+      const source = resolveAssetRef(ref)?.source;
+      if (source?.kind === "glb") paths.add(source.path);
+    }
+    return [...paths];
+  }, [parts, attachments]);
+
+  /**
+   * Whether every one of them has SETTLED — loaded, or failed.
+   *
+   * A failure is as settled as a success: the rig already renders what it
+   * can and reports what it could not, and waiting forever for a file
+   * that is not coming would mean an empty stage with no explanation.
+   */
+  const assetsReady = useMemo(() => {
+    void glbVersion; // the cache changed; ask it again
+    return needed.every((path) => getGlb(path).status !== "loading");
+  }, [needed, glbVersion]);
 
   const zoneMaterialsRef = useRef<ZoneMaterials | null>(null);
   if (zoneMaterialsRef.current === null) {
@@ -73,11 +114,14 @@ export function CharacterRoot() {
 
   // Rebuild rig only when structure changes. The pose preset participates
   // because seated presets swap clothing to pose-compatible geometry.
-  const rig: CharacterRig = useMemo(() => {
+  const rig: CharacterRig | null = useMemo(() => {
+    if (!assetsReady) return null;
     const config = useEditorStore.getState().config;
     return buildRig(config, zoneMaterials);
+    // `assetsReady` replaces the raw cache counter: the rig is rebuilt
+    // when readiness CHANGES, not every time any file anywhere lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parts, attachments, base, proportions, proceduralMorphKey, hands, arms, posePreset, glbVersion, zoneMaterials]);
+  }, [parts, attachments, base, proportions, proceduralMorphKey, hands, arms, posePreset, assetsReady, zoneMaterials]);
 
   // Dispose the previous rig's geometry when a new one replaces it.
   const previousRig = useRef<CharacterRig | null>(null);
@@ -101,14 +145,14 @@ export function CharacterRoot() {
   // Pose: in-place joint rotation updates — joints, gestures, grips and
   // planted attributes, in the one order poseRig defines.
   useEffect(() => {
-    poseRig(rig, pose);
+    if (rig) poseRig(rig, pose);
   }, [rig, pose, hands]);
 
   // Morphs: in-place GPU influence updates (no geometry rebuild). Hand
   // gestures contribute their own influences on bodies that can close
   // their hands — see morphs.ts.
   useEffect(() => {
-    applyMorphInfluences(rig.root, rigMorphInfluences(rig, morphs));
+    if (rig) applyMorphInfluences(rig.root, rigMorphInfluences(rig, morphs));
   }, [rig, morphs, hands, parts.body]);
 
   // Materials: in-place color/finish updates.
@@ -117,6 +161,7 @@ export function CharacterRoot() {
   }, [zoneMaterials, materials]);
 
   useEffect(() => {
+    if (!rig) return;
     const warnings = rigWarnings(rig);
     if (warnings.length > 0) {
       console.warn("Character rig warnings:", warnings);
@@ -131,5 +176,9 @@ export function CharacterRoot() {
     };
   }, [rig]);
 
+  // Nothing until there is something complete to show. The stage knows:
+  // StageReadiness reports no character, the entry holds its last frame
+  // with the ember lit, and the customer never sees a half-built statue.
+  if (!rig) return null;
   return <primitive object={rig.root} />;
 }
