@@ -148,7 +148,20 @@ const PINNED = {
   // lower hand no longer in front of the chest the upper pair needed less
   // room, not more, so the axe clears by over forty millimetres from a
   // NARROWER stance than before.
-  ganesha: { nodes: 371, digest: "e7bb53cab71bc8f0" },
+  //
+  // Re-pinned when the worn things started following the body. Three of
+  // Ganesha's were half-measured and half-typed: the haram's front half
+  // dropped to a hardcoded height and spread to a hardcoded width, the
+  // angavastram's two END points were authored at a z of two centimetres
+  // — near the middle of a torso rather than on its surface — and the
+  // kamarbandh was a circle stretched on one axis until its front
+  // cleared a belly, which pushes its back out behind the spine by the
+  // same amount. Measured: 112 mm of collar inside him, 72 mm of sash
+  // through his shoulders, 15 mm of belt in his side. All three are
+  // routes walked over the measured surface now, and all three measure
+  // zero or near it. The node count rises because a ribbon and a bead
+  // fringe have more parts than a tube and a torus.
+  ganesha: { nodes: 379, digest: "4ae525d78d430669" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
@@ -275,7 +288,14 @@ const PINNED = {
   // whatever skull is wearing them — and a face with none reads as
   // unfinished, which is what both of them did. Three nodes more: the
   // part's own group and the two brows. Nothing else about Shiva moved.
-  shiva: { nodes: 338, digest: "e03c9e12f07f1fd8" },
+  //
+  // Shiva moves for the mala and the sash. ref3's neck close-up shows a
+  // fine strand; his beads were a sixth of his neck's radius, which at
+  // this scale is a walnut, and the guru bead was seated at seven tenths
+  // of its own radius so a third of it was inside the sternum. Beads are
+  // a ninth of the neck now, there are more of them, and each clears the
+  // skin by its own radius.
+  shiva: { nodes: 373, digest: "6f1aa5be5d39aa2e" },
 } as const;
 
 describe("protected characters do not move", () => {

@@ -3,9 +3,10 @@
  * distribute rings/bands across limb joints so they follow every pose).
  */
 import * as THREE from "three";
-import { ARM_SLOTS, activeArmSlots, type JointId } from "@devaform/character-schema";
+import { ARM_SLOTS, activeArmSlots, getSocket, type JointId } from "@devaform/character-schema";
 import { lathe, mesh, radialRing, taperedTube, type V3 } from "../geometry";
 import { headFit } from "./bodyProfile";
+import { surfaceRibbon, walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
 import { type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
 
 function gemStud(ctx: GeneratorContext, r: number): THREE.Mesh {
@@ -182,49 +183,109 @@ export function chestZAtSocket(
   );
 }
 
+/**
+ * Haram — the collar, walked round the body that wears it.
+ *
+ * WHAT WAS WRONG. Half of this was measured and half was typed. The back
+ * of the band wrapped a flattened circle of the measured neck radius;
+ * the front dropped to a hardcoded `-0.052`, spread to a hardcoded
+ * `±0.09`, and hung a pendant at a hardcoded `-0.098`. Those numbers are
+ * true of exactly one torso — the one somebody had on screen when they
+ * wrote them — and the registry puts this collar on three. Measured, it
+ * sat a hundred and twelve millimetres inside Ganesha and forty-one
+ * inside Vishnu: not a scale problem and not a clearance problem, but a
+ * curve that was never expressed in the body's own coordinates at all.
+ *
+ * WHAT IT IS NOW. A ROUTE, exactly as the rudraksha mala and the serpent
+ * already are: a bearing round the body and a height, walked onto
+ * whatever surface the body reports, standing off it by the band's own
+ * half-thickness. Everything that was a metre is now a fraction of a
+ * measurement the body publishes, so the collar fits a thin ascetic and a
+ * broad elephant-headed god by asking each of them where their skin is.
+ *
+ * It cannot end up inside one, because it is never expressed in a space
+ * where inside is representable — which is the whole argument of
+ * surfaceWalk, and this ornament was the one that was not taking it.
+ */
 export const necklaceHaram: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
-  // Relational surface drape: the collar band is a closed curve whose back
-  // half hugs the neck and whose front half lies on the measured chest —
-  // a rigid torus cannot do both without its sides sinking into the
-  // pectorals, so the band is swept along the surface instead. The neck
-  // half wraps the measured neck column, whatever body wears it.
-  const neckR = ctx.body.neckRadius + 0.003;
-  const collarY = ctx.body.neckBaseOffsetY;
-  const bandPts: V3[] = [];
-  const samples = 26;
-  for (let i = 0; i <= samples; i++) {
-    const angle = (i / samples) * Math.PI * 2;
-    const frontness = Math.max(0, Math.sin(angle));
-    const x = Math.cos(angle) * (neckR + frontness * 0.015);
-    // Back half seats at the neck base; the front drops onto the chest.
-    const y = collarY + 0.004 - frontness * (0.052 + collarY);
-    const zNeck = Math.sin(angle) * neckR * 0.65;
-    const z =
-      frontness > 0.05
-        ? Math.max(zNeck, chestZAtSocket(ctx, x, y, 0.005))
-        : zNeck;
-    bandPts.push([x, y, z]);
-  }
-  group.add(new THREE.Mesh(taperedTube(bandPts, [0.012, 0.012], 52, 12), metal));
-  // Bead fringe along the front half, seated on the chest surface
-  for (let i = 0; i < 9; i++) {
-    const angle = Math.PI * (0.25 + (i / 8) * 0.5);
-    const x = Math.cos(angle + Math.PI / 2) * 0.09;
-    const frontness = Math.sin(angle + Math.PI / 2);
-    if (frontness < 0.3) continue;
-    const y = -0.062 * frontness - 0.012;
+  const body = ctx.body;
+
+  // Every dimension below is a fraction of the neck this collar is for.
+  const neck = body.neckRadius;
+  const neckBase = body.necklaceSocketY + body.neckBaseOffsetY;
+  const toSocket = (point: THREE.Vector3): V3 => [
+    point.x,
+    point.y - body.necklaceSocketY,
+    point.z - body.necklaceSocketZ,
+  ];
+  /** How far the front of the collar falls below the nape. */
+  const dip = neck * 1.15;
+  /** The band's own half-thickness. */
+  const band = neck * 0.2;
+
+  /** A closed route round the body, dipping toward the front. */
+  const ring = (drop: number): SurfaceWaypoint[] => {
+    const route: SurfaceWaypoint[] = [];
+    const steps = 20;
+    for (let i = 0; i <= steps; i += 1) {
+      const bearing = (i / steps) * Math.PI * 2;
+      // Bearings run from the FRONT; 1 at the chest, 0 at the nape.
+      const front = (1 + Math.cos(bearing)) / 2;
+      route.push({ bearing, y: neckBase + neck * 0.08 - Math.pow(front, 1.6) * drop });
+    }
+    return route;
+  };
+
+  // The spine stands off by MORE than the band's half-thickness, because
+  // a tube is not its spine: where the route turns down onto the chest
+  // the inner wall of the tube cuts the corner the spine takes, and a
+  // clearance equal to the radius leaves that wall inside the skin. The
+  // extra is the curvature's, not a fudge — measured at twelve
+  // millimetres of penetration before it was added.
+  group.add(
+    new THREE.Mesh(
+      taperedTube(
+        walkSurface(body, ring(dip), band * 1.7, 120).points.map(toSocket),
+        [band, band],
+        52,
+        12,
+      ),
+      metal,
+    ),
+  );
+
+  // The fringe: beads on a second route under the first, and only where
+  // the collar is on the chest rather than round the neck.
+  const beadSize = neck * 0.16;
+  const fringe = walkSurface(body, ring(dip + neck * 0.5), beadSize * 1.25, 120);
+  for (let i = 0; i < fringe.points.length; i += 1) {
+    const bearing = (i / (fringe.points.length - 1)) * Math.PI * 2;
+    if (Math.cos(bearing) < 0.35) continue;
+    if (i % 4 !== 0) continue;
+    const at = toSocket(fringe.points[i] as THREE.Vector3);
     group.add(
-      mesh(new THREE.SphereGeometry(0.0075, 10, 8), metal, {
-        position: [x, y, chestZAtSocket(ctx, x, y, 0.007)],
-      }),
+      mesh(new THREE.SphereGeometry(beadSize, 10, 8), metal, { position: at }),
     );
   }
-  const pendant = gemStud(ctx, 0.016);
-  const pendantY = -0.098;
-  pendant.position.set(0, pendantY, chestZAtSocket(ctx, 0, pendantY, 0.009));
-  pendant.scale.set(0.8, 1.25, 0.6);
+
+  // And the pendant, hanging at the front below the fringe.
+  const pendantSize = neck * 0.34;
+  const hang = walkSurface(
+    body,
+    [
+      { bearing: -0.3, y: neckBase - dip - neck * 1.1 },
+      { bearing: 0, y: neckBase - dip - neck * 1.15 },
+      { bearing: 0.3, y: neckBase - dip - neck * 1.1 },
+    ],
+    pendantSize * 0.55,
+    9,
+  );
+  const pendant = gemStud(ctx, pendantSize * 0.5);
+  const seat = toSocket(hang.points[Math.floor(hang.points.length / 2)] as THREE.Vector3);
+  pendant.position.set(seat[0], seat[1], seat[2]);
+  pendant.scale.set(0.85, 1.2, 0.75);
   group.add(pendant);
   return group;
 };
@@ -286,44 +347,93 @@ export const tikkaChandra: AttachmentGenerator = (ctx) => {
   return group;
 };
 
+/**
+ * Kamarbandh — a belt that follows the waist it is worn on.
+ *
+ * WHAT WAS WRONG. A torus, scaled on one axis: a circle of the hips'
+ * half-width, stretched until its FRONT reached the belly. A torso is not
+ * an ellipse centred on its own axis — a belly protrudes forward and the
+ * spine does not protrude back — so stretching symmetrically to clear the
+ * front pushed the back of the ring out behind the body by exactly as
+ * much as the belly stuck out in front. Measured on Ganesha: fifteen
+ * millimetres of belt inside him at the sides, forty standing off at the
+ * back. The reference asks for one thing of this ornament — "kamarbandh
+ * follows waist surface, proper fit, no floating" — and a scaled circle
+ * cannot do it on any body with a front.
+ *
+ * WHAT IT IS NOW. A ribbon walked round the measured waist, like every
+ * other wrapped thing here. The belt is worn OVER the dressed waist, so
+ * the clearance it asks for is the cloth's: a slim body in a full dhoti
+ * still wears its belt outside the skirt, never inside it.
+ */
 export const waistKamarband: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
-  // Relational fit: the belt encircles whatever the torso actually is at
-  // the belt's own height — the wider of the hips and the belly overhang —
-  // with a small clearance. Front depth follows the belly surface, so the
-  // ring is elliptical on deep-bellied bodies instead of cutting through
-  // them. Socket sits at pelvis + [0, 0.04, 0.12]; work socket-local.
-  const beltY = 0.015; // socket-local; pelvis + 0.055
-  const spineY = beltY + 0.04 - 0.1; // same height in spine-local space
-  // The kamarband is worn over the dressed waist: it must clear the hips,
-  // the belly overhang AND the skirt's wrap radius (a slim body in a full
-  // dhoti still wears the belt outside the cloth, never inside it).
-  const halfWidth = Math.max(
-    ctx.body.pelvisHalfWidth + 0.014,
-    ctx.body.bellyHalfWidthAt(spineY) + 0.008,
-    ctx.body.dhotiRadius + 0.012,
-  );
-  const frontDepth = Math.max(halfWidth, ctx.body.bellySurfaceZAt(0, spineY) + 0.008);
-  const belt = mesh(new THREE.TorusGeometry(halfWidth, 0.012, 10, 48), metal, {
-    position: [0, beltY, -0.12],
-    rotation: [Math.PI / 2, 0, 0],
+  const body = ctx.body;
+
+  /**
+   * This socket's own place in the chest's frame, read from the skeleton
+   * this body actually brought rather than from the stylised table — the
+   * walk answers in chest-local metres and the generator returns
+   * socket-local ones, so the conversion has to be real.
+   */
+  const socket = getSocket("waist.ornament");
+  const spine = ctx.jointOffset("spine");
+  const chest = ctx.jointOffset("chest");
+  const toChest = {
+    y: socket.position[1] - spine[1] - chest[1],
+    z: socket.position[2] - spine[2] - chest[2],
+  };
+  const toSocket = (point: THREE.Vector3): V3 => [
+    point.x,
+    point.y - toChest.y,
+    point.z - toChest.z,
+  ];
+
+  // Worn over the cloth: whatever the skirt wraps to, the belt clears it.
+  const overCloth = Math.max(0, body.dhotiRadius - body.pelvisHalfWidth) + 0.006;
+  const beltY = toChest.y + 0.015;
+  const halfWidth = body.neckRadius * 0.42;
+  const thickness = body.neckRadius * 0.22;
+
+  const ring: SurfaceWaypoint[] = [];
+  for (let i = 0; i <= 24; i += 1) {
+    const bearing = (i / 24) * Math.PI * 2;
+    ring.push({ bearing, y: beltY });
+  }
+  const belt = surfaceRibbon(body, ring, {
+    halfWidth,
+    thickness,
+    clearance: overCloth,
+    samples: 120,
   });
-  belt.scale.z = 1; // torus lies in xz after rotation; depth scales via y
-  belt.scale.y = frontDepth / halfWidth;
-  group.add(belt);
-  // Hanging tassels on the front, forward of both skirt and belly.
-  for (const dx of [-0.045, 0, 0.045]) {
-    const tasselY = -0.015; // socket-local; pelvis-local 0.025
-    const bellyZ = ctx.body.bellySurfaceZAt(dx, tasselY + 0.04 - 0.1);
-    const frontZ = Math.max(frontDepth + 0.004, bellyZ + 0.012) - 0.12;
+  // Into the socket's own frame, where the rig will place it.
+  const position = belt.getAttribute("position");
+  for (let i = 0; i < position.count; i += 1) {
+    position.setY(i, position.getY(i) - toChest.y);
+    position.setZ(i, position.getZ(i) - toChest.z);
+  }
+  belt.computeVertexNormals();
+  group.add(new THREE.Mesh(belt, metal));
+
+  // Tassels hanging at the front, seated on the same surface the belt is.
+  const hang = walkSurface(
+    body,
+    [
+      { bearing: -0.34, y: beltY - 0.012 },
+      { bearing: 0, y: beltY - 0.014 },
+      { bearing: 0.34, y: beltY - 0.012 },
+    ],
+    overCloth + thickness,
+    5,
+  );
+  for (const index of [0, 2, 4]) {
+    const seat = toSocket(hang.points[index] as THREE.Vector3);
     group.add(
-      mesh(new THREE.CapsuleGeometry(0.005, 0.03, 4, 8), metal, {
-        position: [dx, tasselY, frontZ],
-      }),
+      mesh(new THREE.CapsuleGeometry(0.005, 0.03, 4, 8), metal, { position: seat }),
     );
     const drop = gemStud(ctx, 0.007);
-    drop.position.set(dx, tasselY - 0.028, frontZ);
+    drop.position.set(seat[0], seat[1] - 0.028, seat[2]);
     group.add(drop);
   }
   return group;

@@ -237,3 +237,97 @@ function interpolate(knots: readonly number[], values: readonly number[]): (t: n
     );
   };
 }
+
+/**
+ * A BAND of cloth lying on the body, rather than a tube of it.
+ *
+ * Every sash, shawl and waistband in this repository was a `taperedTube`
+ * — a hosepipe of circular section — which is why the complaint about
+ * them was always the same word: they read as tubes. Cloth has a width
+ * and a thickness and they are not the same number; a sash is a flat
+ * band following the body, and the difference between that and a round
+ * cord is most of what makes a garment look like a garment.
+ *
+ * Built on the walk, so it inherits everything the walk guarantees: the
+ * route is authored in the body's own surface coordinates, and the band
+ * stands off the skin by the clearance the caller declares. The width
+ * runs ACROSS the surface — along the direction perpendicular both to
+ * the path and to the outward normal — so the band lies on the body
+ * rather than cutting through it edge-first.
+ *
+ * `taper` lets a sash narrow toward its ends, which is what stops a band
+ * from terminating in a blunt rectangle.
+ */
+export function surfaceRibbon(
+  body: BodyProfile,
+  route: readonly SurfaceWaypoint[],
+  options: {
+    /** Half the cloth's width, metres — constant, or along the route. */
+    halfWidth: number | ((t: number) => number);
+    /** How thick the cloth is, metres. */
+    thickness: number;
+    /** Gap between the skin and the cloth's underside, metres. */
+    clearance: number;
+    samples?: number;
+  },
+): THREE.BufferGeometry {
+  const samples = options.samples ?? 120;
+  const width =
+    typeof options.halfWidth === "number" ? () => options.halfWidth as number : options.halfWidth;
+  // The walk is told to hold the UNDERSIDE off the skin, so the spine
+  // rides half the cloth's thickness higher than that.
+  const walk = walkSurface(
+    body,
+    route,
+    options.clearance + options.thickness / 2,
+    samples,
+  );
+
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const tangent = new THREE.Vector3();
+  const across = new THREE.Vector3();
+  for (let i = 0; i <= samples; i += 1) {
+    const here = walk.points[i] as THREE.Vector3;
+    const ahead = walk.points[Math.min(samples, i + 1)] as THREE.Vector3;
+    const behind = walk.points[Math.max(0, i - 1)] as THREE.Vector3;
+    tangent.copy(ahead).sub(behind);
+    if (tangent.lengthSq() < 1e-12) tangent.set(0, 1, 0);
+    tangent.normalize();
+    const outward = walk.normals[i] as THREE.Vector3;
+    across.copy(tangent).cross(outward);
+    if (across.lengthSq() < 1e-12) across.set(1, 0, 0);
+    across.normalize();
+
+    const half = width(i / samples);
+    const lift = options.thickness / 2;
+    // Four corners of this rung: outer edge pair, then inner edge pair.
+    for (const [side, up] of [
+      [1, 1],
+      [-1, 1],
+      [-1, -1],
+      [1, -1],
+    ] as const) {
+      positions.push(
+        here.x + across.x * half * side + outward.x * lift * up,
+        here.y + across.y * half * side + outward.y * lift * up,
+        here.z + across.z * half * side + outward.z * lift * up,
+      );
+    }
+  }
+  // Four quads per segment: top, bottom and the two edges — a closed
+  // band, so it reads solid from any angle including its own hem.
+  for (let i = 0; i < samples; i += 1) {
+    const a = i * 4;
+    const b = a + 4;
+    for (let corner = 0; corner < 4; corner += 1) {
+      const next = (corner + 1) % 4;
+      indices.push(a + corner, b + corner, a + next, a + next, b + corner, b + next);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}

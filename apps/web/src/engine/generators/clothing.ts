@@ -3,6 +3,7 @@
  */
 import * as THREE from "three";
 import { mesh, pleatedCylinder, taperedTube, type V3 } from "../geometry";
+import { pushOutsideBody, surfaceRibbon, type SurfaceWaypoint } from "./surfaceWalk";
 import { num, type PartGenerator } from "./types";
 
 export const humanoidDhoti: PartGenerator = (ctx) => {
@@ -114,40 +115,75 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   return [{ joint: "pelvis", object: group }];
 };
 
+/**
+ * The angavastram — a band of cloth over one shoulder, not a cord.
+ *
+ * WHAT WAS WRONG. The drape was a `taperedTube` through five control
+ * points, and three of them were measured while TWO were typed: the
+ * shoulder end and the hip end were authored as `[±0.16 * bulk, y, 0.02]`
+ * — a z of two centimetres, which is near the middle of a torso rather
+ * than on its surface. So the sash began and ended INSIDE the body.
+ * Measured on Ganesha, whose shoulders are broadest, it reached
+ * seventy-two millimetres in, which is the "upper garment intersecting
+ * the shoulders" this fixes. Not a scale problem and not a clearance
+ * problem: two points on a route were never expressed in the body's
+ * coordinates at all.
+ *
+ * WHAT IT IS NOW. One route, authored entirely in bearings and heights,
+ * walked onto whatever body wears it, and built as a RIBBON — cloth has
+ * a width and a thickness and they are different numbers. The heights
+ * come from the torso the body reports rather than from the figure
+ * somebody had on screen, so the sash crosses a broad chest and a narrow
+ * one at the same place on each.
+ *
+ * `pushOutsideBody` closes the loop. The walk guarantees the spine of the
+ * band; the band has width, and where the route turns hardest its outer
+ * corner can still reach skin. That guarantee is structural and already
+ * exists — the serpent has used it since it was built.
+ */
 export const humanoidShawl: PartGenerator = (ctx) => {
   const accent = ctx.materials.get("garmentAccent");
   const group = new THREE.Group();
-  const bulk = ctx.proportions.bulk;
   const body = ctx.body;
 
-  // Diagonal sash from the left shoulder across the chest to the right hip,
-  // returning across the back — the classic angavastram/yajnopavita drape.
-  // The cloth path is draped over the measured torso surfaces (slightly
-  // sunk for an intentional cloth-on-skin seat) so it conforms to every
-  // body variant instead of one tuned volume.
-  const onFront = (x: number, y: number): V3 => [x, y, body.torsoSurfaceZAt(x, y) + 0.008];
-  const onBack = (x: number, y: number): V3 => [x, y, body.torsoBackZAt(x, y) - 0.006];
-  const front: V3[] = [
-    [0.155 * bulk, 0.13, 0.02],
-    onFront(0.1, 0.05),
-    onFront(-0.02, -0.06),
-    onFront(-0.13, -0.17),
-    [-0.165 * bulk, -0.23, 0.02],
+  // The torso's own extent, so a sash crosses the same landmarks on any
+  // body: the shoulder line at the top, the hip at the bottom.
+  const SPINE_TO_CHEST_Y = 0.16;
+  const top = body.chestCenterY + body.chestRadiusY;
+  const bottom = body.bellyCenterY - body.bellyRadiusY - SPINE_TO_CHEST_Y;
+  const at = (fraction: number) => bottom + (top - bottom) * fraction;
+
+  const halfWidth = body.neckRadius * 0.62;
+  const thickness = body.neckRadius * 0.1;
+
+  /**
+   * Over the LEFT shoulder, across the chest to the right hip, round the
+   * back and home. Bearings turn toward the figure's left, so running
+   * NEGATIVE from the front crosses to the right and carries on behind.
+   */
+  const route: SurfaceWaypoint[] = [
+    { bearing: 1.15, y: at(0.97) },
+    { bearing: 0.5, y: at(0.78) },
+    { bearing: -0.1, y: at(0.52) },
+    { bearing: -0.75, y: at(0.26) },
+    { bearing: -1.5, y: at(0.12) },
+    { bearing: -Math.PI, y: at(0.2) },
+    { bearing: -4.2, y: at(0.5) },
+    { bearing: -5.0, y: at(0.82) },
+    { bearing: 1.15 - Math.PI * 2, y: at(0.97) },
   ];
-  const back: V3[] = [
-    [-0.165 * bulk, -0.23, 0.02],
-    onBack(-0.1, -0.1),
-    onBack(0.05, 0.04),
-    [0.155 * bulk, 0.13, 0.02],
-  ];
-  for (const pts of [front, back]) {
-    group.add(new THREE.Mesh(taperedTube(pts, [0.024, 0.024], 32, 10), accent));
-  }
-  group.traverse((o) => {
-    if (o instanceof THREE.Mesh) {
-      o.castShadow = true;
-      o.receiveShadow = true;
-    }
+
+  const cloth = surfaceRibbon(body, route, {
+    halfWidth: (t) => halfWidth * (0.72 + 0.28 * Math.sin(Math.min(1, t * 1.6) * Math.PI)),
+    thickness,
+    clearance: thickness * 0.35,
+    samples: 150,
   });
+  pushOutsideBody(cloth, body, { y: 0, z: 0 }, thickness * 0.25);
+
+  const mesh = new THREE.Mesh(cloth, accent);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
   return [{ joint: "chest", object: group }];
 };

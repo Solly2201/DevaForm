@@ -791,9 +791,18 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
     point.z - body.necklaceSocketZ,
   ];
 
+  /**
+   * Bead size, against the reference rather than against nothing.
+   *
+   * These were a sixth and a fifth of the neck's radius — on the measured
+   * human, beads seventeen millimetres across, which at this figure's
+   * scale is a walnut. ref3's neck close-up shows a fine strand: beads
+   * about a tenth of the neck's radius, two strands of many rather than
+   * one strand of few. A rudraksha is a seed.
+   */
   for (const [drop, size] of [
-    [body.neckRadius * 1.6, body.neckRadius * 0.17],
-    [body.neckRadius * 2.8, body.neckRadius * 0.19],
+    [body.neckRadius * 1.6, body.neckRadius * 0.115],
+    [body.neckRadius * 2.8, body.neckRadius * 0.13],
   ] as const) {
     // Round the neck at the back, falling to its lowest at the front —
     // which is what a strand hung over a neck does under its own weight.
@@ -815,7 +824,7 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
         y: neckBase + 0.004 - Math.pow(front, 3) * drop,
       });
     }
-    const walk = walkSurface(body, route, size * 0.95, 160);
+    const walk = walkSurface(body, route, size * 1.05, 160);
     const path = walk.points.map(toSocket);
 
     // Beads laid along the path at their own diameter, so the strand is
@@ -848,14 +857,16 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
   }
 
   // Central guru bead, hanging below the lower strand at the front.
-  const guru = body.neckRadius * 0.26;
+  const guru = body.neckRadius * 0.19;
   const front = body.surfaceAt(0, neckBase - body.neckRadius * 2.8 - guru);
   group.add(
     mesh(new THREE.SphereGeometry(guru, 14, 12), bead, {
       position: [
         0,
         front.y - body.necklaceSocketY,
-        front.z + guru * 0.7 - body.necklaceSocketZ,
+        // Its own radius clear of the chest, not most of one: seven tenths
+        // left a third of the bead inside the sternum.
+        front.z + guru - body.necklaceSocketZ,
       ],
     }),
   );
