@@ -68,8 +68,27 @@ export const featureBrows: PartGenerator = (ctx) => {
   // GRIPS a head, which is a little above where a brow sits on a face;
   // placed at it, all three variants floated off the eye.
   const base = body.browY + skull * (-0.035 + 0.06 * lift);
-  /** How thick the band is where it is thickest. */
-  const thick = skull * (0.025 + 0.018 * weight);
+  /**
+   * The band's radius where it is thickest.
+   *
+   * Two things were wrong and only one of them was size. The first
+   * version squashed the finished mesh with `brow.scale.y = 0.52` and
+   * `brow.scale.z = 0.62` — but `scale` on a part's child scales about
+   * the PART's origin, which here is the skull's centre, so the depth
+   * squash did not thin the brow, it moved it thirty-five millimetres
+   * BACKWARDS. Measured, its front face sat a tenth of a millimetre
+   * outside the skin and all the rest of it was inside the forehead.
+   * That is why the brows "did not render": there was a tangent sliver
+   * of them to see.
+   *
+   * Nothing is scaled now. The cross-section is round, which is what a
+   * brow ridge on carved stone is, and the radius alone says how tall
+   * the band reads — about an eighth of the skull's radius, giving five
+   * millimetres on a forty-millimetre skull. A shade bolder than strict
+   * anatomy, because the Studio opens four metres back and a three-pixel
+   * line on an untextured face is nothing; still a brow at arm's length.
+   */
+  const thick = skull * (0.05 + 0.025 * weight);
 
   for (const side of [1, -1] as const) {
     const path: V3[] = [];
@@ -84,16 +103,12 @@ export const featureBrows: PartGenerator = (ctx) => {
       // reading as a circumflex.
       const fall = Math.pow(t, 2.4) * skull * 0.05;
       const y = base + rise - fall;
-      path.push([x, y, frontSurface(body, x, y) + skull * 0.004]);
+      // Seated proud of the skin rather than through it: most of the
+      // band's thickness outside, a couple of millimetres buried, which
+      // is a brow resting on a face rather than hiding behind one.
+      path.push([x, y, frontSurface(body, x, y) + thick * 0.45]);
     }
-    const brow = new THREE.Mesh(
-      taperedTube(path, [thick, thick * 0.42], 10, 7),
-      hair,
-    );
-    // A band, not a rope.
-    brow.scale.y = 0.52;
-    brow.scale.z = 0.62;
-    group.add(brow);
+    group.add(new THREE.Mesh(taperedTube(path, [thick, thick * 0.5], 10, 8), hair));
   }
 
   return [{ joint: "head", object: group }];

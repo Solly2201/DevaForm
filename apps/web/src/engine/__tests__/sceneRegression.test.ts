@@ -295,7 +295,16 @@ const PINNED = {
   // of its own radius so a third of it was inside the sternum. Beads are
   // a ninth of the neck now, there are more of them, and each clears the
   // skin by its own radius.
-  shiva: { nodes: 373, digest: "6f1aa5be5d39aa2e" },
+  //
+  // And again for the brows, which Shiva wears the same assets of as
+  // Vishnu. They were flattened with `mesh.scale`, which on a part's
+  // child scales about the PART's origin — the centre of the skull — so
+  // the depth squash did not thin the band, it moved it thirty-five
+  // millimetres backwards into the forehead. Nothing is scaled now; the
+  // radius alone says how the band reads, and it is seated proud of the
+  // skin. Same node count: the same two brows, in a different shape and
+  // a different place.
+  shiva: { nodes: 373, digest: "445ea164764dbe90" },
 } as const;
 
 describe("protected characters do not move", () => {

@@ -1060,18 +1060,24 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   /**
    * How this head of hair differs from the next.
    *
-   * `fall` is how far the locks drop — the whole difference between hair
+   * `fall` is how far the mass drops — the whole difference between hair
    * over the shoulders and hair cropped at the nape. `sweep` is how far
-   * round the sides they come, which decides whether the face is framed
-   * or clear. `body` is how far the mass stands off the skull.
+   * round the sides it comes, which decides whether the face is framed
+   * or clear. `mass` is how far it stands off the skull.
    *
    * Three numbers, because a second head of hair should be a line in a
    * manifest rather than a second generator: see humanoid.brows for the
    * same argument about faces.
    */
-  const fall = num(ctx, "fall", 1);
+  const drops = num(ctx, "fall", 1);
   const sweep = num(ctx, "sweep", 1);
   const mass = num(ctx, "mass", 1);
+
+  /** Hermite ease between two bounds; 0 below `from`, 1 above `to`. */
+  const smoothstep = (from: number, to: number, x: number) => {
+    const u = Math.min(1, Math.max(0, (x - from) / (to - from)));
+    return u * u * (3 - 2 * u);
+  };
 
   /** The skull at a height, as the hair has to lie on it. */
   const at = (y: number) => {
@@ -1084,73 +1090,256 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   };
 
   /**
-   * THE SCALP, not a curtain.
+   * ONE MASS, NOT A CAP WITH THREADS TIED TO IT.
    *
-   * This surface used to start at the crown's rim and sweep DOWNWARD over
-   * the back half of the head, on the reasoning that anything above the
-   * rim is hair inside the gold. True while the crown is on — and the
-   * crown comes off: the Hair and Head panels let a customer take it
-   * away, and what was left was a man bald from the hairline up with two
-   * dark curtains hanging beside his ears.
+   * This was a dome over the back of the skull plus forty-two tubes hung
+   * off its rim, and in the Studio it read as exactly that: a smooth
+   * helmet ending on a hard edge, with ropes dangling below it and the
+   * blue of the neck showing between them. Each tube was a separate
+   * surface starting where the dome stopped, so the seam was a seam, the
+   * gaps were gaps, and no amount of waving the tubes about could close
+   * either.
    *
-   * Hair covers the head. It runs from the APEX of the skull down, all
-   * the way round, and where it stops at the bottom depends on which way
-   * it is facing: at the back it reaches the nape, at the front it stops
-   * at the hairline — which is the crown's own rim, so the two still meet
-   * on one seam and nothing of the forehead is lost.
+   * What it is now is ONE closed surface. It starts at the crown, lies on
+   * the measured skull down to the hairline at the front and the nape at
+   * the back, and at the back it keeps going — the same surface, flaring
+   * and falling to the shoulder blades. The locks are RELIEF carved into
+   * it rather than objects attached to it, so there is nothing to come
+   * apart. And it closes: an outer face down to the tips and an inner
+   * face back up to the crown, which makes it a solid rather than a shell
+   * showing its own back faces when the customer turns the statue — and
+   * a solid is also what a print source needs.
    */
-  const APEX = body.skullTopY + skull * 0.02;
+  const APEX = body.skullTopY;
   const HAIRLINE = kiritaBandBottom(body);
   const NAPE = body.headCenterY - skull * 1.5;
-  /** Where the hair's lower edge runs, at a bearing measured from the front. */
-  const hemAt = (bearing: number) => {
-    // 0 at the front, 1 at the back.
-    const back = (1 - Math.cos(bearing)) / 2;
-    // A hairline is not a straight cut across the brow: it comes down a
-    // little at the centre and climbs at the temples. Small, but it is
-    // the difference between a hairline and a headband.
-    const peak = Math.max(0, Math.cos(bearing)) * skull * 0.035 * (1 - 2 * Math.abs(
-      Math.sin(bearing),
-    ) ** 1.5);
-    return HAIRLINE - peak + (NAPE - HAIRLINE) * back;
-  };
+
+  /** The five lobes the locks are carved in, at a bearing. */
+  const lobe = (bearing: number) => 0.5 + 0.5 * Math.cos(bearing * 5);
+
   /**
-   * How far the hair stands off the skull at a height.
+   * Where the hair LEAVES the skull, at a bearing measured from the front.
    *
-   * Thin under the crown, where a band is pressing on it; full below,
-   * where it is only hair; and drawn back in at the very bottom so the
-   * shell's own rim tucks under the locks instead of ending on a
-   * straight cut across the back.
+   * A hairline is not a line. The expression this replaced moved it by at
+   * most a millimetre and a half and went negative past forty degrees, so
+   * what it drew was a level cut straight across the brow — half of why
+   * the hair read as a bathing cap. A hairline comes down at the centre,
+   * climbs away at the temples, and descends again in front of the ear.
    */
-  const thickness = (t: number) =>
-    skull * (0.02 + 0.42 * mass * Math.sin(Math.min(1, t * 1.18) * Math.PI * 0.62));
-  // --- the shell ----------------------------------------------------------
-  // All the way round. Zero is the FRONT, and the face is still left
-  // open — not by cutting the sweep short, but because the hem reaches
-  // the hairline there and goes no lower.
-  const ROWS = 16;
-  const COLUMNS = 40;
+  const releaseAt = (bearing: number) => {
+    const back = (1 - Math.cos(bearing)) / 2;
+    const front = Math.max(0, Math.cos(bearing));
+    const peak = front ** 3 * skull * 0.05;
+    const temples = Math.sin(bearing) ** 2 * front * skull * 0.34;
+    return HAIRLINE - peak + temples + (NAPE - HAIRLINE) * back;
+  };
+
+  /**
+   * And how far the mass falls below that.
+   *
+   * Nothing at the face, everything at the back, and ragged across the
+   * lobes so the bottom of the hair is not a level cut either. `sweep`
+   * narrows the arc it falls from, so a close crop does not send hair
+   * forward past the ear.
+   */
+  const dropAt = (bearing: number) => {
+    const back = (1 - Math.cos(bearing)) / 2;
+    const reach = smoothstep(0.5 - sweep * 0.5, 0.78 - sweep * 0.28, back);
+    /**
+     * Concentrated at the BACK, which is where the reference sheet's back
+     * view puts it: one long wavy mass down the middle of the back,
+     * reaching the shoulder blades, about a third as wide as the back
+     * itself. The first exponent here was below one, which spread the
+     * fall evenly round the whole head and gave a cape.
+     */
+    return (
+      skull * drops * (0.10 + 4.6 * back ** 2.6) * (0.78 + 0.22 * lobe(bearing)) * reach
+    );
+  };
+
+  /**
+   * How thick the mass is along its own length.
+   *
+   * Thin at the crown, where a crown is pressing on it; full over the
+   * back of the skull; thinning again towards the tips and towards the
+   * hairline, because hair has no edge and the sixteen-millimetre rim
+   * this used to end on was the other half of the bathing cap.
+   */
+  const thickness = (u: number) => {
+    const swell = Math.sin(Math.min(1, u * 1.3) * Math.PI * 0.62);
+    const taper = 1 - 0.74 * smoothstep(0.58, 1, u);
+    return skull * (0.02 + 0.42 * mass * swell * taper);
+  };
+
+  /** The locks, as relief on the outer face. */
+  const relief = (u: number, bearing: number) => {
+    /**
+     * Deep enough to SEE, and twisting as it goes.
+     *
+     * At a tenth of the skull's radius the locks were four millimetres of
+     * modulation on a mass a hundred and thirty across, which from the
+     * hero camera is a smooth dark blob — the opposite failure to the
+     * ropes, and just as wrong. The lobes also turn slowly as they
+     * descend, because a lock that runs dead vertically for the whole
+     * length of the hair reads as fluting on a column.
+     */
+    const twist = bearing * 5 + u * 1.25;
+    const shape = Math.cos(twist) * 0.70 + Math.cos(bearing * 11 + u * 2.1 + 1.3) * 0.30;
+    /**
+     * And nearly nothing at the FACE.
+     *
+     * Carved to full depth all the way round, the lobe that happened to
+     * fall at the centre of the hairline put a nine-millimetre spike of
+     * hair over the middle of the forehead — clearly visible in profile,
+     * and nothing a hairline does. The locks belong to the mass at the
+     * back; at the front there is a hairline, and a hairline is quiet.
+     */
+    const back = (1 - Math.cos(bearing)) / 2;
+    const depth = skull * (0.07 + 0.16 * smoothstep(0.1, 0.72, u)) * (0.2 + 0.8 * back);
+    // Nothing at the crown either: the kirita sits on that, and a bulge
+    // under gold is a bulge THROUGH gold.
+    return shape * depth * smoothstep(0.015, 0.34, u);
+  };
+
+  const ROWS = 26;
+  const COLUMNS = 48;
+  /**
+   * Rows bunched at the crown.
+   *
+   * Spaced evenly, a straight chord between two rings a centimetre apart
+   * on a curved skull passes INSIDE it — scalp showing through hair,
+   * which is the same defect the head-top hole was, one step down. A
+   * cosine gives the dome a third of the rows for a twentieth of the
+   * length, and the fall does not need them.
+   */
+  const along = (row: number) => 1 - Math.cos((row / ROWS) * Math.PI * 0.5);
+
+  /**
+   * A point on the hair, at a bearing and a distance along it.
+   *
+   * `lift` is how far off the surface underneath: the outer face asks for
+   * the mass's full thickness, the inner face for a hair's breadth, and
+   * between them is the solid.
+   */
+  /**
+   * NOTHING INSIDE THE HEAD, whatever the construction above produced.
+   *
+   * Two of the terms that give the hair its life — the backward swing of
+   * the fall, and the inward half of the carved locks — can each put a
+   * vertex behind the skin they were measured from, and did: ten
+   * millimetres, at the sides, where the mass leaves the skull well above
+   * the skull's widest point. Rather than tune each term until the sum
+   * happens to clear, the sum is checked. This is the same structural
+   * guarantee `pushOutsideBody` makes for the torso, on the one surface
+   * that has its own measurement.
+   */
+  const CLEARANCE = skull * 0.012;
+  const outsideSkull = (point: THREE.Vector3) => {
+    if (point.y < 0 || point.y > body.skullTopY) return point;
+    const section = body.skullAt(point.y);
+    if (section.halfWidth < 1e-4) return point;
+    const centreZ = (section.frontZ + section.backZ) / 2;
+    const halfDepth = Math.max(1e-6, (section.frontZ - section.backZ) / 2);
+    const dz = point.z - centreZ;
+    const normalised = Math.hypot(point.x / section.halfWidth, dz / halfDepth);
+    const floor = 1 + CLEARANCE / section.halfWidth;
+    if (normalised >= floor || normalised < 1e-6) return point;
+    const push = floor / normalised;
+    return new THREE.Vector3(point.x * push, point.y, centreZ + dz * push);
+  };
+
+  const surface = (bearing: number, u: number, lift: number, carve: boolean) => {
+    const release = releaseAt(bearing);
+    const drop = dropAt(bearing);
+    const scalp = Math.max(1e-6, APEX - release);
+    const split = scalp / (scalp + drop);
+
+    if (u <= split) {
+      // ON THE SKULL. Offset along the SKULL'S OWN NORMAL, which is the
+      // only construction that closes at the top: at the crown "outwards"
+      // is straight up, and a purely radial push has no vertical part, so
+      // however finely the rings are sampled the surface arrives at the
+      // apex as a flat ring and stops. That ring was the hole.
+      const y = APEX - scalp * (u / split);
+      const ring = at(y);
+      const x = Math.sin(bearing) * ring.halfWidth;
+      const z = Math.cos(bearing) * ring.halfDepth;
+      const radius = Math.hypot(x, z);
+      const step = skull * 0.02;
+      const atRadius = (h: number) => {
+        const r = at(h);
+        return Math.hypot(Math.sin(bearing) * r.halfWidth, Math.cos(bearing) * r.halfDepth);
+      };
+      const slope = (atRadius(y + step) - atRadius(y - step)) / (2 * step);
+      const length = Math.hypot(1, slope);
+      const out = lift + (carve ? relief(u, bearing) : 0);
+      const outward = radius + out / length;
+      return outsideSkull(
+        new THREE.Vector3(
+          radius > 1e-9 ? (x / radius) * outward : 0,
+          y - (out * slope) / length,
+          ring.centreZ + (radius > 1e-9 ? (z / radius) * outward : 0),
+        ),
+      );
+    }
+
+    // OFF IT. The skull has nothing to say below the nape, so the mass
+    // carries on from the ring it left on: flaring as hair does over the
+    // shoulders, drawing in again towards the tips, and swinging back
+    // behind the neck rather than through it.
+    const fraction = (u - split) / Math.max(1e-6, 1 - split);
+    const left = at(release);
+    // Gathering as it falls: hair off a head spreads a little at the
+    // shoulders and then draws in, and the reference's plait is half the
+    // width at its tip that it is at the nape.
+    const widen =
+      (1 + 0.22 * Math.sin(fraction * Math.PI * 0.7)) * (1 - 0.55 * fraction ** 1.3);
+    const y = release - drop * fraction;
+    /**
+     * AND STILL OUTSIDE THE HEAD.
+     *
+     * At the sides the hair leaves the skull well above the skull's
+     * widest point, so a mass that carried the ring it left on straight
+     * downwards went through the jaw: measured, nineteen millimetres
+     * inside. Where the measurement still describes a head, the mass
+     * takes whichever is larger — what it inherited, or the head that is
+     * in the way. Below the head there is no measurement and nothing to
+     * clear.
+     */
+    const here = y >= 0 && y <= body.skullTopY ? at(y) : null;
+    const halfWidth = Math.max(left.halfWidth * widen, here ? here.halfWidth : 0);
+    const halfDepth = Math.max(left.halfDepth * widen, here ? here.halfDepth : 0);
+    const centreZ = here && here.halfWidth > left.halfWidth * widen ? here.centreZ : left.centreZ;
+    const out = lift + (carve ? relief(u, bearing) : 0);
+    const sway = Math.sin(bearing * 3 + fraction * 2.1) * skull * 0.07 * fraction;
+    return outsideSkull(
+      new THREE.Vector3(
+        Math.sin(bearing) * (halfWidth + out) + sway,
+        y,
+        centreZ + Math.cos(bearing) * (halfDepth + out) - skull * 0.5 * fraction ** 2,
+      ),
+    );
+  };
+
   const positions: number[] = [];
   const indices: number[] = [];
-  for (let row = 0; row <= ROWS; row += 1) {
-    const t = row / ROWS;
+  for (let row = 0; row <= ROWS * 2; row += 1) {
+    // Down the outside to the tips, then back up the inside.
+    const outer = row <= ROWS;
+    const u = along(outer ? row : ROWS * 2 - row);
     for (let column = 0; column <= COLUMNS; column += 1) {
       const bearing = (column / COLUMNS) * Math.PI * 2;
-      const y = APEX + (hemAt(bearing) - APEX) * t;
-      const ring = at(y);
-      // A shallow wave round the head, so the surface has locks in it
-      // rather than being a swim cap.
-      const wave = Math.cos(bearing * 5) * skull * 0.035 * t;
-      const out = thickness(t) + wave;
-      positions.push(
-        Math.sin(bearing) * (ring.halfWidth + out),
-        y,
-        ring.centreZ + Math.cos(bearing) * (ring.halfDepth + out),
+      const point = surface(
+        bearing,
+        u,
+        outer ? CLEARANCE + thickness(u) : CLEARANCE,
+        outer,
       );
+      positions.push(point.x, point.y, point.z);
     }
   }
   const stride = COLUMNS + 1;
-  for (let row = 0; row < ROWS; row += 1) {
+  for (let row = 0; row < ROWS * 2; row += 1) {
     for (let column = 0; column < COLUMNS; column += 1) {
       const a = row * stride + column;
       const b = a + 1;
@@ -1163,80 +1352,49 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   shell.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   shell.setIndex(indices);
   shell.computeVertexNormals();
-  // Seen from inside as well: the customer turns the statue, and the
-  // parting at the back of an open shell shows its own underside.
+  /**
+   * ONE NORMAL AT EACH CROWN.
+   *
+   * Each cap is a fan of vertices that share a position and not an index,
+   * so `computeVertexNormals` gives every one of them the average of its
+   * own two triangles — forty-nine different normals at one point.
+   * Shaded, that is a dark pinprick at the crown of the head, which is a
+   * smaller version of the hole it replaced. They are one point, so they
+   * get one normal.
+   */
+  const normals = shell.getAttribute("normal") as THREE.BufferAttribute;
+  /**
+   * AND ONE NORMAL DOWN THE SEAM.
+   *
+   * Bearing zero and bearing two pi are the same place and different
+   * indices, so each got the average of only the triangles on its own
+   * side — a hard shading line straight down the centre of the head,
+   * which is visible in the front view as a crease the hair does not
+   * have. Same point, same normal.
+   */
+  for (let row = 0; row <= ROWS * 2; row += 1) {
+    const first = row * stride;
+    const last = first + COLUMNS;
+    const mean = new THREE.Vector3()
+      .fromBufferAttribute(normals, first)
+      .add(new THREE.Vector3().fromBufferAttribute(normals, last))
+      .normalize();
+    normals.setXYZ(first, mean.x, mean.y, mean.z);
+    normals.setXYZ(last, mean.x, mean.y, mean.z);
+  }
+  for (const base of [0, ROWS * 2 * stride]) {
+    const mean = new THREE.Vector3();
+    for (let column = 0; column <= COLUMNS; column += 1) {
+      mean.add(new THREE.Vector3().fromBufferAttribute(normals, base + column));
+    }
+    mean.normalize();
+    for (let column = 0; column <= COLUMNS; column += 1) {
+      normals.setXYZ(base + column, mean.x, mean.y, mean.z);
+    }
+  }
+  normals.needsUpdate = true;
   group.add(new THREE.Mesh(shell, hair));
 
-  // --- the fall -----------------------------------------------------------
-  /**
-   * One lock: a few strands on a shared path, waved down the back and
-   * flattened across.
-   */
-  const lock = (bearing: number, phase: number, drop: number, width: number) => {
-    // Off the hem, wherever the hem is at this bearing — so a lock beside
-    // the ear starts at the ear and one at the back starts at the nape.
-    const hem = hemAt(bearing);
-    const ring = at(hem);
-    const ox = Math.sin(bearing) * (ring.halfWidth + thickness(1));
-    const oz = ring.centreZ + Math.cos(bearing) * (ring.halfDepth + thickness(1));
-    const away = Math.sign(ox) || 1;
-    const strands = new THREE.Group();
-    for (const side of [-1, 0, 1] as const) {
-      const path: V3[] = [];
-      const STEPS = 9;
-      // EACH STRAND ON ITS OWN WAVE. They used to share one, offset only
-      // sideways, and three tubes moving in lockstep are one wide tube:
-      // the fall read as a flat black plank hanging beside the face
-      // rather than as hair. A lock's strands go roughly together and not
-      // exactly together, and that difference is the whole of what makes
-      // it look like hair.
-      const own = phase + side * 0.9;
-      for (let step = 0; step <= STEPS; step += 1) {
-        const t = step / STEPS;
-        // An S: out over the shoulder, back in below it, and a wave
-        // across the whole fall. A lock that only goes down is a rope.
-        const flare = Math.sin(t * Math.PI * 0.9) * skull * 0.5 * away;
-        const sway = Math.sin(t * Math.PI * 1.9 + own) * skull * 0.46;
-        path.push([
-          ox + flare + sway + side * width * 0.7,
-          hem - drop * t + Math.sin(t * Math.PI * 2.2 + own) * skull * 0.08,
-          oz - skull * 0.55 * t * t + Math.cos(t * Math.PI * 1.5 + own) * skull * 0.22 * t,
-        ]);
-      }
-      strands.add(
-        new THREE.Mesh(taperedTube(path, [width, width * 0.3], 14, 9), hair),
-      );
-    }
-    return strands;
-  };
-
-  // More of them, and each thinner: nine wide locks cover the same back
-  // as fourteen narrow ones and read as a cape instead of as hair.
-  const LOCKS = 14;
-  for (let i = 0; i < LOCKS; i += 1) {
-    const t = i / (LOCKS - 1);
-    // Round the back half: the front of the hem is the hairline, and hair
-    // does not fall from a hairline onto a face.
-    // `sweep` narrows the arc the locks leave from, so a close crop does
-    // not send strands forward past the ear.
-    const arc = (Math.PI - 0.16) * sweep;
-    const bearing = Math.PI - arc / 2 + arc * t;
-    group.add(
-      lock(
-        bearing,
-        i * 1.31,
-        skull * (3.1 + 1.1 * Math.sin(i * 0.9)) * fall,
-        skull * (0.15 + 0.05 * Math.cos(i * 2.1)),
-      ),
-    );
-  }
-  // Two shorter locks forward of the ears, as the reference's face
-  // close-up has them.
-  for (const side of [1, -1] as const) {
-    if (sweep > 0.75) {
-      group.add(lock(side * Math.PI * 0.46, side * 0.7, skull * 1.6 * fall, skull * 0.1));
-    }
-  }
   return [{ joint: "head", object: group }];
 };
 

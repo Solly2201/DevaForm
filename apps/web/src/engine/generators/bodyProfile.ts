@@ -175,10 +175,49 @@ function sampleSkullEnvelope(
   y: number,
 ): { halfWidth: number; frontZ: number; backZ: number } {
   const rows = envelope.halfWidth.length;
-  const at = Math.min(
-    rows - 1,
-    Math.max(0, (y - envelope.y0) / (envelope.step || 1)),
-  );
+  const step = envelope.step || 1;
+  /**
+   * ABOVE THE LAST ROW, A HEAD CLOSES.
+   *
+   * The rows are sampled on a fixed pitch from `y0`, so the last of them
+   * lands wherever the pitch happens to leave it — for the measured human
+   * that is five millimetres shy of `topY`, with the skull still
+   * twenty-three millimetres wide. Clamping to it, as this did, extruded
+   * that ring straight up forever, and everything that asks about the top
+   * of a head believed the head had a flat lid two inches across.
+   *
+   * Vishnu's hair was built on that answer. Its topmost row was a
+   * twenty-three-millimetre RING with nothing capping it, which is the
+   * hole a customer sees the moment the crown comes off: a smooth dome
+   * ending in an open rim. The crown reads the same surface and had the
+   * same licence to sit on a lid that is not there.
+   *
+   * The envelope already records where the head really ends, so between
+   * the last row and `topY` the section closes on a quarter-ellipse —
+   * rounded rather than conical, because that is the shape of the part of
+   * a skull the rows were too coarse to catch — and above `topY` there is
+   * nothing, which is the truth.
+   */
+  const lastY = envelope.y0 + (rows - 1) * step;
+  if (y > lastY && envelope.topY > lastY) {
+    const u = (y - lastY) / (envelope.topY - lastY);
+    if (u >= 1) {
+      const centreZ =
+        (((envelope.frontZ[rows - 1] ?? 0) + (envelope.backZ[rows - 1] ?? 0)) / 2);
+      return { halfWidth: 0, frontZ: centreZ, backZ: centreZ };
+    }
+    const closing = Math.sqrt(Math.max(0, 1 - u * u));
+    const width = envelope.halfWidth[rows - 1] ?? 0;
+    const front = envelope.frontZ[rows - 1] ?? 0;
+    const back = envelope.backZ[rows - 1] ?? 0;
+    const centreZ = (front + back) / 2;
+    return {
+      halfWidth: width * closing,
+      frontZ: centreZ + (front - centreZ) * closing,
+      backZ: centreZ + (back - centreZ) * closing,
+    };
+  }
+  const at = Math.min(rows - 1, Math.max(0, (y - envelope.y0) / step));
   const low = Math.floor(at);
   const high = Math.min(rows - 1, low + 1);
   const t = at - low;
