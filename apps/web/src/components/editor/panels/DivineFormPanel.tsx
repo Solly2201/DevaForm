@@ -22,17 +22,23 @@ import { AVAILABLE_DEITIES, DEITIES, type DeityDefinition } from "@devaform/asse
 import { useEditorStore } from "@/state/editorStore";
 import { ConfirmDialog, type Confirmation } from "../ConfirmDialog";
 import { useUiStore } from "@/state/uiStore";
+import { useStageStore } from "@/presentation/stageStore";
 
 export function DivineFormPanel() {
   const current = useEditorStore((s) => s.config.deity);
   const switchDeity = useEditorStore((s) => s.switchDeity);
   const showStatus = useUiStore((s) => s.showStatus);
+  const beginArrival = useStageStore((s) => s.beginArrival);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
 
   const take = (deity: DeityDefinition) => {
     if (!deity.available || deity.id === current) return;
     const leaving = DEITIES.find((entry) => entry.id === current);
     const go = () => {
+      // The veil goes up BEFORE the configuration changes, so there is no
+      // frame in which the old statue has gone and nothing has replaced
+      // it. It comes down when the new one is standing — see StageArrival.
+      beginArrival(deity.name);
       switchDeity(deity.id);
       showStatus(`Now creating ${deity.name}`);
     };

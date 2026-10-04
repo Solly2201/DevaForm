@@ -16,6 +16,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { getPresentation } from "@devaform/asset-system";
 import { PresentationEntry } from "@/presentation/PresentationEntry";
+import { StageArrival } from "@/presentation/StageArrival";
 import { StageVignette } from "@/presentation/StageVignette";
 import { shouldShowEntry, useStageStore } from "@/presentation/stageStore";
 import { useDeity } from "@/state/deityContext";
@@ -117,6 +118,10 @@ export function EditorShell() {
             {/* The frame's edge, over the room rather than under it: the
                 canvas is opaque now that the hall is geometry. */}
             <StageVignette />
+            {/* A form being swapped for another. Over the stage and under
+                the chrome: the customer keeps their tools, and what they
+                cannot see is the one thing that is not ready. */}
+            <StageArrival />
             {/* Not merely invisible: not there. A control faded to zero
                 is still in the tab order, and a customer who has not
                 arrived yet could reach the camera presets with a Tab. */}

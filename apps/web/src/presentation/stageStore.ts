@@ -34,8 +34,24 @@ interface StageState {
    * rather than by two sets of coordinates.
    */
   figure: FigureExtent | null;
+  /**
+   * A form the customer has asked for and that is not standing yet.
+   *
+   * Separate from `phase`, which is about the ENTRY — the one sequence
+   * that happens once per visit. This is the other moment the stage has
+   * nothing finished to show: a deity has been swapped, the old figure is
+   * gone and the new one is being prepared. Both deserve a veil and they
+   * are not the same veil, because the entry is a place the customer
+   * walks through and this is a wait they did not ask for.
+   *
+   * Holds the NAME, because what the veil says is the whole of what makes
+   * it a transition rather than a stall: "Vishnu is taking form".
+   */
+  arriving: string | null;
   beginSettle: () => void;
   finishSettle: () => void;
+  beginArrival: (name: string) => void;
+  finishArrival: () => void;
   setCharacterReady: (ready: boolean) => void;
   setFigure: (figure: FigureExtent | null) => void;
 }
@@ -102,6 +118,19 @@ export const useStageStore = create<StageState>()((set) => ({
   phase: "intro",
   beginSettle: () => set((state) => (state.phase === "intro" ? { phase: "settling" } : state)),
   finishSettle: () => set({ phase: "ready" }),
+  arriving: null,
+  /**
+   * The old figure is counted as gone AT ONCE.
+   *
+   * The rig the previous deity was using is still in the scene for the
+   * frame or two it takes React to commit the new configuration, so
+   * `characterReady` would stay true across the switch and the veil would
+   * lift before anything had changed. Saying plainly that there is no
+   * character yet is both true a moment early and the only way to make
+   * "wait for the new one" mean what it says.
+   */
+  beginArrival: (name) => set({ arriving: name, characterReady: false }),
+  finishArrival: () => set({ arriving: null }),
   characterReady: false,
   setCharacterReady: (ready) =>
     set((state) => (state.characterReady === ready ? state : { characterReady: ready })),

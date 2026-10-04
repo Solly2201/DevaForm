@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveAssetRef } from "@devaform/asset-system";
 import { useEditorStore } from "@/state/editorStore";
+import { glbPathsFor } from "./assetReadiness";
 import { getGlb, subscribeGlbCache } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 import {
@@ -62,15 +63,13 @@ export function CharacterRoot() {
    * the customer is still at the temple doors instead of halfway down the
    * hall.
    */
-  const needed = useMemo(() => {
-    const refs = [...Object.values(parts), ...attachments.map((a) => a.asset)];
-    const paths = new Set<string>();
-    for (const ref of refs) {
-      const source = resolveAssetRef(ref)?.source;
-      if (source?.kind === "glb") paths.add(source.path);
-    }
-    return [...paths];
-  }, [parts, attachments]);
+  const needed = useMemo(
+    () => glbPathsFor(useEditorStore.getState().config),
+    // The configuration's own asset references, and nothing else, decide
+    // this: see glbPathsFor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [parts, attachments],
+  );
 
   /**
    * Whether every one of them has SETTLED — loaded, or failed.
