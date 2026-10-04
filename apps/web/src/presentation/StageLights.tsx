@@ -15,24 +15,45 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 import { SceneEnvironment } from "@/engine/SceneEnvironment";
-import { getLightingPreset, type LightingPresetId } from "@/engine/lighting";
 import { useStageStore } from "./stageStore";
+import { resolveStudioLighting, type StudioLighting } from "./studioLighting";
 
 export function StageLights({
-  presetId,
+  lighting,
   settleMs,
   /** Whether a backdrop image is behind the canvas: it owns the background. */
   transparent,
 }: {
-  presetId: LightingPresetId;
+  lighting: StudioLighting;
   settleMs: number;
   transparent: boolean;
 }) {
-  const preset = getLightingPreset(presetId);
+  /**
+   * The preset, with the customer's adjustment already in it.
+   *
+   * Resolving is pure and lives in `studioLighting`: what reaches this
+   * component is a finished rig, so the only thing here that knows about
+   * key, fill and rim is the thing that draws them.
+   */
+  const preset = resolveStudioLighting(lighting);
   const phase = useStageStore((state) => state.phase);
   const group = useRef<THREE.Group | null>(null);
   const level = useRef(phase === "ready" ? 1 : 0);
   const scene = useThree((state) => state.scene);
+  const gl = useThree((state) => state.gl);
+
+  /**
+   * EXPOSURE, which the Studio never had.
+   *
+   * r3f's default is ACES filmic at an exposure of one and nothing ever
+   * set it, so the only way to make the whole image brighter was to turn
+   * up individual lights — which changes the modelling, not the exposure.
+   * They are different controls and a customer photographing a statue
+   * wants both.
+   */
+  useEffect(() => {
+    gl.toneMappingExposure = preset.exposure;
+  }, [gl, preset.exposure]);
 
   // The character's rig lights the CHARACTER. A directional does not
   // fall off, so the same key that models a statue a metre tall also
@@ -77,12 +98,12 @@ export function StageLights({
         />
         {preset.directionals.map((light, index) => (
           <directionalLight
-            key={`${preset.id}-${index}`}
+  key={`${preset.presetId}-${index}`}
             position={light.position}
             intensity={light.intensity}
             color={light.color}
             userData={{ full: light.intensity }}
-            castShadow={light.castShadow ?? false}
+            castShadow={light.castShadow}
             /**
              * The shadow map frames the FIGURE, and now contains only the
              * figure.

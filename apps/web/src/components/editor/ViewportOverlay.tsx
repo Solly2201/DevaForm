@@ -1,8 +1,8 @@
 "use client";
 
 /** Camera view + lighting controls overlaid on the viewport. */
-import { LIGHTING_PRESETS, type LightingPresetId } from "@/engine/lighting";
 import { useUiStore, type CameraView } from "@/state/uiStore";
+import { LightingControl } from "./LightingControl";
 
 const VIEWS: ReadonlyArray<{ view: CameraView; label: string }> = [
   { view: "threeQuarter", label: "¾" },
@@ -16,8 +16,6 @@ const VIEWS: ReadonlyArray<{ view: CameraView; label: string }> = [
 export function ViewportOverlay() {
   const requestCameraView = useUiStore((s) => s.requestCameraView);
   const currentView = useUiStore((s) => s.cameraCommand.view);
-  const lightingPreset = useUiStore((s) => s.lightingPreset);
-  const setLightingPreset = useUiStore((s) => s.setLightingPreset);
 
   return (
     <>
@@ -62,26 +60,7 @@ export function ViewportOverlay() {
           Reset
         </button>
       </div>
-      <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-2 rounded-xl border border-surface-700/80 bg-surface-900/85 px-3 py-2 backdrop-blur">
-        <label
-          htmlFor="stage-lighting"
-          className="text-[11px] uppercase tracking-wide text-stone-500"
-        >
-          Light
-        </label>
-        <select
-          id="stage-lighting"
-          value={lightingPreset}
-          onChange={(e) => setLightingPreset(e.target.value as LightingPresetId)}
-          className="rounded-md border border-surface-700 bg-surface-850 px-2 py-1 text-xs text-stone-200"
-        >
-          {LIGHTING_PRESETS.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <LightingControl />
     </>
   );
 }

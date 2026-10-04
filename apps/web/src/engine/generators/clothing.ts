@@ -2,7 +2,7 @@
  * Clothing generators: dhoti styles and the angavastram shawl.
  */
 import * as THREE from "three";
-import { mesh, pleatedCylinder, taperedTube, type V3 } from "../geometry";
+import { mesh, pleatedCylinder } from "../geometry";
 import { pushOutsideBody, surfaceRibbon, type SurfaceWaypoint } from "./surfaceWalk";
 import { num, type PartGenerator } from "./types";
 

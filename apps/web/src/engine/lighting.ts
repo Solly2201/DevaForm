@@ -9,6 +9,16 @@ export interface DirectionalLightSpec {
   intensity: number;
   color: string;
   castShadow?: boolean;
+  /**
+   * What job this light is doing, for the Studio's own key/fill/rim
+   * controls to multiply. Optional, because every rig below is written to
+   * the same convention — key first and it is the one that casts, rim
+   * last, fill in between — and `presentation/studioLighting.roleOf`
+   * reads it that way when nothing says otherwise. `lighting.test.ts`
+   * holds the shipped presets to that convention, so a rig written
+   * differently has to say so here.
+   */
+  role?: "key" | "fill" | "rim";
 }
 
 export interface LightingPreset {

@@ -26,7 +26,6 @@ import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { orbitBounds, type PresentationConfig } from "@devaform/asset-system";
 import { CharacterRoot } from "@/engine/CharacterRoot";
-import type { LightingPresetId } from "@/engine/lighting";
 import { heroComposition, type HeroComposition } from "@/presentation/heroFraming";
 import { StageEnvironment } from "@/presentation/StageEnvironment";
 import { StageLights } from "@/presentation/StageLights";
@@ -154,7 +153,7 @@ function AdoptHero({
 export function EditorViewport({ stage }: { stage: PresentationConfig }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const lightingPreset = useUiStore((s) => s.lightingPreset);
+  const lighting = useUiStore((s) => s.lighting);
   const phase = useStageStore((s) => s.phase);
   const figure = useStageStore((s) => s.figure);
 
@@ -342,7 +341,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
         style={{ background: "transparent" }}
       >
         <StageLights
-          presetId={lightingPreset as LightingPresetId}
+          lighting={lighting}
           settleMs={stage.intro?.settleMs ?? 900}
           transparent={false}
         />
