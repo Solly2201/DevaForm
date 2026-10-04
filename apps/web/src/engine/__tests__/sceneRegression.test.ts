@@ -269,7 +269,13 @@ const PINNED = {
   // both looked at before pinning: nothing else about either of them
   // moved, and their jewellery sits on their arms instead of through
   // them.
-  shiva: { nodes: 335, digest: "183cd2e87fa80b7a" },
+  //
+  // Re-pinned when a face stopped being one thing. Both mesh-bodied
+  // deities arrive wearing a brow now — three are offered, built from
+  // whatever skull is wearing them — and a face with none reads as
+  // unfinished, which is what both of them did. Three nodes more: the
+  // part's own group and the two brows. Nothing else about Shiva moved.
+  shiva: { nodes: 338, digest: "e03c9e12f07f1fd8" },
 } as const;
 
 describe("protected characters do not move", () => {

@@ -5,6 +5,7 @@
  */
 import type { AttachmentGenerator, PartGenerator } from "./types";
 import { humanoidBody, humanoidHands } from "./body";
+import { featureBrows } from "./face";
 import { athleticBody } from "./bodyAthletic";
 import { ganeshaEars, classicEyes, ganeshaHead, ganeshaTrunk, ganeshaTusks } from "./head";
 import { humanoidHideWrap } from "./hideGarment";
@@ -67,6 +68,8 @@ export const PART_GENERATORS: Record<string, PartGenerator> = {
   "humanoid.dhoti": humanoidDhoti,
   "humanoid.hideWrap": humanoidHideWrap,
   "vishnu.hair": featureHairFlowing,
+  // Shared facial features — built from whatever skull is wearing them.
+  "feature.brows": featureBrows,
   "humanoid.shawl": humanoidShawl,
   "humanoid.eyes": classicEyes,
   // Ganesha anatomy

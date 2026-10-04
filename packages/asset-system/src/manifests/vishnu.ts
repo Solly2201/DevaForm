@@ -262,15 +262,57 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     category: "ornaments",
     printability: proto,
   },
+  // ---- HAIR -------------------------------------------------------------
+  //
+  // One generator, three heads of hair. What separates them is how far
+  // the locks fall, how far round the sides they come and how much mass
+  // they carry — see generators/vishnu.ts. A second style is a line here
+  // rather than a second generator, which is the same bargain Shiva's two
+  // jata already make.
   {
     id: "vishnu.hair.flowing",
     version: 1,
     name: "Flowing Hair",
-    description: "Long dark hair falling behind the shoulders, under the crown.",
+    description: "Long dark hair falling behind the shoulders and forward past each ear.",
     kind: { type: "part", slot: "hair" },
     deityCompatibility: ["vishnu"],
     stage: "prototype",
-    source: { kind: "procedural", generatorId: "vishnu.hair" },
+    source: { kind: "procedural", generatorId: "vishnu.hair", params: { fall: 1, sweep: 1, mass: 1 } },
+    materialZones: ["hair"],
+    category: "features",
+    printability: proto,
+  },
+  {
+    id: "vishnu.hair.gathered",
+    version: 1,
+    name: "Gathered",
+    description:
+      "Drawn back off the face and falling in one mass behind — the ears and the kundala clear.",
+    kind: { type: "part", slot: "hair" },
+    deityCompatibility: ["vishnu"],
+    stage: "prototype",
+    source: {
+      kind: "procedural",
+      generatorId: "vishnu.hair",
+      params: { fall: 1.15, sweep: 0.62, mass: 1.1 },
+    },
+    materialZones: ["hair"],
+    category: "features",
+    printability: proto,
+  },
+  {
+    id: "vishnu.hair.cropped",
+    version: 1,
+    name: "Close Cropped",
+    description: "Short at the nape, close to the skull — the plainest of the three.",
+    kind: { type: "part", slot: "hair" },
+    deityCompatibility: ["vishnu"],
+    stage: "prototype",
+    source: {
+      kind: "procedural",
+      generatorId: "vishnu.hair",
+      params: { fall: 0.22, sweep: 0.7, mass: 0.6 },
+    },
     materialZones: ["hair"],
     category: "features",
     printability: proto,

@@ -41,6 +41,10 @@ export const PART_SLOTS = [
   "trunk",
   "tusks",
   "hair",
+  // A face's own features, for bodies that have a face to put them on.
+  // Additive: `parts` is a record, so a creation saved before this slot
+  // existed simply does not mention it.
+  "brows",
   "hands",
   "lowerGarment",
   "upperGarment",

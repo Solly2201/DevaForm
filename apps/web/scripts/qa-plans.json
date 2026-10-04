@@ -581,5 +581,89 @@
         ]
       }
     ]
+  },
+  "features": {
+    "width": 720,
+    "height": 860,
+    "shots": [
+      {
+        "name": "brow-serene",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "part": "brows:humanoid.brows.serene"
+        },
+        "views": [
+          "front"
+        ]
+      },
+      {
+        "name": "brow-arched",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "part": "brows:humanoid.brows.arched"
+        },
+        "views": [
+          "front"
+        ]
+      },
+      {
+        "name": "brow-strong",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "part": "brows:humanoid.brows.strong"
+        },
+        "views": [
+          "front"
+        ]
+      },
+      {
+        "name": "hair-flowing",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "part": "hair:vishnu.hair.flowing",
+          "without": "vishnu.crown.kirita"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "hair-gathered",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "part": "hair:vishnu.hair.gathered",
+          "without": "vishnu.crown.kirita"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "hair-cropped",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "part": "hair:vishnu.hair.cropped",
+          "without": "vishnu.crown.kirita"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      }
+    ]
   }
 }

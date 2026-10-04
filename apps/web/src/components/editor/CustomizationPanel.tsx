@@ -45,6 +45,7 @@ const SLOT_LABELS: Record<PartSlot, string> = {
   trunk: "Trunk",
   tusks: "Tusks",
   hair: "Hair",
+  brows: "Eyebrows",
   hands: "Hand Style",
   lowerGarment: "Dhoti",
   upperGarment: "Upper Garment",
@@ -66,6 +67,7 @@ const SLOT_LABELS: Record<PartSlot, string> = {
 const OPTIONAL_SLOTS: readonly PartSlot[] = [
   "upperGarment",
   "hair",
+  "brows",
   "earrings",
   "armlets",
   "bracelets",

@@ -142,6 +142,21 @@ function configFor(params: URLSearchParams): CharacterConfiguration {
   const posed = pose ? posedWith(config, pose) : config;
   const body = params.get("body");
   if (body) posed.parts.body = { assetId: body, version: 1 };
+  /**
+   * Swap any part, as `?part=hair:vishnu.hair.cropped`.
+   *
+   * A feature with three variants cannot be judged from the one the
+   * default happens to wear, and `without` can only take things away.
+   * Repeatable: `?part=hair:…&part=brows:…`.
+   */
+  for (const pair of params.getAll("part")) {
+    const [slot, assetId, version] = pair.split(":");
+    if (!slot || !assetId) continue;
+    (posed.parts as Record<string, unknown>)[slot] = {
+      assetId,
+      version: Number(version ?? 1) || 1,
+    };
+  }
   const arms = params.get("arms");
   if (arms === "2" || arms === "4") posed.arms = { count: Number(arms) as 2 | 4 };
   const morphs = params.get("morphs");

@@ -12,6 +12,69 @@
 import type { AssetDefinition } from "../types";
 
 export const SHARED_ASSETS: readonly AssetDefinition[] = [
+  // ---- FACIAL FEATURES --------------------------------------------------
+  //
+  // Shared, because a face is a face: these are built from the measured
+  // skull of whatever body is wearing them (see generators/face.ts), so
+  // the same three brows fit Shiva and Vishnu and would fit the next
+  // human-faced deity without being touched. Scoped to the deities that
+  // HAVE a human face rather than to "any" — an elephant's brow ridge is
+  // not this shape and should not be offered one.
+  //
+  // Three of them, and they differ in the two things a brow actually
+  // says: how far it lifts, and how much of it there is.
+  {
+    id: "humanoid.brows.serene",
+    version: 1,
+    name: "Serene",
+    description: "An even brow, barely lifted — the calm face the reference sheets lead with.",
+    kind: { type: "part", slot: "brows" },
+    deityCompatibility: ["shiva", "vishnu"],
+    stage: "prototype",
+    source: {
+      kind: "procedural",
+      generatorId: "feature.brows",
+      params: { arch: 0.3, weight: 0.45, lift: 0 },
+    },
+    materialZones: ["hair"],
+    category: "face",
+    printability: { printSourceAvailable: false, minStatueHeightMm: 150 },
+  },
+  {
+    id: "humanoid.brows.arched",
+    version: 1,
+    name: "Arched",
+    description:
+      "Lifted through the middle and falling away at the temple — a gentler, more open face.",
+    kind: { type: "part", slot: "brows" },
+    deityCompatibility: ["shiva", "vishnu"],
+    stage: "prototype",
+    source: {
+      kind: "procedural",
+      generatorId: "feature.brows",
+      params: { arch: 1, weight: 0.4, lift: 0.5 },
+    },
+    materialZones: ["hair"],
+    category: "face",
+    printability: { printSourceAvailable: false, minStatueHeightMm: 150 },
+  },
+  {
+    id: "humanoid.brows.strong",
+    version: 1,
+    name: "Strong",
+    description: "Heavy and level, set low over the eye — the ascetic's brow.",
+    kind: { type: "part", slot: "brows" },
+    deityCompatibility: ["shiva", "vishnu"],
+    stage: "prototype",
+    source: {
+      kind: "procedural",
+      generatorId: "feature.brows",
+      params: { arch: 0.15, weight: 1, lift: -0.4 },
+    },
+    materialZones: ["hair"],
+    category: "face",
+    printability: { printSourceAvailable: false, minStatueHeightMm: 150 },
+  },
   {
     id: "humanoid.body.human",
     version: 1,

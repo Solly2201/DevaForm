@@ -14,7 +14,7 @@
  */
 import * as THREE from "three";
 import { lathe, loft, mesh, taperedTube } from "../geometry";
-import type { AttachmentGenerator, GeneratorContext, PartGenerator } from "./types";
+import { num, type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
 import type { BodyProfile } from "./bodyProfile";
 import { walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
 
@@ -1057,6 +1057,21 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   const group = new THREE.Group();
   const body = ctx.body;
   const skull = body.headRadius;
+  /**
+   * How this head of hair differs from the next.
+   *
+   * `fall` is how far the locks drop — the whole difference between hair
+   * over the shoulders and hair cropped at the nape. `sweep` is how far
+   * round the sides they come, which decides whether the face is framed
+   * or clear. `body` is how far the mass stands off the skull.
+   *
+   * Three numbers, because a second head of hair should be a line in a
+   * manifest rather than a second generator: see humanoid.brows for the
+   * same argument about faces.
+   */
+  const fall = num(ctx, "fall", 1);
+  const sweep = num(ctx, "sweep", 1);
+  const mass = num(ctx, "mass", 1);
 
   /** The skull at a height, as the hair has to lie on it. */
   const at = (y: number) => {
@@ -1108,7 +1123,7 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
    * straight cut across the back.
    */
   const thickness = (t: number) =>
-    skull * (0.02 + 0.42 * Math.sin(Math.min(1, t * 1.18) * Math.PI * 0.62));
+    skull * (0.02 + 0.42 * mass * Math.sin(Math.min(1, t * 1.18) * Math.PI * 0.62));
   // --- the shell ----------------------------------------------------------
   // All the way round. Zero is the FRONT, and the face is still left
   // open — not by cutting the sweep short, but because the hem reaches
@@ -1202,12 +1217,15 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
     const t = i / (LOCKS - 1);
     // Round the back half: the front of the hem is the hairline, and hair
     // does not fall from a hairline onto a face.
-    const bearing = Math.PI * 0.5 + 0.08 + (Math.PI - 0.16) * t;
+    // `sweep` narrows the arc the locks leave from, so a close crop does
+    // not send strands forward past the ear.
+    const arc = (Math.PI - 0.16) * sweep;
+    const bearing = Math.PI - arc / 2 + arc * t;
     group.add(
       lock(
         bearing,
         i * 1.31,
-        skull * (3.1 + 1.1 * Math.sin(i * 0.9)),
+        skull * (3.1 + 1.1 * Math.sin(i * 0.9)) * fall,
         skull * (0.15 + 0.05 * Math.cos(i * 2.1)),
       ),
     );
@@ -1215,7 +1233,9 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   // Two shorter locks forward of the ears, as the reference's face
   // close-up has them.
   for (const side of [1, -1] as const) {
-    group.add(lock(side * Math.PI * 0.46, side * 0.7, skull * 1.6, skull * 0.1));
+    if (sweep > 0.75) {
+      group.add(lock(side * Math.PI * 0.46, side * 0.7, skull * 1.6 * fall, skull * 0.1));
+    }
   }
   return [{ joint: "head", object: group }];
 };

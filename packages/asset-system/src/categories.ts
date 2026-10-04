@@ -120,8 +120,8 @@ export const SHIVA_EDITOR_CATEGORIES: readonly EditorCategory[] = [
     id: "face",
     label: "Face",
     icon: "face",
-    description: "Eyes, third eye and face shaping",
-    content: { type: "mixed", slots: ["eyes"], sockets: ["head.forehead"], allowNone: true },
+    description: "Brows, eyes, third eye and face shaping",
+    content: { type: "mixed", slots: ["eyes", "brows"], sockets: ["head.forehead"], allowNone: true },
   },
   {
     id: "body",
@@ -209,8 +209,8 @@ export const VISHNU_EDITOR_CATEGORIES: readonly EditorCategory[] = [
     id: "face",
     label: "Face",
     icon: "face",
-    description: "Eyes, tilaka and face shaping",
-    content: { type: "mixed", slots: ["eyes"], sockets: ["head.forehead"], allowNone: true },
+    description: "Brows, eyes, tilaka and face shaping",
+    content: { type: "mixed", slots: ["eyes", "brows"], sockets: ["head.forehead"], allowNone: true },
   },
   {
     id: "body",

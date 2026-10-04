@@ -89,6 +89,10 @@ export function createDefaultShivaConfiguration(): CharacterConfiguration {
       head: null,
       eyes: null,
       hair: { assetId: "shiva.jata.flowing", version: 1 },
+      // A face without brows reads as unfinished, which is what both
+      // mesh-bodied deities looked like. Three are offered; this is the
+      // one the reference's own face leads with.
+      brows: { assetId: "humanoid.brows.strong", version: 1 },
       hands: null,
       // The skin IS the garment. A cream dhoti under it made the hide
       // read as a belt over a cream cylinder; the layered dhoti-and-hide
@@ -174,6 +178,7 @@ export function createDefaultVishnuConfiguration(): CharacterConfiguration {
       head: null,
       eyes: null,
       hair: { assetId: "vishnu.hair.flowing", version: 1 },
+      brows: { assetId: "humanoid.brows.serene", version: 1 },
       hands: null,
       lowerGarment: { assetId: "vishnu.garment.dhoti", version: 1 },
       upperGarment: null,
