@@ -8,7 +8,7 @@
  * at the local origin so the hand's item socket closes around them.
  */
 import * as THREE from "three";
-import { lathe, loft, mesh, taperedTube, type V3 } from "../geometry";
+import { collapse, lathe, loft, mesh, taperedTube, type V3 } from "../geometry";
 import {
   num,
   type AttachmentGenerator,
@@ -870,7 +870,8 @@ export const ornamentRudraksha: AttachmentGenerator = (ctx) => {
       ],
     }),
   );
-  return group;
+  // A hundred and fourteen beads on two strands. See geometry.collapse.
+  return collapse(group);
 };
 
 // ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@
  * - pleatedCylinder: radially rippled cylinder (dhoti pleats)
  */
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 export type V3 = readonly [number, number, number];
 
@@ -266,4 +267,105 @@ export function radialRing(
     group.add(child);
   }
   return group;
+}
+
+/**
+ * Collapse an ornament's meshes to one per material.
+ *
+ * WHY THIS EXISTS. A procedural ornament is written the way it is worn —
+ * a crown is a band and a drum and forty ribs and twenty scallops; a
+ * garland is a hundred and seventy-seven flowers; a mala is a hundred and
+ * fourteen beads — and each of those was its own `THREE.Mesh`. Measured
+ * through the real renderer, Vishnu's default statue cost six hundred and
+ * ninety-nine draw calls against Shiva's two hundred and ninety-five, and
+ * five hundred and fifty-nine of his were three attachments: the kirita,
+ * the chakra and the vaijayanti. Nothing was wrong with the geometry.
+ * There was simply one object per petal.
+ *
+ * WHAT IT IS SAFE TO DO, AND WHY. This is explicit rather than automatic:
+ * a generator asks for it, having looked at what it built. Merging is
+ * wrong wherever the separate objects are load-bearing —
+ *
+ *   • a skinned mesh deforms per vertex against a skeleton,
+ *   • a morph target is a per-mesh attribute,
+ *   • a part split across joints must stay split, or a folded leg takes
+ *     its cloth with it and the cloth stays behind,
+ *   • anything the customer can change on its own has to BE on its own.
+ *
+ * None of those is true of the ornaments that call this. They are rebuilt
+ * whole when anything about them changes, they ride one socket, and the
+ * customer's choice of metal is a property of the shared material object
+ * — which the merged mesh still points at, so a palette change still
+ * reaches it. Skinned and morphed meshes are skipped here as well as
+ * excluded by the caller, because a guard that is only a convention is
+ * one refactor from not being a guard.
+ *
+ * Geometries are grouped by material AND by their attribute signature:
+ * `mergeGeometries` requires them to match, and a repository where some
+ * pieces carry vertex colours and some do not would otherwise merge to
+ * null and silently lose the ornament.
+ */
+export function collapse(root: THREE.Object3D): THREE.Object3D {
+  root.updateMatrixWorld(true);
+  const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const groups = new Map<
+    string,
+    {
+      material: THREE.Material | THREE.Material[];
+      geometries: THREE.BufferGeometry[];
+      casts: boolean;
+      receives: boolean;
+    }
+  >();
+  const originals: THREE.Mesh[] = [];
+  const materials: Array<THREE.Material | THREE.Material[]> = [];
+
+  root.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
+    if (mesh.morphTargetInfluences?.length) return;
+    if (Array.isArray(mesh.material)) return;
+    const signature = Object.keys(mesh.geometry.attributes).sort().join(",");
+    const index = materials.indexOf(mesh.material);
+    const slot = index >= 0 ? index : materials.push(mesh.material) - 1;
+    const key = `${slot}|${signature}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { material: mesh.material, geometries: [], casts: false, receives: false };
+      groups.set(key, group);
+    }
+    // THE SHADOW FLAGS SURVIVE. They are per-object, and a fresh mesh has
+    // them off: merging without carrying them forward silently drops
+    // every collapsed ornament out of the shadow pass, which is a change
+    // nobody asked for dressed up as an optimisation.
+    group.casts = group.casts || mesh.castShadow;
+    group.receives = group.receives || mesh.receiveShadow;
+    const geometry = mesh.geometry.clone();
+    mesh.updateWorldMatrix(true, false);
+    geometry.applyMatrix4(new THREE.Matrix4().multiplyMatrices(toRoot, mesh.matrixWorld));
+    group.geometries.push(geometry);
+    originals.push(mesh);
+  });
+
+  // Nothing to gain, and something to lose: a single mesh re-parented to
+  // the root loses whatever its own node was expressing.
+  if (originals.length < 2) return root;
+
+  const merged: THREE.Mesh[] = [];
+  for (const group of groups.values()) {
+    const geometry =
+      group.geometries.length === 1
+        ? (group.geometries[0] as THREE.BufferGeometry)
+        : mergeGeometries(group.geometries, false);
+    if (!geometry) return root;
+    const mesh = new THREE.Mesh(geometry, group.material);
+    mesh.castShadow = group.casts;
+    mesh.receiveShadow = group.receives;
+    merged.push(mesh);
+  }
+
+  for (const mesh of originals) mesh.removeFromParent();
+  for (const mesh of merged) root.add(mesh);
+  return root;
 }

@@ -13,7 +13,7 @@
  * comments say which panel of it each decision came from.
  */
 import * as THREE from "three";
-import { lathe, loft, mesh, taperedTube } from "../geometry";
+import { collapse, lathe, loft, mesh, taperedTube } from "../geometry";
 import { num, type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
 import type { BodyProfile } from "./bodyProfile";
 import { walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
@@ -355,7 +355,10 @@ export const itemChakra: AttachmentGenerator = (ctx) => {
     small.add(flame(RIM * 0.96, RIM * 1.13, RIM * 0.06, 0.16));
     disc.add(small);
   }
-  return group;
+  // Twenty-four spokes, their beads, the rim's flames and the hub: a
+  // hundred and ninety-one objects for one wheel, and not one of them
+  // separately selectable. See geometry.collapse.
+  return collapse(group);
 };
 
 /**
@@ -948,7 +951,9 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
       { position: [0, 0, seatZ] },
     ),
   );
-  return group;
+  // Band, drum, ribs, scallops, kumbha, finial and every gem in them —
+  // a hundred and ninety-one meshes of one crown. See geometry.collapse.
+  return collapse(group);
 };
 
 /**
@@ -1469,5 +1474,6 @@ export const ornamentVaijayanti: AttachmentGenerator = (ctx: GeneratorContext) =
     );
     group.add(head);
   }
-  return group;
+  // A hundred and seventy-seven flowers. See geometry.collapse.
+  return collapse(group);
 };

@@ -367,8 +367,29 @@ function Publish({
       // render.
       scene.updateMatrixWorld(true);
       camera.updateMatrixWorld(true);
+      /**
+       * WHAT THE FRAME COST, alongside what it looked like.
+       *
+       * Draw calls and triangles are properties of the SCENE, not of the
+       * rasteriser, so reading them under SwiftShader is as true as
+       * reading them on a GPU — unlike frame time, which is not, and
+       * which this deliberately does not report. A harness that can
+       * photograph a figure but cannot say it is thirteen hundred draw
+       * calls leaves the budget to be discovered on somebody's laptop.
+       */
+      gl.info.reset();
       gl.render(scene, camera);
-      w.__devaformQaFrame = { ...frame, camera: camera.position.toArray() };
+      w.__devaformQaFrame = {
+        ...frame,
+        camera: camera.position.toArray(),
+        cost: {
+          calls: gl.info.render.calls,
+          triangles: gl.info.render.triangles,
+          geometries: gl.info.memory.geometries,
+          textures: gl.info.memory.textures,
+          programs: gl.info.programs?.length ?? 0,
+        },
+      };
       w.__devaformQa = gl.domElement.width ? gl.domElement.toDataURL("image/png") : "FAILED";
     }, 500);
     return () => clearTimeout(timer);

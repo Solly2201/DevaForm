@@ -324,7 +324,11 @@ const PINNED = {
   // thinner through the wrap than the mala hanging over it, which is a
   // gold cord round a neck and not the torque the reference sheet labels.
   // Same nodes, a thicker snake.
-  shiva: { nodes: 384, digest: "2ff7234ba8012259" },
+  // And a hundred and twelve nodes fewer, which is the mala: a hundred
+  // and fourteen beads that were a hundred and fourteen draw calls and
+  // are now two, one per material. Nothing about the mala changed except
+  // how many objects it is. See geometry.collapse and renderBudget.
+  shiva: { nodes: 272, digest: "b8b1a05bab0f7ad3" },
 } as const;
 
 describe("protected characters do not move", () => {
