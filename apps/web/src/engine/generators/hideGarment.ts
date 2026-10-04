@@ -50,6 +50,15 @@ const CLEARANCE = 0.008;
 const DHOTI_FOLDS = 0.2;
 
 /**
+ * Columns round the dhoti. Fine enough for the folds to survive being
+ * sampled: at forty-four, the deeper of the two fold frequencies lands on
+ * barely two samples a cycle and washes out into a smooth tube. Shared,
+ * because the hem border is cut from the column's own vertices and has to
+ * agree with it ring for ring.
+ */
+const DHOTI_RADIAL = 68;
+
+/**
  * One ring of a cloth sleeve.
  *
  * `rx`/`rz` are the half-widths, and `flat` is how much of the width is a
@@ -1039,9 +1048,21 @@ function dhotiSections(body: BodyProfile, reach: number): ClothSection[] {
     // much as the cloth stands clear. Cloth hanging on a leg takes the
     // leg's own taper and gathers again at the hem.
     around(seat - body.thighLength * 0.45, 2.8),
-    around(knee + body.shinLength * 0.06, 2.4),
-    around((knee + hem) / 2, 1.9),
-    around(hem, 2.2),
+    /**
+     * Room for a pose, at the knee.
+     *
+     * The cloth is cut to the leg envelope the body reports AT REST, and
+     * a standing pose is not rest: `vishnu.serene` rolls one thigh six
+     * degrees and pitches the other four, which at knee height is about
+     * three centimetres of lateral travel. Measured against the real leg
+     * mesh, twenty-nine vertices of knee and upper calf stood outside the
+     * cloth — about seven millimetres proud at the widest, on the side,
+     * where it is the only thing you can see from. The thigh band above
+     * already carried enough; these two did not.
+     */
+    around(knee + body.shinLength * 0.06, 3.3),
+    around((knee + hem) / 2, 3.5),
+    around(hem, 3.3),
   ];
 }
 
@@ -1096,8 +1117,8 @@ function dhotiColumn(
   // Fine enough for the folds to survive being sampled. At forty-four
   // columns the deeper of the two fold frequencies lands on barely two
   // samples a cycle and washes out into a smooth tube.
-  const RADIAL = 68;
-  const geometry = sleeve(sections, RADIAL, 5, DHOTI_FOLDS);
+  const geometry = sleeve(sections, DHOTI_RADIAL, 5, DHOTI_FOLDS);
+  const RADIAL = DHOTI_RADIAL;
 
   /**
    * Curve the hem.
@@ -1144,6 +1165,79 @@ function dhotiColumn(
 }
 
 /**
+ * The border along the hem.
+ *
+ * Every reference sheet in the repository has one — a red band round the
+ * bottom of Vishnu's yellow, ochre round the bottom of Shiva's cream —
+ * and the garment had none. It is the detail that says a dhoti is a
+ * length of woven cloth with a selvedge rather than a dyed cylinder, and
+ * the Studio showed a dyed cylinder.
+ *
+ * It is built from the column's OWN vertices rather than from a second
+ * loft, because the column's hem is not level: it is lifted between the
+ * legs and carried lower on one side, by a shaping pass that runs after
+ * the loft. A band lofted from the same sections would be a flat ring
+ * cutting across a shaped hem, and a torus would be worse. Copying the
+ * last rings and pushing them out a millimetre means the border cannot
+ * disagree with the hem it is on — whatever the hem turns out to be.
+ */
+function dhotiBorder(
+  column: THREE.BufferGeometry,
+  radial: number,
+  material: THREE.Material,
+  /** How many of the column's own rings the band covers. */
+  depth = 2,
+): THREE.Mesh {
+  const source = column.getAttribute("position");
+  const rings = source.count / radial;
+  const first = Math.max(0, rings - 1 - depth);
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const PROUD = 0.0015;
+  for (let ring = first; ring < rings; ring += 1) {
+    // The ring's own centre, so a section carrying a z offset is pushed
+    // out from where it actually is.
+    let cx = 0;
+    let cz = 0;
+    for (let column_ = 0; column_ < radial; column_ += 1) {
+      cx += source.getX(ring * radial + column_);
+      cz += source.getZ(ring * radial + column_);
+    }
+    cx /= radial;
+    cz /= radial;
+    for (let column_ = 0; column_ < radial; column_ += 1) {
+      const index = ring * radial + column_;
+      const dx = source.getX(index) - cx;
+      const dz = source.getZ(index) - cz;
+      const length = Math.max(1e-6, Math.hypot(dx, dz));
+      const out = (length + PROUD) / length;
+      positions.push(cx + dx * out, source.getY(index), cz + dz * out);
+      uvs.push(column_ / radial, (ring - first) / Math.max(1, rings - 1 - first));
+    }
+  }
+  const bands = rings - first;
+  for (let ring = 0; ring < bands - 1; ring += 1) {
+    for (let column_ = 0; column_ < radial; column_ += 1) {
+      const a = ring * radial + column_;
+      const b = ring * radial + ((column_ + 1) % radial);
+      const c = (ring + 1) * radial + column_;
+      const d = (ring + 1) * radial + ((column_ + 1) % radial);
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  // Garment materials render vertex colours; a mesh without the attribute
+  // comes out BLACK, which is how a missing one shows up here.
+  markHide(geometry, 47, 0);
+  return new THREE.Mesh(geometry, material);
+}
+
+/**
  * The cascade of pleats down the centre front of a wrapped dhoti.
  *
  * The one piece of this garment that hangs free, and therefore the piece
@@ -1172,13 +1266,37 @@ function dhotiCascade(
   const gathered = (y: number) =>
     DHOTI_FOLDS *
     Math.min(1, Math.max(0, (columnTop - y) / Math.max(1e-6, columnTop - columnHem)));
-  const drop = (body.thighLength + body.shinLength * reach) * 0.82;
+  // Nearly to the hem, as the reference has it. At four fifths the fan
+  // stopped in the middle of the thigh and its border read as a flag
+  // pinned there.
+  const drop = (body.thighLength + body.shinLength * reach) * 0.96;
   // Bearings just off the centre front, so the three pleats overlap the
   // way gathered cloth does instead of standing side by side.
+  /**
+   * Wider than it was, and piped.
+   *
+   * Three pleats of three and a half centimetres on a figure a metre tall
+   * is a cord, and in the Studio that is what it read as: a thread
+   * hanging down the front of a smooth column. The reference's kaccha is
+   * a broad fan, most of the width between the legs, and it is edged —
+   * and it falls nearly to the hem.
+   *
+   * The red is left to the dhoti's own hem border, which the fan hangs
+   * in front of. Two ways of edging the fan itself were built and looked
+   * at first, and both were worse: vertical piping down its sides is
+   * buried inside panels ten centimetres wide, and what is not buried
+   * reads as two red tongues off the waistband; a band across each
+   * pleat's own hem gives three borders at three heights, which from the
+   * front is one torn red mark. The reference's pleats are the garment's
+   * own fabric, and that is what is here.
+   */
   const panels: Array<readonly [number, number, number, THREE.Material]> = [
-    [Math.PI * 0.5 - 0.22, 0.036, 0.96, cloth],
-    [Math.PI * 0.5 - 0.02, 0.032, 1, cloth],
-    [Math.PI * 0.5 + 0.2, 0.026, 0.86, edge],
+    // The three fall to nearly the same line. Spread further apart, each
+    // carried its own border at its own height and the three read as one
+    // torn red mark rather than as a hem.
+    [Math.PI * 0.5 - 0.2, 0.05, 0.97, cloth],
+    [Math.PI * 0.5 - 0.02, 0.046, 1, cloth],
+    [Math.PI * 0.5 + 0.18, 0.038, 0.95, edge],
   ];
   for (const [bearing, width, share, material] of panels) {
     const panel: ClothSection[] = [];
@@ -1192,7 +1310,10 @@ function dhotiCascade(
       [0, 1, 0, 0.003],
       [0.4, 1.2, 0.012, 0.009],
       [0.78, 1.12, 0.016, 0.008],
-      [1, 0.9, 0.01, 0.006],
+      // A station close to the hem, so the border below is a strip of
+      // cloth rather than the bottom fifth of the fan.
+      [0.93, 1.04, 0.013, 0.007],
+      [1, 0.92, 0.01, 0.006],
     ] as const) {
       const y = waistY - 0.012 - drop * share * t;
       const at = onCloth(profile, y, bearing, air, gathered(y));
@@ -1202,10 +1323,11 @@ function dhotiCascade(
     // because those materials render them: a mesh without the attribute
     // comes out BLACK, which is what the pleat beside the sash was doing
     // — a hole cut through the dhoti in every three-quarter view.
+    const seatX = onCloth(profile, waistY - 0.012, bearing, 0.004, gathered(waistY)).x;
     const pleat = sleeve(panel, 14, 4, 0.06);
     markHide(pleat, 3 + bearing * 7, 0);
     const piece = new THREE.Mesh(pleat, material);
-    piece.position.x = onCloth(profile, waistY - 0.012, bearing, 0.004, gathered(waistY)).x;
+    piece.position.x = seatX;
     group.add(piece);
   }
   return group;
@@ -1363,7 +1485,9 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     // How far down the shin the cloth reaches: all the way for a standing
     // figure, above the knee when the pose has a leg out.
     const reach = ctx.garment === "short" ? 0 : dhotiReach;
-    wrap.add(dhotiColumn(ctx, cloth, reach));
+    const column = dhotiColumn(ctx, cloth, reach);
+    wrap.add(column);
+    wrap.add(dhotiBorder(column.geometry, DHOTI_RADIAL, sashMaterial));
     // Whether the centre pleats wear the ACCENT or the cloth itself.
     // Shiva's ochre pleats over cream are the reference look for him;
     // on Vishnu's yellow the accent pleats read as red stains, and the

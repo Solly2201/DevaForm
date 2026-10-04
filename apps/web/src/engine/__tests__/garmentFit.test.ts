@@ -16,18 +16,42 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-
-vi.mock("three/examples/jsm/loaders/GLTFLoader.js", () => ({
-  GLTFLoader: class {
-    load(): void {
-      /* never resolves in tests */
-    }
-  },
-}));
 import * as THREE from "three";
+
+const PUBLIC_DIR = join(__dirname, "..", "..", "..", "public");
+
+/**
+ * The real loader, reading the shipped files.
+ *
+ * It used to be a stub that never resolved, which is harmless for Shiva —
+ * his default body is procedural and needs nothing loaded. It is fatal
+ * for anyone whose body is a mesh: the rig comes back with no garment in
+ * it at all, and a containment test that finds no cloth has nothing to
+ * say. That is how Vishnu stayed unmeasured.
+ */
+vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {
+  interface RealLoader {
+    parse(data: ArrayBuffer, path: string, onLoad: (gltf: { scene: THREE.Group }) => void): void;
+  }
+  const actual = await vi.importActual<{ GLTFLoader: new () => RealLoader }>(
+    "three/examples/jsm/loaders/GLTFLoader.js",
+  );
+  return {
+    GLTFLoader: class {
+      private readonly real = new actual.GLTFLoader();
+      load(path: string, onLoad: (gltf: { scene: THREE.Group }) => void): void {
+        const file = readFileSync(join(PUBLIC_DIR, path.replace(/^\//, "")));
+        const buffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
+        this.real.parse(buffer as ArrayBuffer, "", onLoad);
+      }
+    },
+  };
+});
 import {
   SHIVA_POSE_PRESETS,
+  VISHNU_POSE_PRESETS,
   createDefaultShivaConfiguration,
+  createDefaultVishnuConfiguration,
   garmentFitOf,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
@@ -35,9 +59,6 @@ import { getAsset } from "@devaform/asset-system";
 import { buildRig, poseRig } from "../rig";
 import { ZoneMaterials } from "../materials";
 
-const ASSET_ID = "humanoid.body.human";
-const PUBLIC_DIR = join(__dirname, "..", "..", "..", "public");
-const asset = getAsset(ASSET_ID);
 
 interface GlbJson {
   nodes?: Array<{ name?: string }>;
@@ -205,10 +226,10 @@ function insideCloth(outline: Outline, x: number, z: number, slack: number): boo
  * pieces ride joints, so a copy re-parented under a fresh group loses the
  * whole chain that put them on the body.
  */
-function garmentOf(rig: ReturnType<typeof buildRig>): THREE.Mesh[] {
+function garmentOf(rig: ReturnType<typeof buildRig>, assetId: string): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
   rig.root.traverse((node) => {
-    if (!node.name.startsWith("part:shiva.garment")) return;
+    if (node.name !== `part:${assetId}`) return;
     node.updateWorldMatrix(true, true);
     node.traverse((child) => {
       const mesh = child as THREE.Mesh;
@@ -240,6 +261,52 @@ const shiva = (preset: string, lowerGarment = "shiva.garment.dhoti"): CharacterC
 };
 
 /**
+ * AND EVERY OTHER FIGURE WHO WEARS A COLUMN OF CLOTH.
+ *
+ * This measured Shiva, because Shiva is who it was written for, and the
+ * defect it was written for was his. But a dhoti is one shared generator
+ * cut to whatever legs are reported — the whole argument for building it
+ * that way — and the one thing a shared generator guarantees is that a
+ * body nobody checked will eventually be the one it does not fit.
+ *
+ * Vishnu was that body. He wears the same wrap from the same generator,
+ * over the same measured legs, and nothing in this repository had ever
+ * compared the two.
+ */
+/**
+ * A built, posed rig — after the body mesh has had a turn to arrive.
+ *
+ * The loader resolves on the microtask queue, so the first build returns
+ * before the mesh is there. Every other suite in here builds twice for the
+ * same reason; this is that, named.
+ */
+async function posedRig(config: CharacterConfiguration) {
+  const materials = new ZoneMaterials();
+  buildRig(config, materials);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const rig = buildRig(config, materials);
+  poseRig(rig);
+  rig.root.updateWorldMatrix(true, true);
+  return { rig, materials };
+}
+
+const SUBJECTS = [
+  {
+    label: "shiva",
+    make: (preset: string) => shiva(preset),
+    poses: SHIVA_POSE_PRESETS,
+  },
+  {
+    label: "vishnu",
+    make: (preset: string): CharacterConfiguration => {
+      const base = createDefaultVishnuConfiguration();
+      return { ...base, pose: { preset, jointOverrides: {} } };
+    },
+    poses: VISHNU_POSE_PRESETS,
+  },
+] as const;
+
+/**
  * The body's OWN leg vertices, read from the shipped GLB.
  *
  * The profile reports a mean limb radius about the joint axis, and a calf
@@ -252,8 +319,8 @@ const shiva = (preset: string, lowerGarment = "shiva.garment.dhoti"): CharacterC
  * every "full garment" pose leaves the legs within a few degrees of rest,
  * and the tolerance below covers that.
  */
-function bodyLegVertices(hipY: number): Float32Array {
-  const source = asset!.source;
+function bodyLegVertices(bodyAssetId: string, hipY: number): Float32Array {
+  const source = getAsset(bodyAssetId)!.source;
   if (source.kind !== "glb") throw new Error("expected a GLB body");
   const glb = readGlb(join(PUBLIC_DIR, source.path.replace(/^\//, "")));
   const skinJoints = glb.json.skins?.[0]?.joints ?? [];
@@ -305,7 +372,7 @@ function bodyLegVertices(hipY: number): Float32Array {
  * cloth is inside them.
  */
 function bodyVerticesBetween(lo: number, hi: number): Float32Array {
-  const source = asset!.source;
+  const source = getAsset("humanoid.body.human")!.source;
   if (source.kind !== "glb") throw new Error("expected a GLB body");
   const glb = readGlb(join(PUBLIC_DIR, source.path.replace(/^\//, "")));
   const skinJoints = glb.json.skins?.[0]?.joints ?? [];
@@ -338,8 +405,10 @@ function bodyVerticesBetween(lo: number, hi: number): Float32Array {
   return Float32Array.from(kept);
 }
 
-describe("a garment that contains the legs, contains them", () => {
-  const full = SHIVA_POSE_PRESETS.filter((preset) => garmentFitOf(preset) === "full");
+describe.each(SUBJECTS.map((subject) => [subject.label, subject] as const))(
+  "%s: a garment that contains the legs, contains them",
+  (_label, subject) => {
+  const full = subject.poses.filter((preset) => garmentFitOf(preset) === "full");
 
   // There was a second test here, comparing the cloth against the body
   // profile's limb radii. It is gone: those radii are now the radius that
@@ -352,17 +421,14 @@ describe("a garment that contains the legs, contains them", () => {
 
   it.each(full.map((preset) => preset.id))(
     "%s: no part of the real leg mesh stands outside the cloth",
-    (presetId) => {
-      const config = shiva(presetId);
-      const materials = new ZoneMaterials();
-      const rig = buildRig(config, materials);
-      poseRig(rig);
-      rig.root.updateWorldMatrix(true, true);
-      const garment = garmentOf(rig);
+    async (presetId) => {
+      const config = subject.make(presetId);
+      const { rig, materials } = await posedRig(config);
+      const garment = garmentOf(rig, config.parts.lowerGarment!.assetId);
       const hipY = rig.joints
         .get("leg.left.thigh")!
         .getWorldPosition(new THREE.Vector3()).y;
-      const legs = bodyLegVertices(hipY);
+      const legs = bodyLegVertices(config.parts.body!.assetId, hipY);
 
       const outlineAt = (y: number) => outlineOf(garment, y, 0.014);
       const hem = hemOf(garment);
@@ -407,7 +473,8 @@ describe("a garment that contains the legs, contains them", () => {
       materials.dispose();
     },
   );
-});
+  },
+);
 
 
 /**
@@ -436,7 +503,7 @@ describe("a wrapped garment stays outside the body", () => {
     const rig = buildRig(config, materials);
     poseRig(rig);
     rig.root.updateWorldMatrix(true, true);
-    const garment = garmentOf(rig);
+    const garment = garmentOf(rig, "shiva.garment.vyaghracharma");
     const hipY = rig.joints.get("leg.left.thigh")!.getWorldPosition(new THREE.Vector3()).y;
     // The single-volume band: from the thigh seat up to the waist.
     const top = hipY + 0.09;
