@@ -220,41 +220,165 @@ export const necklaceHaram: AttachmentGenerator = (ctx) => {
     point.y - body.necklaceSocketY,
     point.z - body.necklaceSocketZ,
   ];
+  /**
+   * WHERE THE NECK STOPS BEING A NECK, measured on this body.
+   *
+   * A collar wants the neck, and `surfaceAt` will happily describe the
+   * shoulders if asked at the wrong height. Measured round the back arc,
+   * every body here has the same shape to its answer: a plateau a little
+   * wider than the neck, and below some height a sharp blow-out as the
+   * torso arrives. Where that height IS differs enormously — twenty
+   * millimetres under the socket for the human bodies, fifty for Ganesha,
+   * whose neck is short and whose chest is half as wide again — so it is
+   * found rather than guessed, by walking down until the answer stops
+   * being neck-shaped.
+   */
+  const roundBack = (y: number) => {
+    let most = 0;
+    for (let i = 0; i < 32; i += 1) {
+      const bearing = (i / 32) * Math.PI * 2;
+      // The front arc is where the collar dips onto the chest on
+      // purpose; it is the rest of the way round that has to be a neck.
+      if (Math.cos(bearing) > 0.5) continue;
+      const skin = body.surfaceAt(bearing, y);
+      most = Math.max(most, Math.hypot(skin.x, skin.z - body.necklaceSocketZ));
+    }
+    return most;
+  };
+  const seat = (() => {
+    // UPWARDS from under the socket to the first height that is still a
+    // neck — not downwards from above it. Downwards, a body whose head is
+    // wider than its neck (which is every elephant) fails the test on the
+    // very first step and the collar is seated in the skull.
+    const ceiling = neckBase + neck * 1.0;
+    for (let y = neckBase - neck * 0.2; y < ceiling; y += neck * 0.04) {
+      if (roundBack(y) <= neck * 1.35) return y;
+    }
+    return ceiling;
+  })();
   /** How far the front of the collar falls below the nape. */
   const dip = neck * 1.15;
-  /** The band's own half-thickness. */
-  const band = neck * 0.2;
+  /**
+   * The band's own half-thickness.
+   *
+   * A fifth of the neck's radius made a gold rope eighteen millimetres
+   * thick, and with the clearance under it the collar came out a hundred
+   * and sixty-three millimetres across a neck that is ninety-six — half
+   * of that was the ornament's own gauge. The reference sheet's kantha is
+   * a flat plate, not a cable.
+   */
+  const band = neck * 0.13;
 
-  /** A closed route round the body, dipping toward the front. */
+  /**
+   * A closed route round the body, dipping toward the front.
+   *
+   * THE DIP IS WINDOWED, and sits where a collar sits.
+   *
+   * Spread round the whole circumference, as `front ** 1.6` spread it, the
+   * route fell far enough at the SIDES to leave the neck and ride out
+   * onto the trapezius — and the body widens fast there, from fifty-five
+   * millimetres of half-width at the neck's base to a hundred and three
+   * thirty millimetres below it. Measured, the result was a ring two
+   * hundred and thirty-four millimetres across on a neck ninety-one
+   * across: a flat gold yoke standing off the shoulders, which is what
+   * the Studio showed and what the reference sheet's layered kantha is
+   * not. It cleared the skin perfectly the whole way round. Fit is not
+   * only clearance.
+   *
+   * So the fall is confined to the front arc, and the rest of the route
+   * rides a quarter of a neck-radius higher, at the base of the neck
+   * rather than on the shoulder.
+   */
   const ring = (drop: number): SurfaceWaypoint[] => {
     const route: SurfaceWaypoint[] = [];
     const steps = 20;
     for (let i = 0; i <= steps; i += 1) {
       const bearing = (i / steps) * Math.PI * 2;
-      // Bearings run from the FRONT; 1 at the chest, 0 at the nape.
-      const front = (1 + Math.cos(bearing)) / 2;
-      route.push({ bearing, y: neckBase + neck * 0.08 - Math.pow(front, 1.6) * drop });
+      // 1 dead ahead, 0 at the nape, and nothing outside the front arc.
+      const ahead = Math.max(0, Math.cos(bearing));
+      const window = Math.max(0, (ahead - 0.5) / 0.5);
+      route.push({ bearing, y: seat - window ** 1.3 * drop });
     }
     return route;
   };
 
+  /**
+   * The turn onto the chest, as an allowance in millimetres.
+   *
+   * This used to be folded into a 1.7x multiple of the band, which tied
+   * an allowance for the ROUTE's curvature to the ornament's gauge —
+   * two unrelated things, so thinning the collar quietly thinned the
+   * clearance it needed to turn. It is the corner the tube's inner wall
+   * cuts, and the corner is the same size whatever is going round it.
+   */
+  const curve = neck * 0.08;
   // The spine stands off by MORE than the band's half-thickness, because
   // a tube is not its spine: where the route turns down onto the chest
   // the inner wall of the tube cuts the corner the spine takes, and a
   // clearance equal to the radius leaves that wall inside the skin. The
   // extra is the curvature's, not a fudge — measured at twelve
   // millimetres of penetration before it was added.
-  group.add(
-    new THREE.Mesh(
-      taperedTube(
-        walkSurface(body, ring(dip), band * 1.7, 120).points.map(toSocket),
-        [band, band],
-        52,
-        12,
-      ),
-      metal,
-    ),
+  /**
+   * AND IT RINGS THE NECK.
+   *
+   * `walkSurface` walks the measured TORSO, and at the height a collar
+   * sits the measured torso is already the trapezius: at some bearings
+   * two thirds of the way round, the skin is seventy-seven millimetres
+   * from the neck's axis rather than the neck's own forty-five. Walked
+   * faithfully, the band went out along the top of each shoulder and
+   * stopped — a pair of gold bars standing off the deltoids, which is
+   * what the Studio showed from three-quarters however good the front
+   * looked. It cleared the skin the whole way; it was not a collar.
+   *
+   * So outside the front arc the spine is pulled back onto the neck's own
+   * cylinder, and across the front it is the walked chest surface, which
+   * is where the dip has to follow real geometry. The bearing comes from
+   * the point itself — in socket space the neck's axis is the origin — so
+   * this does not depend on how `walkSurface` chose to space its samples.
+   */
+  /**
+   * The cylinder the collar rings: the neck's own radius, or how wide
+   * this body actually is round the back at the seat, whichever is more.
+   * Shaved by a few per cent, because jewellery beds into flesh and the
+   * fit validator says so in millimetres.
+   */
+  const onNeck = neck + band + curve * 0.5;
+  const spine = walkSurface(body, ring(dip), band * 1.2 + curve, 120).points.map(
+    (point): V3 => {
+      const seat = toSocket(point);
+      const [x, y, z] = seat;
+      const radius = Math.hypot(x, z);
+      /**
+       * Round the back, a RING — not the walk.
+       *
+       * `walkSurface` offsets its route horizontally, away from the
+       * slice's centre, and over a shoulder the skin's own normal points
+       * mostly upward. So on that ledge a horizontal offset does not lift
+       * the band off the shoulder, it slides it sideways ALONG it, and
+       * the further the route is pushed the further out it travels. That
+       * is the pair of gold bars over the deltoids, and no amount of
+       * tuning the clearance removes it, because the clearance is what
+       * causes it.
+       *
+       * This does what can be done from here: the band is held OUT to at
+       * least the neck's own girth, so it rings a neck rather than
+       * tracing a collarbone, and it is never pulled in — an earlier
+       * attempt interpolated towards the neck's radius and put the band
+       * seven millimetres into a human trapezius and thirty into
+       * Ganesha's chest. Replacing that radius wholesale with a single
+       * ring is worse still: a neck is fifteen millimetres deep at the
+       * nape and nearly sixty at the trapezius, and one number for both
+       * is a hula hoop, which is what the side view showed.
+       *
+       * The rest belongs in `walkSurface`, which is where the horizontal
+       * offset is. Left as it is, deliberately, rather than worked around
+       * here a sixth time.
+       */
+      const scale = radius > 1e-6 ? Math.max(1, onNeck / radius) : 1;
+      return [x * scale, y, z * scale];
+    },
   );
+  group.add(new THREE.Mesh(taperedTube(spine, [band, band], 52, 12), metal));
 
   // The fringe: beads on a second route under the first, and only where
   // the collar is on the chest rather than round the neck.
@@ -283,8 +407,8 @@ export const necklaceHaram: AttachmentGenerator = (ctx) => {
     9,
   );
   const pendant = gemStud(ctx, pendantSize * 0.5);
-  const seat = toSocket(hang.points[Math.floor(hang.points.length / 2)] as THREE.Vector3);
-  pendant.position.set(seat[0], seat[1], seat[2]);
+  const hangAt = toSocket(hang.points[Math.floor(hang.points.length / 2)] as THREE.Vector3);
+  pendant.position.set(hangAt[0], hangAt[1], hangAt[2]);
   pendant.scale.set(0.85, 1.2, 0.75);
   group.add(pendant);
   return group;

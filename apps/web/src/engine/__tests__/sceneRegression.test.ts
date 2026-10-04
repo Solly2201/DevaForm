@@ -161,7 +161,17 @@ const PINNED = {
   // routes walked over the measured surface now, and all three measure
   // zero or near it. The node count rises because a ribbon and a bead
   // fringe have more parts than a tube and a torus.
-  ganesha: { nodes: 379, digest: "4ae525d78d430669" },
+  //
+  // And again for the collar, which Vishnu wears too. It passed every
+  // clearance check while being a hundred and sixty-three millimetres
+  // across a neck ninety-six across — a flat gold yoke standing off the
+  // shoulders rather than a kantha — because its route dipped onto the
+  // chest the whole way round and so left the neck at the sides. The dip
+  // is confined to the front arc now, the seat is FOUND on each body by
+  // walking up until the surface round the back stops being shoulder and
+  // starts being neck, and the band is held out to at least the neck's
+  // own girth. Same nodes; a collar instead of a yoke.
+  ganesha: { nodes: 379, digest: "663b315ee2b3dd66" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
