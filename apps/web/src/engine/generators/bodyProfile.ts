@@ -137,6 +137,27 @@ export interface BodyProfile {
    */
   surfaceAt(bearing: number, chestLocalY: number): { x: number; y: number; z: number };
   /**
+   * How finely that surface is actually KNOWN — the span below which
+   * asking it for a shape returns interpolation rather than anatomy.
+   *
+   * It exists because something has to decide how far apart to put the
+   * samples when differentiating `surfaceAt` for a normal, and only the
+   * body can answer. A measured torso is a polar height-field on a grid:
+   * the shipped human's is twenty rows over four hundred and sixty
+   * millimetres, so TWENTY-FOUR millimetres apart, and a central
+   * difference narrower than that measures the bilinear facet between two
+   * samples rather than the body. Measured, a two-millimetre difference
+   * at the hollow between neck and shoulder produced a normal so faithful
+   * to the interpolation that an ornament asked to stand twenty
+   * millimetres clear ended up three and a half from the skin — worse
+   * than the flat approximation it replaced.
+   *
+   * A generated body is analytic and has no grid; what it has is the
+   * seams where `Math.max` switches between its chest, belly and neck
+   * volumes, and this is the span that steps over one.
+   */
+  surfaceResolution: { height: number; bearing: number };
+  /**
    * How far the legs reach at a pelvis-local height: sideways, forward
    * and back. What a wrapped lower garment has to contain.
    *
@@ -430,6 +451,20 @@ function generatedSurfaceAt(
   };
 }
 
+/**
+ * What a GENERATED surface is worth differentiating over.
+ *
+ * It is analytic — two ellipsoids — so in principle it is smooth at every
+ * scale and any span would do. In practice `generatedSurfaceAt` takes the
+ * larger of chest, belly and a neck floor, and a `Math.max` has a seam
+ * where the winner changes: differenced across one, the normal jumps. A
+ * few millimetres steps over the seam and costs nothing elsewhere, which
+ * is what the measurements show — on the procedural body, a span this
+ * size and a span a tenth of it resolve to the same distance to the last
+ * tenth of a millimetre.
+ */
+const GENERATED_SURFACE_RESOLUTION = { height: 0.004, bearing: (Math.PI * 2) / 64 };
+
 /** spine joint sits this far below the chest joint (see skeleton.ts). */
 const SPINE_TO_CHEST_Y = 0.16;
 
@@ -572,6 +607,7 @@ export function deriveBodyProfile(
     chestSurfaceZAt,
     torsoSurfaceZAt,
     torsoBackZAt,
+    surfaceResolution: GENERATED_SURFACE_RESOLUTION,
     surfaceAt: (bearing: number, y: number) =>
       generatedSurfaceAt(bearing, y, {
         chestCenterY,
@@ -802,6 +838,13 @@ function deriveMeasuredProfile(
     torsoSurfaceZAt,
     torsoBackZAt,
     surfaceAt,
+    // The grid the surface was measured on, where there is one.
+    surfaceResolution: torsoSurface
+      ? {
+          height: Math.abs(torsoSurface.maxY - torsoSurface.minY) / Math.max(1, torsoSurface.rows - 1),
+          bearing: (Math.PI * 2) / Math.max(1, torsoSurface.columns),
+        }
+      : GENERATED_SURFACE_RESOLUTION,
     crownSocketY: value("crownSocketY"),
     crownSocketZ: value("crownSocketZ"),
     browY: value("browY"),
@@ -945,6 +988,7 @@ function deriveAthleticProfile(
     chestSurfaceZAt,
     torsoSurfaceZAt,
     torsoBackZAt,
+    surfaceResolution: GENERATED_SURFACE_RESOLUTION,
     surfaceAt: (bearing: number, y: number) =>
       generatedSurfaceAt(bearing, y, {
         chestCenterY,

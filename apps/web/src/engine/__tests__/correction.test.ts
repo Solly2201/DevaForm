@@ -381,9 +381,59 @@ describe("naga lies on the body it is worn by", () => {
     const toSocket = new THREE.Matrix4().copy(socket.matrixWorld).invert();
 
     const body = rig.body;
+    /**
+     * HOW CLOSE, in euclidean millimetres rather than radially.
+     *
+     * This used to ask how far the point was from the axis compared with
+     * the skin at the same HEIGHT, and count anything within fifty
+     * millimetres as lying against the body. That reading is wrong for
+     * exactly the thing the serpent now does: clearance is applied along
+     * the surface's own normal, so over the sloped base of the neck a
+     * point lifts upward as well as outward — to a height where the torso
+     * is narrower, which inflates a radial gap while the real distance to
+     * the skin is the clearance that was asked for.
+     *
+     * Measured both ways on the day this changed: the coil's nearest
+     * approach went from four tenths of a millimetre to three, which is
+     * the four-millimetre gap `ornamentNaga` asks for under the serpent's
+     * belly finally being delivered. The old direction had the underside
+     * resting in the skin.
+     */
+    const distanceToSkin = (target: THREE.Vector3): number => {
+      const at = (bearing: number, height: number) => {
+        const skin = body.surfaceAt(bearing, height);
+        return new THREE.Vector3(skin.x, height, skin.z);
+      };
+      let best = Infinity;
+      let bestBearing = 0;
+      let bestY = target.y;
+      for (let i = 0; i < 96; i += 1) {
+        const bearing = (i / 96) * Math.PI * 2;
+        for (let j = -8; j <= 8; j += 1) {
+          const height = target.y + j * 0.016;
+          const distance = at(bearing, height).distanceTo(target);
+          if (distance < best) {
+            best = distance;
+            bestBearing = bearing;
+            bestY = height;
+          }
+        }
+      }
+      for (let i = -5; i <= 5; i += 1) {
+        for (let j = -5; j <= 5; j += 1) {
+          const distance = at(
+            bestBearing + (i / 5) * ((Math.PI * 2) / 96),
+            bestY + (j / 5) * 0.016,
+          ).distanceTo(target);
+          if (distance < best) best = distance;
+        }
+      }
+      return best;
+    };
+
     let inside = 0;
-    let against = 0;
     let total = 0;
+    const near: number[] = [];
     const p = new THREE.Vector3();
     (naga as unknown as THREE.Object3D).traverse((o) => {
       const m = o as THREE.Mesh;
@@ -409,11 +459,21 @@ describe("naga lies on the body it is worn by", () => {
         const here = Math.hypot(p.x, z - centreZ);
         const there = Math.hypot(skin.x, skin.z - centreZ);
         const gap = here - there;
+        // Containment stays RADIAL, which is sound: the torso surface is
+        // a star-shaped field about its own axis, so "further from the
+        // axis than the skin is" is exactly "outside the body".
         if (gap < -0.004) inside += 1;
-        else if (gap < 0.05) against += 1;
+        // Proximity is euclidean, for the reason above.
+        near.push(distanceToSkin(new THREE.Vector3(p.x, y, z)));
       }
     });
-    return { inside, against, total };
+    near.sort((a, b) => a - b);
+    return {
+      inside,
+      total,
+      nearest: near[0] ?? Infinity,
+      median: near[Math.floor(near.length / 2)] ?? Infinity,
+    };
   };
 
   it.each([
@@ -427,12 +487,27 @@ describe("naga lies on the body it is worn by", () => {
       return config;
     }],
   ])("keeps its coil outside the skin, and against it — %s", (_name, makeConfig) => {
-    const { inside, against, total } = coilClearance(makeConfig());
+    const { inside, total, nearest, median } = coilClearance(makeConfig());
     expect(total).toBeGreaterThan(50);
     // Nothing of consequence buried in the chest...
     expect(inside / total).toBeLessThan(0.02);
-    // ...and the coil is a coil, not a hoop floating clear of the body.
-    expect(against / total).toBeGreaterThan(0.5);
+    /**
+     * ...and the coil is a coil, not a hoop floating clear of the body.
+     *
+     * Said as two numbers because one will not do it. The NEAREST
+     * approach says the serpent rests on the figure at all — a hoop has
+     * no contact anywhere. The MEDIAN says most of its length lies along
+     * the body rather than standing off it — a serpent resting at one
+     * point and sailing away from every other is still a hoop.
+     *
+     * Measured: nearest 3 mm, median 36 mm, on a serpent whose own body
+     * is thirty millimetres thick and which asks for a four-millimetre
+     * gap under it.
+     */
+    expect(nearest * 1000, `the coil rests on the body: nearest ${(nearest * 1000).toFixed(1)}mm`)
+      .toBeLessThan(10);
+    expect(median * 1000, `the coil lies along the body: median ${(median * 1000).toFixed(1)}mm`)
+      .toBeLessThan(45);
   });
 
   /**

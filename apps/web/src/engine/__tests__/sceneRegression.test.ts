@@ -171,7 +171,14 @@ const PINNED = {
   // walking up until the surface round the back stops being shoulder and
   // starts being neck, and the band is held out to at least the neck's
   // own girth. Same nodes; a collar instead of a yoke.
-  ganesha: { nodes: 379, digest: "663b315ee2b3dd66" },
+  //
+  // And again when clearance started meaning distance. `walkSurface` used
+  // to push an ornament horizontally away from the slice's centre, which
+  // is the surface normal only where the surface is vertical; over a
+  // shoulder it slid the piece along the slope instead of lifting it off.
+  // Everything routed over skin moves a little: the collar, the belt, the
+  // serpent, the mala, the sash. See surfaceClearance.test.ts.
+  ganesha: { nodes: 379, digest: "bd71ffe8f4fb4f00" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
@@ -328,7 +335,7 @@ const PINNED = {
   // and fourteen beads that were a hundred and fourteen draw calls and
   // are now two, one per material. Nothing about the mala changed except
   // how many objects it is. See geometry.collapse and renderBudget.
-  shiva: { nodes: 272, digest: "b8b1a05bab0f7ad3" },
+  shiva: { nodes: 272, digest: "b783addb6e303b87" },
 } as const;
 
 describe("protected characters do not move", () => {

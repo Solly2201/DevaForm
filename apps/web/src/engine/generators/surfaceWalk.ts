@@ -48,6 +48,98 @@ export interface SurfaceWalk {
   normals: THREE.Vector3[];
 }
 
+/** A point on the skin, and the direction that is away from it. */
+export interface SurfaceFrame {
+  /** The point on the skin, chest-joint-local. */
+  point: THREE.Vector3;
+  /** Unit normal of the surface there, pointing out of the body. */
+  normal: THREE.Vector3;
+}
+
+/**
+ * The surface's OWN normal at a point, measured over a span.
+ *
+ * WHAT WAS WRONG. Clearance used to be applied along the horizontal
+ * direction away from the slice's centre. On a vertical surface that IS
+ * the normal, which is why it served for waists and necks and ribcages
+ * for so long. Over a shoulder it is not: the skin there slopes, its
+ * normal points partly UPWARD, and pushing horizontally slides the
+ * ornament sideways along the slope instead of lifting it off. Measured
+ * on the shipped human, the normal at the side of the neck's base tilts
+ * forty to fifty-seven degrees above horizontal — so an ornament asked to
+ * stand twenty millimetres clear of the skin achieved six and a half,
+ * and travelled the rest of the way out across the deltoid. That is the
+ * pair of gold bars the kantha used to hang over the shoulders.
+ *
+ * WHAT IT IS NOW. The torso is a parametric surface: a bearing and a
+ * height give a point, and that is the whole of what `surfaceAt` is. So
+ * the normal is the one any parametric surface has — the cross product of
+ * its two tangents — found by differencing the primitive rather than by
+ * modelling the body a second time. On a vertical surface it returns
+ * exactly the horizontal direction it replaces, so nothing that was
+ * already right moves.
+ *
+ * THE SPAN IS THE WHOLE OF THE CARE REQUIRED, and it is why this takes
+ * one. A normal is only as good as the scale it is measured at:
+ *
+ *   • Below the body's own `surfaceResolution` it measures the
+ *     interpolation between two samples rather than the body.
+ *   • In a CONCAVITY — the hollow between neck and shoulder, an armpit —
+ *     a faithful local normal is actively wrong for something worn. The
+ *     offset converges toward the centre of curvature, so the point ends
+ *     up nearer the far wall of the hollow than it started. Measured,
+ *     a two-millimetre difference there turned a twenty-millimetre
+ *     clearance into three and a half; the flat approximation managed six
+ *     and a half, and this managed thirteen.
+ *
+ * Both say the same thing: a thing worn at a stand-off of `span`
+ * BRIDGES features smaller than `span`, so that is the scale its normal
+ * should be measured at. Hence the window is the larger of the stand-off
+ * asked for and the resolution the body admits to. It is not a shoulder
+ * correction, and there is no anatomy named anywhere in it — a hollow is
+ * simply a place where the surface turns faster than the ornament can
+ * follow, and the span is what decides which those are.
+ */
+export function surfaceFrameAt(
+  body: BodyProfile,
+  bearing: number,
+  y: number,
+  /** How far off the skin this frame is going to be used at, metres. */
+  span: number,
+): SurfaceFrame {
+  const at = (towards: number, height: number) => {
+    const skin = body.surfaceAt(towards, height);
+    return new THREE.Vector3(skin.x, height, skin.z);
+  };
+  const here = at(bearing, y);
+  // The slice's own centre, which is both what "outward" is relative to
+  // and what turns a span in metres into a step in bearing.
+  const opposite = body.surfaceAt(bearing + Math.PI, y);
+  const centreX = (here.x + opposite.x) / 2;
+  const centreZ = (here.z + opposite.z) / 2;
+  const radial = new THREE.Vector3(here.x - centreX, 0, here.z - centreZ);
+  if (radial.lengthSq() < 1e-12) radial.set(0, 0, 1);
+  const radius = Math.max(1e-3, radial.length());
+  radial.normalize();
+
+  const reach = Math.max(0, span);
+  const stepY = Math.max(reach, body.surfaceResolution.height) / 2;
+  const stepBearing = Math.max(reach / radius, body.surfaceResolution.bearing) / 2;
+  const alongBearing = at(bearing + stepBearing, y).sub(at(bearing - stepBearing, y));
+  const alongHeight = at(bearing, y + stepY).sub(at(bearing, y - stepY));
+  const normal = new THREE.Vector3().crossVectors(alongBearing, alongHeight);
+  // Degenerate where the surface pinches to nothing — the top of a
+  // closed form, or a body that reports no width. The radial is the
+  // honest answer there and it is what this replaced.
+  if (normal.lengthSq() < 1e-16) return { point: here, normal: radial };
+  normal.normalize();
+  // Orientation, not geometry: the cross product's sign follows from the
+  // parameterisation, and a body whose bearings ran the other way would
+  // hand back an inward normal. Cheap to settle rather than assume.
+  if (normal.dot(radial) < 0) normal.negate();
+  return { point: here, normal };
+}
+
 /**
  * Evaluate a route onto a body.
  *
@@ -98,20 +190,14 @@ export function walkSurface(
     const t = i / samples;
     const bearing = bearingAt(t);
     const y = heightAt(t);
-    const skin = body.surfaceAt(bearing, y);
-    // Outward is away from the slice's own centre, which is the direction
-    // the surface faces at this bearing.
-    const centre = body.surfaceAt(bearing + Math.PI, y);
-    const outward = new THREE.Vector3(
-      skin.x - (skin.x + centre.x) / 2,
-      0,
-      skin.z - (skin.z + centre.z) / 2,
-    );
-    if (outward.lengthSq() < 1e-12) outward.set(0, 0, 1);
-    outward.normalize();
+    // Clearance is separation FROM the skin, so it is applied along the
+    // skin's own normal — see surfaceFrameAt. The route's own direction
+    // is untouched: the bearing and the height are where the author put
+    // them, and only the offset off the surface changes.
     const stand = standOff(t) + Math.max(0, liftAt(t));
-    points.push(new THREE.Vector3(skin.x, y, skin.z).addScaledVector(outward, stand));
-    normals.push(outward);
+    const frame = surfaceFrameAt(body, bearing, y, stand);
+    points.push(frame.point.clone().addScaledVector(frame.normal, stand));
+    normals.push(frame.normal);
   }
   return { points, normals };
 }
