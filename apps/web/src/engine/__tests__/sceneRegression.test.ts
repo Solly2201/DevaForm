@@ -131,7 +131,24 @@ const PINNED = {
   // Nothing else about Ganesha changed — no asset, no socket, no ornament,
   // no front arm, no node — and handCoexistence.test.ts now holds every
   // pose of every deity to real daylight between the two.
-  ganesha: { nodes: 371, digest: "fd586b8761f96299" },
+  //
+  // Re-pinned again when the blessing gestures stopped bending the wrong
+  // way. Abhaya swung the whole upper arm seventy degrees forward, which
+  // puts the elbow ahead of the chest and folds the forearm back toward
+  // the shoulder — from the front the arm reads as hinging backwards, and
+  // the hand lands at the chest instead of beside the face. Varada was
+  // worse: forty-four degrees of elbow on an already-abducted arm left it
+  // nearly straight, with the wrist twenty-three centimetres in front of
+  // the shoulder, an arm held out stiffly to the side. Both are measured
+  // against the constraints correction.test already stated and both now
+  // meet every one of them, on every body, with the wrist solver reaching
+  // the required palm exactly.
+  //
+  // Ganesha's blessing back arms moved with them, by a little: with the
+  // lower hand no longer in front of the chest the upper pair needed less
+  // room, not more, so the axe clears by over forty millimetres from a
+  // NARROWER stance than before.
+  ganesha: { nodes: 371, digest: "e7bb53cab71bc8f0" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

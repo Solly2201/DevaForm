@@ -546,5 +546,40 @@
         ]
       }
     ]
+  },
+  "vishnu-hair": {
+    "width": 760,
+    "height": 900,
+    "shots": [
+      {
+        "name": "with-crown",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "no-crown",
+        "params": {
+          "deity": "vishnu",
+          "pose": "vishnu.regal",
+          "focus": "head",
+          "without": "vishnu.crown.kirita"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      }
+    ]
   }
 }

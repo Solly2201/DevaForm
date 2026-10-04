@@ -24,13 +24,11 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import * as THREE from "three";
 import {
-  ARM_SLOTS,
   createDefaultGaneshaConfiguration,
   createDefaultShivaConfiguration,
   createDefaultVishnuConfiguration,
-  mudraArmRotations,
+  posedWith,
   type CharacterConfiguration,
-  type Vec3,
 } from "@devaform/character-schema";
 import { getLightingPreset } from "@/engine/lighting";
 import { ZoneMaterials } from "@/engine/materials";
@@ -134,27 +132,21 @@ function configFor(params: URLSearchParams): CharacterConfiguration {
         ? createDefaultVishnuConfiguration()
         : createDefaultShivaConfiguration();
   const pose = params.get("pose");
-  if (pose) {
-    // Exactly what the editor does when a pose is chosen: the preset
-    // replaces the joints, and any hand already set to a gesture brings
-    // its own arm with it. Building the config by hand instead would make
-    // QA render a state the product never produces.
-    const jointOverrides: Record<string, Vec3> = {};
-    for (const slot of ARM_SLOTS) {
-      Object.assign(
-        jointOverrides,
-        mudraArmRotations(config.hands[slot]?.mudra ?? "open", slot) ?? {},
-      );
-    }
-    config.pose = { preset: pose, jointOverrides };
-  }
+  // Exactly what the editor does when a pose is chosen, by calling the
+  // same function it calls: the preset is recorded, its gestures arrive
+  // in the hands, and the hands that gesture seed the arms that carry
+  // them. This used to be a copy of those steps, and the copy fell behind
+  // — it kept the joint seeding and lost the gestures, so every capture
+  // of a blessing pose showed hands still gripping what the product would
+  // have made them let go of.
+  const posed = pose ? posedWith(config, pose) : config;
   const body = params.get("body");
-  if (body) config.parts.body = { assetId: body, version: 1 };
+  if (body) posed.parts.body = { assetId: body, version: 1 };
   const arms = params.get("arms");
-  if (arms === "2" || arms === "4") config.arms = { count: Number(arms) as 2 | 4 };
+  if (arms === "2" || arms === "4") posed.arms = { count: Number(arms) as 2 | 4 };
   const morphs = params.get("morphs");
   if (morphs) {
-    config.morphs = Object.fromEntries(
+    posed.morphs = Object.fromEntries(
       morphs.split(",").map((pair) => {
         const [name, value] = pair.split(":");
         return [name ?? "", Number(value ?? 0)];
@@ -164,14 +156,14 @@ function configFor(params: URLSearchParams): CharacterConfiguration {
   const drop = params.get("without");
   if (drop) {
     const ids = new Set(drop.split(","));
-    config.attachments = config.attachments.filter((a) => !ids.has(a.asset.assetId));
-    for (const [slot, ref] of Object.entries(config.parts)) {
+    posed.attachments = posed.attachments.filter((a) => !ids.has(a.asset.assetId));
+    for (const [slot, ref] of Object.entries(posed.parts)) {
       if (ref && ids.has(ref.assetId)) {
-        (config.parts as Record<string, unknown>)[slot] = null;
+        (posed.parts as Record<string, unknown>)[slot] = null;
       }
     }
   }
-  return config;
+  return posed;
 }
 
 function Figure({

@@ -172,32 +172,46 @@ export interface MudraGesture {
 /**
  * The two blessing gestures, defined by what the devotee must SEE.
  *
- * abhaya ("fear not"): hand raised to shoulder/head height, elbow tucked
- * and bent, fingers up, palm turned to the devotee. Reaching that palm
- * orientation with a bent elbow needs forearm pronation — the same joint a
- * real arm uses — so the arm carries it and the engine solves the wrist.
+ * abhaya ("fear not"): hand raised to shoulder height, palm turned to the
+ * devotee, fingers up — and the ELBOW HANGING. That last part is the one
+ * that was wrong. The upper arm used to be swung seventy degrees forward,
+ * which puts the elbow out ahead of the chest and folds the forearm back
+ * toward the shoulder: from the front the arm reads as bending the wrong
+ * way, and the hand ends up at the chest rather than beside the face.
+ * ref3's mudra panel is explicit — "elbow bent naturally" — and a natural
+ * elbow is a hanging one.
  *
- * varada ("boon"): the same palm shown lower — elbow bent and relaxed at
- * the deity's side, forearm angled down and forward so the hand is
- * OFFERED in front of the lower chest rather than dangling by the hip.
+ * varada ("boon"): the same palm shown LOW. ref3: "hand lower than
+ * abhaya, palm facing outward and downward, arm angled forward". It was
+ * neither lower nor angled: forty-four degrees of elbow bend on an arm
+ * already swung out left it nearly straight, with the hand twenty-three
+ * centimetres in front of the shoulder — an arm held out stiffly to the
+ * side, which is what the Studio showed on all three deities.
+ *
+ * MEASURED against the constraints correction.test already states, which
+ * are rig-relative and therefore true of any body: abhaya's wrist above
+ * the shoulder with the elbow hanging a hand's breadth below it and bent
+ * between sixty and a hundred and forty-five degrees; varada's below the
+ * shoulder but above the middle of the torso, carried forward and clear
+ * of it. Both reach their required palm with ZERO residual, which is the
+ * other half of the claim — an arm that needs an impossible wrist is an
+ * arm the solver will revert, leaving a gesture that is not a gesture.
  *
  * Grip mudras (hold/pinch/grip) declare no gesture: their arms belong to
  * the pose and their wrists to the held item.
  */
 export const GESTURE_MUDRAS: Partial<Record<MudraId, MudraGesture>> = {
   abhaya: {
-    arm: { upper: [-70 * D, -30 * D, -40 * D], forearm: [-120 * D, 68 * D, 0] },
+    arm: { upper: [-40 * D, -10 * D, -38 * D], forearm: [-96 * D, 40 * D, 0] },
     fingers: [0, 0.985, -0.174],
     palm: [0, 0.174, 0.985],
   },
   varada: {
-    // The shoulder carries the arm FORWARD, which is what makes this an
-    // offering rather than a hand hanging by a hip. Re-measured when the
-    // wrist stopped being a ball joint: the hand's height comes from the
-    // arm now, and the solver supplies only the axial twist, so an arm
-    // authored to sit right on a slack wrist sat 4 cm too low on a real
-    // one. These place the arm; they are not its twist.
-    arm: { upper: [-30 * D, 24 * D, -46 * D], forearm: [-44 * D, -45 * D, 0] },
+    // The shoulder carries the arm a little forward, which is what makes
+    // this an offering rather than a hand hanging by a hip — but only a
+    // little. The hand's height comes from the arm; the solver supplies
+    // the axial twist and nothing else.
+    arm: { upper: [-32 * D, 22 * D, -46 * D], forearm: [-36 * D, -34 * D, 0] },
     fingers: [0, -0.94, 0.342],
     palm: [0, -0.342, 0.94],
   },
@@ -270,16 +284,24 @@ export const POSE_PRESETS: readonly PosePreset[] = [
     label: "Standing",
     description: "Samabhanga — even, frontal standing pose.",
     joints: {
-      "arm.frontLeft.upper": [8 * D, 0, 58 * D],
-      "arm.frontRight.upper": [8 * D, 0, -58 * D],
-      "arm.frontLeft.forearm": [-28 * D, 0, 0],
-      "arm.frontRight.forearm": [-28 * D, 0, 0],
+      // The lower arms hang. Fifty-eight degrees of abduction on an arm
+      // whose elbow is barely bent is an arm held out sideways, which is
+      // what the Studio showed: a standing Ganesha presenting an empty
+      // upturned palm at the end of a straight arm. ref2's standing panel
+      // has the lower pair close to the body with the hands at the hips.
+      "arm.frontLeft.upper": [-6 * D, 0, 26 * D],
+      "arm.frontRight.upper": [-6 * D, 0, -26 * D],
+      "arm.frontLeft.forearm": [-46 * D, 0, 0],
+      "arm.frontRight.forearm": [-46 * D, 0, 0],
       "arm.frontLeft.hand": [-12 * D, 0, 6 * D],
       "arm.frontRight.hand": [-12 * D, 0, -6 * D],
-      "arm.backLeft.upper": [-18 * D, -10 * D, 48 * D],
-      "arm.backRight.upper": [-18 * D, 10 * D, -48 * D],
-      "arm.backLeft.forearm": [-52 * D, 0, 0],
-      "arm.backRight.forearm": [-52 * D, 0, 0],
+      // Raised, and bent, for the same reason the blessing's are: with the
+      // lower arms brought in to the body the upper pair has to carry the
+      // attributes clear of them rather than past them.
+      "arm.backLeft.upper": [-34 * D, -14 * D, 48 * D],
+      "arm.backRight.upper": [-34 * D, 14 * D, -48 * D],
+      "arm.backLeft.forearm": [-72 * D, 0, 0],
+      "arm.backRight.forearm": [-72 * D, 0, 0],
       "arm.backLeft.hand": [-20 * D, 0, 0],
       "arm.backRight.hand": [-20 * D, 0, 0],
       "leg.left.thigh": [0, 4 * D, 2 * D],
@@ -313,22 +335,24 @@ export const POSE_PRESETS: readonly PosePreset[] = [
        * the two hands were in the same place, and the shaft was simply
        * telling the truth about where it was being held.
        *
-       * So the shoulder carries the hand a hand's breadth further out and
-       * as much again BEHIND the blessing hand, which is where classical
-       * iconography puts the upper pair anyway: the lower hands address
-       * the devotee, the upper ones hold the attributes clear of them.
+       * Most of that was the BLESSING arm's doing, and it was fixed where
+       * it belonged: abhaya used to swing the whole upper arm seventy
+       * degrees forward, which put the hand in front of the chest and
+       * squarely in the axe's line. With the elbow hanging where a real
+       * one does (see GESTURE_MUDRAS) the two hands stopped competing for
+       * the same place, and the upper pair needed only a small adjustment
+       * — a touch less abduction and a deeper elbow, which lifts the axe
+       * clear and brings the silhouette IN rather than out.
        *
-       * The elbow keeps its bend, deliberately. The first fix opened it
-       * instead, and buying the clearance that way straightened both back
-       * arms into a wingspan — measured clear, and visibly wrong: the axe
-       * ended up at the end of an outstretched arm rather than raised
-       * beside the shoulder. Depth is the axis that was free here, and
-       * spending it costs the silhouette nothing.
+       * An earlier attempt bought the same clearance by splaying both
+       * back arms into a wingspan. It measured clear and looked wrong:
+       * the axe at the end of an outstretched arm rather than raised
+       * beside the shoulder. Clearance is necessary and not sufficient.
        */
-      "arm.backLeft.upper": [-38 * D, 22 * D, 62 * D],
-      "arm.backRight.upper": [-38 * D, -22 * D, -62 * D],
-      "arm.backLeft.forearm": [-68 * D, 0, 0],
-      "arm.backRight.forearm": [-68 * D, 0, 0],
+      "arm.backLeft.upper": [-34 * D, -14 * D, 48 * D],
+      "arm.backRight.upper": [-34 * D, 14 * D, -48 * D],
+      "arm.backLeft.forearm": [-72 * D, 0, 0],
+      "arm.backRight.forearm": [-72 * D, 0, 0],
       "arm.backLeft.hand": [-14 * D, 0, 0],
       "arm.backRight.hand": [-14 * D, 0, 0],
       "leg.left.thigh": [0, 5 * D, 2 * D],
@@ -563,22 +587,24 @@ export const SHIVA_POSE_PRESETS: readonly PosePreset[] = [
        * the two hands were in the same place, and the shaft was simply
        * telling the truth about where it was being held.
        *
-       * So the shoulder carries the hand a hand's breadth further out and
-       * as much again BEHIND the blessing hand, which is where classical
-       * iconography puts the upper pair anyway: the lower hands address
-       * the devotee, the upper ones hold the attributes clear of them.
+       * Most of that was the BLESSING arm's doing, and it was fixed where
+       * it belonged: abhaya used to swing the whole upper arm seventy
+       * degrees forward, which put the hand in front of the chest and
+       * squarely in the axe's line. With the elbow hanging where a real
+       * one does (see GESTURE_MUDRAS) the two hands stopped competing for
+       * the same place, and the upper pair needed only a small adjustment
+       * — a touch less abduction and a deeper elbow, which lifts the axe
+       * clear and brings the silhouette IN rather than out.
        *
-       * The elbow keeps its bend, deliberately. The first fix opened it
-       * instead, and buying the clearance that way straightened both back
-       * arms into a wingspan — measured clear, and visibly wrong: the axe
-       * ended up at the end of an outstretched arm rather than raised
-       * beside the shoulder. Depth is the axis that was free here, and
-       * spending it costs the silhouette nothing.
+       * An earlier attempt bought the same clearance by splaying both
+       * back arms into a wingspan. It measured clear and looked wrong:
+       * the axe at the end of an outstretched arm rather than raised
+       * beside the shoulder. Clearance is necessary and not sufficient.
        */
-      "arm.backLeft.upper": [-38 * D, 22 * D, 62 * D],
-      "arm.backRight.upper": [-38 * D, -22 * D, -62 * D],
-      "arm.backLeft.forearm": [-68 * D, 0, 0],
-      "arm.backRight.forearm": [-68 * D, 0, 0],
+      "arm.backLeft.upper": [-34 * D, -14 * D, 48 * D],
+      "arm.backRight.upper": [-34 * D, 14 * D, -48 * D],
+      "arm.backLeft.forearm": [-72 * D, 0, 0],
+      "arm.backRight.forearm": [-72 * D, 0, 0],
       "arm.backLeft.hand": [-14 * D, 0, 0],
       "arm.backRight.hand": [-14 * D, 0, 0],
       "leg.left.thigh": [0, 5 * D, 2 * D],

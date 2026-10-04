@@ -54,7 +54,15 @@ const SLOT_LABELS: Record<PartSlot, string> = {
   anklets: "Anklets",
 };
 
-/** Slots the user may intentionally leave empty. */
+/**
+ * Slots a customer may intentionally leave empty.
+ *
+ * Which of them are actually optional depends on WHO is wearing them —
+ * see `essentialParts` on the deity. Hair is a choice on a god with an
+ * elephant's head and not a choice on one the reference draws with it in
+ * all four views; this list says which slots could ever be empty, and the
+ * deity says which of those it would stop being itself without.
+ */
 const OPTIONAL_SLOTS: readonly PartSlot[] = [
   "upperGarment",
   "hair",
@@ -74,6 +82,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function PartSlotSection({ slot }: { slot: PartSlot }) {
   const config = useEditorStore((s) => s.config);
+  const deity = useDeity();
   const selected = config.parts[slot];
   const setPart = useEditorStore((s) => s.setPart);
   const assets = listAssets({ deity: config.deity, slot });
@@ -99,7 +108,7 @@ function PartSlotSection({ slot }: { slot: PartSlot }) {
       <AssetGrid
         assets={assets}
         selectedAssetId={selected?.assetId ?? null}
-        allowNone={OPTIONAL_SLOTS.includes(slot)}
+        allowNone={OPTIONAL_SLOTS.includes(slot) && !(deity.essentialParts ?? []).includes(slot)}
         onSelect={(assetId) => setPart(slot, assetId)}
       />
     </section>

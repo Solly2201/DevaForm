@@ -23,6 +23,7 @@ import {
   HUMAN_FOUR_ARM_SKELETON,
   VISHNU_POSE_PRESETS,
   type CharacterConfiguration,
+  type PartSlot,
   type PosePreset,
   type SkeletonDefinition,
 } from "@devaform/character-schema";
@@ -79,6 +80,22 @@ export interface AvailableDeity extends DeityDefinitionBase {
   armOptions: readonly (2 | 4)[];
   /** Builds offered for this deity, as morph presets on one body. */
   bodyVariants?: readonly BodyVariant[];
+  /**
+   * Part slots this deity is not ITSELF without.
+   *
+   * Most parts a customer may leave empty: a bare wrist and a bare ear
+   * are choices. A few are not choices, because the deity stops being
+   * recognisable without them — Shiva's jata and Vishnu's hair are named
+   * features of both references, and the editor offered an empty tile for
+   * each. Taking Vishnu's hair away left a bald blue man.
+   *
+   * Which slots those are is a fact about the DEITY, not about the slot:
+   * hair is optional on a god with an elephant's head and not optional on
+   * one whose hair the reference draws four times. So it is declared
+   * here, beside the rest of what a deity is, rather than in a list the
+   * editor keeps.
+   */
+  essentialParts?: readonly PartSlot[];
   createDefaultConfiguration: () => CharacterConfiguration;
 }
 
@@ -170,6 +187,9 @@ const shiva: AvailableDeity = {
   posePresets: SHIVA_POSE_PRESETS,
   armOptions: [2, 4],
   bodyVariants: SHIVA_BODY_VARIANTS,
+  // The jata is Shiva. ref3 names it in the head panel, the silhouette
+  // guide and the style guide; a Shiva with it removed is a bald ascetic.
+  essentialParts: ["hair"],
   createDefaultConfiguration: createDefaultShivaConfiguration,
 };
 
@@ -205,6 +225,10 @@ const vishnu: AvailableDeity = {
   skeleton: HUMAN_FOUR_ARM_SKELETON,
   posePresets: VISHNU_POSE_PRESETS,
   armOptions: [4],
+  // Drawn in all four views of ref_vishnu.png and in vishnu.jpg: long
+  // dark hair under the crown and over the shoulders. Offering to take it
+  // away offered a bald blue man.
+  essentialParts: ["hair"],
   createDefaultConfiguration: createDefaultVishnuConfiguration,
 };
 

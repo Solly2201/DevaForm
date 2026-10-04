@@ -1068,10 +1068,37 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
     };
   };
 
-  // Under the crown at the top, and clear of it below. The band's own
-  // rim is the seam; hair above it is hair inside the gold.
-  const TOP = kiritaBandBottom(body) - skull * 0.03;
+  /**
+   * THE SCALP, not a curtain.
+   *
+   * This surface used to start at the crown's rim and sweep DOWNWARD over
+   * the back half of the head, on the reasoning that anything above the
+   * rim is hair inside the gold. True while the crown is on — and the
+   * crown comes off: the Hair and Head panels let a customer take it
+   * away, and what was left was a man bald from the hairline up with two
+   * dark curtains hanging beside his ears.
+   *
+   * Hair covers the head. It runs from the APEX of the skull down, all
+   * the way round, and where it stops at the bottom depends on which way
+   * it is facing: at the back it reaches the nape, at the front it stops
+   * at the hairline — which is the crown's own rim, so the two still meet
+   * on one seam and nothing of the forehead is lost.
+   */
+  const APEX = body.skullTopY + skull * 0.02;
+  const HAIRLINE = kiritaBandBottom(body);
   const NAPE = body.headCenterY - skull * 1.5;
+  /** Where the hair's lower edge runs, at a bearing measured from the front. */
+  const hemAt = (bearing: number) => {
+    // 0 at the front, 1 at the back.
+    const back = (1 - Math.cos(bearing)) / 2;
+    // A hairline is not a straight cut across the brow: it comes down a
+    // little at the centre and climbs at the temples. Small, but it is
+    // the difference between a hairline and a headband.
+    const peak = Math.max(0, Math.cos(bearing)) * skull * 0.035 * (1 - 2 * Math.abs(
+      Math.sin(bearing),
+    ) ** 1.5);
+    return HAIRLINE - peak + (NAPE - HAIRLINE) * back;
+  };
   /**
    * How far the hair stands off the skull at a height.
    *
@@ -1082,31 +1109,24 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
    */
   const thickness = (t: number) =>
     skull * (0.02 + 0.42 * Math.sin(Math.min(1, t * 1.18) * Math.PI * 0.62));
-  /**
-   * Which bearings the hair covers. Zero is the FRONT, and the face is
-   * left open — a sweep's own zero is the geometry's convention, and two
-   * earlier attempts at phiStart arithmetic draped hair over the brow
-   * like a helmet brim.
-   */
-  const FROM = Math.PI * 0.5;
-  const TO = Math.PI * 1.5;
-
   // --- the shell ----------------------------------------------------------
-  const ROWS = 14;
-  const COLUMNS = 26;
+  // All the way round. Zero is the FRONT, and the face is still left
+  // open — not by cutting the sweep short, but because the hem reaches
+  // the hairline there and goes no lower.
+  const ROWS = 16;
+  const COLUMNS = 40;
   const positions: number[] = [];
   const indices: number[] = [];
   for (let row = 0; row <= ROWS; row += 1) {
     const t = row / ROWS;
-    const y = TOP + (NAPE - TOP) * t;
-    const ring = at(y);
-    const stand = thickness(t);
     for (let column = 0; column <= COLUMNS; column += 1) {
-      const bearing = FROM + ((TO - FROM) * column) / COLUMNS;
+      const bearing = (column / COLUMNS) * Math.PI * 2;
+      const y = APEX + (hemAt(bearing) - APEX) * t;
+      const ring = at(y);
       // A shallow wave round the head, so the surface has locks in it
       // rather than being a swim cap.
       const wave = Math.cos(bearing * 5) * skull * 0.035 * t;
-      const out = stand + wave;
+      const out = thickness(t) + wave;
       positions.push(
         Math.sin(bearing) * (ring.halfWidth + out),
         y,
@@ -1138,7 +1158,10 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
    * flattened across.
    */
   const lock = (bearing: number, phase: number, drop: number, width: number) => {
-    const ring = at(NAPE);
+    // Off the hem, wherever the hem is at this bearing — so a lock beside
+    // the ear starts at the ear and one at the back starts at the nape.
+    const hem = hemAt(bearing);
+    const ring = at(hem);
     const ox = Math.sin(bearing) * (ring.halfWidth + thickness(1));
     const oz = ring.centreZ + Math.cos(bearing) * (ring.halfDepth + thickness(1));
     const away = Math.sign(ox) || 1;
@@ -1161,7 +1184,7 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
         const sway = Math.sin(t * Math.PI * 1.9 + own) * skull * 0.46;
         path.push([
           ox + flare + sway + side * width * 0.7,
-          NAPE - drop * t + Math.sin(t * Math.PI * 2.2 + own) * skull * 0.08,
+          hem - drop * t + Math.sin(t * Math.PI * 2.2 + own) * skull * 0.08,
           oz - skull * 0.55 * t * t + Math.cos(t * Math.PI * 1.5 + own) * skull * 0.22 * t,
         ]);
       }
@@ -1177,7 +1200,9 @@ export const featureHairFlowing: PartGenerator = (ctx) => {
   const LOCKS = 14;
   for (let i = 0; i < LOCKS; i += 1) {
     const t = i / (LOCKS - 1);
-    const bearing = FROM + 0.08 + (TO - FROM - 0.16) * t;
+    // Round the back half: the front of the hem is the hairline, and hair
+    // does not fall from a hairline onto a face.
+    const bearing = Math.PI * 0.5 + 0.08 + (Math.PI - 0.16) * t;
     group.add(
       lock(
         bearing,
