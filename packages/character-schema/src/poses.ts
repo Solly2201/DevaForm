@@ -678,11 +678,17 @@ export const VISHNU_POSE_PRESETS: readonly PosePreset[] = [
     label: "Regal",
     description: "Upright and symmetrical, all four attributes presented.",
     joints: {
-      // Front pair: low and open, the mace hand at the hip. The right
-      // arm hangs nearly straight so the wrist can bring the shaft fully
-      // vertical — bent further, the upright solve ran out of joint.
-      "arm.frontRight.upper": [6 * D, 0, -9 * D],
-      "arm.frontRight.forearm": [-16 * D, -8 * D, 0],
+      // Front pair: low and open, the mace hand at the hip.
+      //
+      // A little more abduction and a little more elbow than it had. The
+      // arm was authored "nearly straight so the wrist can bring the
+      // shaft fully vertical", and it did not: the mace stood thirteen
+      // degrees off upright, which is past the solver's own tolerance, so
+      // every customer who opened Vishnu got a rig warning about it.
+      // Measured, these reach it exactly — nought point nought degrees —
+      // and move the wrist by two centimetres doing it.
+      "arm.frontRight.upper": [6 * D, 0, -16 * D],
+      "arm.frontRight.forearm": [-26 * D, -8 * D, 0],
       "arm.frontRight.hand": [-6 * D, 0, 0],
       "arm.frontLeft.upper": [4 * D, 0, 6 * D],
       "arm.frontLeft.forearm": [-26 * D, 14 * D, 0],

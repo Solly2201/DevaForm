@@ -504,6 +504,44 @@ else if (!focus.outline && !focus.ring) {
   note("bug", "a11y", `focus on "${focus.label}" is invisible`);
 }
 
+// --- every control a screen reader can name ------------------------------
+//
+// A button whose only content is an icon is a button a screen reader
+// announces as "button". The Studio is full of them — camera presets,
+// undo, the dismiss on a toast — and each one needs a name of its own.
+const unnamed = await page.evaluate(() => {
+  const name = (node) =>
+    (
+      node.getAttribute("aria-label") ||
+      node.getAttribute("title") ||
+      node.textContent ||
+      ""
+    )
+      .replace(/\s+/g, " ")
+      .trim();
+  return [...document.querySelectorAll("button, a[href], input, select")]
+    .filter((node) => {
+      const box = node.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) return false;
+      if (node.getAttribute("aria-hidden") === "true") return false;
+      return name(node).length === 0;
+    })
+    .map((node) => `${node.tagName.toLowerCase()}${node.className ? "." + String(node.className).split(" ")[0] : ""}`);
+});
+for (const control of [...new Set(unnamed)].slice(0, 8)) {
+  note("bug", "a11y", `a ${control} offers no name to a screen reader`);
+}
+
+const unlabelledImages = await page.evaluate(() =>
+  [...document.querySelectorAll("img")].filter(
+    (node) =>
+      node.getAttribute("alt") === null && node.getAttribute("aria-hidden") !== "true",
+  ).length,
+);
+if (unlabelledImages > 0) {
+  note("bug", "a11y", `${unlabelledImages} image(s) with neither alt text nor aria-hidden`);
+}
+
 await writeFile(path.join(outDir, "studio.png"), await page.screenshot({ type: "png" }));
 await writeFile(
   path.join(outDir, "report.json"),

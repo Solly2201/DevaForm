@@ -161,9 +161,12 @@ export function CharacterRoot() {
 
   useEffect(() => {
     if (!rig) return;
-    const warnings = rigWarnings(rig);
-    if (warnings.length > 0) {
-      console.warn("Character rig warnings:", warnings);
+    // Rig warnings are for whoever is BUILDING the product, and the
+    // console is the customer's window. They stay on the rig either way,
+    // which is where /dev/qa and the capture harness read them from.
+    if (process.env.NODE_ENV !== "production") {
+      const warnings = rigWarnings(rig);
+      if (warnings.length > 0) console.warn("Character rig warnings:", warnings);
     }
     activeRig.current = rig;
     if (process.env.NODE_ENV !== "production") {
