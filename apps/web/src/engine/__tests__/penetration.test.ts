@@ -156,6 +156,13 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
     why: "a tusk's root is inside the jaw it grows from",
   },
   {
+    id: "ganesha.waist.kamarband",
+    mm: 6,
+    reason: "seam",
+    why:
+      "a sash wound round a waist beds into what it is tied over, and the belt is now seated on the dhoti's own measured radius rather than pushed clear of it by a body-derived floor. Before that it had NO penetration and stood eighty millimetres proud of the cloth — a gold flange wider than Ganesha's belly, visible from every angle in the showcase captures. A few millimetres of bite is what a tied band looks like; the alternative was a hoop in the air",
+  },
+  {
     id: "ganesha.hands.classic",
     mm: 14,
     reason: "seam",

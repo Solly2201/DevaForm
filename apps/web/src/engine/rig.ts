@@ -695,6 +695,38 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   };
 
   /**
+   * Where a socket is, expressed in a named JOINT's frame.
+   *
+   * Because generators were re-deriving this from the joint table and
+   * getting it wrong. The waist ornament hangs off the PELVIS; the belt
+   * built on it converted to chest space as `socket - spine - chest`,
+   * which is a different chain, and the answer was eighty millimetres
+   * out. The belt was therefore built against the body profile at one
+   * height and rendered at another, where the torso is wider — measured,
+   * twenty-six millimetres of gold inside Shiva — and a body-derived
+   * "floor" had been added to the belt's radius to push it back out,
+   * which is what made it read as a flange on Ganesha, who did not need
+   * the correction.
+   *
+   * Read off the live objects, so it is right whatever the skeleton's
+   * shape and whoever reparented what: no generator should have to know
+   * the chain between two things it can simply ask about.
+   */
+  const socketInFrameOf = (
+    id: SocketId,
+    frame: JointId,
+  ): readonly [number, number, number] | null => {
+    const socket = sockets.get(id);
+    const joint = joints.get(frame);
+    if (!socket || !joint) return null;
+    socket.updateWorldMatrix(true, false);
+    joint.updateWorldMatrix(true, false);
+    const point = new THREE.Vector3().setFromMatrixPosition(socket.matrixWorld);
+    joint.worldToLocal(point);
+    return [point.x, point.y, point.z];
+  };
+
+  /**
    * How wide the figure has become, height by height AND bearing by
    * bearing, as clothing is put on it.
    *
@@ -714,14 +746,29 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
    */
   const WORN_BIN = 0.005;
   const WORN_BEARINGS = 16;
-  const wornRadius = new Map<number, number>();
+  /**
+   * Kept per GARMENT SLOT, because "what am I worn over" has a different
+   * answer for different things and the single map could only give one.
+   *
+   * A kamarband is tied over the dhoti. The uttariya is thrown over the
+   * shoulder and its tail falls across the belt — OVER it, the way cloth
+   * laid on a belt does. Pooling both into one radius made the belt clear
+   * the sash as well, and measured on Ganesha that put eighty millimetres
+   * of air between the gold and the red: a flange standing further out
+   * than his own belly, with its own shadow on the skirt below it. The
+   * physics was never the problem; the belt was being told the wrong
+   * thing was underneath it.
+   */
+  const wornRadius = new Map<string, Map<number, number>>();
   const wornKey = (heightBin: number, bearingBin: number): number =>
     heightBin * WORN_BEARINGS + bearingBin;
   const bearingBinOf = (x: number, z: number): number =>
     ((Math.round((Math.atan2(x, z) / (Math.PI * 2)) * WORN_BEARINGS) % WORN_BEARINGS) +
       WORN_BEARINGS) %
     WORN_BEARINGS;
-  const recordWorn = (object: THREE.Object3D): void => {
+  const recordWorn = (object: THREE.Object3D, slot: string): void => {
+    const bySlot = wornRadius.get(slot) ?? new Map<number, number>();
+    wornRadius.set(slot, bySlot);
     const point = new THREE.Vector3();
     object.updateWorldMatrix(true, true);
     object.traverse((node) => {
@@ -737,14 +784,53 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         characterRoot.worldToLocal(point);
         const key = wornKey(Math.round(point.y / WORN_BIN), bearingBinOf(point.x, point.z));
         const radius = Math.hypot(point.x, point.z);
-        if (radius > (wornRadius.get(key) ?? 0)) wornRadius.set(key, radius);
+        if (radius > (bySlot.get(key) ?? 0)) bySlot.set(key, radius);
       }
     });
   };
-  const wornClearanceAt = (frame: JointId, localY: number, bearing?: number): number => {
+  /**
+   * WHERE THE CLOTH IS, as a SIGNED offset from the body's own surface —
+   * or null where no cloth was recorded nearby.
+   *
+   * Signed, and that is the whole point of it. The clamped version can
+   * only ever push a thing OUT from the profile's idea of the body, and
+   * the profile is an estimate: measured on Ganesha it puts his belly at
+   * a hundred and ninety-two millimetres at the front where the dhoti
+   * drawn over it reaches a hundred and eighty-seven. A belt asking for
+   * clearance there was told "none needed", fell back to a body-derived
+   * floor, and came out thirty-one millimetres off the cloth — the flange
+   * in the showcase captures.
+   *
+   * With the sign kept, a generator that seats itself at
+   * `surfaceAt + offset` lands on the cloth that is ACTUALLY there, and
+   * the profile's error cancels instead of accumulating. Null rather than
+   * zero when nothing was found, so a caller can tell "the cloth is
+   * exactly on the skin" from "there is no cloth here" — the two want
+   * opposite fallbacks.
+   */
+  const wornOffsetAt = (
+    frame: JointId,
+    localY: number,
+    bearing?: number,
+    /**
+     * The garment slots this thing is worn OVER. Omitted means every
+     * garment, which is right for anything draped outermost and wrong
+     * for anything tied under something else — see `wornRadius`.
+     */
+    over?: readonly string[],
+  ): number | null => {
     const joint = joints.get(frame);
     const chestJoint = joints.get("chest" as JointId);
-    if (!joint || !chestJoint || wornRadius.size === 0) return 0;
+    if (!joint || !chestJoint || wornRadius.size === 0) return null;
+    const layers = [...wornRadius.entries()]
+      .filter(([slot]) => over === undefined || over.includes(slot))
+      .map(([, bins]) => bins);
+    if (layers.length === 0) return null;
+    const wornAt = (key: number): number => {
+      let widest = 0;
+      for (const bins of layers) widest = Math.max(widest, bins.get(key) ?? 0);
+      return widest;
+    };
     joint.updateWorldMatrix(true, false);
     chestJoint.updateWorldMatrix(true, false);
     const at = new THREE.Vector3(0, localY, 0).applyMatrix4(joint.matrixWorld);
@@ -755,7 +841,8 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     const heightBin = Math.round(at.y / WORN_BIN);
 
     const probe = new THREE.Vector3();
-    let worst = 0;
+    let widestWorn = 0;
+    let found = false;
     /**
      * ONE BEARING WHEN ONE IS ASKED FOR.
      *
@@ -784,27 +871,61 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       // falls between two samples of a pleated hem should not read as
       // nothing.
       const worn = Math.max(
-        wornRadius.get(wornKey(heightBin - 1, step)) ?? 0,
-        wornRadius.get(wornKey(heightBin, step)) ?? 0,
-        wornRadius.get(wornKey(heightBin + 1, step)) ?? 0,
+        wornAt(wornKey(heightBin - 1, step)),
+        wornAt(wornKey(heightBin, step)),
+        wornAt(wornKey(heightBin + 1, step)),
       );
       if (worn <= 0) continue;
-      // The skin at the same bearing and height, about the same axis. The
-      // profile answers in the chest's frame and the bins are in the
-      // root's, so the conversion happens here rather than in a generator
-      // that would have to be told which of the two it was holding.
-      const point = bodyProfile.surfaceAt(bearing, chestLocalY);
-      probe.set(point.x, point.y, point.z).applyMatrix4(chestJoint.matrixWorld);
-      characterRoot.worldToLocal(probe);
-      worst = Math.max(worst, worn - Math.hypot(probe.x, probe.z));
+      found = true;
+      widestWorn = Math.max(widestWorn, worn);
     }
-    return Math.max(0, worst);
+    if (!found) return null;
+    /**
+     * THE WIDEST CLOTH IN THE ARC, against the skin AT THE BEARING ASKED.
+     *
+     * The window used to be applied to the finished clearance — the
+     * largest `worn - surfaceAt` anywhere in the arc — and that mixes two
+     * bearings into one number. Measured on Ganesha: at ninety degrees
+     * the body is a hundred and eighty millimetres and the dhoti a
+     * hundred and eighty-seven, so the belt needs seven; but a hundred
+     * and thirty-five degrees is inside the window, the body there is a
+     * hundred and sixty-three, and the twenty-four millimetres THAT
+     * bearing needs was carried round and applied where it was not. The
+     * belt came out thirty-four millimetres off the cloth on both flanks.
+     *
+     * A radius is the thing that travels. A rigid band bending over an
+     * arc must pass outside the widest cloth in that arc — and it does so
+     * at its own bearing, where its own skin is.
+     */
+    const point = bodyProfile.surfaceAt(
+      bearing === undefined ? 0 : bearing,
+      chestLocalY,
+    );
+    probe.set(point.x, point.y, point.z).applyMatrix4(chestJoint.matrixWorld);
+    characterRoot.worldToLocal(probe);
+    return widestWorn - Math.hypot(probe.x, probe.z);
   };
+
+  /**
+   * How far past the body's own surface the cloth reaches here, or zero
+   * where it does not reach past it at all.
+   *
+   * The clamped answer, which is what anything asking "how much room do I
+   * need to clear what is under me" wants.
+   */
+  const wornClearanceAt = (
+    frame: JointId,
+    localY: number,
+    bearing?: number,
+    over?: readonly string[],
+  ): number => Math.max(0, wornOffsetAt(frame, localY, bearing, over) ?? 0);
 
   const baseCtx: Omit<GeneratorContext, "params"> = {
     jointOffset: jointOffsetOf,
     socketOffset: socketOffsetOf,
+    socketInFrame: socketInFrameOf,
     wornClearanceAt,
+    wornOffsetAt,
     materials,
     proportions: config.proportions,
     morphs: config.morphs,
@@ -824,7 +945,14 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // Parts. Socket-mounted part entries (ear jewellery etc.) are deferred
   // until every joint entry has landed, so owner parts have already
   // refined the sockets they terminate on.
-  const socketMounts: Array<{ assetId: string; socket: SocketId; object: THREE.Object3D }> = [];
+  const socketMounts: Array<{
+    assetId: string;
+    socket: SocketId;
+    object: THREE.Object3D;
+    /** What it is, so cloth can be recorded once it is in the tree. */
+    category: string;
+    slot: string;
+  }> = [];
   /**
    * THE FIGURE'S OWN FLESH — all of it, not only the torso slot.
    *
@@ -974,7 +1102,13 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       entry.object.name = entry.object.name || `part:${asset.id}`;
       if (isFlesh) claimFlesh(entry.object);
       if (entry.socket !== undefined) {
-        socketMounts.push({ assetId: asset.id, socket: entry.socket, object: entry.object });
+        socketMounts.push({
+          assetId: asset.id,
+          socket: entry.socket,
+          object: entry.object,
+          category: asset.category,
+          slot,
+        });
       } else {
         const target = joints.get(entry.joint);
         if (!target) {
@@ -984,7 +1118,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         target.add(entry.object);
         // Now it is in the tree, so how wide it makes the figure can be
         // read. Ornaments worn over it are built later and ask.
-        if (asset.category === "clothing") recordWorn(entry.object);
+        if (asset.category === "clothing") recordWorn(entry.object, slot);
       }
       /**
        * A part that REPLACED a region of the body corrects what the
@@ -1044,6 +1178,20 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       continue;
     }
     socket.add(mount.object);
+    /**
+     * A GARMENT MOUNTED TO A SOCKET IS STILL CLOTH ON THE FIGURE.
+     *
+     * Only the joint-parented branch recorded, so a dhoti that hangs off
+     * a socket was invisible to everything asking "what am I worn over".
+     * Measured on the stylised Shiva: the skirt reached three hundred and
+     * thirty millimetres across and the belt tied over it came out at two
+     * hundred and seventy-three — the gold entirely inside the cloth,
+     * because as far as the measurement was concerned there was no cloth.
+     *
+     * Recorded here rather than at the push, because a mount's world
+     * matrix only means anything once it is under the socket.
+     */
+    if (mount.category === "clothing") recordWorn(mount.object, mount.slot);
   }
 
   // Attachments — every decision about where these go and in what

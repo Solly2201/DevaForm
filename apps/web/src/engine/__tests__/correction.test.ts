@@ -573,6 +573,45 @@ describe("naga lies on the body it is worn by", () => {
   );
 });
 
+/** How wide an object gets, counting only vertices inside a height band. */
+function widthWithin(
+  config: CharacterConfiguration,
+  name: string,
+  band: THREE.Box3,
+  posed = true,
+): number {
+  const rig = buildRig(config, new ZoneMaterials());
+  if (posed) poseRig(rig);
+  rig.root.updateWorldMatrix(true, true);
+  let low = Infinity;
+  let high = -Infinity;
+  rig.root.traverse((node) => {
+    let owner: THREE.Object3D | null = node;
+    let label = "";
+    while (owner && owner !== rig.root) {
+      if (typeof owner.name === "string" && owner.name.length > 0) {
+        label = owner.name;
+        break;
+      }
+      owner = owner.parent;
+    }
+    if (label !== name) return;
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const position = mesh.geometry.getAttribute("position");
+    if (!position) return;
+    mesh.updateWorldMatrix(true, false);
+    const point = new THREE.Vector3();
+    for (let i = 0; i < position.count; i += 1) {
+      point.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+      if (point.y < band.min.y || point.y > band.max.y) continue;
+      low = Math.min(low, point.x);
+      high = Math.max(high, point.x);
+    }
+  });
+  return Number.isFinite(low) ? high - low : 0;
+}
+
 describe("kamarband wraps the dressed waist", () => {
   const beltWidth = (bulk: number): number => {
     const config = stylisedShiva();
@@ -586,16 +625,54 @@ describe("kamarband wraps the dressed waist", () => {
     return box!.max.x - box!.min.x;
   };
 
-  it("sits outside the skirt's wrap radius and scales with the body", () => {
-    const profile = deriveBodyProfile(
-      { form: "athletic", chest: 1, waist: 1, shoulder: 1 },
-      { height: 1, bulk: 1 },
+  it("sits outside the skirt it is tied on, and scales with the body", () => {
+    /**
+     * MEASURED AGAINST THE CLOTH, not against `dhotiRadius`.
+     *
+     * This asserted `width > 2 * dhotiRadius` — the belt had to be wider
+     * than the garment's DECLARED wrap radius. That radius is a floor:
+     * what a dhoti needs at the HIPS so it clears the legs inside it. The
+     * belt is tied above the hips, where the skirt is legitimately
+     * narrower, so holding the belt to the hip number is holding it to a
+     * figure it is not touching — and it is what kept the belt standing
+     * off the cloth in every showcase capture.
+     *
+     * The honest form of the same rule is the one the eye applies: the
+     * gold is outside the red. So the skirt is measured where the belt
+     * actually sits, and the belt has to be outside THAT.
+     */
+    const config = stylisedShiva();
+    config.attachments = [
+      ...config.attachments,
+      { socket: "waist.ornament", asset: { assetId: "ganesha.waist.kamarband", version: 2 } },
+    ];
+    // The BAND, not the group: the tassels hang four centimetres below
+    // it, and a flared skirt is wider down there than anywhere the band
+    // touches. Comparing those two is comparing different heights.
+    const belt = bboxOf(config, "kamarband.band");
+    const skirt = bboxOf(config, "part:shiva.garment.dhoti");
+    expect(belt, "the belt was built").not.toBeNull();
+    expect(skirt, "the skirt under it was built").not.toBeNull();
+
+    const beltWidthAt = belt!.max.x - belt!.min.x;
+    // The skirt's width in the belt's own height band — a tapered skirt
+    // measured at its hem says nothing about the waist it is tied at.
+    const band = new THREE.Box3(
+      new THREE.Vector3(-Infinity, belt!.min.y, -Infinity),
+      new THREE.Vector3(Infinity, belt!.max.y, Infinity),
     );
-    const width = beltWidth(1);
-    // Never swallowed by the dhoti…
-    expect(width).toBeGreaterThan(2 * profile.dhotiRadius);
-    // …but still a fitted band, not a hoop in space.
-    expect(width).toBeLessThan(2 * profile.dhotiRadius + 0.08);
+    const skirtThere = widthWithin(config, "part:shiva.garment.dhoti", band);
+    expect(
+      beltWidthAt,
+      `the belt (${(beltWidthAt * 1000).toFixed(1)} mm across) is inside the skirt ` +
+        `(${(skirtThere * 1000).toFixed(1)} mm) it is tied on`,
+    ).toBeGreaterThan(skirtThere);
+    // …but still a fitted band, not a hoop in space. Four centimetres of
+    // total width, which is two of standoff on each side.
+    expect(
+      beltWidthAt,
+      `the belt stands ${(((beltWidthAt - skirtThere) / 2) * 1000).toFixed(1)} mm off the skirt`,
+    ).toBeLessThan(skirtThere + 0.04);
     expect(beltWidth(1.3)).toBeGreaterThan(beltWidth(0.8) + 0.02);
   });
 });

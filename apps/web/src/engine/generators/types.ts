@@ -156,7 +156,45 @@ export interface GeneratorContext {
    *
    * Returns 0 where nothing worn reaches past the skin.
    */
-  wornClearanceAt(frame: JointId, localY: number, bearing?: number): number;
+  /**
+   * How far past the body's own surface the CLOTH reaches here.
+   *
+   * `over` names the garment slots this thing is worn on top of. Omit it
+   * for anything draped outermost; name them for anything tied beneath
+   * another layer — a belt is wound on the dhoti and the sash falls
+   * across it, so a belt that clears the sash too stands off the figure
+   * by the sash's whole thickness all the way round.
+   */
+  /**
+   * Where a socket sits in a named joint's frame, or null if either is
+   * absent. Ask this instead of subtracting joint offsets by hand: the
+   * chain between a socket and a joint is the skeleton's business, and a
+   * generator that reconstructs it is a generator that will be wrong the
+   * day something is reparented.
+   */
+  socketInFrame(socket: SocketId, frame: JointId): readonly [number, number, number] | null;
+  wornClearanceAt(
+    frame: JointId,
+    localY: number,
+    bearing?: number,
+    over?: readonly string[],
+  ): number;
+  /**
+   * The same measurement, SIGNED, and null where no cloth was found.
+   *
+   * Use this to SEAT something on cloth rather than to clear it: placing
+   * at `surfaceAt + offset` lands on the garment that is actually there,
+   * so the profile's own error cancels. The clamped version above can
+   * only push outwards from the profile's estimate, which on a body the
+   * profile over-reports leaves a band standing off the cloth it is
+   * supposed to be tied round.
+   */
+  wornOffsetAt(
+    frame: JointId,
+    localY: number,
+    bearing?: number,
+    over?: readonly string[],
+  ): number | null;
 }
 
 /**

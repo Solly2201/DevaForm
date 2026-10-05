@@ -568,13 +568,14 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
    * human torsos while sitting correctly on Ganesha, who is the body the
    * table is for.
    */
+  const inChest = ctx.socketInFrame("waist.ornament", "chest");
   const socket = ctx.socketOffset("waist.ornament");
-  const spine = ctx.jointOffset("spine");
-  const chest = ctx.jointOffset("chest");
-  const toChest = {
-    y: socket[1] - spine[1] - chest[1],
-    z: socket[2] - spine[2] - chest[2],
-  };
+  const toChest = inChest
+    ? { y: inChest[1], z: inChest[2] }
+    : // Only if the skeleton has no chest to speak of — the figure then
+      // has no torso frame and the socket's own offset is the best that
+      // can be said about where the waist is.
+      { y: socket[1], z: socket[2] };
   const toSocket = (point: THREE.Vector3): V3 => [
     point.x,
     point.y - toChest.y,
@@ -625,11 +626,6 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
    * see `torsoBand`, and `bodySurface.test`, which holds the profile only
    * over the band it admits to.
    */
-  const overCloth = (t: number) =>
-    Math.max(
-      Math.max(0, body.dhotiRadius - body.pelvisHalfWidth),
-      ctx.wornClearanceAt("chest", beltY, t * Math.PI * 2),
-    ) + 0.006;
   /**
    * A BELT IS SIZED BY THE WAIST IT WRAPS, not by the neck.
    *
@@ -642,6 +638,49 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
   const halfWidth = body.dhotiRadius * 0.1;
   const thickness = body.dhotiRadius * 0.045;
 
+  const overCloth = (bearing: number) => {
+    /**
+     * SEATED ON WHICHEVER IS WIDER: the cloth, or the body under it.
+     *
+     * Three corrections live here, all measured off showcase captures in
+     * which the belt read as a gold flange standing further out than
+     * Ganesha's own belly — eighty millimetres of air between the gold
+     * and the red.
+     *
+     * OVER THE LOWER GARMENT ONLY. The uttariya's tail crosses the waist
+     * and falls ACROSS a belt, not under it. Pooling both garments into
+     * one radius made the belt clear the sash as well, all the way round,
+     * for a crossing that lies on top of it anyway.
+     *
+     * ACROSS THE BAND THE BELT OCCUPIES. A belt is centimetres tall and
+     * the skirt under it is not a cylinder; asked only at its centre
+     * line, the band cleared the cloth there and was swallowed by the
+     * flare below it.
+     *
+     * AND NO BODY-DERIVED FLOOR. There used to be a
+     * `dhotiRadius - pelvisHalfWidth` term maxed in — two measurements of
+     * the BODY standing in for a garment's thickness — kept as a safety
+     * net for cloth the measurement could not see. It is no longer needed
+     * for that (see `wornOffsetAt`, which now answers for socket-mounted
+     * garments too) and it was twenty millimetres of the flange. What
+     * actually stops the belt sinking into a figure is the clamp below,
+     * which is about the SKIN and says so.
+     */
+    let measured: number | null = null;
+    for (const offset of [-halfWidth, 0, halfWidth]) {
+      const here = ctx.wornOffsetAt("chest", beltY + offset, bearing, ["lowerGarment"]);
+      if (here === null) continue;
+      measured = measured === null ? here : Math.max(measured, here);
+    }
+    /**
+     * Never inside the skin. `wornOffsetAt` is signed so that a belt can
+     * sit ON cloth the profile over-reports; clamped here so it can never
+     * sit IN a body the profile under-reports. Measured on Vishnu without
+     * this: fourteen millimetres into the torso. A bare waist, with no
+     * cloth to measure at all, lands on the skin plus the six.
+     */
+    return Math.max(0, measured ?? 0) + 0.006;
+  };
   const ring: SurfaceWaypoint[] = [];
   for (let i = 0; i <= 24; i += 1) {
     const bearing = (i / 24) * Math.PI * 2;
@@ -650,7 +689,9 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
   const belt = surfaceRibbon(body, ring, {
     halfWidth,
     thickness,
-    clearance: overCloth,
+    // The ring spans the whole circle, so its walk parameter is the
+    // bearing as a fraction of it.
+    clearance: (t: number) => overCloth(t * Math.PI * 2),
     samples: 120,
     // A belt's width runs up the figure, not across the hip it rides.
     upright: true,
@@ -662,28 +703,57 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
     position.setZ(i, position.getZ(i) - toChest.z);
   }
   belt.computeVertexNormals();
-  group.add(new THREE.Mesh(belt, metal));
+  /**
+   * Named, because the band and the things hanging off it are different
+   * objects answering to different rules and a measurement has to be able
+   * to tell them apart. The tassels drop four centimetres below the band;
+   * a check that took the whole group's extent compared the band against
+   * the skirt where the TASSELS are, which on a flared skirt is wider
+   * than anywhere the band touches.
+   */
+  const band = new THREE.Mesh(belt, metal);
+  band.name = "kamarband.band";
+  group.add(band);
 
   // Tassels hanging at the front, seated on the same surface the belt is.
+  /**
+   * THE TASSELS ASK ABOUT THEIR OWN BEARING.
+   *
+   * They hang across a sixty-nine hundredths of a radian arc at the
+   * FRONT, and `walkSurface` hands its callback the walk's own parameter
+   * — nought to one across that short arc. Feeding that straight to a
+   * function keyed by bearing fraction read the clearance from all the
+   * way round the figure: the middle tassel, at the front, was seated on
+   * the forty-one millimetres of cloth measured at Ganesha's BACK and
+   * stood two hundred and thirty-six millimetres out where the dhoti it
+   * hangs on is a hundred and eighty-seven. That spike is the flange in
+   * the showcase captures — the band itself was never more than a
+   * centimetre or so off.
+   */
+  const HANG_FROM = -0.34;
+  const HANG_TO = 0.34;
   const hang = walkSurface(
     body,
     [
-      { bearing: -0.34, y: beltY - 0.012 },
+      { bearing: HANG_FROM, y: beltY - 0.012 },
       { bearing: 0, y: beltY - 0.014 },
-      { bearing: 0.34, y: beltY - 0.012 },
+      { bearing: HANG_TO, y: beltY - 0.012 },
     ],
-    (t) => overCloth(t) + thickness,
+    (t) => overCloth(HANG_FROM + t * (HANG_TO - HANG_FROM)) + thickness,
     5,
   );
+  const tassels = new THREE.Group();
+  tassels.name = "kamarband.tassels";
   for (const index of [0, 2, 4]) {
     const seat = toSocket(hang.points[index] as THREE.Vector3);
-    group.add(
+    tassels.add(
       mesh(new THREE.CapsuleGeometry(0.005, 0.03, 4, 8), metal, { position: seat }),
     );
     const drop = gemStud(ctx, 0.007);
     drop.position.set(seat[0], seat[1] - 0.028, seat[2]);
-    group.add(drop);
+    tassels.add(drop);
   }
+  group.add(tassels);
   return group;
 };
 

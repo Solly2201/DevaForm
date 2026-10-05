@@ -100,7 +100,9 @@ export async function buildAssetObject(
     // And a thumbnail wears nothing else: a picture of one ornament has
     // no garment under it, so there is nothing to clear and zero is the
     // true answer rather than a stub.
+    socketInFrame: () => null,
     wornClearanceAt: () => 0,
+    wornOffsetAt: () => null,
     held: {},
     seated: false,
     garment: "full",

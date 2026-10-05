@@ -263,7 +263,19 @@ const PINNED = {
   // belt is sized by the waist it wraps rather than by his neck, and a
   // belt clears what is under it PER BEARING rather than bulging its
   // whole circumference to miss one sash crossing.
-  ganesha: { nodes: 379, digest: "23dc5a2857fefc8e" },
+  //
+  // AND HIS BELT NOW SITS ON HIS DHOTI. It was eighty millimetres proud
+  // of the cloth — a gold flange standing further out than his own belly,
+  // in every frame of the 360-degree sweep. Four separate things put it
+  // there and all four are fixed in this digest: it cleared the uttariya
+  // as well as the dhoti, though a sash's tail falls ACROSS a belt; its
+  // three front tassels read the clearance with the walk's own parameter
+  // and so were seated on cloth measured at his BACK; the per-bearing
+  // window maxed a clearance rather than a radius, carrying one bearing's
+  // need round to another; and a body-derived floor was added on top of
+  // all of it. The extra node is the tassels, now a named group so that a
+  // measurement can tell the band from the things hanging off it.
+  ganesha: { nodes: 380, digest: "cf0868c1c6634a61" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

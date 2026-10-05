@@ -54,6 +54,7 @@ import {
   type CharacterConfiguration,
 } from "@devaform/character-schema";
 import { buildRig, poseRig } from "../rig";
+import { insideSkin, skinDepthAt, skinFieldOf } from "../spatial/skinDepth";
 import { ZoneMaterials } from "../materials";
 
 const SUBJECTS = [
@@ -92,6 +93,29 @@ describe.each(SUBJECTS.map((subject) => [subject.label, subject] as const))(
         });
         expect(node, "the belt is in the scene").not.toBeNull();
 
+        /**
+         * MEASURED AGAINST THE SKIN THAT IS DRAWN, not against the torso
+         * profile.
+         *
+         * This used to ask `body.surfaceAt` how deep each belt vertex
+         * was. The belt rides at roughly two hundred millimetres below
+         * the chest, which is BELOW the band that profile admits to
+         * describing — `torsoBand` exists to say where it stops being
+         * able to answer, and below it the profile keeps replying with
+         * something that is not the body. Measured, the two instruments
+         * disagreed by tens of millimetres at exactly this height: the
+         * dhoti drawn over Shiva's hips is narrower than the profile
+         * claims his torso is there, so a belt seated correctly ON the
+         * cloth was reported twenty-six millimetres INSIDE him.
+         *
+         * `skinDepth` was built for this question — how far inside the
+         * rendered, skinned, morphed triangles a point is, anywhere on
+         * the figure — and it is the instrument that can answer it.
+         */
+        const bodyMeshes: THREE.Mesh[] = [];
+        for (const mesh of rig.bodyMeshes) bodyMeshes.push(mesh);
+        const field = skinFieldOf(bodyMeshes);
+
         let deepest = 0;
         let measured = 0;
         let where = "";
@@ -104,23 +128,12 @@ describe.each(SUBJECTS.map((subject) => [subject.label, subject] as const))(
             const point = new THREE.Vector3()
               .fromBufferAttribute(position, i)
               .applyMatrix4(mesh.matrixWorld);
-            const local = point.y - chestY;
-            /**
-             * Containment is the RADIAL question, and sound: the torso
-             * surface is a star-shaped field about its own axis, so
-             * "further from the axis than the skin is" is exactly
-             * "outside the body".
-             */
-            const centreZ =
-              (rig.body.surfaceAt(0, local).z + rig.body.surfaceAt(Math.PI, local).z) / 2;
-            const bearing = Math.atan2(point.x, point.z - centreZ);
-            const skin = rig.body.surfaceAt(bearing, local);
-            const here = Math.hypot(point.x, point.z - centreZ);
-            const there = Math.hypot(skin.x, skin.z - centreZ);
             measured += 1;
-            if (there - here > deepest) {
-              deepest = there - here;
-              where = `${(local * 1000).toFixed(0)}mm up, ${((bearing * 180) / Math.PI).toFixed(0)}deg`;
+            if (!insideSkin(field, point)) continue;
+            const depth = skinDepthAt(field, point);
+            if (depth > deepest) {
+              deepest = depth;
+              where = `${((point.y - chestY) * 1000).toFixed(0)}mm below the chest`;
             }
           }
         });
