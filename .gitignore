@@ -42,3 +42,6 @@ screenshots/
 # tools/humanbase/export-makehuman.py (the .mhm sources are committed).
 tools/humanbase/exports/*
 !tools/humanbase/exports/*.mhm
+
+# session notes/briefs kept locally, not product source
+prompt.txt
