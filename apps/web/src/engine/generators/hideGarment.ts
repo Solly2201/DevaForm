@@ -1296,7 +1296,19 @@ function dhotiCascade(
     // torn red mark rather than as a hem.
     [Math.PI * 0.5 - 0.2, 0.05, 0.97, cloth],
     [Math.PI * 0.5 - 0.02, 0.046, 1, cloth],
-    [Math.PI * 0.5 + 0.18, 0.038, 0.95, edge],
+    /**
+     * The accent pleat is an EDGE, not a third panel.
+     *
+     * On Vishnu every pleat is the garment's own yellow, so its width
+     * never mattered. On Shiva the third one takes the ochre — his
+     * reference has an ochre border on cream — and when the fan was
+     * widened for Vishnu this went with it, from twenty-six millimetres
+     * to thirty-eight. At that width, in a contrasting colour, it stops
+     * being a border and becomes a sheet: a tan panel with a wavy edge
+     * hanging down the front of the cream, which reads as a tear in the
+     * cloth or a second garment laid over it.
+     */
+    [Math.PI * 0.5 + 0.2, 0.013, 0.93, edge],
   ];
   for (const [bearing, width, share, material] of panels) {
     const panel: ClothSection[] = [];
@@ -1462,8 +1474,31 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
         // Seated, the thighs come forward and a long tail would hang
         // through them; the skin is gathered instead, which is what you
         // do with a garment before sitting down.
-        drop: ctx.seated ? body.thighLength * 0.42 : fall + body.thighLength * 0.55,
-        slack: 1.9 + 3.1 * overCloth,
+        /**
+         * A SHORTER TAIL when there is cloth under it.
+         *
+         * Worn alone the skin IS the garment and its hanging end is most
+         * of its length. Worn over a dhoti it is the short outer layer
+         * that shows the cream below it — which is what ref3 draws, a hip
+         * wrap ending around mid-thigh. At the old length the tail ran
+         * past the KNEE, so on the short dhoti the cream's own hem and
+         * the skin's end arrived at the same height and fought there.
+         */
+        drop: ctx.seated
+          ? body.thighLength * 0.42
+          : fall + body.thighLength * (overCloth ? 0.18 : 0.55),
+        /**
+         * Worn over cloth that GATHERS, not over a smooth cylinder.
+         *
+         * The extra slack here allowed for the cream's spine and not for
+         * its folds, and `dhotiColumn` gathers by a fifth of its own
+         * radius — about twenty-four millimetres on this body, which is
+         * more than the twenty-five the skin was standing off by. So the
+         * cream's fold crests came through the hide wherever they met,
+         * and the overlap read as a washed-out tan patch on the thigh:
+         * two garments in one volume, which is what it was.
+         */
+        slack: 1.9 + overCloth * (3.1 + (DHOTI_FOLDS * body.dhotiRadius) / CLEARANCE),
         seed: 1,
       }),
     );
@@ -1564,12 +1599,23 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     piece.scale.y = drop;
     fold.add(piece);
   }
-  // The fan of flat panels that used to hang at the front belonged to the
-  // ring-of-cloth construction: three plates standing off the body,
-  // which from the side was a board. A wrapped skin has its own front —
-  // the overlap where its far end lies over its near one — so the fan is
-  // only worn when something else is the outer layer.
-  if (dhotiReach > 0 && drape > 0) wrap.add(fold);
+  /**
+   * The fan of flat panels that used to hang at the front belonged to
+   * the ring-of-cloth construction: three plates standing off the body,
+   * which from the side was a board. A wrapped skin has its own front —
+   * the overlap where its far end lies over its near one — so the fan is
+   * only worn when NOTHING ELSE is the outer layer.
+   *
+   * That is what the sentence above has always said and what the
+   * condition never checked. Worn with a hide, the fan was drawn at the
+   * front IN THE HIDE'S OWN MATERIAL, directly over the skin's own tail,
+   * and the two of them read in the Studio as a second pale sheet of
+   * tiger hung on top of the first — the "two representations of the
+   * same garment" this is. Four things were competing for the front of
+   * one hip: the cream cascade, the sash's panel, the skin's tail, and
+   * this.
+   */
+  if (dhotiReach > 0 && drape > 0 && hideAmount === 0) wrap.add(fold);
 
   // Seated poses fold the thighs up in front, so the skin is gathered
   // shorter — the same garment, worn the way you wear it to sit down.

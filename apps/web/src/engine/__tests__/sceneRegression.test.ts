@@ -341,7 +341,16 @@ const PINNED = {
   // and fourteen beads that were a hundred and fourteen draw calls and
   // are now two, one per material. Nothing about the mala changed except
   // how many objects it is. See geometry.collapse and renderBudget.
-  shiva: { nodes: 272, digest: "b783addb6e303b87" },
+  // And four nodes fewer when his dress stopped doubling itself. The fan
+  // of flat panels that hangs at the front of a cloth-only wrap was being
+  // drawn with a hide over it, in the HIDE'S own material, directly on
+  // top of the skin's own tail — the "two representations of one garment"
+  // that read as a washed-out tan patch across the thigh. It is worn only
+  // when nothing else is the outer layer, which is what its own comment
+  // always said. The skin also clears the cloth's GATHERS now rather than
+  // its spine, and its tail is short when there is a dhoti under it.
+  // See garmentLayering.test.ts.
+  shiva: { nodes: 268, digest: "b61b9e5615630258" },
 } as const;
 
 describe("protected characters do not move", () => {
