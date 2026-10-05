@@ -236,7 +236,24 @@ const FLESH_SLOTS = new Set<string>(["body", "head", "ears", "tusks", "trunk", "
 function measureCranium(
   object: THREE.Object3D,
   head: THREE.Object3D,
-): { headRadius: number; headCenterY: number; crownSocketY: number; skullTopY: number } | null {
+): {
+  headRadius: number;
+  headCenterY: number;
+  crownSocketY: number;
+  skullTopY: number;
+  /**
+   * The cranium's own width at each height, which this already measured
+   * and used to throw away.
+   *
+   * A head PART replaces the body's head, and `skullAt` is a closure over
+   * the body's own numbers — so on Ganesha, whose default head is a GLB,
+   * everything worn up there was sized against a cranium that is not on
+   * the figure. Measured: all five of his crowns stood six to eleven
+   * millimetres clear of his head, because a band of fixed radius round a
+   * skull that is narrower there never touches it.
+   */
+  envelope: BodyProfile["skullAt"];
+} | null {
   head.updateWorldMatrix(true, false);
   object.updateWorldMatrix(true, true);
   const toHead = new THREE.Matrix4().copy(head.matrixWorld).invert();
@@ -282,6 +299,18 @@ function measureCranium(
     headCenterY: (top + bottom) / 2,
     crownSocketY: seatY,
     skullTopY: top,
+    envelope: (y: number) => {
+      const bin = Math.round(y / BIN);
+      // Above the measured top a head closes; below the bottom there is
+      // no cranium to describe. Both answer as nothing rather than as a
+      // ring extruded forever — see sampleSkullEnvelope, which learned
+      // this the same way.
+      if (y > top + BIN || y < bottom - BIN) {
+        return { halfWidth: 0, frontZ: 0, backZ: 0 };
+      }
+      const halfWidth = widest.get(bin) ?? 0;
+      return { halfWidth, frontZ: halfWidth, backZ: -halfWidth };
+    },
   };
 }
 
@@ -1151,7 +1180,10 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           if (slot === "head" && jointId === "head" && target) {
             const cranium = measureCranium(group, target);
             if (cranium) {
-              Object.assign(bodyProfile, cranium);
+              const { envelope, ...measurements } = cranium;
+              Object.assign(bodyProfile, measurements);
+              // What is worn on this head is worn on THIS head.
+              bodyProfile.headEnvelopeAt = envelope;
               const crownSocket = sockets.get("head.crown" as SocketId);
               if (crownSocket) crownSocket.position.y = cranium.crownSocketY;
             }
@@ -1219,7 +1251,10 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         const headJoint = joints.get("head" as JointId);
         const cranium = headJoint ? measureCranium(entry.object, headJoint) : null;
         if (cranium) {
-          Object.assign(bodyProfile, cranium);
+          const { envelope, ...measurements } = cranium;
+          Object.assign(bodyProfile, measurements);
+          // What is worn on this head is worn on THIS head.
+          bodyProfile.headEnvelopeAt = envelope;
           const crownSocket = sockets.get("head.crown" as SocketId);
           if (crownSocket) crownSocket.position.y = cranium.crownSocketY;
         }

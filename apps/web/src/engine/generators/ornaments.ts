@@ -17,6 +17,68 @@ function gemStud(ctx: GeneratorContext, r: number): THREE.Mesh {
 // CROWNS
 // ---------------------------------------------------------------------------
 
+/**
+ * Drop a crown until its band meets the head.
+ *
+ * Every crown in this file is drawn against a reference skull and scaled
+ * by `headFit`, which gets the SIZE right and says nothing about where
+ * the head is wide enough to hold it. A band of fixed radius round a
+ * cranium that is narrower at that height simply never touches: measured,
+ * all five of Ganesha's crowns stood six to eleven millimetres clear of
+ * his head, and a crown resting on nothing is the first thing an eye
+ * picks out.
+ *
+ * So the band is seated where the head is actually that wide. The socket
+ * is the crown's origin and `headEnvelopeAt` answers in the head's frame,
+ * hence the one conversion through `crownSocketY`. Searching downward,
+ * because a crown settles onto a head rather than rising off it, and
+ * stopping at the socket itself — below that is a brow, and a crown that
+ * keeps sliding until it finds something is a crown over the eyes.
+ */
+function seatOnHead(ctx: GeneratorContext, group: THREE.Group, bandRadius: number): void {
+  const body = ctx.body;
+  /**
+   * A CROWN IS SIZED BY THE HEAD WHERE IT SITS, not by the head's widest
+   * point.
+   *
+   * `headFit` divides the head's own radius by the reference skull's, and
+   * that radius comes from the WIDEST section of the whole head part. On
+   * Ganesha's sculpted head the widest section is the jaw and cheeks at a
+   * hundred and forty-eight millimetres, while the dome where a band
+   * actually rides is a hundred and twenty-three. Scaled by the first,
+   * every one of his crowns came out ten millimetres too big for the
+   * place it sits, and no amount of lowering it could make it touch —
+   * which is exactly what the measurement said: six to eleven millimetres
+   * clear, on all five.
+   *
+   * So the band is scaled to the cranium at the crown socket. The tower
+   * above it comes down with it, which is right: a smaller head wears a
+   * smaller crown, not the same crown perched higher.
+   */
+  const atSocket = body.headEnvelopeAt(body.crownSocketY).halfWidth;
+  if (atSocket > 0) {
+    const previous = group.scale.x || 1;
+    // A hair's clearance so the band grips rather than shares a surface.
+    const wanted = (atSocket + 0.0015) / bandRadius;
+    // Bounded against the old answer, so a degenerate measurement cannot
+    // produce a crown the size of a ring or of the room.
+    const scale = Math.min(Math.max(wanted, previous * 0.6), previous * 1.4);
+    group.scale.setScalar(scale);
+  }
+  const scale = group.scale.x || 1;
+  const want = bandRadius * scale;
+  const STEP = 0.002;
+  for (let drop = 0; drop <= 0.05; drop += STEP) {
+    const headLocal = -drop + body.crownSocketY;
+    if (body.headEnvelopeAt(headLocal).halfWidth >= want) {
+      group.position.y -= drop;
+      return;
+    }
+  }
+  // Nothing on this head is ever that wide — leave it where the socket
+  // put it rather than sliding it down the face looking for contact.
+}
+
 export const crownKirita: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
@@ -88,6 +150,8 @@ export const crownKirita: AttachmentGenerator = (ctx) => {
   bandGems.position.y = 0.024;
   group.add(bandGems);
 
+
+  seatOnHead(ctx, group, 0.088);
   return group;
 };
 
@@ -184,6 +248,8 @@ export const crownCirclet: AttachmentGenerator = (ctx) => {
   centre.scale.z = 0.5;
   group.add(centre);
 
+
+  seatOnHead(ctx, group, 0.086);
   return group;
 };
 
@@ -282,6 +348,8 @@ export const crownGopuram: AttachmentGenerator = (ctx) => {
     }),
   );
 
+
+  seatOnHead(ctx, group, 0.087);
   return group;
 };
 
@@ -326,6 +394,8 @@ export const crownKaranda: AttachmentGenerator = (ctx) => {
   });
   gems.position.y = 0.016;
   group.add(gems);
+
+  seatOnHead(ctx, group, 0.085);
   return group;
 };
 
@@ -378,6 +448,8 @@ export const crownFan: AttachmentGenerator = (ctx) => {
   crest.position.set(0, 0.05, 0.085);
   crest.scale.z = 0.5;
   group.add(crest);
+
+  seatOnHead(ctx, group, 0.088);
   return group;
 };
 

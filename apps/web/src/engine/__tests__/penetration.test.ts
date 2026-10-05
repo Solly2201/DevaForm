@@ -156,6 +156,13 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
     why: "a tusk's root is inside the jaw it grows from",
   },
   {
+    id: "ganesha.crown.kirita",
+    mm: 6,
+    reason: "seam",
+    why:
+      "a crown's band grips the head it is worn on. It used to have no penetration at all and stood six to eleven millimetres clear of his skull -- scaled by `headFit`, which divides by the head's WIDEST section, and on a sculpted Ganesha that is the jaw rather than the dome a band rides. Sized to the cranium at the crown socket instead, it now bites by a few millimetres, which is a crown being worn",
+  },
+  {
     id: "ganesha.waist.kamarband",
     mm: 6,
     reason: "seam",
