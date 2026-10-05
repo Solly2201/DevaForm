@@ -74,6 +74,29 @@ const settle = (ms = 260) => new Promise((r) => setTimeout(r, ms));
 
 // --- get into the Studio, past the entry ----------------------------------
 await page.goto(`${BASE}/studio?form=${deity}`, { waitUntil: "networkidle0", timeout: 120_000 });
+
+/**
+ * THIS HARNESS READS THE STORE, so it needs a build that exposes one.
+ *
+ * `__devaformStore` is guarded by `NODE_ENV !== "production"`, which is
+ * right: a shipped page should not hand its state to the window. Run
+ * against a production build, every picker click looked like it had
+ * changed nothing and this reported forty-five bugs in a product with
+ * none of them. An instrument that cannot see its subject has to say so
+ * rather than describe what it imagines.
+ */
+const hasStore = await page
+  .waitForFunction(() => window.__devaformStore !== undefined, { timeout: 20_000 })
+  .then(() => true)
+  .catch(() => false);
+if (!hasStore) {
+  console.error(
+    "no __devaformStore: this harness measures the editor's own state, so it needs a development server",
+  );
+  await browser.close();
+  process.exit(2);
+}
+
 await page
   .waitForSelector('[data-testid="stage-intro"]', { timeout: 20_000 })
   .then(async () => {

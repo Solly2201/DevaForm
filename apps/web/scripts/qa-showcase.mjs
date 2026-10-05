@@ -157,11 +157,49 @@ if (intro) {
   if (!entered) fail("Enter reveals the Studio", "the overlay never went away");
   else pass("Enter reveals the Studio");
 }
-await page.waitForFunction(() => window.__devaformRenderer !== undefined, { timeout: 120_000 });
+/**
+ * DEV HANDLES, OR THE BUILD THAT ACTUALLY SHIPS.
+ *
+ * `__devaformRenderer`, `__devaformRig`, `__devaformStore` and
+ * `__devaformUi` are all guarded by `NODE_ENV !== "production"`, and
+ * correctly so — a renderer handle on a shipped page is a debug hook in a
+ * customer's browser. The first run of this script against a production
+ * build therefore hung for two minutes waiting for a window property that
+ * is never going to appear.
+ *
+ * So it runs either way. With the handles it asks the sharp questions —
+ * how many draw calls, which deity the rig is built from, how far a bone
+ * turned. Without them it asks what a PERSON can see: is there a canvas
+ * with pixels in it, did the panel open the category it was asked for,
+ * did the picker's own pressed-state change, does Save produce a
+ * confirmation and Share a link that opens. That second set is weaker and
+ * it is the only set that can be asked of the artefact being released.
+ */
+const deep = await page
+  .waitForFunction(() => window.__devaformRenderer !== undefined, { timeout: 20_000 })
+  .then(() => true)
+  .catch(() => false);
+if (deep) pass("the build exposes its dev handles", "measuring geometry directly");
+else notes.push("a production build: no dev handles, so this is what a person can observe");
+
 await settle(2500);
-const first = await sceneCost();
-if (!first || first.calls < 50) fail("a statue is drawn", JSON.stringify(first));
-else pass("a statue is drawn", `${first.calls} draw calls, ${first.triangles} triangles`);
+if (deep) {
+  const first = await sceneCost();
+  if (!first || first.calls < 50) fail("a statue is drawn", JSON.stringify(first));
+  else pass("a statue is drawn", `${first.calls} draw calls, ${first.triangles} triangles`);
+} else {
+  const canvas = await page.evaluate(() => {
+    const node = document.querySelector("canvas");
+    if (!node) return null;
+    const box = node.getBoundingClientRect();
+    return { width: Math.round(box.width), height: Math.round(box.height) };
+  });
+  if (!canvas || canvas.width < 200 || canvas.height < 200) {
+    fail("a statue is drawn", `canvas ${JSON.stringify(canvas)}`);
+  } else {
+    pass("a viewport is drawn", `${canvas.width}x${canvas.height}`);
+  }
+}
 await shot("02-ganesha");
 
 // --- 3-7. customise Ganesha ----------------------------------------------
@@ -227,7 +265,8 @@ const pickTile = async (index) =>
  * it reported a working Hands panel as inert.
  */
 const figureSignature = () =>
-  page.evaluate(() => {
+  deep
+    ? page.evaluate(() => {
     const rig = window.__devaformRig;
     /**
      * The parts, found by walking the whole figure.
@@ -249,8 +288,21 @@ const figureSignature = () =>
         return `${id}:${bone?.rotation.x.toFixed(3)},${bone?.rotation.y.toFixed(3)},${bone?.rotation.z.toFixed(3)}`;
       })
       .join("|");
-    return `${parts.join(",")}##${joints}`;
-  });
+        return `${parts.join(",")}##${joints}`;
+      })
+    : /**
+       * WITHOUT THE RIG: what the PICKER says it has selected.
+       *
+       * Weaker, and not nothing — it is the product's own statement about
+       * the configuration, and a tile that highlights while the figure
+       * does not change is at least half the bug.
+       */
+      page.evaluate(() => {
+        const panel = document.querySelector('[data-testid="customization-panel"]');
+        return [...(panel?.querySelectorAll("button[aria-pressed]") ?? [])]
+          .map((node) => `${node.textContent?.trim()}=${node.getAttribute("aria-pressed")}`)
+          .join("|");
+      });
 
 for (const [category, index, step] of [
   ["Head", 1, "a different head"],
@@ -288,9 +340,20 @@ for (const view of ["Front", "Left", "Back", "Right", "¾"]) {
   }
   await settle(900);
 }
-const orbited = await sceneCost();
-if (!orbited || orbited.calls < 50) fail("the statue survives an orbit", JSON.stringify(orbited));
-else pass("the statue survives an orbit", `${orbited.calls} draw calls`);
+if (deep) {
+  const orbited = await sceneCost();
+  if (!orbited || orbited.calls < 50) fail("the statue survives an orbit", JSON.stringify(orbited));
+  else pass("the statue survives an orbit", `${orbited.calls} draw calls`);
+} else {
+  // The canvas is still there and still has a figure's worth of pixels in
+  // it, which is what "survives an orbit" means to somebody watching.
+  const alive = await page.evaluate(() => {
+    const node = document.querySelector("canvas");
+    return node ? node.getBoundingClientRect().width > 200 : false;
+  });
+  if (!alive) fail("the statue survives an orbit", "the viewport is gone");
+  else pass("the statue survives an orbit");
+}
 await shot("04-orbit");
 
 // --- 9-16. the other two gods --------------------------------------------
@@ -357,9 +420,26 @@ const switchTo = async (name) => {
     .then(() => true)
     .catch(() => false);
   await settle(3000);
+  const wanted = name.toLowerCase();
+  if (!deep) {
+    /**
+     * Without the store, the product's own statement of which form is
+     * being created: the Divine Form card marked "Creating".
+     */
+    const creating = await page.evaluate(() => {
+      const card = [...document.querySelectorAll("button")].find((node) =>
+        /Creating\s*$/.test(node.textContent ?? ""),
+      );
+      return card?.textContent?.trim().split(/The |Remover|Preserver/)[0]?.trim() ?? null;
+    });
+    if (!arrived) fail(`switch to ${name}`, "the form never arrived");
+    else if (creating && !creating.startsWith(name)) {
+      fail(`switch to ${name}`, `the panel says it is creating "${creating}"`);
+    } else pass(`switch to ${name}`, creating ?? "arrived");
+    return;
+  }
   const { declared, built } = await loadedDeity();
   const cost = await sceneCost();
-  const wanted = name.toLowerCase();
   if (!arrived || declared !== wanted) {
     fail(`switch to ${name}`, `the document says ${declared ?? "nothing"}`);
   } else if (built.length > 0 && !built.includes(wanted)) {
@@ -412,7 +492,7 @@ if (await openCategory("Pose")) {
    * is whether the figure's shape did — measured off the rig's own
    * skeleton rather than off the renderer's statistics.
    */
-  const jointState = () => page.evaluate(() => {
+  const jointState = () => deep ? page.evaluate(() => {
     const rig = window.__devaformRig;
     return [...(rig?.joints?.keys?.() ?? [])]
       .map((id) => {
@@ -420,7 +500,7 @@ if (await openCategory("Pose")) {
         return `${id}:${bone?.rotation.x.toFixed(3)},${bone?.rotation.y.toFixed(3)},${bone?.rotation.z.toFixed(3)}`;
       })
       .join("|");
-  });
+  }) : figureSignature();
   const before = await jointState();
   const posed = await pickTile(1);
   await settle(2500);
@@ -447,16 +527,54 @@ await shot("09-back-to-ganesha");
 
 // --- 18. lighting ---------------------------------------------------------
 console.log("\n8. lighting");
-const lit = await page.evaluate(() => {
-  const ui = window.__devaformUi?.getState();
-  if (!ui) return null;
-  ui.setLightingPreset("temple");
-  ui.setLightingValue("warmth", -0.6);
-  return ui.lighting?.preset ?? null;
-});
-await settle(1500);
-if (lit === null) fail("lighting", "no lighting store on the page");
-else pass("lighting responds");
+if (deep) {
+  const lit = await page.evaluate(() => {
+    const ui = window.__devaformUi?.getState();
+    if (!ui) return null;
+    ui.setLightingPreset("temple");
+    ui.setLightingValue("warmth", -0.6);
+    return ui.lighting?.preset ?? null;
+  });
+  await settle(1500);
+  if (lit === null) fail("lighting", "no lighting store on the page");
+  else pass("lighting responds");
+} else {
+  // Through the control a customer uses, which is the better test anyway.
+  const opened = await page.evaluate(() => {
+    const button = [...document.querySelectorAll("button")].find((node) =>
+      /^Light/.test(node.textContent ?? ""),
+    );
+    if (!button) return false;
+    button.click();
+    return true;
+  });
+  await settle(900);
+  /**
+   * INSIDE THE LIGHTING POPOVER, which is a dialog of its own.
+   *
+   * Searching the whole document for an unpressed one-of-a-set control
+   * found the viewport's camera buttons first and clicked "Front" while
+   * reporting that the lighting had responded. Third time this exact
+   * trap has been sprung in this file; the answer is always to scope the
+   * search to the region the question is about.
+   */
+  const changed = opened
+    ? await page.evaluate(() => {
+        const popover = document.querySelector("[role='dialog']");
+        const preset = [...(popover?.querySelectorAll("button[aria-pressed]") ?? [])].find(
+          (node) => node.getAttribute("aria-pressed") !== "true" && node.offsetParent !== null,
+        );
+        if (!preset) return null;
+        const label = preset.textContent?.trim() ?? "";
+        preset.click();
+        return label;
+      })
+    : null;
+  await settle(1500);
+  if (!opened) fail("lighting", "no lighting control");
+  else if (!changed) notes.push("lighting: the panel opened with every preset already chosen");
+  else pass("lighting responds", changed);
+}
 await shot("10-lighting");
 
 // --- 19-21. save, share, reopen ------------------------------------------

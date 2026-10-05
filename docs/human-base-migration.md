@@ -272,8 +272,15 @@ Until those are closed, the procedural Shiva stays the default and the
 human base stays compatible with no deity. Both resolve from the registry,
 so a saved configuration naming either one still loads.
 
-Compare them directly: `/studio/shiva` is the current default,
-`/dev/shiva-human` is the candidate, `/dev/human` is the body on its own.
+> **This migration is finished.** Shiva and Vishnu both ship on the
+> measured human mesh; the procedural bodies they were compared against
+> are marked `deprecated` and are kept only so that characters saved
+> before the switch still resolve — `oldSaves.test` holds them to actually
+> building. The comparison routes this stage describes (`/dev/human`,
+> `/dev/shiva-human`, `/dev/humanbase`) and the MakeHuman candidate meshes
+> under `public/poc/` were removed once the decision they existed to
+> support had been made. Everything below is the record of how it was
+> made, not a description of the current system.
 
 ---
 

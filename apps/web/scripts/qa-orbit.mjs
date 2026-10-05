@@ -59,7 +59,25 @@ await page
     );
   })
   .catch(() => null);
-await new Promise((r) => setTimeout(r, 2200));
+
+/**
+ * WAIT FOR THE CONTROLS, not for a stopwatch.
+ *
+ * `__devaformCamera` returns null until OrbitControls has mounted, and
+ * this waited a flat 2.2 seconds before orbiting. On a cold compile that
+ * is not enough: `orbitTo` found no camera, returned false, and the sweep
+ * wrote eight identical pictures without turning anything. The handles
+ * say when they are ready, so the wait is for them.
+ */
+const ready = await page
+  .waitForFunction(
+    () => window.__devaformStage?.() != null && window.__devaformCamera?.() != null,
+    { timeout: 90_000, polling: 250 },
+  )
+  .then(() => true)
+  .catch(() => false);
+if (!ready) console.error("the camera handles never became ready");
+await new Promise((r) => setTimeout(r, 1200));
 
 /** Where the statue actually is: its root, and the lowest point of its body. */
 const plant = () =>
@@ -127,6 +145,31 @@ report.plantedThroughout = report.angles.every(
     JSON.stringify(a.root) === JSON.stringify(first.root) &&
     Math.abs((a.lowest ?? 0) - (first.lowest ?? 0)) < 1e-4,
 );
+/**
+ * AND IT ACTUALLY ORBITED.
+ *
+ * The camera is driven through `__devaformSetCamera`, which — like every
+ * other handle here — is guarded by `NODE_ENV !== "production"`. Run
+ * against a production build the orbit silently did nothing: eight
+ * identical screenshots of whatever happened to be on screen, a report
+ * full of `"moved": false`, and an exit code of zero. The pictures were
+ * of the loading overlay.
+ *
+ * A sweep that cannot turn the camera has not audited anything, and
+ * saying so is the difference between a harness and a screenshot
+ * generator.
+ */
+report.orbited = report.angles.every((a) => a.moved);
 await writeFile(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
-console.log(JSON.stringify({ plantedThroughout: report.plantedThroughout, angles: report.angles, consoleErrors }, null, 1));
+console.log(
+  JSON.stringify(
+    { orbited: report.orbited, plantedThroughout: report.plantedThroughout, angles: report.angles, consoleErrors },
+    null,
+    1,
+  ),
+);
+if (!report.orbited) {
+  console.error("the camera never moved - this needs a development server, where the handle exists");
+}
 await browser.close();
+process.exitCode = report.orbited && report.plantedThroughout ? 0 : 1;

@@ -137,9 +137,23 @@ for (const size of SIZES) {
         })
         .catch(() => fail(size.name, "the entry never handed over"));
     }
+    /**
+     * A CANVAS, NOT A RENDERER HANDLE.
+     *
+     * This waited for `__devaformRenderer`, which production does not
+     * expose - so every desktop size failed on a build whose layout was
+     * perfect. Whether the statue has somewhere to be is a question about
+     * the DOM, and the DOM is the same in both builds.
+     */
     await page
-      .waitForFunction(() => window.__devaformRenderer !== undefined, { timeout: 120_000 })
-      .catch(() => fail(size.name, "no renderer appeared"));
+      .waitForFunction(
+        () => {
+          const node = document.querySelector("canvas");
+          return node !== null && node.getBoundingClientRect().width > 100;
+        },
+        { timeout: 120_000 },
+      )
+      .catch(() => fail(size.name, "no viewport appeared"));
     await new Promise((resolve) => setTimeout(resolve, 3500));
 
     const layout = await page.evaluate(() => {
