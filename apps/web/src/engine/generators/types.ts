@@ -121,6 +121,42 @@ export interface GeneratorContext {
    * chance to refine the sockets it owns.
    */
   socketOffset(id: SocketId): readonly [number, number, number];
+  /**
+   * How far past the skin anything ALREADY WORN reaches at this height.
+   *
+   * WHY A BODY MEASUREMENT COULD NOT ANSWER IT. A belt worn over a dhoti
+   * cleared `dhotiRadius - pelvisHalfWidth`, two measurements of the BODY
+   * standing in for the thickness of a GARMENT, because nothing could ask
+   * a garment anything. Measured on Ganesha, fifty-four vertices of the
+   * dhoti's own waist wrap came through the gold by up to seven
+   * millimetres — a roll of red cloth lying across the belt, plainly
+   * visible from behind.
+   *
+   * And it could not have been tuned right. `dhotiRadius` is the wrap
+   * radius a garment NEEDS in order to clear the hips: a floor. The
+   * garment's waist band is a torus of its own, and its tube puts it
+   * fourteen millimetres past that floor. Nothing measured on a body
+   * predicts a garment's styling.
+   *
+   * PER BEARING, which is the whole difficulty. A first attempt compared
+   * the widest worn radius at a height against the widest skin radius at
+   * the same height, and reported five millimetres where the real answer
+   * was fourteen — because the two maxima are at different bearings. A
+   * wrapped thing is placed against the skin AT EACH BEARING, so the gap
+   * it needs is the largest difference at any ONE bearing.
+   *
+   * WHAT IT IS NOT. Not a placement system and not a resolver: it returns
+   * a number and places nothing. It cannot see the future either — parts
+   * are built before attachments, so an attachment may ask about a
+   * garment and a garment may not ask about an ornament. That ordering is
+   * the product's own layering. Where two things in the SAME phase must
+   * layer, `WornFit.over` already says which is outside, and nothing yet
+   * reads it; the sash running fifty-nine millimetres into the dhoti is
+   * that case, and is not fixed by this.
+   *
+   * Returns 0 where nothing worn reaches past the skin.
+   */
+  wornClearanceAt(frame: JointId, localY: number): number;
 }
 
 /**

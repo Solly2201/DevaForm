@@ -22,7 +22,22 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   // legs need. A wrap that leaves the waist as wide as the hem is a
   // barrel, not a garment — the taper is what makes it read as cloth.
   const bottomR = Math.max(ctx.body.dhotiRadius, ctx.body.pelvisHalfWidth + 0.012);
-  const topR = ctx.body.pelvisHalfWidth + 0.012;
+  /**
+   * THE WAIST CLEARS THE HIPS, not the pelvis.
+   *
+   * `pelvisHalfWidth` is the seat mass, and on a stylised body the thigh
+   * masses hang outboard of it: ninety millimetres to the joint plus a
+   * seventy-five millimetre sphere, where the pelvis is a hundred and
+   * fifty-two. The skirt's top was cut to the pelvis plus twelve, which
+   * is NARROWER than the hip it has to pass over, so a facet of the hip
+   * came through the cloth and read as a patch of skin on the skirt.
+   *
+   * `dhotiRadius` is the body's own statement of the radius a wrap needs
+   * to clear its hips and standing legs; the waist is held to it too. The
+   * taper survives, because the hem is drawn at ninety-four percent of
+   * the bottom and the bottom is no wider than before.
+   */
+  const topR = Math.max(ctx.body.pelvisHalfWidth + 0.012, ctx.body.dhotiRadius);
   const waistY = ctx.body.waistSeatY;
   // Seated drape volumes are authored against the classic wrap; scale
   // them with the actual wrap so slim bodies get a proportionate lap.
@@ -173,10 +188,33 @@ export const humanoidShawl: PartGenerator = (ctx) => {
     { bearing: 1.15 - Math.PI * 2, y: at(0.97) },
   ];
 
+  /**
+   * How far off the skin, ALONG the route — because what is under a sash
+   * changes along it.
+   *
+   * Its low point dips to the hip, and the hip is already wearing a
+   * skirt. Measured on Ganesha with a single clearance: a hundred and
+   * seventeen of the sash's six hundred vertices were inside the dhoti,
+   * the deepest by fifty-nine millimetres, and a thirty-millimetre patch
+   * of it came out through the red on the far side — which is the tan
+   * blob a rear-quarter view shows on the skirt, with nothing actually
+   * misplaced behind it.
+   *
+   * The route's own heights say where it is, and the rig says what is
+   * already worn there. A sash over a bare shoulder is unaffected: there
+   * is nothing under it, so the clearance is the cloth's own.
+   */
+  const heightAt = (t: number): number => {
+    const span = (route.length - 1) * Math.min(1, Math.max(0, t));
+    const first = route[Math.floor(span)] ?? route[0]!;
+    const second = route[Math.min(route.length - 1, Math.floor(span) + 1)] ?? first;
+    return first.y + (second.y - first.y) * (span - Math.floor(span));
+  };
   const cloth = surfaceRibbon(body, route, {
     halfWidth: (t) => halfWidth * (0.72 + 0.28 * Math.sin(Math.min(1, t * 1.6) * Math.PI)),
     thickness,
-    clearance: thickness * 0.35,
+    clearance: (t) =>
+      Math.max(thickness * 0.35, ctx.wornClearanceAt("chest", heightAt(t)) + thickness * 0.35),
     samples: 150,
   });
   pushOutsideBody(cloth, body, { y: 0, z: 0 }, thickness * 0.25);

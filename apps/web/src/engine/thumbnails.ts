@@ -97,6 +97,10 @@ export async function buildAssetObject(
     // A thumbnail has no rig, so nothing has refined a socket: the
     // schema's own seat is the only answer there is here.
     socketOffset: (id) => getSocket(id).position,
+    // And a thumbnail wears nothing else: a picture of one ornament has
+    // no garment under it, so there is nothing to clear and zero is the
+    // true answer rather than a stub.
+    wornClearanceAt: () => 0,
     held: {},
     seated: false,
     garment: "full",

@@ -227,7 +227,20 @@ const PINNED = {
   // profile agrees with the mesh to within five millimetres at every
   // bearing. Only this character moves: the human body ships a measured
   // surface and never used this path. See bodySurface.test.ts.
-  ganesha: { nodes: 379, digest: "506f87f029228b14" },
+  //
+  // And once more, for his waist. Three changes, all measured. The belt
+  // now asks the dhoti how thick it is instead of inferring it from two
+  // hip measurements -- fifty-four vertices of the cloth's own waist roll
+  // were coming through the gold, which is the red tongue a rear view
+  // showed lying across the belt. The sash's clearance varies ALONG its
+  // route, because its low point crosses a hip that is already wearing a
+  // skirt and its shoulder end is not. And the skirt is cut to contain
+  // the legs it is drawn around: the thigh masses reach 164.8mm and the
+  // wrap radius was 165.0, flush to two tenths of a millimetre, so one
+  // facet of hip stood through one facet of cloth and read as a patch of
+  // skin on red. Cloth also draws from both sides now, as its patterned
+  // variant always has. See garmentLayer.test.ts.
+  ganesha: { nodes: 379, digest: "724a80efd4fc19e3" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

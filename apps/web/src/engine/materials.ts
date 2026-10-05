@@ -90,7 +90,30 @@ export class ZoneMaterials {
     this.zones = Object.fromEntries(
       MATERIAL_ZONES.map((zone) => [
         zone,
-        new THREE.MeshPhysicalMaterial({ name: `zone:${zone}` }),
+        new THREE.MeshPhysicalMaterial({
+          name: `zone:${zone}`,
+          /**
+           * CLOTH IS DRAWN FROM BOTH SIDES, because cloth is a surface.
+           *
+           * The patterned variant of these same zones already said so and
+           * said why — "the inside of a hem is visible" — but the plain
+           * one did not, and the plain one is what a garment generator
+           * asks for. A dhoti's skirt is an open-ended cylinder with
+           * pleats pressed into it, and wherever a pleat's valley turns a
+           * triangle away from the camera a front-faced material simply
+           * does not draw it: you look through the cloth and see the leg.
+           *
+           * Measured on Ganesha, that is a seven-millimetre patch of skin
+           * on the back of a red skirt, visible in any rear-quarter view,
+           * with nothing actually out of place behind it. It is not a fit
+           * defect and no amount of moving things fixes it.
+           *
+           * Only the two cloth zones. A metal band or a gem is a solid and
+           * its backfaces are hidden by its own front ones, so drawing
+           * them would cost fill for nothing.
+           */
+          side: zone === "garment" || zone === "garmentAccent" ? THREE.DoubleSide : THREE.FrontSide,
+        }),
       ]),
     ) as Record<MaterialZone, THREE.MeshPhysicalMaterial>;
     const fixed = (name: string, props: THREE.MeshPhysicalMaterialParameters) =>

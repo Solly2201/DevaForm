@@ -551,9 +551,30 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
     point.z - toChest.z,
   ];
 
-  // Worn over the cloth: whatever the skirt wraps to, the belt clears it.
-  const overCloth = Math.max(0, body.dhotiRadius - body.pelvisHalfWidth) + 0.006;
   const beltY = toChest.y + 0.015;
+  /**
+   * Worn over the cloth — and the cloth is ASKED, not inferred.
+   *
+   * It used to be `dhotiRadius - pelvisHalfWidth`, two measurements of the
+   * BODY standing in for the thickness of a GARMENT. Measured on Ganesha,
+   * fifty-four vertices of the dhoti's own waist wrap came through the
+   * gold by up to seven millimetres: a roll of red cloth lying across the
+   * belt, plainly visible from behind.
+   *
+   * And it was not a tuning error. `dhotiRadius` is the wrap radius a
+   * garment NEEDS in order to clear the hips — a floor — and the dhoti's
+   * waist band is a torus whose tube puts it fourteen millimetres past
+   * that floor. No measurement of a body predicts a garment's styling.
+   *
+   * The floor is still honoured, because a figure wearing a garment this
+   * generator has never seen should not end up with a tighter belt than
+   * the old rule gave it.
+   */
+  const overCloth =
+    Math.max(
+      Math.max(0, body.dhotiRadius - body.pelvisHalfWidth),
+      ctx.wornClearanceAt("chest", beltY),
+    ) + 0.006;
   const halfWidth = body.neckRadius * 0.42;
   const thickness = body.neckRadius * 0.22;
 

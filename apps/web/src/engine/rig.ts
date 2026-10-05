@@ -21,12 +21,14 @@
 import * as THREE from "three";
 import {
   ARM_SLOTS,
+  PART_SLOTS,
   getJoint,
   isJointId,
   type ArmSlot,
   type CharacterConfiguration,
   type HandsConfiguration,
   type JointId,
+  type PartSlot,
   type PoseConfiguration,
   type SkeletonDefinition,
   type SocketId,
@@ -603,9 +605,95 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     return [socket.position.x, socket.position.y, socket.position.z];
   };
 
+  /**
+   * How wide the figure has become, height by height AND bearing by
+   * bearing, as clothing is put on it.
+   *
+   * Both axes are necessary. Binned by height alone, the widest worn
+   * radius and the widest skin radius fall at different bearings and the
+   * difference between them is not a gap anywhere — measured on Ganesha
+   * it read five millimetres where the real answer was fourteen. A
+   * wrapped thing is placed against the skin at each bearing, so what it
+   * must clear is the largest excess at any one bearing.
+   *
+   * CLOTHING ONLY, which is not a shortcut. The question is "what am I
+   * worn over", and in the rest pose the arms hang beside the waist: a
+   * radius that included the body would report a hand at the hip and a
+   * belt would be built to clear it. What wraps the figure is what a
+   * wrapped thing has to clear, and the body's own surface is already
+   * answered, per bearing, by `BodyProfile`.
+   */
+  const WORN_BIN = 0.005;
+  const WORN_BEARINGS = 16;
+  const wornRadius = new Map<number, number>();
+  const wornKey = (heightBin: number, bearingBin: number): number =>
+    heightBin * WORN_BEARINGS + bearingBin;
+  const bearingBinOf = (x: number, z: number): number =>
+    ((Math.round((Math.atan2(x, z) / (Math.PI * 2)) * WORN_BEARINGS) % WORN_BEARINGS) +
+      WORN_BEARINGS) %
+    WORN_BEARINGS;
+  const recordWorn = (object: THREE.Object3D): void => {
+    const point = new THREE.Vector3();
+    object.updateWorldMatrix(true, true);
+    object.traverse((node) => {
+      const mesh = node as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const position = mesh.geometry.getAttribute("position");
+      if (!position) return;
+      mesh.updateWorldMatrix(true, false);
+      // Every third vertex: this runs on every rig build, and a garment's
+      // widest point is a rim rather than a single vertex.
+      for (let i = 0; i < position.count; i += 3) {
+        point.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+        characterRoot.worldToLocal(point);
+        const key = wornKey(Math.round(point.y / WORN_BIN), bearingBinOf(point.x, point.z));
+        const radius = Math.hypot(point.x, point.z);
+        if (radius > (wornRadius.get(key) ?? 0)) wornRadius.set(key, radius);
+      }
+    });
+  };
+  const wornClearanceAt = (frame: JointId, localY: number): number => {
+    const joint = joints.get(frame);
+    const chestJoint = joints.get("chest" as JointId);
+    if (!joint || !chestJoint || wornRadius.size === 0) return 0;
+    joint.updateWorldMatrix(true, false);
+    chestJoint.updateWorldMatrix(true, false);
+    const at = new THREE.Vector3(0, localY, 0).applyMatrix4(joint.matrixWorld);
+    const chestLocalY = at
+      .clone()
+      .applyMatrix4(new THREE.Matrix4().copy(chestJoint.matrixWorld).invert()).y;
+    characterRoot.worldToLocal(at);
+    const heightBin = Math.round(at.y / WORN_BIN);
+
+    const probe = new THREE.Vector3();
+    let worst = 0;
+    for (let step = 0; step < WORN_BEARINGS; step += 1) {
+      const bearing = (step / WORN_BEARINGS) * Math.PI * 2;
+      // One height bin either side: a height is a slice, and a slice that
+      // falls between two samples of a pleated hem should not read as
+      // nothing.
+      const worn = Math.max(
+        wornRadius.get(wornKey(heightBin - 1, step)) ?? 0,
+        wornRadius.get(wornKey(heightBin, step)) ?? 0,
+        wornRadius.get(wornKey(heightBin + 1, step)) ?? 0,
+      );
+      if (worn <= 0) continue;
+      // The skin at the same bearing and height, about the same axis. The
+      // profile answers in the chest's frame and the bins are in the
+      // root's, so the conversion happens here rather than in a generator
+      // that would have to be told which of the two it was holding.
+      const point = bodyProfile.surfaceAt(bearing, chestLocalY);
+      probe.set(point.x, point.y, point.z).applyMatrix4(chestJoint.matrixWorld);
+      characterRoot.worldToLocal(probe);
+      worst = Math.max(worst, worn - Math.hypot(probe.x, probe.z));
+    }
+    return Math.max(0, worst);
+  };
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     jointOffset: jointOffsetOf,
     socketOffset: socketOffsetOf,
+    wornClearanceAt,
     materials,
     proportions: config.proportions,
     morphs: config.morphs,
@@ -636,7 +724,22 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       if (mesh.isMesh) bodyMeshes.push(mesh);
     });
   };
-  for (const [slot, ref] of Object.entries(config.parts)) {
+  /**
+   * IN THE ORDER THE SLOTS ARE DECLARED, not the order the object happens
+   * to carry.
+   *
+   * `PART_SLOTS` lists the lower garment before the upper one, which IS
+   * the layering: a sash goes over a skirt. Reading `Object.entries` got
+   * the same answer by luck, because the defaults are written in that
+   * order — and a configuration that has been through JSON, a share link
+   * or an editor that rebuilt the record need not keep it. Now that a
+   * later part can ask what an earlier one is wearing, the order is load
+   * bearing and it comes from the declaration.
+   */
+  const partEntries = PART_SLOTS.flatMap((slot) =>
+    slot in config.parts ? ([[slot, config.parts[slot]]] as Array<[string, unknown]>) : [],
+  );
+  for (const [slot, ref] of partEntries as Array<[string, (typeof config.parts)[PartSlot]]>) {
     const asset = resolveAssetRef(ref);
     if (ref && !asset) {
       warnings.push(`Unknown part asset: ${ref.assetId}`);
@@ -723,6 +826,9 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           continue;
         }
         target.add(entry.object);
+        // Now it is in the tree, so how wide it makes the figure can be
+        // read. Ornaments worn over it are built later and ask.
+        if (asset.category === "clothing") recordWorn(entry.object);
       }
       // The part owns the surface its sockets terminate on (e.g. the
       // trunk's tip, or a hand's own grip) — move those sockets onto the

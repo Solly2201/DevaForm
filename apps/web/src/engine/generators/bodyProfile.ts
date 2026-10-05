@@ -610,13 +610,31 @@ export function deriveBodyProfile(
 
   // The legs the classic body generator draws (see body.ts).
   const legs = {
-    thighTopRadius: 0.062 * bulk,
+    /**
+     * THE HIP MASS, not the tube under it.
+     *
+     * `body.ts` draws each thigh as a sphere of 0.075 at the joint with a
+     * tapered tube of 0.068 hanging from it, and this said 0.062 — the
+     * tube's top, which is the second-widest thing there. Combined with
+     * the spread below, the leg extent came out twenty-eight millimetres
+     * narrower than the leg that is drawn.
+     */
+    thighTopRadius: 0.075 * bulk,
     thighMidRadius: 0.056 * bulk,
     kneeRadius: 0.042 * bulk,
     calfRadius: 0.046 * bulk,
     thighLength: 0.2,
     shinLength: 0.19,
-    legSpreadX: 0.075 * bulk,
+    /**
+     * WHERE THE SKELETON PUTS THE THIGH, which is ninety millimetres out.
+     *
+     * This said seventy-five. The stylised skeleton's own table has
+     * `leg.<side>.thigh` at x = ±0.09 and does not scale it with bulk, so
+     * every body built on that skeleton has its legs there. A profile
+     * that places them fifteen millimetres narrower is describing a
+     * figure nobody draws.
+     */
+    legSpreadX: 0.09,
     thighSeatY: -0.05,
   };
 
@@ -626,9 +644,21 @@ export function deriveBodyProfile(
     bulk,
     neckRadius,
     neckBaseOffsetY: 0,
-    // Mirrors the classic dhoti sizing: wide enough that knee/shin masses
-    // stay inside the skirt in standing poses.
-    dhotiRadius: 0.165 * bulk,
+    /**
+     * Wide enough to CONTAIN the legs, which is what this field promises.
+     *
+     * It was 0.165, and the thigh masses reach exactly 0.165: ninety
+     * millimetres out to the joint plus a seventy-five millimetre sphere.
+     * Flush, with no air at all — so a single facet of the hip came
+     * through the red skirt and read as a thirty-millimetre patch of skin
+     * on the cloth, in every rear-quarter view, with nothing actually
+     * misplaced behind it. The skirt tapers below the waist as well, so
+     * lower down it was narrower still.
+     *
+     * Derived from the same two numbers the body is drawn with rather
+     * than restated as one, so a thigh that moves takes the skirt with it.
+     */
+    dhotiRadius: 0.09 + 0.075 * bulk + 0.008,
     bellyCenterY,
     bellyCenterZ,
     bellyRadiusX,
@@ -995,13 +1025,31 @@ function deriveAthleticProfile(
 
   // The legs the classic body generator draws (see body.ts).
   const legs = {
-    thighTopRadius: 0.062 * bulk,
+    /**
+     * THE HIP MASS, not the tube under it.
+     *
+     * `body.ts` draws each thigh as a sphere of 0.075 at the joint with a
+     * tapered tube of 0.068 hanging from it, and this said 0.062 — the
+     * tube's top, which is the second-widest thing there. Combined with
+     * the spread below, the leg extent came out twenty-eight millimetres
+     * narrower than the leg that is drawn.
+     */
+    thighTopRadius: 0.075 * bulk,
     thighMidRadius: 0.056 * bulk,
     kneeRadius: 0.042 * bulk,
     calfRadius: 0.046 * bulk,
     thighLength: 0.2,
     shinLength: 0.19,
-    legSpreadX: 0.075 * bulk,
+    /**
+     * WHERE THE SKELETON PUTS THE THIGH, which is ninety millimetres out.
+     *
+     * This said seventy-five. The stylised skeleton's own table has
+     * `leg.<side>.thigh` at x = ±0.09 and does not scale it with bulk, so
+     * every body built on that skeleton has its legs there. A profile
+     * that places them fifteen millimetres narrower is describing a
+     * figure nobody draws.
+     */
+    legSpreadX: 0.09,
     thighSeatY: -0.05,
   };
 

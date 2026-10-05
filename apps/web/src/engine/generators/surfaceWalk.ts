@@ -352,8 +352,16 @@ export function surfaceRibbon(
     halfWidth: number | ((t: number) => number);
     /** How thick the cloth is, metres. */
     thickness: number;
-    /** Gap between the skin and the cloth's underside, metres. */
-    clearance: number;
+    /**
+     * Gap between the skin and the cloth's underside, metres — a constant,
+     * or a function of the fraction travelled.
+     *
+     * Along the route, because what a cloth has to clear changes along it.
+     * A sash crosses a bare shoulder and then a hip that is already
+     * wearing a skirt; a single number is either too little at the hip or
+     * a sash floating off the shoulder.
+     */
+    clearance: number | ((t: number) => number);
     samples?: number;
     /**
      * Which way the band's WIDTH runs.
@@ -376,12 +384,11 @@ export function surfaceRibbon(
     typeof options.halfWidth === "number" ? () => options.halfWidth as number : options.halfWidth;
   // The walk is told to hold the UNDERSIDE off the skin, so the spine
   // rides half the cloth's thickness higher than that.
-  const walk = walkSurface(
-    body,
-    route,
-    options.clearance + options.thickness / 2,
-    samples,
-  );
+  const gap =
+    typeof options.clearance === "number"
+      ? () => options.clearance as number
+      : options.clearance;
+  const walk = walkSurface(body, route, (t) => gap(t) + options.thickness / 2, samples);
 
   const positions: number[] = [];
   const indices: number[] = [];
