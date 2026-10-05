@@ -222,7 +222,19 @@ function fingerPoints(root: V3, lengthScale: number, bend: number, splay: number
   const segLengths = [0.021, 0.017, 0.014].map((l) => l * lengthScale);
   const points: V3[] = [root];
   const dir = new THREE.Vector3(Math.sin(splay) * 0.35, -1, 0.08).normalize();
-  const bendAxis = new THREE.Vector3(1, 0, 0);
+  /**
+   * FINGERS CURL TOWARD THE PALM, which is +Z in this frame.
+   *
+   * The rotation was about +X, and about +X a finger pointing down turns
+   * BACKWARDS — away from the palm it belongs to. So every closing mudra
+   * curled its fingers behind the hand: measured, the four tips reached a
+   * maximum of nine to fifteen millimetres of local Z while the grip
+   * point they are supposed to close on sits at twenty-two, and the
+   * nearest any finger came to it was thirteen. The fist was a ball of
+   * knuckles with the haft running down the outside, which is exactly how
+   * it looked.
+   */
+  const bendAxis = new THREE.Vector3(-1, 0, 0);
   const p = new THREE.Vector3(...root);
   for (const len of segLengths) {
     dir.applyAxisAngle(bendAxis, bend);
@@ -324,12 +336,30 @@ function closureFor(
   radius: number,
 ): number {
   const STEPS = 48;
-  let best = 1;
+  // Never straighter than half the mudra's own shape — a grip is still a
+  // grip — and never more than half again, which would fold the fingers
+  // into the palm.
+  const LOOSEST = 0.5;
+  /**
+   * THE FALLBACK IS THE LOOSEST GRIP, not the tightest.
+   *
+   * This started at 1 — the mudra's own full closure — and returned it
+   * whenever the very first step already had the fingers inside the
+   * item. Which is every real item: measured, the fist closed to an
+   * aperture of three point seven millimetres for a lotus stem of four,
+   * an axe haft of seven, and a modak of THIRTY. The hand was not
+   * adapting to anything; `closureFor` searched, broke on its first
+   * iteration, and handed back a number that had nothing to do with what
+   * was being held.
+   *
+   * If a hand cannot open far enough to clear what it is given, the
+   * honest answer is the widest it opens. Closing further cannot help,
+   * and is how a grip became a ball of knuckles with the haft running
+   * down the outside of it.
+   */
+  let best = LOOSEST;
   for (let i = 0; i <= STEPS; i += 1) {
-    // Never straighter than half the mudra's own shape — a grip is still
-    // a grip — and never more than half again, which would fold the
-    // fingers into the palm.
-    const closure = 0.5 + (i / STEPS) * 1.0;
+    const closure = LOOSEST + (i / STEPS) * 1.0;
     if (apertureAt(shape, grip, closure) < radius) break;
     best = closure;
   }

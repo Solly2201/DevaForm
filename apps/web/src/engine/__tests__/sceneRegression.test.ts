@@ -178,7 +178,13 @@ const PINNED = {
   // shoulder it slid the piece along the slope instead of lifting it off.
   // Everything routed over skin moves a little: the collar, the belt, the
   // serpent, the mala, the sash. See surfaceClearance.test.ts.
-  ganesha: { nodes: 379, digest: "bd71ffe8f4fb4f00" },
+  //
+  // And again when his hands learned to close. `fingerPoints` rotated
+  // each phalanx about +X, which for a finger pointing down curls it AWAY
+  // from the palm: every closing mudra made a ball of knuckles with the
+  // haft running down the outside. Only Ganesha wears these hands, so
+  // only Ganesha moves. See handGrip.test.ts.
+  ganesha: { nodes: 379, digest: "c414dca16fbaa2b9" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
