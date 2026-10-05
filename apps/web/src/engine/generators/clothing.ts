@@ -11,6 +11,19 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   const accent = ctx.materials.get("garmentAccent");
   const length = num(ctx, "length", 1);
   const layered = num(ctx, "layered", 0);
+  /**
+   * HOW THE CLOTH IS FINISHED, which is what actually distinguishes one
+   * dhoti from another.
+   *
+   * Every dhoti is a wrapped skirt — that is what the word means — so the
+   * variants cannot differ in being one. What differs is what is done
+   * with the loose length: pleated into a fan at the centre front and
+   * bordered (`fan`), or caught up in a sash knotted at the hip with its
+   * ends left hanging (`sash`). Those are different garments to look at
+   * and they share the containment the base wrap already guarantees.
+   */
+  const fan = num(ctx, "fan", 0);
+  const sash = num(ctx, "sash", 0);
   const bulk = ctx.proportions.bulk;
   const group = new THREE.Group();
 
@@ -150,17 +163,162 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
       rotation: [Math.PI / 2, 0, 0],
     }),
   );
+  /**
+   * WHERE THE CLOTH IS AT A GIVEN HEIGHT, and which way it leans.
+   *
+   * The skirt is a cone from `topR` at the waist to `hemR` at the hem,
+   * pleated a whole `fold` either side of that. Anything laid on its
+   * front has to follow both or it sinks in at one end and stands off at
+   * the other — which is what the strips below were doing: placed at a
+   * single fixed depth, they disappeared into the wrap near the waist and
+   * surfaced in pale flecks lower down, on every dhoti in the picker.
+   */
+  const hemR = bottomR * 0.94;
+  const cloth = {
+    lean: Math.atan2(topR - hemR, skirtLength),
+    at: (y: number) => hemR + (topR - hemR) * ((y - hemY) / Math.max(1e-6, skirtLength)),
+    // Beyond the pleat crests, with room for a strip's own half-thickness.
+    clear: fold * 1.75,
+  };
+
   // Front pleat fan — three accent strips flaring toward the hem
   const fanStrips = 3;
   for (let i = 0; i < fanStrips; i++) {
     const t = i / (fanStrips - 1) - 0.5;
     const stripLength = skirtLength * (0.88 - Math.abs(t) * 0.14);
+    const centreY = waistY - 0.005 - stripLength / 2;
     group.add(
       mesh(new THREE.BoxGeometry(0.032, stripLength, 0.005), accent, {
-        position: [t * 0.06, waistY - 0.005 - stripLength / 2, bottomR * 0.9 + 0.01],
-        rotation: [0.02, 0, t * 0.1],
+        position: [t * 0.06, centreY, cloth.at(centreY) + cloth.clear],
+        rotation: [-cloth.lean, 0, t * 0.1],
       }),
     );
+  }
+
+  if (fan > 0) {
+    /**
+     * THE ROYAL FINISH: a deep pleated fan at the centre front, and a
+     * border heavy enough to read as one.
+     *
+     * The kachcha's loose length is pleated and tucked so it hangs as a
+     * fan from the waist, and on a court dhoti that fan is the garment's
+     * whole front. It is built as separate blades rather than as one
+     * plate because a fan is a stack of folds seen edge-on — a single box
+     * with an accent material is a bib.
+     *
+     * It hangs OUTSIDE the skirt it is pleated from (the skirt's own
+     * radius plus the fold depth), falls a little past the hem the way a
+     * tucked length does, and shortens with the pose exactly as the
+     * skirt does, so a dancing figure does not wade through it.
+     */
+    const fanLength = skirtLength * 1.08;
+    const blades = 7;
+    /**
+     * THE FAN FOLLOWS THE SKIRT, which is not optional.
+     *
+     * Placed at a fixed depth the blades sank into the cloth at the waist
+     * — where the wrap is at `topR` — and emerged near the hem, where it
+     * has drawn in to `bottomR`. What that renders as is a jagged gold
+     * and red sawtooth down the front: not a fan, a z-fight. The skirt is
+     * a cone, so the fan hanging on it leans at the cone's own angle and
+     * its depth is read off the cloth at each blade's own height.
+     */
+    for (let i = 0; i < blades; i += 1) {
+      const t = i / (blades - 1) - 0.5;
+      // Shorter at the edges, so the fan's lower edge is a curve.
+      const length = fanLength * (1 - Math.abs(t) * 0.12);
+      const width = 0.03 + Math.abs(t) * 0.004;
+      const centreY = waistY - 0.004 - length / 2;
+      /**
+       * Clear of the PLEAT CRESTS, not of the cone.
+       *
+       * `pleatedCylinder` swings a whole `fold` either side of the
+       * nominal radius, and the blade has its own half-thickness behind
+       * its centre line. At 1.25 folds the blade's back face sat at 0.8
+       * of a fold — inside the crests — and the crests came through it in
+       * ragged red teeth. The crest is at one fold, the blade's back face
+       * has to be beyond that, and the margin is what stops it flickering
+       * as the figure turns.
+       */
+      const depth = cloth.at(centreY) + cloth.clear;
+      group.add(
+        mesh(new THREE.BoxGeometry(width, length, fold * 0.9), accent, {
+          position: [t * 0.085 * (depth / topR), centreY, depth - Math.abs(t) * 0.014],
+          rotation: [-cloth.lean, -t * 0.5, t * 0.07],
+        }),
+      );
+    }
+    // A broad border round the hem, which is what makes it court dress
+    // rather than a longer skirt.
+    group.add(
+      mesh(new THREE.CylinderGeometry(bottomR * 0.95, bottomR * 0.95, 0.034, 40, 1, true), accent, {
+        position: [0, hemY + 0.019, 0],
+      }),
+    );
+    // And a second waistband above the first: the tuck that holds it.
+    group.add(
+      mesh(new THREE.TorusGeometry(topR * 1.005, 0.011, 10, 48), accent, {
+        position: [0, waistY - 0.026, 0],
+        rotation: [Math.PI / 2, 0, 0],
+      }),
+    );
+  }
+
+  if (sash > 0) {
+    /**
+     * THE PATKA: a sash knotted at the hip with its ends left to hang.
+     *
+     * Distinct from the angavastram, which crosses the chest from a
+     * shoulder — this one belongs to the waist, and it is the thing the
+     * reference sheet's fifth dhoti is named for. Knot at the wearer's
+     * left hip, two falls of different lengths beside the skirt.
+     *
+     * OUTSIDE the skirt and outside anything wound over it. It is the
+     * outermost layer at the waist by construction: a sash is tied last.
+     */
+    /**
+     * ON THE HIP, OUTSIDE THE WRAP.
+     *
+     * The knot was placed at a fraction of the hem radius and a fraction
+     * of the waist radius independently, which put it most of the way
+     * inside the skirt: from three-quarters only the ends were visible
+     * and the sash read as two strips of cloth with nothing tying them.
+     * A knot sits ON the cloth, so its distance from the axis is read off
+     * the wrap at its own height like everything else here.
+     */
+    const knotY = waistY - 0.02;
+    const knotR = cloth.at(knotY) + cloth.clear;
+    // Forty degrees round from the front, on the wearer's left: far
+    // enough to read as a hip rather than a buckle, near enough to be
+    // seen from the front three-quarter the figure is shown at.
+    const knotBearing = -0.7;
+    const knotX = Math.sin(knotBearing) * knotR;
+    const knotZ = Math.cos(knotBearing) * knotR;
+    group.add(
+      mesh(new THREE.SphereGeometry(0.027, 14, 12), accent, {
+        position: [knotX, knotY, knotZ],
+        scale: [1.15, 0.8, 0.9],
+        rotation: [0, -knotBearing, 0.2],
+      }),
+    );
+    // The two ends. Different lengths, because a tied sash has no reason
+    // to be symmetrical and a symmetrical one reads as moulded.
+    for (const [drop, offset, twist] of [
+      [0.86, -0.1, 0.08],
+      [0.6, 0.12, -0.12],
+    ] as const) {
+      const length = skirtLength * drop;
+      const centreY = knotY - 0.012 - length / 2;
+      const bearing = knotBearing + offset;
+      // Each end follows the wrap down, like the fan does.
+      const radius = cloth.at(centreY) + cloth.clear * 1.3;
+      group.add(
+        mesh(new THREE.BoxGeometry(0.042, length, fold * 0.8), accent, {
+          position: [Math.sin(bearing) * radius, centreY, Math.cos(bearing) * radius],
+          rotation: [-cloth.lean, -bearing, twist],
+        }),
+      );
+    }
   }
 
   return [{ joint: "pelvis", object: group }];

@@ -105,6 +105,9 @@ const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> 
   // judged.
   crown: { joints: ["head"], span: 0.56 },
   torso: { joints: ["chest"], span: 0.5 },
+  // The lower garment and the legs it has to clear, which is the frame
+  // every dhoti question is actually asked in.
+  garment: { joints: ["pelvis"], span: 0.72 },
   hands: {
     joints: [
       "arm.frontLeft.hand",
@@ -214,13 +217,23 @@ function configFor(params: URLSearchParams): CharacterConfiguration {
   if (wear) {
     for (const assetId of wear.split(",")) {
       const asset = getAsset(assetId);
-      if (!asset || asset.kind.type !== "attachment") continue;
-      const socket = asset.kind.sockets[0];
-      if (!socket) continue;
-      posed.attachments = [
-        ...posed.attachments.filter((a) => a.socket !== socket),
-        { socket, asset: { assetId, version: asset.version } },
-      ];
+      if (!asset) continue;
+      if (asset.kind.type === "attachment") {
+        const socket = asset.kind.sockets[0];
+        if (!socket) continue;
+        posed.attachments = [
+          ...posed.attachments.filter((a) => a.socket !== socket),
+          { socket, asset: { assetId, version: asset.version } },
+        ];
+      } else if (asset.kind.type === "part") {
+        // Parts too: swapping a garment to look at it is the same need as
+        // swapping a crown, and having one of the two would be a tool
+        // that answers half the question.
+        (posed.parts as Record<string, unknown>)[asset.kind.slot] = {
+          assetId,
+          version: asset.version,
+        };
+      }
     }
   }
   const drop = params.get("without");

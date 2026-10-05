@@ -291,7 +291,13 @@ const PINNED = {
   // fingers is merged -- five meshes where there were seventeen. The
   // fingers stay separate and named, because they are what closes on a
   // held object and so are what every grip measurement addresses.
-  ganesha: { nodes: 360, digest: "a3165650a5645cb6" },
+  //
+  // AND THE STRIPS ON HIS DHOTI FOLLOW IT. The front pleat strips were
+  // placed at one fixed depth while the wrap is a cone, so they sank into
+  // the cloth near the waist and surfaced lower down in pale flecks --
+  // on every dhoti in the picker, not just his. They now read their depth
+  // off the cloth at their own height and lean at the cone's own angle.
+  ganesha: { nodes: 360, digest: "bf7b329dc88556c7" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

@@ -75,15 +75,7 @@ const SHEET: readonly Row[] = [
     offered: bySocket("arm.frontRight.hand.item" as SocketId),
   },
   { sheet: "8. Crown / headwear", promised: 5, offered: bySocket("head.crown" as SocketId) },
-  {
-    sheet: "9. Clothing / dhoti",
-    promised: 5,
-    offered: bySlot("lowerGarment"),
-    shortfall:
-      "three of five. The sheet draws Traditional, Ornate, Simple, Royal and With Sash; the " +
-      "Studio offers Pleated, Short and Layered, plus the Angavastram as a separate upper " +
-      "garment, which covers the sheet's 'With Sash' differently rather than not at all",
-  },
+  { sheet: "9. Clothing / dhoti", promised: 5, offered: bySlot("lowerGarment") },
   {
     // The sheet draws six KINDS of ornament rather than six of one, so
     // the row is about whether each kind exists at all.
@@ -133,15 +125,15 @@ describe("the reference sheet's own target for completeness", () => {
     ).toBeGreaterThanOrEqual(row.promised);
   });
 
-  it("covers most of the sheet, and says exactly where it does not", () => {
+  it("covers the sheet, and says exactly where it does not", () => {
     const short = SHEET.filter((row) => row.shortfall);
     const complete = SHEET.length - short.length;
     expect(
       complete,
       `${complete} of ${SHEET.length} categories meet the reference; short: ` +
         short.map((row) => row.sheet).join(", "),
-    ).toBeGreaterThanOrEqual(14);
+    ).toBe(SHEET.length);
     // And the gaps stay enumerated rather than growing quietly.
-    expect(short.map((row) => row.sheet)).toEqual(["9. Clothing / dhoti"]);
+    expect(short.map((row) => row.sheet)).toEqual([]);
   });
 });
