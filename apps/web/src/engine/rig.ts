@@ -1109,6 +1109,9 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       continue;
     }
     if (!asset) continue;
+    // The pose cannot wear this one — the resolver decided and explained.
+    // See `wearableWhen`: the renderer builds what it is handed.
+    if (resolved.suppressedParts.has(slot)) continue;
     if (resolved.integratedFeatures.has(slot) && !asset.integratedFeatures?.includes(slot)) continue;
     const isFlesh = FLESH_SLOTS.has(slot);
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings, pending);

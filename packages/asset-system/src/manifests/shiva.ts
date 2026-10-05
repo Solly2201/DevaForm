@@ -335,6 +335,13 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "shiva.garment.uttariya",
+    /**
+     * Standing dress. Seated, the lap wrap occupies the waist this drape
+     * ends at; in tandava the cloth is worn short and the figure is
+     * mid-turn. Measured, it cut 20-36 mm into the lower garment in those
+     * two poses and in no other.
+     */
+    wearableWhen: { seated: false, fits: ["full"] },
     version: 1,
     name: "Uttariya",
     description: "Cloth draped across the chest.",

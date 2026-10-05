@@ -496,8 +496,10 @@ export function PresentationEntry({ stage }: { stage: PresentationConfig }) {
             animation: "devaform-ember 2.4s ease-in-out infinite",
           }}
         />
+        {/* The same words the rest of the opening uses: this is the last
+            stage of one sequence, not a fourth different sentence. */}
         <span className="text-xs uppercase tracking-[0.3em] text-stone-400">
-          Preparing your murti
+          Awakening the figure
         </span>
       </div>
     </div>

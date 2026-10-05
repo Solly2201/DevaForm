@@ -449,6 +449,35 @@ export interface AssetDefinition {
    * it there, and it explains the ones it dropped.
    */
   cardinality?: "singleton";
+  /**
+   * THE POSES THIS GARMENT IS ACTUALLY WEARABLE IN.
+   *
+   * A pose is not just a set of joint angles; it decides how cloth is
+   * worn (`GarmentFit`) and whether the figure is seated, and some
+   * garments have no sensible answer for some of those. Shiva's uttariya
+   * is the case that prompted it: the drape crosses the chest and ends at
+   * the waist, and in meditation the seated lap wrap occupies exactly
+   * that space while in tandava the figure is mid-whirl with the cloth
+   * caught short. Measured, the drape cut twenty to thirty-six
+   * millimetres into whichever lower garment was on, in those two poses
+   * and no others.
+   *
+   * This is a DECLARATION, not a workaround. A combination that is
+   * technically renderable and visually poor should not be offered as a
+   * normal production choice, and the honest way to say so is for the
+   * asset to say it — the resolver then explains it to the customer in
+   * their own words rather than the renderer quietly producing something
+   * wrong.
+   *
+   * Absent means the garment works in every pose, which is true of the
+   * wraps that are drawn for the pose they are in.
+   */
+  wearableWhen?: {
+    /** False if it cannot be worn seated. */
+    seated?: boolean;
+    /** The garment fits it can be worn with; omitted means all of them. */
+    fits?: readonly ("full" | "gathered" | "short")[];
+  };
   /** Categorization for the editor UI. */
   category: string;
   /** Path to a pre-rendered thumbnail image (public URL). */

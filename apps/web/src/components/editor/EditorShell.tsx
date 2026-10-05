@@ -13,6 +13,7 @@
  * chrome merely appears on top when the Studio becomes the customer's.
  */
 import dynamic from "next/dynamic";
+import { TempleOpening } from "@/presentation/TempleOpening";
 import { useEffect, useState } from "react";
 import { getPresentation } from "@devaform/asset-system";
 import { PresentationEntry } from "@/presentation/PresentationEntry";
@@ -33,11 +34,7 @@ const EditorViewport = dynamic(
   () => import("@/components/viewport/EditorViewport").then((m) => m.EditorViewport),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full w-full items-center justify-center text-sm text-stone-500">
-        Preparing 3D viewport…
-      </div>
-    ),
+    loading: () => <TempleOpening stage="viewport" compact />,
   },
 );
 

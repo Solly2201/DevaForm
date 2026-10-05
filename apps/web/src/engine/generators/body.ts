@@ -94,13 +94,27 @@ export const humanoidBody: PartGenerator = (ctx) => {
     }),
   });
   if (chest > 1.05) {
-    // Regal variant: defined pectorals
+    /**
+     * THE REGAL CHEST, as a plane rather than as two balls.
+     *
+     * It was two sixty-two-millimetre spheres parked ninety-five
+     * millimetres proud of the chest and nearly round in plan, so they
+     * sat ON the torso instead of emerging from it: from the front the
+     * build read as inflated and toy-like rather than as the substantial,
+     * dignified figure the variant is for.
+     *
+     * A pectoral is broad, flat and low. Wider than it is tall, much
+     * shallower than it is wide, and set back far enough that its own
+     * curve is the last part of the chest rather than a thing stuck to
+     * it. The gap at the sternum stays, because that groove is what says
+     * there are two of them.
+     */
     for (const side of [1, -1]) {
       parts.push({
         joint: "chest",
-        object: mesh(new THREE.SphereGeometry(0.062, 22, 16), skin, {
-          position: [side * 0.07 * bulk, 0.06, 0.095 * bulk],
-          scale: [1.15, 0.85, 0.55],
+        object: mesh(new THREE.SphereGeometry(0.074, 24, 18), skin, {
+          position: [side * 0.058 * bulk, 0.054, 0.055 * bulk],
+          scale: [1.4, 0.72, 0.4],
         }),
       });
     }

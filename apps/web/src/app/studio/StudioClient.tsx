@@ -15,6 +15,7 @@
  * in the configuration, so opening one needs no route at all.
  */
 import { useEffect, useState } from "react";
+import { TempleOpening } from "@/presentation/TempleOpening";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AVAILABLE_DEITIES, getAvailableDeity } from "@devaform/asset-system";
 import { EditorShell } from "@/components/editor/EditorShell";
@@ -53,9 +54,7 @@ export function StudioClient() {
   if (!deity) return null;
   if (!ready) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-surface-950 text-sm text-stone-500">
-        Preparing Divine Studio…
-      </div>
+      <TempleOpening stage="space" />
     );
   }
 

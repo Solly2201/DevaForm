@@ -109,6 +109,12 @@ export interface ResolvedCharacter {
   attachments: readonly ResolvedAttachment[];
   /** Features physically embedded in a selected part's own mesh. */
   integratedFeatures: ReadonlySet<string>;
+  /**
+   * Part slots the pose cannot wear — see `wearableWhen`. The renderer
+   * skips these; the configuration still names them, so changing pose
+   * brings them back.
+   */
+  suppressedParts: ReadonlySet<string>;
   issues: readonly ResolutionIssue[];
 }
 
@@ -314,6 +320,42 @@ export function resolveCharacterPresentation(
     for (const feature of asset?.integratedFeatures ?? []) integratedFeatures.add(feature);
   }
 
+  /**
+   * GARMENTS THE POSE CANNOT WEAR.
+   *
+   * The pose decides how cloth is worn and whether the figure is seated,
+   * and a garment may declare that it has no sensible answer for some of
+   * those — see `wearableWhen`. Shiva's uttariya crosses the chest and
+   * ends at the waist, which is exactly where a seated figure's lap wrap
+   * goes; measured, it cut tens of millimetres into whichever lower
+   * garment was on, in meditation and tandava and in no other pose.
+   *
+   * Decided HERE because the resolver is where a configuration becomes a
+   * presentation. The renderer is handed a set of parts it can simply
+   * build; it is not asked to judge whether the result looks sensible.
+   *
+   * The customer is told, in their own words. Nothing is destroyed: the
+   * configuration still names the garment, so choosing a standing pose
+   * brings it straight back.
+   */
+  const suppressedParts = new Set<string>();
+  for (const [slot, ref] of Object.entries(config.parts)) {
+    const asset = resolveAssetRef(ref);
+    const when = asset?.wearableWhen;
+    if (!asset || !when) continue;
+    const seated = preset?.seated === true;
+    const fit = garmentFitOf(preset);
+    if (when.seated === false && seated) {
+      suppressedParts.add(slot);
+      note("conflict", `${asset.name} is not worn with a seated pose.`, { assetId: asset.id });
+      continue;
+    }
+    if (when.fits && !when.fits.includes(fit)) {
+      suppressedParts.add(slot);
+      note("conflict", `${asset.name} is not worn with this pose.`, { assetId: asset.id });
+    }
+  }
+
   // --- attachments --------------------------------------------------------
   const socketIds = new Set<string>(skeleton.sockets.map((s) => s.id));
   const occupied = new Set<ArmSlot>();
@@ -472,6 +514,7 @@ export function resolveCharacterPresentation(
     pose,
     hands: resolvedHands as HandsConfiguration,
     attachments,
+    suppressedParts,
     integratedFeatures,
     issues,
   };

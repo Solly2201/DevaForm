@@ -315,7 +315,14 @@ const PINNED = {
   // web between them, without which each finger reads as a rod screwed
   // on. A held sweet sits deeper in it, which is what a palm with a dish
   // in it does.
-  ganesha: { nodes: 360, digest: "9953ecdcceacd8b2" },
+  //
+  // AND HIS REGAL CHEST IS A CHEST. The variant added two sixty-two
+  // millimetre spheres ninety-five millimetres proud of the torso and
+  // nearly round in plan, so they sat ON it: the build read as inflated
+  // and toy-like rather than substantial. A pectoral is broad, flat and
+  // low, set back far enough that its own curve is the last part of the
+  // chest rather than a thing stuck to it.
+  ganesha: { nodes: 360, digest: "34875caf4dc65f81" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

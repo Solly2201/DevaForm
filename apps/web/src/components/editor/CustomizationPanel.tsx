@@ -104,9 +104,26 @@ function PartSlotSection({ slot }: { slot: PartSlot }) {
     );
   }
   if (assets.length === 0 && !selected) return null;
+  /**
+   * WHY THE CHOICE IS NOT ON THE FIGURE, said where the choice is.
+   *
+   * The pose can decide a garment is not wearable — a drape that crosses
+   * to the waist has nowhere to go on a seated figure, see
+   * `wearableWhen`. The notices banner already says so, but a customer
+   * looking at a highlighted card and an unchanged statue is looking at
+   * the picker, not at the banner. The selection is KEPT: choosing a
+   * standing pose brings it straight back, and saying that is the
+   * difference between an explanation and a silent refusal.
+   */
+  const suppressed = resolveCharacterPresentation(config).suppressedParts.has(slot);
   return (
     <section>
       <SectionHeading>{SLOT_LABELS[slot]}</SectionHeading>
+      {suppressed && selected && (
+        <p className="mb-2 rounded-md border border-surface-700 bg-surface-900 px-2 py-1.5 text-[11px] leading-snug text-stone-400">
+          Not worn with this pose — your choice is kept, and returns when you change it.
+        </p>
+      )}
       <AssetGrid
         assets={assets}
         selectedAssetId={selected?.assetId ?? null}

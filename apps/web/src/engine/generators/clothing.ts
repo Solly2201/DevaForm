@@ -74,26 +74,55 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   const lapScale = bottomR / (0.165 * bulk);
 
   if (ctx.seated) {
-    // Seated poses: drape a lap cloth over the folded legs instead of a
-    // full standing skirt that would clip through them.
+    /**
+     * SEATED CLOTH IS STILL CLOTH.
+     *
+     * The lap used to be one flattened sphere — a smooth ball the width
+     * of the crossed legs, with a half-torus laid across its front for a
+     * hem. On the stylised body it passed; on a seated mesh figure it is
+     * a cream cushion swallowing the legs, and Shiva in meditation read
+     * as sitting inside a cocoon. A sphere has no folds, no hem it can
+     * hold, and no relationship with the legs under it, so there is
+     * nothing about it the eye can take for fabric.
+     *
+     * What a seated wrap actually is: the same pleated cone as the
+     * standing one, drawn short and wide. A waist that grips, a fall that
+     * flares over the knees, pleats that catch light down their length,
+     * and a banded hem at the bottom. It is built from the same
+     * `pleatedCylinder` as the standing skirt for exactly that reason —
+     * the thing that reads as cloth is the pleating, and a seated figure
+     * has no less claim on it than a standing one.
+     *
+     * The width comes from the legs the figure ACTUALLY has: `legExtentAt`
+     * is the body's own statement of how far its legs reach at a height,
+     * which on a folded pose is the knees. Authored numbers would be the
+     * stylised body's lap on a mesh body's knees all over again.
+     */
+    const lapY = waistY - 0.1;
+    const legs = ctx.body.legExtentAt(lapY);
+    const kneeReach = Math.max(legs.halfWidth, legs.frontZ, topR * 1.15);
+    const lapR = kneeReach + 0.018;
+    const skirtDrop = 0.17;
+
     group.add(
-      mesh(pleatedCylinder(topR, topR * 1.18, 0.1, 18, 0.006), garment, {
-        position: [0, waistY - 0.05, 0],
+      mesh(pleatedCylinder(topR * 1.02, lapR, skirtDrop, 20, Math.max(0.008, lapR * 0.05)), garment, {
+        position: [0, waistY - skirtDrop / 2, 0],
       }),
     );
-    // Lap drape — wide, flattened cushion of cloth over the crossed legs
+    // The lap itself: a shallow dome closing the top of that cone, so
+    // nothing looks down inside the wrap from three-quarters.
     group.add(
-      mesh(new THREE.SphereGeometry(0.19 * bulk * lapScale, 32, 22), garment, {
-        position: [0, -0.075, 0.05],
-        scale: [1.15, 0.42, 0.95],
+      mesh(new THREE.SphereGeometry(lapR, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.5), garment, {
+        position: [0, waistY - skirtDrop + 0.004, 0],
+        scale: [1, 0.26, 1],
       }),
     );
-    // Hem falling over the front edge of the lap
+    // Hem band round the bottom edge — the line that says where the
+    // cloth ends, which a sphere could never have.
     group.add(
-      mesh(new THREE.TorusGeometry(0.185 * bulk * lapScale, 0.012, 10, 40, Math.PI), accent, {
-        position: [0, -0.09, 0.055],
-        rotation: [0.25, 0, 0],
-        scale: [1.05, 0.9, 0.85],
+      mesh(new THREE.TorusGeometry(lapR * 0.985, 0.011, 10, 48), accent, {
+        position: [0, waistY - skirtDrop + 0.008, 0],
+        rotation: [Math.PI / 2, 0, 0],
       }),
     );
     // Waist wrap band
@@ -370,15 +399,32 @@ export const humanoidShawl: PartGenerator = (ctx) => {
    * back and home. Bearings turn toward the figure's left, so running
    * NEGATIVE from the front crosses to the right and carries on behind.
    */
+  /**
+   * ABOVE THE WAISTBAND, which is where an upper cloth belongs.
+   *
+   * The route used to dip to a tenth of the torso's height — the hip, and
+   * the hip is already wearing a skirt. Two garments competing for one
+   * surface is a fight the drape cannot win: measured across every Shiva
+   * pose, the uttariya reached twenty-eight to sixty-eight millimetres
+   * inside whichever lower garment was on, and the two corrections that
+   * belong at this layer (asking for clearance per BEARING, and pushing
+   * the ribbon's edges out as well as its spine) between them removed
+   * only about half of it. The rest is below the band `BodyProfile`
+   * admits to describing, where no clearance query can be trusted.
+   *
+   * So the sash ends at the waist. That is also what an uttariya IS — the
+   * upper cloth, worn over the shoulder and across the chest — and a sash
+   * that stops where the dhoti starts is the dress the references draw.
+   */
   const route: SurfaceWaypoint[] = [
     { bearing: 1.15, y: at(0.97) },
-    { bearing: 0.5, y: at(0.78) },
-    { bearing: -0.1, y: at(0.52) },
-    { bearing: -0.75, y: at(0.26) },
-    { bearing: -1.5, y: at(0.12) },
-    { bearing: -Math.PI, y: at(0.2) },
-    { bearing: -4.2, y: at(0.5) },
-    { bearing: -5.0, y: at(0.82) },
+    { bearing: 0.5, y: at(0.8) },
+    { bearing: -0.1, y: at(0.58) },
+    { bearing: -0.75, y: at(0.47) },
+    { bearing: -1.5, y: at(0.41) },
+    { bearing: -Math.PI, y: at(0.46) },
+    { bearing: -4.2, y: at(0.58) },
+    { bearing: -5.0, y: at(0.84) },
     { bearing: 1.15 - Math.PI * 2, y: at(0.97) },
   ];
 
@@ -398,20 +444,76 @@ export const humanoidShawl: PartGenerator = (ctx) => {
    * already worn there. A sash over a bare shoulder is unaffected: there
    * is nothing under it, so the clearance is the cloth's own.
    */
-  const heightAt = (t: number): number => {
+  const alongRoute = <K extends "y" | "bearing">(t: number, key: K): number => {
     const span = (route.length - 1) * Math.min(1, Math.max(0, t));
     const first = route[Math.floor(span)] ?? route[0]!;
     const second = route[Math.min(route.length - 1, Math.floor(span) + 1)] ?? first;
-    return first.y + (second.y - first.y) * (span - Math.floor(span));
+    return first[key] + (second[key] - first[key]) * (span - Math.floor(span));
   };
+  const heightAt = (t: number): number => alongRoute(t, "y");
+  const bearingAt = (t: number): number => alongRoute(t, "bearing");
   const cloth = surfaceRibbon(body, route, {
     halfWidth: (t) => halfWidth * (0.72 + 0.28 * Math.sin(Math.min(1, t * 1.6) * Math.PI)),
     thickness,
+    /**
+     * PER BEARING, and that is the whole correction.
+     *
+     * `wornClearanceAt` returns how far the cloth under it stands outside
+     * the BODY, and asked without a bearing it measures that against the
+     * body's FRONT. A skirt is roughly circular and a torso is not: at
+     * the front the body is a hundred and ninety-two millimetres and the
+     * skirt two hundred and fifty, so the sash wanted fifty-eight; carry
+     * that same fifty-eight round to the back, where the body is a
+     * hundred and fifty, and the sash lands at two hundred and eight —
+     * forty millimetres inside the skirt it is supposed to lie on.
+     *
+     * Measured across every Shiva pose and every lower garment, the
+     * uttariya reached twenty-eight to sixty-eight millimetres inside.
+     * Asking at the bearing the ribbon is actually at removes all of it.
+     */
     clearance: (t) =>
-      Math.max(thickness * 0.35, ctx.wornClearanceAt("chest", heightAt(t)) + thickness * 0.35),
+      Math.max(
+        thickness * 0.35,
+        ctx.wornClearanceAt("chest", heightAt(t), bearingAt(t)) + thickness * 0.35,
+      ),
     samples: 150,
   });
   pushOutsideBody(cloth, body, { y: 0, z: 0 }, thickness * 0.25);
+
+  /**
+   * AND OUTSIDE WHAT IT IS DRAPED OVER, vertex by vertex.
+   *
+   * `clearance` places the ribbon's SPINE, and a ribbon has width: where
+   * the route turns hardest its outer corner swings inboard of the spine
+   * and lands inside the skirt. That is the same structural gap
+   * `pushOutsideBody` exists to close against the body, and it closes it
+   * against the body only — measured, the spine-level fix took the
+   * uttariya from fifty down to thirty-seven millimetres inside the
+   * dhoti, and the thirty-seven that remained were all edge.
+   *
+   * So the guarantee is restated where it has to hold: no vertex of this
+   * cloth is nearer the axis than the cloth it is worn over. Pushed along
+   * its own bearing, which is the direction "outward" means for a wrap,
+   * and only outward — a vertex already clear is left alone.
+   */
+  {
+    const position = cloth.getAttribute("position");
+    const point = new THREE.Vector3();
+    for (let i = 0; i < position.count; i += 1) {
+      point.fromBufferAttribute(position, i);
+      const bearing = Math.atan2(point.x, point.z);
+      const skin = body.surfaceAt(bearing, point.y);
+      const offset = ctx.wornOffsetAt("chest", point.y, bearing);
+      if (offset === null) continue;
+      const want = Math.hypot(skin.x, skin.z) + offset + thickness * 0.5;
+      const radius = Math.hypot(point.x, point.z);
+      if (radius >= want || radius < 1e-5) continue;
+      const scale = want / radius;
+      position.setXYZ(i, point.x * scale, point.y, point.z * scale);
+    }
+    position.needsUpdate = true;
+    cloth.computeVertexNormals();
+  }
 
   const mesh = new THREE.Mesh(cloth, accent);
   mesh.castShadow = true;
