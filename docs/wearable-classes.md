@@ -103,10 +103,12 @@ now right; `bodySurface.test.ts` holds the second.
 
 `haram` declares `restsOn neck, 4 mm` and is measured. `naga` declares a
 socket and a `clearanceM` that nothing reads, and measures 13–77 mm clear
-of the body all the way round — a serpent that never touches the figure
-it is draped on. It needs `restsOn chest` plus a *contact* requirement,
-which `restsOn` already implies and no validator yet enforces. Small,
-worth doing in Phase 5.
+of the body all the way round — which looked like a serpent that never
+touches the figure it is draped on.
+
+**Superseded by the addendum below: it is not floating.** Measured against
+the hair rather than the skin, it lies 4.4 mm INTO the jata, and the 12.7 mm
+to skin is how thick the hair is. **A, not B.**
 
 ### Malas (`shiva.mala.rudraksha`, `ganesha.necklace.mala`) — **C**
 
@@ -116,9 +118,12 @@ the neck, falls under gravity, and its lowest point is where it stops.
 most of it — but the thing a mala gets wrong is the fall, and the fall is
 a length, not a route. `shiva.mala.rudraksha` measures −3 to −33 mm,
 touching at the sternum and standing off below, which is what a hanging
-strand should do. The contract it needs is "reaches this far down and
-hangs free below the last contact", and `drapes` cannot currently say
-*free*. Phase 5.
+strand should do.
+
+**Superseded by the addendum below.** Measured against the hair it rests
+on, both malas are correct as built, and the contract would have been
+written to fix a number that was already right. **A, not C** — until an
+asset appears whose fall is actually wrong.
 
 ### Crowns (`vishnu.crown.kirita`, 3 × Ganesha) — **C**
 
@@ -126,9 +131,13 @@ A crown does not rest on a body region. It rests on a **skull envelope**,
 over whatever hair is between, and its silhouette is deity-specific by
 design. `restsOn head` would be true and useless: the measured thing is
 `skullEnvelope`, which exists, and the question is seating depth and
-orientation on it. Measured, Vishnu's kirita band is 31.5 mm inside the
-scalp, which is correct layering (crown over hair over skull) and a
-printability concern rather than a visual one. Its own contract family.
+orientation on it.
+
+**Superseded by the addendum below.** Measured, Vishnu's kirita presses
+8.2 mm into the hair and 31.5 mm into the scalp, which is exactly how a
+kirita is worn over hair — correct, and invisible. The only crown fact
+that survives is a manufacturing one. **A for fit; the printability
+concern moves to Phase 9.**
 
 ### Earrings (`ganesha.earrings.kundala`) — **A**
 
