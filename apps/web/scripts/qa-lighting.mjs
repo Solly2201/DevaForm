@@ -91,13 +91,49 @@ await drive(() => {
 });
 await shot("07-no-shadows");
 
+/**
+ * Set something a preset would not produce, so the read-back is about
+ * THIS customer's choice rather than about a default that happens to
+ * agree with it.
+ */
+await drive(() => {
+  const ui = window.__devaformUi.getState();
+  ui.setLightingPreset("temple");
+  ui.setLightingValue("key", 0.42);
+  ui.setLightingValue("warmth", -0.75);
+  ui.setLightingShadows(false);
+});
+await shot("08-custom");
+
 const persisted = await page.evaluate(() => ({
   stored: localStorage.getItem("devaform.studio.presentation"),
   live: window.__devaformUi.getState().lighting,
 }));
-console.log(JSON.stringify(persisted, null, 2));
 if (!persisted.stored) {
   console.error("FAIL: nothing was persisted; the lighting would be lost on reload");
+  process.exitCode = 1;
+}
+
+/**
+ * AND THEN ACTUALLY RELOAD.
+ *
+ * Checking that something was WRITTEN is not the same as checking that it
+ * comes back, and this file's own opening paragraph says the way this
+ * feature fails quietly is "by working beautifully until a reload". It
+ * was only ever testing the write.
+ */
+await page.reload({ waitUntil: "networkidle0", timeout: 180_000 });
+await page.waitForFunction(() => window.__devaformUi, { timeout: 90_000 });
+await new Promise((r) => setTimeout(r, 4000));
+const restored = await page.evaluate(() => window.__devaformUi.getState().lighting);
+await shot("09-after-reload");
+
+const differences = Object.entries(persisted.live)
+  .filter(([key, value]) => restored?.[key] !== value)
+  .map(([key, value]) => `${key}: set ${JSON.stringify(value)}, came back ${JSON.stringify(restored?.[key])}`);
+console.log(JSON.stringify({ set: persisted.live, afterReload: restored, differences }, null, 2));
+if (differences.length > 0) {
+  console.error(`FAIL: lighting did not survive a reload — ${differences.join("; ")}`);
   process.exitCode = 1;
 }
 await browser.close();
