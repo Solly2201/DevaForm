@@ -42,6 +42,8 @@ export function EditorShell() {
   const deity = useDeity();
   const stage = getPresentation(deity.id);
   const phase = useStageStore((state) => state.phase);
+  const characterReady = useStageStore((state) => state.characterReady);
+  const arriving = useStageStore((state) => state.arriving);
   const finishSettle = useStageStore((state) => state.finishSettle);
 
   /**
@@ -130,6 +132,31 @@ export function EditorShell() {
                 the chrome: the customer keeps their tools, and what they
                 cannot see is the one thing that is not ready. */}
             <StageArrival />
+            {/**
+             * THE LAST STAGE OF THE OPENING, which nothing was covering.
+             *
+             * The route's wait and the viewport chunk's wait each had a
+             * cover; the gap between a canvas existing and a figure
+             * standing in it had none. On a first visit the customer
+             * therefore watched an empty lit room for as long as the
+             * body's mesh took to arrive and assemble, with no word about
+             * what was happening — the part of the opening that actually
+             * reads as slow.
+             *
+             * It lifts on `characterReady`: the body's mesh is in the
+             * scene, nothing is still on its way, and a frame has been
+             * drawn (see StageReadiness). Not a timer — a timer would
+             * either hide a failed asset or uncover an empty room.
+             *
+             * Not during the entry, which owns the window and is already
+             * a cover; not during a form swap, which has its own veil and
+             * keeps the customer's tools.
+             */}
+            {phase !== "intro" && !characterReady && !arriving && (
+              <div className="absolute inset-0 z-20">
+                <TempleOpening stage="figure" compact />
+              </div>
+            )}
             {/* Not merely invisible: not there. A control faded to zero
                 is still in the tab order, and a customer who has not
                 arrived yet could reach the camera presets with a Tab. */}

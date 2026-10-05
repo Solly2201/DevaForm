@@ -178,6 +178,27 @@ export function PresentationEntry({ stage }: { stage: PresentationConfig }) {
     beginSettle();
   }, [beginSettle]);
 
+  /**
+   * ASKED FOR, rather than travelled to.
+   *
+   * The approach only goes as far as the strip has DECODED, which is
+   * right for a scroll — the hall cannot move past a picture that does
+   * not exist yet. It was also what the Enter button did, and that made
+   * the one control labelled with the customer's intention the one
+   * control that could not act on it: on a weak connection a customer
+   * pressed Enter and the title card simply stayed, with nothing on
+   * screen to say why. Measured at 400 kbps, fifteen seconds of that.
+   *
+   * Enter means take me in. So it hands over at once — past the strip,
+   * and past waiting for the statue, because the Studio has its own cover
+   * for a figure still being assembled and that cover says what is
+   * happening. A still title card does not.
+   */
+  const enterNow = useCallback(() => {
+    approachRef.current = setApproach(approachRef.current, 1);
+    arrive();
+  }, [arrive]);
+
   // --- input ---------------------------------------------------------------
   // The layer takes the gestures itself rather than letting a document
   // scroll under it: there is no document here, and a page that grows a
@@ -224,7 +245,7 @@ export function PresentationEntry({ stage }: { stage: PresentationConfig }) {
         case "End":
         case "Enter":
           event.preventDefault();
-          push(travelPx);
+          enterNow();
           break;
         case "Home":
           event.preventDefault();
@@ -246,7 +267,7 @@ export function PresentationEntry({ stage }: { stage: PresentationConfig }) {
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("keydown", onKey);
     };
-  }, [travelPx, fading]);
+  }, [travelPx, fading, enterNow]);
 
   // --- the scene -----------------------------------------------------------
   // One loop: ease the shown position toward the intent, draw the two
@@ -452,9 +473,7 @@ export function PresentationEntry({ stage }: { stage: PresentationConfig }) {
             reachable by keyboard from the first frame. */}
         <button
           type="button"
-          onClick={() => {
-            approachRef.current = setApproach(approachRef.current, 1);
-          }}
+          onClick={enterNow}
           className="rounded-full border border-saffron-500/40 px-5 py-1.5 text-[0.62rem] uppercase tracking-[0.3em] text-stone-300 transition hover:border-saffron-500 hover:text-saffron-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-saffron-500"
         >
           Enter

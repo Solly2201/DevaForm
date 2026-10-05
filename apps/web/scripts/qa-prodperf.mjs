@@ -76,13 +76,31 @@ await page.waitForFunction(
 );
 const firstViewport = now() - started;
 
-/** The figure is on screen: the arrival cover has lifted. */
+/**
+ * The figure is on screen.
+ *
+ * Measured by the OPENING lifting, not by the arrival veil going away.
+ * The veil only exists during a form swap, so on a first load the old
+ * check found no element, resolved at once, and reported the Studio
+ * usable two milliseconds after the canvas had been given room — with
+ * nothing standing in it. A number like that is worse than no number.
+ *
+ * The opening lifts on `characterReady`: body mesh in the scene, nothing
+ * still on its way, a frame drawn. That is the question a photograph can
+ * fail, which is the one worth timing.
+ */
+const sawOpening = await page
+  .waitForSelector('[data-testid="temple-opening"]', { timeout: 20_000 })
+  .then(() => true)
+  .catch(() => false);
 await page
-  .waitForFunction(() => document.querySelector('[data-testid="stage-arrival"]') === null, {
+  .waitForFunction(() => document.querySelector('[data-testid="temple-opening"]') === null, {
     timeout: 180_000,
-    polling: 150,
+    polling: 100,
   })
-  .catch(() => null);
+  .catch(() => {
+    throw new Error("the opening never lifted: no figure within three minutes");
+  });
 const usable = now() - started;
 
 const timing = await page.evaluate(() => {
@@ -155,7 +173,13 @@ for (let round = 0; round < ROUNDS; round += 1) {
 const finalHeap = await heap();
 
 const report = {
-  firstLoad: { domReadyMs: domReady, firstViewportMs: firstViewport, usableMs: usable },
+  firstLoad: {
+    domReadyMs: domReady,
+    firstViewportMs: firstViewport,
+    usableMs: usable,
+    /** False means the opening was never shown — a gap nobody is covering. */
+    openingShown: sawOpening,
+  },
   timing,
   switches,
   heapMb: { before: baselineHeap, after: finalHeap, grewMb: baselineHeap && finalHeap ? finalHeap - baselineHeap : null },
