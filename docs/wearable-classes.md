@@ -205,3 +205,49 @@ against the fingers round it.
 `WornFit` stays at five kinds. The pressure this audit found is not for a
 sixth kind — it is for the **body** to be able to answer "what else is
 here", which is Phase 2's question, not this one's.
+
+---
+
+## Addendum: crowns, malas, the naga and the marks, measured
+
+Taken 2026-10-05 against `632945b`. Each piece against the figure's own
+geometry and, separately, against the hair — because for most of these the
+hair is what they actually rest on. Negative means touching or inside.
+
+| piece | vs the body | vs the hair | reading |
+|---|---|---|---|
+| `vishnu.crown.kirita` | **31.5 mm in** | 8.2 mm in | correct. A kirita's band encircles the head OVER the hair, so it presses 8 mm into the hair and its inner face lies inside the scalp. Invisible; a printability fact, not a visual one |
+| `shiva.ornament.naga` | 12.7 mm **clear** | 4.4 mm in | correct, and the reason it looked like floating is that it is not resting on skin. It rests on the jata, and 12.7 mm is the hair's thickness |
+| `shiva.mala.rudraksha` | 3.0 mm clear | 1.3 mm in | correct — a bead strand lying on the hair at the nape and 3 mm off the sternum |
+| `shiva.crescent.chandra` | 44.7 mm clear | 3.0 mm in | correct. It is set in the hair, not on the head |
+| `shiva.forehead.trinetra` | 3.1 mm in | 12.0 mm clear | correct — on the skin, clear of the hairline |
+| `vishnu.forehead.tilaka` | 4.6 mm in | 0.1 mm clear | correct, and finely placed: it reaches the hairline and stops |
+
+**So no new contract family is needed here.** Every piece in this group is
+either correct or correct for its class, and what made three of them *look*
+wrong from the outside is that they are worn on hair rather than on skin.
+A "crowns need skull-envelope seating" contract would have been built to
+fix a number that was already right.
+
+The one thing worth saying about crowns remains true and belongs to Phase
+9 rather than here: a crown band whose inner face is 31.5 mm inside the
+cranium is visually perfect and not a solid anyone can print.
+
+### A limitation this exposed
+
+`ganesha.crown.kirita` measures 149 mm from "the body" — which is not a
+defect, it is the measurement failing. **Ganesha's head is not in
+`rig.bodyMeshes`.** That set is built by `claimFlesh`, which claims only
+the `body` slot, because its job is to decide what the statue rests on and
+a hem that hangs past the feet must not lift the figure off its base.
+
+The consequence is that nothing can measure anything against Ganesha's
+head, ears, tusks, trunk or hands: his crown, his earrings and his tilaka
+are unvalidated by every depth check in the suite.
+
+It is the Phase 3 shape again — one name serving two questions. "What does
+this statue rest on" and "what counts as the figure" are different sets,
+and the second is recoverable without a schema change, because flesh is
+exactly the geometry wearing the `skin` zone. Recorded rather than fixed
+in this pass: changing what `bodyMeshes` means touches `settleOnSupport`,
+and the honest version is a second accessor rather than a redefinition.
