@@ -191,7 +191,15 @@ const PINNED = {
   // thing his back view showed. Behind the neck it hugs now, because
   // that is where hair lies over it. Ganesha wears the same collar and
   // has no hair to hide it, so what moves on him is only the nape.
-  ganesha: { nodes: 379, digest: "3f7ccdd8a4e99026" },
+  //
+  // And when the kamarbandh learned which way a belt is wide. A ribbon's
+  // width ran across the SURFACE it rides, which is right for a sash over
+  // a shoulder and wrong for a belt: round a hip the normal tilts down
+  // and out, and the band's lower edge swings out with it. On Ganesha,
+  // whose hips curve hardest, it came out sixty-two millimetres thick
+  // radially — a gold tray round the waist rather than a belt on it.
+  // Thirty-eight now. Only the belt moves.
+  ganesha: { nodes: 379, digest: "acabb4ca2f63f168" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

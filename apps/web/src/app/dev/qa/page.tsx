@@ -414,7 +414,20 @@ export default function QaCapturePage() {
 function QaCapture() {
   const params = useSearchParams();
   const config = useMemo(() => configFor(new URLSearchParams(params.toString())), [params]);
-  const view = VIEWS[params.get("view") ?? "front"] ?? 0;
+  /**
+   * Which way round the figure the camera stands, in degrees.
+   *
+   * `view` names the five angles a sheet usually wants; `azimuth` takes
+   * any of them. A customer can turn the statue through a full circle,
+   * and an audit that can only stand in five places cannot check what
+   * they will see — the back quarters, where garments seam and ornaments
+   * pass behind, are exactly the angles the named views skip.
+   */
+  const azimuth = params.get("azimuth");
+  const view =
+    azimuth !== null && Number.isFinite(Number(azimuth))
+      ? Number(azimuth)
+      : (VIEWS[params.get("view") ?? "front"] ?? 0);
   const focus = FOCUS[params.get("focus") ?? "full"] ?? FOCUS.full!;
   const [report, setReport] = useState<{
     warnings: string[];

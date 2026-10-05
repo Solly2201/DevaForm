@@ -567,6 +567,8 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
     thickness,
     clearance: overCloth,
     samples: 120,
+    // A belt's width runs up the figure, not across the hip it rides.
+    upright: true,
   });
   // Into the socket's own frame, where the rig will place it.
   const position = belt.getAttribute("position");

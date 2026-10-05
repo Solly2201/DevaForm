@@ -355,6 +355,20 @@ export function surfaceRibbon(
     /** Gap between the skin and the cloth's underside, metres. */
     clearance: number;
     samples?: number;
+    /**
+     * Which way the band's WIDTH runs.
+     *
+     * By default it runs across the surface, which is what a sash over a
+     * shoulder does: the cloth lies on the body and its width follows the
+     * skin. A BELT does not. Its width runs up the figure, and the
+     * difference matters wherever the surface it rides is not vertical —
+     * round a hip the normal tilts down and out, so a surface-aligned
+     * band swings its lower edge outward with it. Measured on Ganesha,
+     * whose hips curve hardest, the kamarbandh came out sixty-two
+     * millimetres thick radially and stood sixty-six proud of the cloth:
+     * a gold tray round his waist rather than a belt on it.
+     */
+    upright?: boolean;
   },
 ): THREE.BufferGeometry {
   const samples = options.samples ?? 120;
@@ -381,7 +395,12 @@ export function surfaceRibbon(
     if (tangent.lengthSq() < 1e-12) tangent.set(0, 1, 0);
     tangent.normalize();
     const outward = walk.normals[i] as THREE.Vector3;
-    across.copy(tangent).cross(outward);
+    if (options.upright) {
+      // Up the figure, squared against the direction of travel.
+      across.set(0, 1, 0).addScaledVector(tangent, -tangent.y);
+    } else {
+      across.copy(tangent).cross(outward);
+    }
     if (across.lengthSq() < 1e-12) across.set(1, 0, 0);
     across.normalize();
 
