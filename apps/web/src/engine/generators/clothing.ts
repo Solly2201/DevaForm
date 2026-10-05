@@ -83,7 +83,23 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     return [{ joint: "pelvis", object: group }];
   }
 
-  const skirtLength = 0.2 + 0.17 * length;
+  /**
+   * HOW THE POSE WEARS IT, which this generator was not reading.
+   *
+   * `PosePreset.garment` says whether cloth is worn full, gathered or
+   * short, and it is declared BY THE POSE rather than inferred — a
+   * dancing figure's wrap is short because the pose says a leg is out,
+   * not because a renderer noticed a leg through a skirt. The hide
+   * generator has always honoured it. This one did not, so Ganesha's
+   * `dance` preset declared `garment: "short"` and got a full-length
+   * skirt, and his raised leg went straight through the red.
+   *
+   * The same shape as a wearable's `clearanceM`: a field one generator
+   * reads and another ignores is worse than a field nobody reads,
+   * because it looks answered.
+   */
+  const worn = ctx.garment === "short" ? 0.45 : ctx.garment === "gathered" ? 0.75 : 1;
+  const skirtLength = (0.2 + 0.17 * length) * worn;
   const hemY = waistY - skirtLength;
 
   // Main pleated skirt

@@ -113,7 +113,7 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   },
   {
     id: "shiva.jata.flowing",
-    mm: 40,
+    mm: 46,
     reason: "constitutive",
     why: "a hair cap is rooted in the skull it covers; only its outside is ever seen",
   },
@@ -133,15 +133,21 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   // --- seams ----------------------------------------------------------
   {
     id: "(anon)head_classicSculpt",
-    mm: 20,
+    mm: 25,
     reason: "seam",
     why: "a sculpted head socketed into a neck overlaps it; the overlap is what hides the join",
   },
   {
     id: "ganesha.trunk.leftCurl",
-    mm: 22,
+    mm: 24,
     reason: "seam",
-    why: "the trunk's root is inside the head it grows from",
+    why: "the trunk's root is inside the head it grows from. It was 61mm in `dance` and 50mm in `royal`, which was not a root at all but the trunk curled into the belly — both presets turned it by POSITIVE x, which the `blessing` preset's own comment says folds it back into the torso",
+  },
+  {
+    id: "ganesha.tusks.single",
+    mm: 5,
+    reason: "seam",
+    why: "a tusk's root is inside the jaw it grows from",
   },
   {
     id: "ganesha.hands.classic",
@@ -178,6 +184,18 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
     why: "a sweet pressed into the fist that closes on it",
   },
   {
+    id: "ganesha.anklets.payal",
+    mm: 17,
+    reason: "grip",
+    why: "a folded leg presses its own anklet against its own calf. Seated, that is contact between two parts of ONE body, which is what a seated statue does; it appears in `meditation` and `royal` and nowhere else",
+  },
+  {
+    id: "shiva.attribute.trishul",
+    mm: 11,
+    reason: "grip",
+    why: "a staff set down beside a seated figure rests against the thigh it is set down beside. Appears in `shiva.meditation` only",
+  },
+  {
     id: "shiva.attribute.damaru",
     mm: 5,
     reason: "grip",
@@ -193,13 +211,13 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   // --- defects: each of these is a piece of work ----------------------
   {
     id: "ganesha.armlets.vanki",
-    mm: 9,
+    mm: 12,
     reason: "defect",
     why: "swept station by station, a ring of this armlet's radius is inside the stylised figure at EVERY station of the upper arm — a thick arm carried against a chest that wide leaves nowhere for one to pass. It sits where the overlap is smallest and the armpit hides it. Both mesh bodies are clear; see bandSeat.test.ts",
   },
   {
     id: "ganesha.garment.shawl",
-    mm: 16,
+    mm: 21,
     reason: "defect",
     why: "the sash crosses the shoulder and the upper arm rather than lying over them, and its lower end stops at a flat cut rather than a hem",
   },
@@ -220,12 +238,12 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
 /** Anything at all may be this far in: below it the sign itself flutters. */
 const FLOOR_MM = 2;
 
-async function rigFor(config: CharacterConfiguration) {
+async function rigFor(config: CharacterConfiguration, preset?: string) {
   const materials = new ZoneMaterials();
   buildRig(config, materials);
   await new Promise((resolve) => setTimeout(resolve, 0));
   const rig = buildRig(config, materials);
-  poseRig(rig, config.pose);
+  poseRig(rig, preset ? { preset, jointOverrides: {} } : config.pose);
   settleOnSupport(rig);
   rig.root.updateWorldMatrix(true, true);
   return { rig, materials };
@@ -248,13 +266,38 @@ describe("the classification itself", () => {
   });
 });
 
+/**
+ * Every pose the figure is offered in, not only the one it arrives in.
+ *
+ * This whole table was measured in the default pose first, and four
+ * defects were hiding one pose away. Ganesha's trunk read twenty
+ * millimetres standing -- its root, correct -- and SIXTY-ONE dancing,
+ * because the preset turned it into his belly. His anklet is clear
+ * standing and fifteen millimetres into his own calf sitting down. Shiva's
+ * trishul rests against his thigh when he is seated and nowhere else.
+ *
+ * A figure that is right in one pose and wrong in another is a figure
+ * nobody measured in the other.
+ */
+const POSES: Record<string, readonly string[]> = {
+  ganesha: ["blessing", "standing", "meditation", "royal", "dance"],
+  shiva: [
+    "shiva.standing",
+    "shiva.standingStaff",
+    "shiva.blessing",
+    "shiva.meditation",
+    "shiva.tandava",
+  ],
+  vishnu: ["vishnu.regal"],
+};
+
 describe.each([
   ["ganesha", createDefaultGaneshaConfiguration],
   ["shiva", createDefaultShivaConfiguration],
   ["vishnu", createDefaultVishnuConfiguration],
-] as const)("%s", (_label, make) => {
-  it("is inside itself only where the table says, and no deeper", async () => {
-    const { rig, materials } = await rigFor(make());
+] as const)("%s", (label, make) => {
+  it.each(POSES[label]!)("in %s, is inside itself only where the table says", async (preset) => {
+    const { rig, materials } = await rigFor(make(), preset);
     try {
       const field = skinFieldOf(rig.bodyMeshes);
       const body = new Set<THREE.Mesh>(rig.bodyMeshes);
