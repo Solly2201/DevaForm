@@ -31,6 +31,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
+import { listAssets } from "@devaform/asset-system";
 
 const PUBLIC_DIR = join(__dirname, "..", "..", "..", "public");
 vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {
@@ -113,6 +114,14 @@ function torsoFrontAt(rig: CharacterRig, worldY: number): number {
   return seat.z + rig.body.surfaceAt(0, worldY - seat.y).z;
 }
 
+/** What an asset says it is worn over, if it says anything. */
+function declaredOver(id: string): readonly string[] | null {
+  const asset = listAssets({}).find((candidate) => candidate.id === id);
+  const fit = asset?.fit;
+  if (!fit || fit.kind !== "drapes" || !fit.over) return null;
+  return fit.over;
+}
+
 const SUBJECTS = [
   {
     label: "vishnu",
@@ -178,6 +187,40 @@ describe.each(SUBJECTS.map((subject) => [subject.label, subject] as const))(
         const cloth = worldPoints(rig, `part:${subject.garment}`, 7);
         expect(cloth.length, "the lower garment is in the scene").toBeGreaterThan(100);
         for (const id of subject.necklaces) {
+          /**
+           * AND THE LIST COMES FROM THE ASSET WHERE THE ASSET STATES IT.
+           *
+           * A `drapes` fit names what it is worn over. If that list were
+           * only a comment this test would keep checking the garment it
+           * was written against while the declaration drifted, which is
+           * exactly how `clearanceM` came to be declared by four assets
+           * and read by none. So anything the asset names is checked
+           * here too, and the subject's garment is required to be in the
+           * list: a declaration that forgets the dhoti fails rather than
+           * quietly narrowing what is tested.
+           */
+          const declared = declaredOver(id);
+          if (declared) {
+            expect(declared, `${id} says what it is worn over`).toContain(subject.garment);
+            for (const under of declared) {
+              if (under === subject.garment) continue;
+              const beneath = worldPoints(rig, `attachment:${under}`, 7).concat(
+                worldPoints(rig, `part:${under}`, 7),
+              );
+              if (beneath.length < 50) continue;
+              const mine = worldPoints(rig, `attachment:${id}`, 11);
+              const overlap = mine.filter(
+                (point) => point.y < Math.max(...beneath.map((b) => b.y)),
+              );
+              if (overlap.length === 0) continue;
+              let closest = Infinity;
+              for (const point of overlap) closest = Math.min(closest, nearest(beneath, point));
+              expect(
+                closest * 1000,
+                `${id}: it says it is worn over ${under} and comes within ${(closest * 1000).toFixed(1)}mm of it`,
+              ).toBeGreaterThan(0.5);
+            }
+          }
           const points = worldPoints(rig, `attachment:${id}`, 11);
           // Only where the two actually meet: a collar that stops at the
           // collarbone has nothing to say about a dhoti.
