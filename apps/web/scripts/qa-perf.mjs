@@ -94,13 +94,28 @@ let before = await cost();
 report.switches.push({ at: "ganesha (arrived)", ...before });
 
 for (const deity of ["Shiva", "Vishnu", "Ganesha", "Shiva"]) {
-  const clicked = await page.evaluate((name) => {
-    // The cards read "ShivaThe Auspicious One" -- name then epithet, with
-    // no separator in textContent. Match the start, not the whole.
+  /**
+   * OPEN THE PANEL, THEN LET IT RENDER, THEN FIND THE CARD.
+   *
+   * These were one `page.evaluate`: click Divine Form and search for the
+   * deity's card in the same synchronous pass. React has not re-rendered
+   * by then, so the card does not exist yet and the FIRST switch always
+   * reported "no control found" -- which is why every run of this script
+   * had a hole where Shiva's numbers should be. The ones after it worked
+   * only because the panel was left open by the attempt that failed.
+   */
+  await page.evaluate(() => {
     const open = [...document.querySelectorAll("button, [role='button']")].find((n) =>
       /divine\s*form/i.test(n.textContent ?? ""),
     );
     open?.click();
+  });
+  await new Promise((r) => setTimeout(r, 900));
+
+  const clicked = await page.evaluate((name) => {
+    // The cards read "ShivaThe Auspicious One" -- name then epithet, with
+    // no separator in textContent. Match the start, not the whole.
+    //
     // Buttons only. A wrapping div also starts with the name, matches
     // first, and swallows the click -- which is how four switches in a
     // row reported identical scene counts.
@@ -116,28 +131,48 @@ for (const deity of ["Shiva", "Vishnu", "Ganesha", "Shiva"]) {
     report.switches.push({ at: deity, note: "no control found" });
     continue;
   }
+  /**
+   * And the unsaved-changes confirmation, which is correct product
+   * behaviour and which a harness has to answer rather than route round.
+   * Switching form starts a new creation; if the current one has
+   * unsaved edits, the product says so and waits.
+   */
+  await new Promise((r) => setTimeout(r, 400));
+  await page.evaluate(() => {
+    const dialog = document.querySelector("[role='dialog']");
+    if (!dialog) return;
+    [...dialog.querySelectorAll("button")]
+      .find((n) => n.textContent?.trim().startsWith("Switch to"))
+      ?.click();
+  });
   const started = Date.now();
   // Wait for the FIGURE to change, not for a timer. The header chip is
   // the product's own statement of which deity is loaded.
+  /**
+   * ARRIVED MEANS THE COVER HAS LIFTED, not that a word is on screen.
+   *
+   * Every card in the Divine Form panel contains a leaf node reading the
+   * deity's name, so "a chip with this text exists" was already true
+   * before the switch and this measured nothing. The stage raises a cover
+   * before the configuration changes and drops it when the new figure is
+   * standing, which is exactly the event worth timing -- and timing it
+   * from the click is how long a customer waits.
+   */
   const arrived = await page
     .waitForFunction(
-      (name) => {
-        const chip = [...document.querySelectorAll("*")].find(
-          (n) => n.children.length === 0 && n.textContent?.trim() === name,
-        );
-        return Boolean(chip);
-      },
-      { timeout: 60_000 },
-      deity,
+      () => document.querySelector('[data-testid="stage-arrival"]') === null,
+      { timeout: 60_000, polling: 200 },
     )
     .then(() => true)
     .catch(() => false);
-  await new Promise((r) => setTimeout(r, 2500));
+  const waitedMs = Date.now() - started;
+  await new Promise((r) => setTimeout(r, 1500));
   const after = await cost();
   report.switches.push({
     at: deity,
     ...after,
     arrived,
+    waitedMs,
     newPrograms: after && before ? after.programs - before.programs : null,
     swiftshaderMs: Date.now() - started,
   });
