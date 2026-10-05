@@ -343,7 +343,26 @@ export const necklaceHaram: AttachmentGenerator = (ctx) => {
    * fit validator says so in millimetres.
    */
   const onNeck = neck + band + curve * 0.5;
-  const spine = walkSurface(body, ring(dip), band * 1.2 + curve, 120).points.map(
+  /**
+   * TIGHTER AT THE NAPE, where hair lies over it.
+   *
+   * A collar is not worn in isolation. Behind the neck this one shares
+   * its space with a head of hair, and the reference's back view shows no
+   * necklace there at all — the hair covers it. Held off the skin by its
+   * full gauge the whole way round, it came through the hair instead: a
+   * gold bar crossing the dark mass, which is the first thing Vishnu's
+   * back view shows.
+   *
+   * So the stand-off is a function of where round the body it is. At the
+   * front it is what it was, because that is where the collar is seen and
+   * where it has to turn onto the chest. Round the nape it hugs, and what
+   * shows there is hair.
+   */
+  const standOff = (t: number): number => {
+    const nape = Math.max(0, -Math.cos(t * Math.PI * 2));
+    return (band * 1.2 + curve) * (1 - 0.88 * nape ** 0.6);
+  };
+  const spine = walkSurface(body, ring(dip), standOff, 120).points.map(
     (point): V3 => {
       const seat = toSocket(point);
       const [x, y, z] = seat;
@@ -374,7 +393,18 @@ export const necklaceHaram: AttachmentGenerator = (ctx) => {
        * offset is. Left as it is, deliberately, rather than worked around
        * here a sixth time.
        */
-      const scale = radius > 1e-6 ? Math.max(1, onNeck / radius) : 1;
+      /**
+       * And the ring it is held out to is tighter at the NAPE.
+       *
+       * This clamp is what stops the collar tracing a collarbone, and it
+       * is also what made reducing the stand-off behind the neck do
+       * nothing at all: whatever the walk asked for, every point was
+       * pushed back out to the same ring. Behind the neck the ring is the
+       * neck, because that is where hair lies over it.
+       */
+      const nape = Math.max(0, -Math.cos(Math.atan2(x, z)));
+      const ring = onNeck - (onNeck - (neck + band * 0.15)) * nape ** 0.7;
+      const scale = radius > 1e-6 ? Math.max(1, ring / radius) : 1;
       return [x * scale, y, z * scale];
     },
   );

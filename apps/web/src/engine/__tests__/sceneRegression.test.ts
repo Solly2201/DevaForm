@@ -184,7 +184,14 @@ const PINNED = {
   // from the palm: every closing mudra made a ball of knuckles with the
   // haft running down the outside. Only Ganesha wears these hands, so
   // only Ganesha moves. See handGrip.test.ts.
-  ganesha: { nodes: 379, digest: "c414dca16fbaa2b9" },
+  //
+  // And again when the collar learned about hair. Held off the skin by
+  // its full gauge the whole way round, it came through the back of
+  // Vishnu's head of hair as a gold bar across the dark mass — the first
+  // thing his back view showed. Behind the neck it hugs now, because
+  // that is where hair lies over it. Ganesha wears the same collar and
+  // has no hair to hide it, so what moves on him is only the nape.
+  ganesha: { nodes: 379, digest: "3f7ccdd8a4e99026" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
