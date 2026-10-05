@@ -543,6 +543,12 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.necklace" },
     materialZones: ["metal", "gem"],
+    /**
+     * It RESTS on the base of the neck rather than encircling a limb:
+     * a neck is not a cylinder a thing is threaded onto, and the collar
+     * dips onto the chest at the front.
+     */
+    fit: { kind: "restsOn", region: "neck", clearanceM: 0.004 },
     category: "ornaments",
     printability: proto,
   },
@@ -585,6 +591,13 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.waistband" },
     materialZones: ["metal", "gem"],
+    /**
+     * A BELT ENCIRCLES. Saying so is what the seventy-nine millimetres
+     * inside two human torsos cost: the only thing the asset could state
+     * was a socket, so the generator reconstructed the frame from a table
+     * that describes one body, and nothing could contradict it.
+     */
+    fit: { kind: "encircles", region: "waist" },
     category: "ornaments",
     printability: proto,
   },
@@ -599,6 +612,13 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.earrings" },
     materialZones: ["metal", "gem"],
+    /**
+     * PIERCED, on purpose. Measured, eighty-eight flesh vertices sit
+     * inside this ornament — which is what an earring through an earlobe
+     * is, and which any containment check reports as a fault. Saying so
+     * is how a validator stops being wrong about it.
+     */
+    fit: { kind: "piercedThrough", region: "earlobe" },
     category: "ornaments",
     printability: proto,
   },
@@ -612,6 +632,12 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.armlets" },
     materialZones: ["metal", "gem"],
+    /**
+     * The same, on the arm. A vanki has a crest, so its silhouette is
+     * not a ring — but the band that holds it on is, and that is the
+     * part a limb has to pass through.
+     */
+    fit: { kind: "encircles", region: "upperArm", holdM: 0.0015 },
     category: "ornaments",
     printability: proto,
   },
@@ -624,6 +650,18 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.bracelets" },
     materialZones: ["metal"],
+    /**
+     * A RING ROUND A WRIST, said in the asset rather than in a local
+     * variable.
+     *
+     * `bandRing` already sizes this from the inside — `inner =
+     * limbRadius + BAND_CLEARANCE` — and the comment above that line
+     * records it as the fourth time the sentence has had to be written
+     * down here. Written down in the asset, it is checkable: the hole is
+     * recovered from the bangle's own triangles and the wrist is asked
+     * to pass through it.
+     */
+    fit: { kind: "encircles", region: "wrist", holdM: 0.0015 },
     category: "ornaments",
     printability: proto,
   },
@@ -637,6 +675,11 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.anklets" },
     materialZones: ["metal"],
+    /**
+     * And on the ankle, where the bells hang outside the band rather
+     * than inside the hole.
+     */
+    fit: { kind: "encircles", region: "ankle", holdM: 0.0015 },
     category: "ornaments",
     printability: proto,
   },

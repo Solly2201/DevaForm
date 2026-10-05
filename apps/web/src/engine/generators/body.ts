@@ -21,6 +21,16 @@ import {
 import { mesh, taperedTube, type V3 } from "../geometry";
 import { num, type GeneratorContext, type PartGenerator, type SocketRefinement } from "./types";
 
+/**
+ * The STYLISED table's joint offset — and a body may not agree with it.
+ *
+ * Kept because `bodyAthletic` builds the stylised body itself, which IS
+ * the body this table describes, so asking it is correct there. It is not
+ * correct anywhere a measured body might be wearing the result:
+ * `GeneratorContext.jointOffset` exists for that, and its own notes
+ * record what asking the global table cost — rear bangles two centimetres
+ * off the arm's line and nine degrees out of square.
+ */
 export function jointOffset(child: JointId): V3 {
   return getJoint(child).position;
 }

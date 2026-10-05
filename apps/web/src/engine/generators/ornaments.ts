@@ -3,7 +3,7 @@
  * distribute rings/bands across limb joints so they follow every pose).
  */
 import * as THREE from "three";
-import { ARM_SLOTS, activeArmSlots, getSocket, type JointId } from "@devaform/character-schema";
+import { ARM_SLOTS, activeArmSlots, type JointId } from "@devaform/character-schema";
 import { lathe, mesh, radialRing, taperedTube, type V3 } from "../geometry";
 import { headFit } from "./bodyProfile";
 import { surfaceRibbon, walkSurface, type SurfaceWaypoint } from "./surfaceWalk";

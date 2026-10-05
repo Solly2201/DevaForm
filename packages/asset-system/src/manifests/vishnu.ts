@@ -241,6 +241,22 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     source: { kind: "procedural", generatorId: "vishnu.garland" },
     presentations: [wearable({ id: "worn", label: "Worn", socket: "chest.mala", clearanceM: 0.004 })],
     materialZones: ["garmentAccent"],
+    /**
+     * A GARLAND DRAPES, and over what matters as much as from where.
+     *
+     * Its whole physical story used to be a route inside a generator —
+     * and the route hung it down Vishnu's BACK and inside his dhoti,
+     * where nothing could contradict it because the asset said only
+     * "socket chest.mala, four millimetres". From the shoulders to the
+     * thigh, outside the collar and outside the lower garment, is the
+     * sentence that was missing.
+     */
+    fit: {
+      kind: "drapes",
+      from: "chest",
+      reaches: "thigh",
+      over: ["ganesha.necklace.haram", "vishnu.garment.dhoti"],
+    },
     category: "ornaments",
     printability: proto,
   },
@@ -259,6 +275,11 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
       wearable({ id: "worn", label: "Worn", socket: "head.forehead", clearanceM: 0.001 }),
     ],
     materialZones: [],
+    /**
+     * APPLIED, not worn. A mark is paint on skin; the usual rule about
+     * standing off a surface turns it into a tile stuck to a forehead.
+     */
+    fit: { kind: "appliedTo", region: "forehead" },
     category: "ornaments",
     printability: proto,
   },

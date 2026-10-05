@@ -9,6 +9,7 @@
 import type { DeityId, MaterialZone, PartSlot, SocketId } from "@devaform/character-schema";
 import { defaultPresentationFor, type AttributePresentation } from "./presentation";
 import type { SpatialOccupancy } from "./spatial";
+import type { WornFit } from "./wornFit";
 
 /** Lifecycle stage of an asset version. */
 export type AssetStage =
@@ -415,6 +416,18 @@ export interface AssetDefinition {
    * and an asset without one behaves exactly as every asset always has.
    */
   spatial?: SpatialOccupancy;
+  /**
+   * What this thing IS to the body it is worn on — see wornFit.ts.
+   *
+   * Beside `spatial` and for the same reason: a physical claim the asset
+   * makes, read by validation and by nothing that places anything. A held
+   * item has always been able to say it is a shaft of a given radius held
+   * a given way; this is how a worn one says it is a band round a wrist,
+   * or a garland that falls from the shoulders to the thigh over the
+   * collar and the dhoti. An asset that declares none is not checked,
+   * exactly as before.
+   */
+  fit?: WornFit;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
   /** Categorization for the editor UI. */
