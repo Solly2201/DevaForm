@@ -236,3 +236,46 @@ measured in row 13 for nothing.
 
 The experimental module stays, unimported, with its measurements, so whoever
 asks this next starts from numbers.
+
+---
+
+## 8. Follow-up: were the proxies actually wrong?
+
+The experiment's conclusion named two substitutions as the pressure point
+— the garland standing off a fraction of the neck's radius instead of
+asking the collar, and the belt clearing a figure derived from two hip
+measurements instead of asking the dhoti. A layer query was prototyped to
+remove both: `GeneratorContext.wornClearanceAt(frame, localY)`, filled as
+clothing parts landed and read by ornaments built afterwards, reporting
+how far past the skin anything already worn reached.
+
+Then the result was measured against the built geometry, which is the
+only thing that settles it:
+
+| | measured |
+|---|---|
+| belt vertices inside the dhoti's solid | **0 of 1399** |
+| garland vertices inside the collar's solid | **0 of 25 074**, nearest approach 13.7 mm |
+
+Both proxies are **right**. And the layer query, wired into the belt, made
+it slightly *worse*: five of its vertices moved 3.1 mm into the cloth,
+because the cloth exceeds the body's profile at the belt's height by only
+4.9 mm, which is less than the constant it replaced.
+
+The earlier figures that motivated it — "4.2 mm too close", "11 mm inside"
+— were artefacts of comparing radii taken in different height bands about
+different axes. A formula that looks like a guess is not the same as a
+formula that gives a wrong answer, and only the geometry can tell them
+apart.
+
+**So the prototype was removed rather than shipped.** Adding a capability
+to the generator context, threading it through the rig and the thumbnail
+path, for a defect that does not exist, would be the "second source of
+truth" of row 13 bought twice over.
+
+What survives is the knowledge: both substitutions are accurate on the
+shipped figures, and the measurement that says so can be re-run. If a
+future garment's styling takes it further past the body than its wrap
+radius implies — the thing no body measurement can predict — the query is
+a thirty-line change and this section is the record of how to check
+whether it is needed.
