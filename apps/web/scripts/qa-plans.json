@@ -767,5 +767,66 @@
         ]
       }
     ]
+  },
+  "ganesha-garments": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "g-dhoti",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.garment.dhoti"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-short",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.garment.dhotiShort"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-layered",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.garment.dhotiLayered"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-royal",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.garment.dhotiRoyal"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-sashed",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.garment.dhotiSashed"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      }
+    ]
   }
 }

@@ -182,14 +182,6 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
       rotation: [Math.PI / 2, 0, 0],
     }),
   );
-  if (layered > 0) {
-    // Shorter over-layer
-    group.add(
-      mesh(pleatedCylinder(topR * 1.03, topR * 0.9, skirtLength * 0.55, 22, 0.006), accent, {
-        position: [0, waistY - (skirtLength * 0.55) / 2, 0],
-      }),
-    );
-  }
   // Waist wrap band
   group.add(
     mesh(new THREE.TorusGeometry(topR * 0.99, 0.016, 12, 48), garment, {
@@ -214,6 +206,38 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     // Beyond the pleat crests, with room for a strip's own half-thickness.
     clear: fold * 1.75,
   };
+
+  if (layered > 0) {
+    /**
+     * A SECOND SKIRT, which is what "layered" means.
+     *
+     * It was drawn as a short cone tapering from the waist to nine tenths
+     * of the waist's own radius — INWARD, while the skirt under it flares
+     * outward. So it finished inside the cloth it was supposedly layered
+     * over and showed as nothing but a change of colour near the waist.
+     * Measured against the plain dhoti next to it in the picker, five and
+     * a half millimetres of silhouette: the same garment, sold twice.
+     *
+     * A layered dhoti is an over-cloth that falls part of the way and
+     * flares PAST what it is worn over, with a hem of its own. It is
+     * placed from the under-skirt's own surface at the height it ends, so
+     * it stands proud of the pleats rather than of a number.
+     */
+    const overDrop = skirtLength * 0.55;
+    const overHemY = waistY - overDrop;
+    const overR = cloth.at(overHemY) + cloth.clear + 0.03;
+    group.add(
+      mesh(pleatedCylinder(topR * 1.02, overR, overDrop, 24, 0.007), accent, {
+        position: [0, waistY - overDrop / 2, 0],
+      }),
+    );
+    group.add(
+      mesh(new THREE.TorusGeometry(overR * 0.97, 0.009, 10, 48), garment, {
+        position: [0, overHemY + 0.005, 0],
+        rotation: [Math.PI / 2, 0, 0],
+      }),
+    );
+  }
 
   // Front pleat fan — three accent strips flaring toward the hem
   const fanStrips = 3;
