@@ -496,6 +496,8 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   // ---- ATTRIBUTES (hand-held attachments) ---------------------------------
   {
     id: "shiva.attribute.trishul",
+    // Shiva carries one trident.
+    cardinality: "singleton",
     version: 1,
     name: "Trishul",
     description: "The trident of the three energies.",
@@ -543,6 +545,8 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "shiva.attribute.damaru",
+    // One drum.
+    cardinality: "singleton",
     version: 1,
     name: "Damaru",
     description: "The two-headed drum of creation's rhythm.",

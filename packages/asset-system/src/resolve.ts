@@ -39,6 +39,7 @@ import {
   type SkeletonDefinition,
   type SocketId,
   type Vec3,
+  getSocket,
 } from "@devaform/character-schema";
 import { deityRuntime } from "./deities";
 import { resolveAssetRef } from "./registry";
@@ -318,7 +319,26 @@ export function resolveCharacterPresentation(
   const occupied = new Set<ArmSlot>();
   const attachments: ResolvedAttachment[] = [];
 
-  for (const attachment of config.attachments) {
+  /**
+   * SINGLETON ATTRIBUTES ARE PRESENTED ONCE.
+   *
+   * Vishnu has four hands and exactly one Sudarshana. Put the discus in a
+   * second hand and the customer has MOVED it, not acquired another — but
+   * the configuration happily held two, and the editor drew two, which is
+   * a different god.
+   *
+   * The last occurrence in configuration order wins, because the store
+   * appends on selection: the hand just chosen is the hand it moves to.
+   * The ones it leaves behind are explained rather than silently dropped,
+   * so the customer is told where their discus went.
+   */
+  const singletonKeeper = new Map<string, number>();
+  config.attachments.forEach((attachment, index) => {
+    const asset = resolveAssetRef(attachment.asset);
+    if (asset?.cardinality === "singleton") singletonKeeper.set(asset.id, index);
+  });
+
+  for (const [index, attachment] of config.attachments.entries()) {
     const requested = attachment.socket as SocketId;
     const asset = resolveAssetRef(attachment.asset);
     if (!asset) {
@@ -328,6 +348,14 @@ export function resolveCharacterPresentation(
       continue;
     }
     const about = { assetId: asset.id, socket: requested };
+
+    const keepAt = singletonKeeper.get(asset.id);
+    if (keepAt !== undefined && keepAt !== index) {
+      const keptSocket = config.attachments[keepAt]?.socket;
+      const where = keptSocket ? getSocket(keptSocket as SocketId).label : "another place";
+      note("conflict", `${asset.name} is already presented by the ${where}.`, about);
+      continue;
+    }
 
     // A part whose mesh already contains this feature suppresses it.
     const suffix = requested.split(".").pop() ?? requested;

@@ -430,6 +430,25 @@ export interface AssetDefinition {
   fit?: WornFit;
   /** Asset ids this asset cannot combine with (e.g. two crowns). */
   excludes?: readonly string[];
+  /**
+   * HOW MANY OF THIS PHYSICAL THING CAN EXIST ON ONE FIGURE.
+   *
+   * Declared, never inferred from the number of hands. Vishnu has four
+   * hands and exactly one Sudarshana; a customer who puts the discus in a
+   * second hand has moved it, not acquired another. The same is true of
+   * the Trishul, the Shankha, the Gada and the Padma — these are named
+   * divine attributes, not props.
+   *
+   * Absent means "as many as there are places for it", which is right for
+   * a lotus, a modak, a bangle or an earring: a pair of earrings is a
+   * pair, and nobody is surprised to see two.
+   *
+   * The RESOLVER enforces it, because the resolver is where a
+   * configuration becomes a presentation. It keeps the last occurrence in
+   * configuration order, so selecting a singleton in a second slot moves
+   * it there, and it explains the ones it dropped.
+   */
+  cardinality?: "singleton";
   /** Categorization for the editor UI. */
   category: string;
   /** Path to a pre-rendered thumbnail image (public URL). */

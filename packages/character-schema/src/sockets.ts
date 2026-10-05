@@ -150,3 +150,33 @@ export function isSocketId(value: string): value is SocketId {
 export const HAND_ITEM_SOCKETS: readonly SocketId[] = ARM_SLOTS.map(
   (slot) => `arm.${slot}.hand.item` as SocketId,
 );
+
+/**
+ * The FAMILY a socket belongs to: the same ornament, worn on a different
+ * side or limb.
+ *
+ * `head.leftEar` and `head.rightEar` are one earring in two places, and an
+ * asset that declares both is a pair rather than two ornaments. The same
+ * is true of the two anklets and of the four hand sockets.
+ *
+ * `chest.necklace` and `chest.mala` are NOT a family. They sit at the same
+ * joint and the same height on purpose — a collar and a longer garland are
+ * worn together, which is why Shiva has a serpent at one and rudraksha at
+ * the other. An asset that declares both is not a pair; it is one physical
+ * ornament the customer can switch on from two different places in the
+ * editor, and that is the duplicate-ownership defect this exists to catch.
+ *
+ * Used by the conformance tests. Nothing places anything with it.
+ */
+export function socketFamily(socket: string): string {
+  // Hands: arm.<slot>.hand.item -> arm.hand.item
+  const hand = /^arm\.[A-Za-z]+\.hand\.(.+)$/.exec(socket);
+  if (hand) return `arm.hand.${hand[1]}`;
+  // Sides: head.leftEar/head.rightEar -> head.ear
+  const ear = /^head\.(left|right)Ear$/.exec(socket);
+  if (ear) return "head.ear";
+  // Limbs: leg.left.anklet/leg.right.anklet -> leg.anklet
+  const leg = /^leg\.(left|right)\.(.+)$/.exec(socket);
+  if (leg) return `leg.${leg[2]}`;
+  return socket;
+}

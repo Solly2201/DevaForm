@@ -56,6 +56,8 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
   // ---------------------------------------------------------------- attributes
   {
     id: "vishnu.attribute.gada",
+    // One Kaumodaki.
+    cardinality: "singleton",
     version: 1,
     name: "Kaumodaki",
     description: "The ceremonial mace, its ornate head resting on the ground.",
@@ -93,6 +95,8 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "vishnu.attribute.padma",
+    // One lotus in the iconography of the four-armed form.
+    cardinality: "singleton",
     version: 1,
     name: "Padma",
     description: "The lotus, held by its stem.",
@@ -131,6 +135,8 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "vishnu.attribute.shankha",
+    // One Panchajanya.
+    cardinality: "singleton",
     version: 1,
     name: "Panchajanya",
     description: "The conch of the first sound, held in the palm.",
@@ -160,6 +166,8 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "vishnu.attribute.chakra",
+    // There is one Sudarshana.
+    cardinality: "singleton",
     version: 1,
     name: "Sudarshana Chakra",
     description: "The discus, poised on a raised finger.",
@@ -235,7 +243,22 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
     version: 1,
     name: "Vaijayanti",
     description: "The long forest garland, falling past the knees.",
-    kind: { type: "attachment", sockets: ["chest.necklace", "chest.mala"] },
+    /**
+     * ONE SOCKET, because it is one ornament.
+     *
+     * It declared both `chest.necklace` and `chest.mala`, so it appeared
+     * in the Necklace picker AND the Mala picker and either could switch
+     * it on — two places in the editor activating the same physical
+     * garland, and both at once producing two of it. The two sockets are
+     * layers rather than alternatives: a collar and a longer garland are
+     * worn together, which is why Shiva has a serpent at one and
+     * rudraksha at the other.
+     *
+     * The Vaijayanti is a garland that falls to the thigh, and its own
+     * presentation below already says `socket: "chest.mala"`. That is its
+     * canonical owner.
+     */
+    kind: { type: "attachment", sockets: ["chest.mala"] },
     deityCompatibility: ["vishnu"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "vishnu.garland" },

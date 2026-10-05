@@ -623,7 +623,9 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     // A mala hangs BELOW a collar and is worn with it, so it sits on the
     // mala seat. Both sockets are offered: a saved character that put it
     // on the collar still resolves and still renders there.
-    kind: { type: "attachment", sockets: ["chest.mala", "chest.necklace"] },
+    // One socket, because it is one ornament — see the Vaijayanti, which
+    // had the same defect. A mala's canonical owner is the mala socket.
+    kind: { type: "attachment", sockets: ["chest.mala"] },
     deityCompatibility: ["any"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.mala" },
@@ -837,6 +839,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "ganesha.item.axe",
+    // One parashu.
+    cardinality: "singleton",
     version: 2,
     name: "Parashu",
     description: "The axe that severs attachment.",
@@ -866,6 +870,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "ganesha.item.noose",
+    // One pasha.
+    cardinality: "singleton",
     version: 2,
     name: "Pasha",
     description: "The noose that draws devotees near.",
@@ -895,6 +901,8 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "ganesha.item.ankush",
+    // One ankush.
+    cardinality: "singleton",
     version: 1,
     name: "Ankush",
     description: "The goad that steers the devotee onto the right path.",
