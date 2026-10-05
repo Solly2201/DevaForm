@@ -61,30 +61,59 @@ export function TopBar() {
   const [saveFailed, setSaveFailed] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
 
+  /**
+   * The save currently in flight, so a second press JOINS it.
+   *
+   * It used to be `if (saving) return null` — and the autosave means
+   * there is very often one in flight. Pressing Save a second after a
+   * change therefore did nothing and said nothing: no status, no error,
+   * the button simply swallowed the click. Share was worse, because it
+   * saves first and then abandons the whole operation when that returns
+   * null, so a customer could press Share during the autosave window and
+   * get no link and no explanation.
+   *
+   * Found by the interaction harness, which clicks fifty-nine controls
+   * and then presses Save — which is exactly what a customer does and
+   * exactly the moment an autosave is pending.
+   *
+   * A press now waits for the save already running and gets its id, which
+   * is the answer it was asking for.
+   */
+  const inFlight = useRef<Promise<string | null> | null>(null);
+
   const handleSave = useCallback(
     async (options?: { silent?: boolean }): Promise<string | null> => {
-      if (saving) return null;
-      setSaving(true);
-      try {
-        const { config, characterId: id } = useEditorStore.getState();
-        const name = useEditorStore.getState().characterName.trim() || "Untitled";
-        const preview = captureViewport(320, "image/jpeg", 0.8) ?? undefined;
-        const result = id
-          ? await saveCharacter(id, name, config, preview)
-          : await createCharacter(name, config, preview);
-        markSaved(result.id);
-        setSaveFailed(false);
-        if (!options?.silent) showStatus("Saved");
-        return result.id;
-      } catch (error) {
-        setSaveFailed(true);
-        showStatus(error instanceof Error ? error.message : "Save failed", "error");
-        return null;
-      } finally {
-        setSaving(false);
+      if (inFlight.current) {
+        const id = await inFlight.current;
+        if (!options?.silent) showStatus(id ? "Saved" : "Save failed", id ? undefined : "error");
+        return id;
       }
+      setSaving(true);
+      const run = (async (): Promise<string | null> => {
+        try {
+          const { config, characterId: id } = useEditorStore.getState();
+          const name = useEditorStore.getState().characterName.trim() || "Untitled";
+          const preview = captureViewport(320, "image/jpeg", 0.8) ?? undefined;
+          const result = id
+            ? await saveCharacter(id, name, config, preview)
+            : await createCharacter(name, config, preview);
+          markSaved(result.id);
+          setSaveFailed(false);
+          if (!options?.silent) showStatus("Saved");
+          return result.id;
+        } catch (error) {
+          setSaveFailed(true);
+          showStatus(error instanceof Error ? error.message : "Save failed", "error");
+          return null;
+        } finally {
+          setSaving(false);
+          inFlight.current = null;
+        }
+      })();
+      inFlight.current = run;
+      return run;
     },
-    [markSaved, saving, showStatus],
+    [markSaved, showStatus],
   );
 
   // Autosave: once a creation exists, quietly persist changes after a pause.
