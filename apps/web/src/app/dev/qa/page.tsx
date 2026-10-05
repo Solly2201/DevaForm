@@ -30,6 +30,7 @@ import {
   posedWith,
   type CharacterConfiguration,
 } from "@devaform/character-schema";
+import { getAsset } from "@devaform/asset-system";
 import { getLightingPreset } from "@/engine/lighting";
 import { ZoneMaterials } from "@/engine/materials";
 import {
@@ -98,6 +99,11 @@ const VIEWS: Record<string, number> = {
 const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> = {
   full: { joints: null, span: 1.3 },
   head: { joints: ["head"], span: 0.32 },
+  // Head AND what is worn above it. `head` frames the skull, so anything
+  // standing on top of it — which is every crown — is cut off at the top
+  // of the picture, and a crown you cannot see the finial of cannot be
+  // judged.
+  crown: { joints: ["head"], span: 0.56 },
   torso: { joints: ["chest"], span: 0.5 },
   hands: {
     joints: [
@@ -194,6 +200,28 @@ function configFor(params: URLSearchParams): CharacterConfiguration {
         return [name ?? "", Number(value ?? 0)];
       }),
     );
+  }
+  /**
+   * `wear=<assetId>` — put one attachment on the figure, replacing
+   * whatever occupies its socket.
+   *
+   * The page could already take things OFF (`without`) and not put them
+   * on, so auditing a newly added crown from eight angles meant editing
+   * the default configuration in source and reverting it afterwards. A
+   * variant nobody can look at is a variant nobody can judge.
+   */
+  const wear = params.get("wear");
+  if (wear) {
+    for (const assetId of wear.split(",")) {
+      const asset = getAsset(assetId);
+      if (!asset || asset.kind.type !== "attachment") continue;
+      const socket = asset.kind.sockets[0];
+      if (!socket) continue;
+      posed.attachments = [
+        ...posed.attachments.filter((a) => a.socket !== socket),
+        { socket, asset: { assetId, version: asset.version } },
+      ];
+    }
   }
   const drop = params.get("without");
   if (drop) {

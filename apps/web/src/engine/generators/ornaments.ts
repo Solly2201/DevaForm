@@ -91,6 +91,200 @@ export const crownKirita: AttachmentGenerator = (ctx) => {
   return group;
 };
 
+/**
+ * The circlet: a crown with no tower at all.
+ *
+ * The reference sheet asks for a SIMPLE one beside the tall ones, and the
+ * thing that makes it simple is not a shortened kirita — a tower with its
+ * top cut off reads as a crown somebody broke. What it is instead is a
+ * complete object at a different scale: a jewelled band with its own
+ * crest, finished at the brow.
+ *
+ * It is the one crown here that leaves the whole head visible, which is
+ * the reason to have it: a customer who wants the hair, the tilaka and
+ * the face to carry the figure has nothing else to choose.
+ */
+export const crownCirclet: AttachmentGenerator = (ctx) => {
+  const metal = ctx.materials.get("metal");
+  const group = new THREE.Group();
+  // Sized to the head it is worn on — see crownKirita.
+  group.scale.setScalar(headFit(ctx.body));
+
+  // The band: slightly convex, so a highlight runs round it rather than
+  // sitting flat as it does on a cylinder.
+  group.add(
+    mesh(
+      lathe([
+        [0.086, 0],
+        [0.093, 0.009],
+        [0.095, 0.021],
+        [0.091, 0.033],
+        [0.085, 0.039],
+      ]),
+      metal,
+    ),
+  );
+  // Bead rims top and bottom. Two rows is what keeps a plain band from
+  // reading as a washer.
+  for (const [at, radius, size] of [
+    [0.004, 0.0905, 0.0042],
+    [0.0355, 0.0885, 0.0038],
+  ] as const) {
+    const beads = radialRing(26, radius, () =>
+      mesh(new THREE.SphereGeometry(size, 8, 6), metal),
+    );
+    beads.position.y = at;
+    group.add(beads);
+  }
+  // Cabochons round the band, with none at the front where the crest is.
+  for (let i = 1; i < 10; i += 1) {
+    const bearing = (i / 10) * Math.PI * 2;
+    const gem = gemStud(ctx, 0.0068);
+    gem.scale.set(1, 1.3, 0.5);
+    gem.position.set(Math.sin(bearing) * 0.0935, 0.02, Math.cos(bearing) * 0.0935);
+    gem.rotation.y = bearing;
+    group.add(gem);
+  }
+
+  /**
+   * A TREFOIL AT THE BROW, which is what finishes it.
+   *
+   * Without a crest the band is jewellery rather than a crown. Three
+   * leaves, the centre one taller, is the smallest arrangement that still
+   * reads as a crest from across a room — and it keeps the silhouette low
+   * enough that this stays the simple option.
+   */
+  const leaf = (bearing: number, height: number, width: number) => {
+    const blade = mesh(
+      lathe(
+        [
+          [width, 0],
+          [width * 0.92, height * 0.36],
+          [width * 0.6, height * 0.68],
+          [width * 0.22, height * 0.9],
+          [0, height],
+        ],
+        12,
+      ),
+      metal,
+    );
+    const holder = new THREE.Group();
+    holder.position.set(Math.sin(bearing) * 0.088, 0.032, Math.cos(bearing) * 0.088);
+    holder.rotation.y = -bearing;
+    holder.rotation.x = -0.2;
+    holder.scale.z = 0.3;
+    holder.add(blade);
+    return holder;
+  };
+  group.add(leaf(0, 0.044, 0.019));
+  group.add(leaf(-0.42, 0.028, 0.014));
+  group.add(leaf(0.42, 0.028, 0.014));
+  const centre = gemStud(ctx, 0.0085);
+  centre.position.set(0, 0.044, 0.093);
+  centre.scale.z = 0.5;
+  group.add(centre);
+
+  return group;
+};
+
+/**
+ * The temple crown: a vimana worn on the head.
+ *
+ * The reference sheet's fifth headwear is "Temple Style", and the thing
+ * that distinguishes a south-Indian temple tower from the crowns beside
+ * it is that it STEPS. A kirita tapers smoothly and a karanda stacks
+ * domes; a vimana is storeys, each one set back from the one below with a
+ * cornice overhanging it, so the silhouette is a staircase and the
+ * shadows under the cornices are what you read it by.
+ *
+ * Making it a fourth smooth taper with different numbers would have been
+ * padding the count. The step is the whole design.
+ */
+export const crownGopuram: AttachmentGenerator = (ctx) => {
+  const metal = ctx.materials.get("metal");
+  const group = new THREE.Group();
+  // Sized to the head it is worn on — see crownKirita.
+  group.scale.setScalar(headFit(ctx.body));
+
+  // The base band, which is also the tower's plinth.
+  group.add(
+    mesh(
+      lathe([
+        [0.087, 0],
+        [0.094, 0.01],
+        [0.094, 0.026],
+        [0.088, 0.036],
+      ]),
+      metal,
+    ),
+  );
+  const rim = radialRing(24, 0.0905, () =>
+    mesh(new THREE.SphereGeometry(0.004, 8, 6), metal),
+  );
+  rim.position.y = 0.005;
+  group.add(rim);
+
+  /**
+   * Four storeys. Each is a short wall drawn in from the one below, with
+   * a cornice that oversails it — which is the overhang that casts the
+   * line of shadow the whole shape depends on.
+   */
+  const STOREYS = [
+    { base: 0.036, height: 0.034, radius: 0.082 },
+    { base: 0.07, height: 0.03, radius: 0.069 },
+    { base: 0.1, height: 0.026, radius: 0.056 },
+    { base: 0.126, height: 0.022, radius: 0.043 },
+  ] as const;
+  for (const storey of STOREYS) {
+    const top = storey.base + storey.height;
+    group.add(
+      mesh(
+        lathe([
+          [storey.radius, storey.base],
+          [storey.radius * 0.97, storey.base + storey.height * 0.62],
+          // The cornice: out, then a flat soffit, then back in.
+          [storey.radius * 1.1, storey.base + storey.height * 0.72],
+          [storey.radius * 1.1, storey.base + storey.height * 0.86],
+          [storey.radius * 0.93, top],
+        ]),
+        metal,
+      ),
+    );
+    // A gem on the storey's front face, the way a vimana carries a
+    // deity niche on each tier.
+    const niche = gemStud(ctx, 0.0055);
+    niche.position.set(0, storey.base + storey.height * 0.34, storey.radius * 0.99);
+    niche.scale.z = 0.5;
+    group.add(niche);
+  }
+
+  // The kalasha: the pot and bud that finishes every temple tower.
+  const top = 0.148;
+  group.add(
+    mesh(
+      lathe([
+        [0.036, top],
+        [0.03, top + 0.006],
+        [0.024, top + 0.012],
+        [0.03, top + 0.024],
+        [0.022, top + 0.036],
+        [0.011, top + 0.046],
+      ]),
+      metal,
+    ),
+  );
+  group.add(
+    mesh(new THREE.SphereGeometry(0.0105, 12, 10), metal, { position: [0, top + 0.052, 0] }),
+  );
+  group.add(
+    mesh(new THREE.ConeGeometry(0.0055, 0.018, 10), metal, {
+      position: [0, top + 0.067, 0],
+    }),
+  );
+
+  return group;
+};
+
 export const crownKaranda: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();

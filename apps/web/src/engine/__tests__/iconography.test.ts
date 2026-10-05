@@ -74,15 +74,7 @@ const SHEET: readonly Row[] = [
     promised: 5,
     offered: bySocket("arm.frontRight.hand.item" as SocketId),
   },
-  {
-    sheet: "8. Crown / headwear",
-    promised: 5,
-    offered: bySocket("head.crown" as SocketId),
-    shortfall:
-      "three of five. The sheet draws Traditional, Ornate, Simple, Regal and Temple Style; " +
-      "the Studio offers Kirita, Karanda and Prabha. Two more are wanted, and two weak ones " +
-      "would be worse than none",
-  },
+  { sheet: "8. Crown / headwear", promised: 5, offered: bySocket("head.crown" as SocketId) },
   {
     sheet: "9. Clothing / dhoti",
     promised: 5,
@@ -148,11 +140,8 @@ describe("the reference sheet's own target for completeness", () => {
       complete,
       `${complete} of ${SHEET.length} categories meet the reference; short: ` +
         short.map((row) => row.sheet).join(", "),
-    ).toBeGreaterThanOrEqual(13);
+    ).toBeGreaterThanOrEqual(14);
     // And the gaps stay enumerated rather than growing quietly.
-    expect(short.map((row) => row.sheet)).toEqual([
-      "8. Crown / headwear",
-      "9. Clothing / dhoti",
-    ]);
+    expect(short.map((row) => row.sheet)).toEqual(["9. Clothing / dhoti"]);
   });
 });

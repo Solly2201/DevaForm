@@ -24,7 +24,9 @@ import {
   ankletsPayal,
   armletsVanki,
   braceletsKada,
+  crownCirclet,
   crownFan,
+  crownGopuram,
   crownKaranda,
   crownKirita,
   earringsKundala,
@@ -89,6 +91,8 @@ export const PART_GENERATORS: Record<string, PartGenerator> = {
 
 export const ATTACHMENT_GENERATORS: Record<string, AttachmentGenerator> = {
   "crown.kirita": crownKirita,
+  "crown.circlet": crownCirclet,
+  "crown.gopuram": crownGopuram,
   "crown.karanda": crownKaranda,
   "crown.fan": crownFan,
   "ornament.necklace": necklaceHaram,
