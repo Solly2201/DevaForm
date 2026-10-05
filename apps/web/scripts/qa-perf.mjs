@@ -101,7 +101,10 @@ for (const deity of ["Shiva", "Vishnu", "Ganesha", "Shiva"]) {
       /divine\s*form/i.test(n.textContent ?? ""),
     );
     open?.click();
-    const nodes = [...document.querySelectorAll("button, [role='button'], li, div")];
+    // Buttons only. A wrapping div also starts with the name, matches
+    // first, and swallows the click -- which is how four switches in a
+    // row reported identical scene counts.
+    const nodes = [...document.querySelectorAll("button, [role='button']")];
     const hit = nodes.find(
       (n) => n.textContent?.trim().startsWith(name) && n.offsetParent !== null,
     );
@@ -114,11 +117,27 @@ for (const deity of ["Shiva", "Vishnu", "Ganesha", "Shiva"]) {
     continue;
   }
   const started = Date.now();
-  await new Promise((r) => setTimeout(r, 3500));
+  // Wait for the FIGURE to change, not for a timer. The header chip is
+  // the product's own statement of which deity is loaded.
+  const arrived = await page
+    .waitForFunction(
+      (name) => {
+        const chip = [...document.querySelectorAll("*")].find(
+          (n) => n.children.length === 0 && n.textContent?.trim() === name,
+        );
+        return Boolean(chip);
+      },
+      { timeout: 60_000 },
+      deity,
+    )
+    .then(() => true)
+    .catch(() => false);
+  await new Promise((r) => setTimeout(r, 2500));
   const after = await cost();
   report.switches.push({
     at: deity,
     ...after,
+    arrived,
     newPrograms: after && before ? after.programs - before.programs : null,
     swiftshaderMs: Date.now() - started,
   });
