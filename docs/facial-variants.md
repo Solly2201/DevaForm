@@ -51,7 +51,17 @@ Recorded rather than fabricated, which is what the brief asked for:
 - **Facial hair.** No asset and no slot. Unlike the four above, this one
   needs no new source geometry: a beard is added geometry built from the
   measured skull, exactly as the brows are, so it is a new slot plus a
-  generator plus variants. Buildable today; simply not built.
+  generator plus variants. Buildable today.
+
+  **And deliberately not built.** Checked against the canonical
+  references rather than against the request: `ref4.png` shows Shiva
+  clean-shaven, and `ref_vishnu.png` shows Vishnu clean-shaven in all
+  four views and in the face close-up. Ganesha has an elephant's head.
+  So no figure this product ships wants facial hair, and adding a slot
+  for it would offer a customer a variant none of the iconography calls
+  for — which is the opposite of what the reference sheet is for. This
+  stops being a gap and becomes a decision; it changes the day a deity
+  who wears a beard is added.
 - **Eyes, for the mesh-bodied deities.** The slot exists and the assets
   exist, but a mesh body's eyes are already in its GLB, so selecting one
   would double them. Either the eyes come out of the base mesh, or eye
