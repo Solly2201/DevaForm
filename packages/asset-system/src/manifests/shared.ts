@@ -1080,6 +1080,17 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
     kind: { type: "attachment", sockets: ["head.forehead"] },
     deityCompatibility: [],
     stage: "experimental",
+    /**
+     * ASH ON SKIN, which is a relationship and not a position.
+     *
+     * The same sentence Vishnu's urdhva pundra already states: a mark
+     * applied to a forehead has no clearance to declare, and one that
+     * stands two millimetres off is a tile. Measured, these sit a few
+     * millimetres INTO the brow they are drawn on, which is correct and
+     * is what `appliedTo` exists to say so that a containment check does
+     * not report it as a defect.
+     */
+    fit: { kind: "appliedTo", region: "forehead" },
     source: { kind: "procedural", generatorId: "ornament.tripundra" },
     materialZones: [],
     category: "ornaments",
