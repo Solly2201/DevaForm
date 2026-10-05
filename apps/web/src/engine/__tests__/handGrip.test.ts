@@ -66,11 +66,20 @@ function context(materials: ZoneMaterials): GeneratorContext {
  * near the grip point, and measuring them instead is how an earlier
  * version of this reported an aperture that never changed — it was
  * reading the knuckle, not the fingers.
+ *
+ * BY NAME, not by child index. This was `[3, 5, 7, 9]`, and adding a
+ * muscle pad to the palm renumbered the children under it — which it
+ * caught, loudly, but only because the indices then landed on nothing at
+ * all. Landing on the wrong mesh would have been silent.
  */
 function fingerTubes(hand: THREE.Group): THREE.Mesh[] {
-  return [3, 5, 7, 9]
-    .map((index) => hand.children[index])
-    .filter((child): child is THREE.Mesh => (child as THREE.Mesh)?.isMesh === true);
+  const tubes: THREE.Mesh[] = [];
+  hand.traverse((node) => {
+    if (typeof node.name === "string" && node.name.startsWith("finger:")) {
+      tubes.push(node as THREE.Mesh);
+    }
+  });
+  return tubes;
 }
 
 function fingerPointsOf(hand: THREE.Group): THREE.Vector3[] {

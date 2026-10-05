@@ -275,7 +275,23 @@ const PINNED = {
   // need round to another; and a body-derived floor was added on top of
   // all of it. The extra node is the tassels, now a named group so that a
   // measurement can tell the band from the things hanging off it.
-  ganesha: { nodes: 380, digest: "cf0868c1c6634a61" },
+  //
+  // AND HIS HANDS ARE HANDS. They were four identical sausages on a
+  // rounded slab -- a smooth cone per finger with a ball stuck on its
+  // root, which is precisely what a moulded plastic hand is, and that is
+  // how they read. A finger is three bones: widest past the knuckle,
+  // waisted through each phalanx, swelling at each joint, ending in a
+  // pad; wider than it is deep rather than perfectly round; and carrying
+  // a nail, which at statue distance is worth more than all the rest.
+  // The palm gains the thenar and hypothenar pads, without which a thumb
+  // grows straight out of a flat plate.
+  //
+  // It costs twenty nodes FEWER than before, not more. A hand is one
+  // material and rigid under its own bone, so everything but the four
+  // fingers is merged -- five meshes where there were seventeen. The
+  // fingers stay separate and named, because they are what closes on a
+  // held object and so are what every grip measurement addresses.
+  ganesha: { nodes: 360, digest: "a3165650a5645cb6" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

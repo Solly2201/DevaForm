@@ -18,7 +18,7 @@ import {
   type MudraId,
   type SocketId,
 } from "@devaform/character-schema";
-import { mesh, taperedTube, type V3 } from "../geometry";
+import { collapse, mesh, taperedTube, type V3 } from "../geometry";
 import { num, type GeneratorContext, type PartGenerator, type SocketRefinement } from "./types";
 
 /**
@@ -218,6 +218,8 @@ export function makeFoot(ctx: GeneratorContext): THREE.Group {
 // ---------------------------------------------------------------------------
 
 interface FingerSpec {
+  /** Which finger it is, so the built mesh can say so. */
+  name: "index" | "middle" | "ring" | "little";
   /** Root position on the palm edge (hand-local). */
   root: V3;
   lengthScale: number;
@@ -289,10 +291,10 @@ const MUDRA_SHAPES: Record<MudraId, MudraShape> = {
 
 /** The four fingers of a hand, rooted along the palm's lower edge. */
 const FINGERS: readonly FingerSpec[] = [
-  { root: [-0.0225, -0.058, 0.006], lengthScale: 0.85, radius: 0.0075 },
-  { root: [-0.0075, -0.062, 0.008], lengthScale: 1.0, radius: 0.008 },
-  { root: [0.0075, -0.062, 0.008], lengthScale: 0.93, radius: 0.0076 },
-  { root: [0.0215, -0.057, 0.006], lengthScale: 0.74, radius: 0.0066 },
+  { name: "index", root: [-0.0225, -0.058, 0.006], lengthScale: 0.85, radius: 0.0075 },
+  { name: "middle", root: [-0.0075, -0.062, 0.008], lengthScale: 1.0, radius: 0.008 },
+  { name: "ring", root: [0.0075, -0.062, 0.008], lengthScale: 0.93, radius: 0.0076 },
+  { name: "little", root: [0.0215, -0.057, 0.006], lengthScale: 0.74, radius: 0.0066 },
 ];
 
 /**
@@ -422,14 +424,139 @@ export function makeHand(
     }),
   );
 
+  /**
+   * THE THENAR EMINENCE, and the pad opposite it.
+   *
+   * The ball of muscle at the base of the thumb, and the hypothenar pad
+   * down the little-finger edge. They are the two things that make a palm
+   * read as a hand rather than as a slab with pipes on it: without them
+   * the thumb grows straight out of a flat plate, which is what a toy
+   * hand looks like and what this one looked like.
+   */
+  /**
+   * CLEAR OF THE GRIP CHANNEL, which is not a detail.
+   *
+   * The thenar sat at x = 0.018, z = 0.013 first, and that is straight
+   * through the line a held shaft runs along: it became the nearest thing
+   * to the grip axis at two point one millimetres, for every object, so
+   * the fist closed to an identical aperture on a four-millimetre stem
+   * and a thirty-millimetre modak. That is the exact defect `handGrip`
+   * was written to catch, reintroduced by a muscle in the wrong place.
+   *
+   * Anatomically it was wrong there too. The thenar is on the RADIAL
+   * edge, at the base of the thumb; a shaft held in a fist crosses the
+   * palm diagonally and rests against the pad rather than passing
+   * through it.
+   */
+  g.add(
+    mesh(new THREE.SphereGeometry(0.014, 14, 12), skin, {
+      position: [side * 0.026, -0.042, 0.006],
+      scale: [0.8, 1.2, 0.72],
+    }),
+  );
+  // And the pad down the little-finger edge, which is equally far from
+  // the channel on the other side.
+  g.add(
+    mesh(new THREE.SphereGeometry(0.011, 12, 10), skin, {
+      position: [side * -0.026, -0.046, 0.006],
+      scale: [0.8, 1.3, 0.7],
+    }),
+  );
+
   // Mirror finger order so the index finger is on the thumb's side.
   const indexFirst = side === 1 ? FINGERS : [...FINGERS].reverse();
   indexFirst.forEach((f, i) => {
     const splay = shape.splay * (f.root[0] / 0.0225);
     const bend = shape.bends[i] ?? 0.2;
     const pts = fingerPoints(f.root, f.lengthScale, bend, splay);
-    g.add(new THREE.Mesh(taperedTube(pts, [f.radius, f.radius * 0.72], 14, 10), skin));
-    g.add(mesh(new THREE.SphereGeometry(f.radius * 0.95, 10, 8), skin, { position: f.root }));
+    /**
+     * A FINGER IS THREE BONES, not a cone.
+     *
+     * It was a smooth taper from root to tip, and a smooth taper is
+     * exactly what a moulded plastic finger is. A real one is widest just
+     * past the knuckle, narrows through the middle of each phalanx,
+     * swells again at each joint, and ends in a rounded pad — so the
+     * silhouette has three gentle bulges in it and the eye reads bones
+     * under skin.
+     *
+     * The mean radius is kept where it was on purpose: the fingers close
+     * on what the hand is holding (see `apertureAt` and `closureFor`), so
+     * this is a change to the SHAPE and not to the bulk. The knuckles
+     * swell about a tenth above the old line and the waists dip about a
+     * tenth below it.
+     */
+    const knuckles = (t: number): number => {
+      const taper = 1 - 0.3 * t;
+      // Two interphalangeal joints, at roughly a third and two thirds
+      // along, where the segment lengths put them.
+      const swell =
+        0.11 * Math.exp(-(((t - 0.36) / 0.1) ** 2)) + 0.09 * Math.exp(-(((t - 0.68) / 0.09) ** 2));
+      // And the pad at the very end, which stops the tip reading as a point.
+      const pad = 0.07 * Math.exp(-(((t - 0.96) / 0.06) ** 2));
+      return f.radius * taper * (1 + swell + pad);
+    };
+    const finger = new THREE.Mesh(taperedTube(pts, knuckles, 20, 10), skin);
+    /**
+     * NAMED, and kept out of the merge below.
+     *
+     * The fingers are the part of a hand that closes on things, so they
+     * are the part every grip measurement wants to address, and they were
+     * being picked out by hard-coded child indices — `[3, 5, 7, 9]`.
+     * Adding a muscle pad to the palm silently renumbered them. Geometry
+     * that something measures should say what it is.
+     */
+    finger.name = `finger:${f.name}`;
+    /**
+     * And a finger is WIDER THAN IT IS DEEP. A perfectly circular
+     * cross-section is the other half of the plastic read; a human finger
+     * is flattened front to back, more so toward the nail.
+     */
+    finger.scale.set(1.14, 1, 0.84);
+    g.add(finger);
+    /**
+     * The knuckle, as a metacarpal head rather than a ball.
+     *
+     * Flattened into the back of the hand instead of stuck on the end of
+     * it: the sphere here used to be very nearly the finger's own radius,
+     * which is what made each finger look glued on at a visible joint.
+     */
+    g.add(
+      mesh(new THREE.SphereGeometry(f.radius * 1.15, 12, 10), skin, {
+        position: [f.root[0], f.root[1] + 0.003, f.root[2] - 0.001],
+        scale: [1.05, 0.85, 0.8],
+      }),
+    );
+    /**
+     * A NAIL. One small flat plate on the back of the last joint, and it
+     * is worth more than everything else here put together — it is the
+     * single detail that says "this is a hand" at the distance a statue
+     * is looked at.
+     *
+     * Placed off the last two points of the finger's own curve, so it
+     * follows the curl: the back of the fingertip is the side away from
+     * the palm, and the palm is +Z in this frame.
+     */
+    const tip = pts[pts.length - 1];
+    const before = pts[pts.length - 2];
+    if (tip && before) {
+      const along = new THREE.Vector3(
+        tip[0] - before[0],
+        tip[1] - before[1],
+        tip[2] - before[2],
+      ).normalize();
+      // The back of the finger: perpendicular to its length, away from
+      // the palm side.
+      const back = new THREE.Vector3(0, 0, -1);
+      back.addScaledVector(along, -back.dot(along)).normalize();
+      const seat = new THREE.Vector3(...tip).addScaledVector(along, -f.radius * 0.9);
+      seat.addScaledVector(back, f.radius * 0.72);
+      const nail = mesh(new THREE.SphereGeometry(f.radius * 0.66, 10, 8), skin, {
+        position: [seat.x, seat.y, seat.z],
+      });
+      nail.scale.set(0.95, 1.25, 0.32);
+      nail.lookAt(seat.clone().add(back));
+      g.add(nail);
+    }
   });
 
   // Thumb — from the inner palm edge, opposing toward the fingertips when
@@ -456,6 +583,31 @@ export function makeHand(
       o.receiveShadow = true;
     }
   });
+  /**
+   * THE HAND IS FIVE MESHES: the four fingers, and everything else.
+   *
+   * Seventeen primitives go into a hand — palm, heel, wrist, two muscle
+   * pads, a thumb, and four fingers each with a knuckle and a nail — and
+   * every one was its own draw call, four times over on a four-armed
+   * figure. Sixty-eight calls spent on hands is what made adding the
+   * anatomy that stops them reading as plastic too expensive to afford.
+   *
+   * They are all the same skin material and the group is rigid under its
+   * own bone rather than skinned, which is exactly the case `collapse` is
+   * for. The fingers stay out of it: they are what closes on a held
+   * object, so they are what the grip measurements address, and merging
+   * them into the palm would leave nothing to address. Five meshes
+   * instead of seventeen still pays for all of the detail twice over.
+   */
+  const shell = new THREE.Group();
+  for (const child of [...g.children]) {
+    if (typeof child.name === "string" && child.name.startsWith("finger:")) continue;
+    g.remove(child);
+    shell.add(child);
+  }
+  const merged = collapse(shell);
+  merged.name = "hand:shell";
+  g.add(merged);
   return g;
 }
 
