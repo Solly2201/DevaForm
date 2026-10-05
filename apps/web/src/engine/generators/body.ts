@@ -18,7 +18,7 @@ import {
   type MudraId,
   type SocketId,
 } from "@devaform/character-schema";
-import { collapse, mesh, taperedTube, type V3 } from "../geometry";
+import { collapse, loft, mesh, taperedTube, type V3 } from "../geometry";
 import { num, type GeneratorContext, type PartGenerator, type SocketRefinement } from "./types";
 
 /**
@@ -290,11 +290,26 @@ const MUDRA_SHAPES: Record<MudraId, MudraShape> = {
 };
 
 /** The four fingers of a hand, rooted along the palm's lower edge. */
+/**
+ * The four fingers, rooted on a KNUCKLE ARC rather than along an edge.
+ *
+ * The roots used to sit four millimetres apart in height and two in
+ * depth, which is very nearly a straight line, and four tubes leaving a
+ * straight line is what made the hand read as a mitten with pipes on it.
+ * A real hand's metacarpal heads arch in both planes at once: the middle
+ * knuckle stands furthest forward and highest, the index and little fall
+ * away from it, and the whole row curves around the ball of the hand.
+ *
+ * The lengths are the classical proportions — middle longest, ring just
+ * under it, index shorter, little markedly shorter and set lower on the
+ * hand, which is the single clearest thing that separates a hand from
+ * four identical prongs.
+ */
 const FINGERS: readonly FingerSpec[] = [
-  { name: "index", root: [-0.0225, -0.058, 0.006], lengthScale: 0.85, radius: 0.0075 },
-  { name: "middle", root: [-0.0075, -0.062, 0.008], lengthScale: 1.0, radius: 0.008 },
-  { name: "ring", root: [0.0075, -0.062, 0.008], lengthScale: 0.93, radius: 0.0076 },
-  { name: "little", root: [0.0215, -0.057, 0.006], lengthScale: 0.74, radius: 0.0066 },
+  { name: "index", root: [-0.0235, -0.0565, 0.0035], lengthScale: 0.86, radius: 0.0076 },
+  { name: "middle", root: [-0.008, -0.0635, 0.0105], lengthScale: 1.0, radius: 0.0081 },
+  { name: "ring", root: [0.0072, -0.0625, 0.0098], lengthScale: 0.92, radius: 0.0075 },
+  { name: "little", root: [0.0218, -0.0535, 0.0028], lengthScale: 0.7, radius: 0.0063 },
 ];
 
 /**
@@ -403,26 +418,63 @@ export function makeHand(
         };
   const g = new THREE.Group();
 
-  // Palm — cupped slab with a knuckle ridge at the finger roots
+  /**
+   * THE PALM, LOFTED FROM THE WRIST TO THE KNUCKLES.
+   *
+   * It was one ellipsoid with a second stuck on for the knuckle ridge,
+   * and an ellipsoid is the same width everywhere — which is exactly the
+   * mitten silhouette the hand was criticised for. A hand is not that
+   * shape: it is narrow and round at the wrist, broadens across the ball,
+   * is widest at the knuckles, and is FLATTER than it is wide the whole
+   * way, so the back is a plane and the palm is a shallow dish.
+   *
+   * Lofting it states that in five sections. The cup still comes from the
+   * mudra — a cradling hand dishes more than a blessing one — but it is
+   * now applied as a lean on the sections rather than as a rotation of a
+   * ball, so the knuckles stay where the fingers are rooted.
+   */
+  const cup = shape.palmCup;
   g.add(
-    mesh(new THREE.SphereGeometry(0.032, 24, 18), skin, {
-      position: [0, -0.033, 0.004],
-      rotation: [shape.palmCup, 0, 0],
-      scale: [1.05, 1.2, 0.52],
-    }),
+    mesh(
+      loft(
+        [
+          { y: -0.004, rx: 0.019, rz: 0.0165, z: 0.001 },
+          { y: -0.016, rx: 0.0235, rz: 0.0165, z: 0.0025 + cup * 0.012 },
+          { y: -0.032, rx: 0.0285, rz: 0.0168, z: 0.004 + cup * 0.022 },
+          { y: -0.048, rx: 0.0305, rz: 0.0162, z: 0.0055 + cup * 0.026 },
+          { y: -0.059, rx: 0.0295, rz: 0.0135, z: 0.006 + cup * 0.022 },
+          { y: -0.066, rx: 0.0255, rz: 0.009, z: 0.0055 + cup * 0.016 },
+        ],
+        26,
+        4,
+      ),
+      skin,
+      {},
+    ),
   );
-  g.add(
-    mesh(new THREE.SphereGeometry(0.026, 18, 14), skin, {
-      position: [0, -0.055, 0.007],
-      scale: [1.2, 0.5, 0.5],
-    }),
-  );
-  // Wrist transition
-  g.add(
-    mesh(new THREE.CylinderGeometry(0.021, 0.026, 0.022, 14), skin, {
-      position: [0, -0.006, 0.002],
-    }),
-  );
+  /**
+   * THE WEB between the finger roots.
+   *
+   * Without it the gaps between fingers run right down to the palm's edge
+   * and each finger reads as a separate rod screwed on. A hand has skin
+   * there, rising about a third of the way up the first phalanx.
+   */
+  for (const [left, right] of [
+    [FINGERS[0], FINGERS[1]],
+    [FINGERS[1], FINGERS[2]],
+    [FINGERS[2], FINGERS[3]],
+  ] as const) {
+    if (!left || !right) continue;
+    const midX = (left.root[0] + right.root[0]) / 2;
+    const midY = (left.root[1] + right.root[1]) / 2;
+    const midZ = (left.root[2] + right.root[2]) / 2;
+    g.add(
+      mesh(new THREE.SphereGeometry(0.0085, 10, 8), skin, {
+        position: [midX, midY + 0.0015, midZ],
+        scale: [1.25, 0.95, 0.72],
+      }),
+    );
+  }
 
   /**
    * THE THENAR EMINENCE, and the pad opposite it.

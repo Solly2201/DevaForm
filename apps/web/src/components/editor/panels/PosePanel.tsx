@@ -85,6 +85,13 @@ function JointControls({ joint, held }: { joint: JointDefinition; held: string |
   const setJointOverride = useEditorStore((s) => s.setJointOverride);
   const clearJointOverride = useEditorStore((s) => s.clearJointOverride);
   const rotation = effectiveJointRotation(pose, joint.id);
+  /**
+   * Where the POSE put this joint, ignoring the customer's own
+   * adjustment: the centre the art-directed range is measured from. Using
+   * the current rotation instead would let the range walk, so repeated
+   * nudges could carry a joint anywhere.
+   */
+  const basePose = effectiveJointRotation({ ...pose, jointOverrides: {} }, joint.id);
   const hasOverride = pose.jointOverrides[joint.id] !== undefined;
   const limits = [joint.limits?.x, joint.limits?.y, joint.limits?.z] as const;
 
@@ -114,13 +121,28 @@ function JointControls({ joint, held }: { joint: JointDefinition; held: string |
       <div className="space-y-2.5">
         {AXES.map((axis) => {
           const limit = limits[axis.index];
+          /**
+           * THE SLIDER IS THE ART-DIRECTED RANGE, AROUND THE POSE.
+           *
+           * `limits` is the envelope a pose may use — meditation folds a
+           * hip to a hundred and twenty-six degrees — and handing that to
+           * a slider let somebody customising a standing figure fold his
+           * leg behind his head. `adjust` says how far a customer may
+           * move this joint from wherever the pose put it; the hard
+           * limits still bound the result, so a preset at the edge of its
+           * envelope cannot be nudged outside it.
+           */
+          const reach = joint.adjust?.[axis.key as "x" | "y" | "z"];
+          const posed = basePose[axis.index] ?? 0;
+          const low = Math.max(limit?.[0] ?? -Math.PI, reach ? posed - reach : -Math.PI);
+          const high = Math.min(limit?.[1] ?? Math.PI, reach ? posed + reach : Math.PI);
           return (
             <SliderControl
               key={axis.key}
               label={axis.label}
               value={rotation[axis.index] * RAD_TO_DEG}
-              min={(limit?.[0] ?? -Math.PI) * RAD_TO_DEG}
-              max={(limit?.[1] ?? Math.PI) * RAD_TO_DEG}
+              min={low * RAD_TO_DEG}
+              max={high * RAD_TO_DEG}
               step={1}
               format={(v) => `${Math.round(v)}°`}
               onChange={(degrees) => {

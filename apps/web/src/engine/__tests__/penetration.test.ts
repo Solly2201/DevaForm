@@ -157,10 +157,10 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   },
   {
     id: "ganesha.crown.kirita",
-    mm: 6,
-    reason: "seam",
+    mm: 18,
+    reason: "constitutive",
     why:
-      "a crown's band grips the head it is worn on. It used to have no penetration at all and stood six to eleven millimetres clear of his skull -- scaled by `headFit`, which divides by the head's WIDEST section, and on a sculpted Ganesha that is the jaw rather than the dome a band rides. Sized to the cranium at the crown socket instead, it now bites by a few millimetres, which is a crown being worn",
+      "a crown's band grips the head it is worn on, and a CLOSED band has an inner wall that is inside it by construction -- that is what a ring round a head is. The band used to be an open shell, which is why it had no penetration and also why the crown read as hollow from behind: a one-sided surface is backface-culled, so the eye looked straight through it. Closing the profile (see `closedBand`) put the inner wall where the head is, which is correct and is the whole point of the fix",
   },
   {
     id: "ganesha.waist.kamarband",
@@ -199,9 +199,12 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   // --- grips ----------------------------------------------------------
   {
     id: "ganesha.item.modak",
-    mm: 13,
+    mm: 18,
     reason: "grip",
-    why: "a sweet pressed into the fist that closes on it",
+    why:
+      "a sweet pressed into the fist that closes on it. It went from 13mm to 18mm when the palm " +
+      "stopped being an ellipsoid: a hand with a ball at the thumb and a dish across the middle " +
+      "holds a sweet deeper than a smooth slab does, which is the point of the shape",
   },
   {
     id: "ganesha.anklets.payal",
@@ -223,7 +226,7 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   },
   {
     id: "ganesha.item.axe",
-    mm: 7,
+    mm: 12,
     reason: "grip",
     why: "the parashu's haft against the fingers round it, measurable for the same reason",
   },

@@ -19,7 +19,7 @@
  * measures that and publishes it (see stageFrame.ts); the fullscreen
  * layers above and below follow.
  */
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -132,11 +132,32 @@ function AdoptHero({
 }) {
   const camera = useThree((s) => s.camera);
   const phase = useStageStore((s) => s.phase);
+  /**
+   * Where the camera is going, and whether it has been there before.
+   *
+   * THE FIRST COMPOSITION IS INSTANT and every one after it is eased.
+   * Opening the Studio there is nothing on screen to move away from, so
+   * placing the camera is simply placing it. But the composition is
+   * recomputed from the figure's own measured extent, and a crown is part
+   * of that figure: switching from the kirita to the circlet makes
+   * Ganesha two hundred and eighteen millimetres shorter, so the picture
+   * genuinely has to change. Snapping to it reads as the editor jolting
+   * under the customer's hand while they are comparing two hats.
+   *
+   * Easing is the whole fix. The destination is the same composition it
+   * always was — this does not decide anything, it only refuses to arrive
+   * discontinuously.
+   */
+  const goal = useRef<HeroComposition | null>(null);
+  const placed = useRef(false);
 
   useEffect(() => {
     // `settling` is the entry easing onto this same composition — see
     // StageSettle. Two things moving one camera is one thing too many.
     if (touched.current || phase === "settling") return;
+    goal.current = hero;
+    if (placed.current) return;
+    placed.current = true;
     camera.position.set(...hero.position);
     const controls = controlsRef.current;
     if (controls) {
@@ -146,6 +167,39 @@ function AdoptHero({
       camera.lookAt(...hero.target);
     }
   }, [hero, phase, camera, controlsRef, touched]);
+
+  useFrame((_, delta) => {
+    const want = goal.current;
+    if (!want || touched.current || phase === "settling") return;
+    /**
+     * An exponential ease, framerate-independent: the camera covers the
+     * same fraction of the remaining distance per second however often
+     * this runs. Roughly a third of a second to arrive, which is long
+     * enough to read as a move and short enough not to feel like waiting.
+     */
+    const k = 1 - Math.exp(-delta * 9);
+    const controls = controlsRef.current;
+    const target = new THREE.Vector3(...want.target);
+    const position = new THREE.Vector3(...want.position);
+    if (camera.position.distanceToSquared(position) < 1e-8) {
+      // Arrived. Snap the last micrometre so it comes to rest exactly on
+      // the composition rather than approaching it forever.
+      camera.position.copy(position);
+      if (controls) {
+        controls.target.copy(target);
+        controls.update();
+      }
+      goal.current = null;
+      return;
+    }
+    camera.position.lerp(position, k);
+    if (controls) {
+      controls.target.lerp(target, k);
+      controls.update();
+    } else {
+      camera.lookAt(target);
+    }
+  });
 
   return null;
 }

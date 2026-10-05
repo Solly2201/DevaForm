@@ -297,7 +297,25 @@ const PINNED = {
   // the cloth near the waist and surfaced lower down in pale flecks --
   // on every dhoti in the picker, not just his. They now read their depth
   // off the cloth at their own height and lean at the cone's own angle.
-  ganesha: { nodes: 360, digest: "bf7b329dc88556c7" },
+  //
+  // AND HIS EYES AND BROWS FOLLOW THE CURVE OF HIS FACE. They sat at one
+  // authored depth while a face is curved, so moving eye spacing buried
+  // the brows or lifted them off: measured, the proportion of brow
+  // standing clear ran 36.9% narrow, 39.1% default, 44.9% wide. Dragging
+  // one control changed how thick another feature looked. Corrected as a
+  // delta against the default spacing, so the tuned face is untouched and
+  // only the travel is on the curve.
+  //
+  // AND HIS PALM IS A HAND. It was one ellipsoid with a second stuck on
+  // for the knuckles, and an ellipsoid is the same width everywhere --
+  // the mitten silhouette the hands were criticised for. Lofted now from
+  // a round wrist, through the ball, to its widest across the knuckles,
+  // flatter than it is wide the whole way; the finger roots sit on a
+  // knuckle ARC in both planes instead of nearly in a line; and there is
+  // web between them, without which each finger reads as a rod screwed
+  // on. A held sweet sits deeper in it, which is what a palm with a dish
+  // in it does.
+  ganesha: { nodes: 360, digest: "9953ecdcceacd8b2" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

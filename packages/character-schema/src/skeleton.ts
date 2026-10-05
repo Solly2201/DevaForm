@@ -106,6 +106,31 @@ export interface JointDefinition {
    * and external rotation) and the forearm (pronation and supination).
    */
   twist?: readonly [number, number];
+  /**
+   * HOW FAR A CUSTOMER MAY MOVE THIS JOINT FROM THE POSE IT IS IN,
+   * per axis, in radians.
+   *
+   * Distinct from `limits`, and the distinction is the whole point.
+   * `limits` is the envelope a POSE may use: Ganesha's lotus needs a
+   * hundred and twenty-six degrees of hip flexion, sixty-seven of
+   * abduction and a hundred and fifty-three at the knee, and the presets
+   * ride exactly at those numbers. Handing that same envelope to a slider
+   * lets somebody customising a standing figure fold his leg behind his
+   * head, which is not customising a statue.
+   *
+   * So the slider is art-directed around wherever the pose has put the
+   * joint, and the envelope stays as wide as the poses need. A customer
+   * adjusts; they do not re-animate.
+   *
+   * Absent means the joint is adjusted by its full limits, which is right
+   * for the small ones — a wrist, a trunk segment — where the envelope
+   * already IS the art direction.
+   */
+  adjust?: {
+    x?: number;
+    y?: number;
+    z?: number;
+  };
   /** Human-readable label for pose UIs. */
   label: string;
   /**
@@ -240,7 +265,18 @@ const legJoints = (slot: LegSlot): JointDefinition[] => {
       id: `leg.${slot}.thigh`,
       parent: "pelvis",
       position: [sideSign * 0.09, -0.05, 0],
+      // The envelope the POSES need: `meditation` folds this hip to 126
+      // degrees of flexion, 53 of rotation and 67 of abduction.
       limits: { x: [-PI * 0.7, PI * 0.7], y: [-PI * 0.3, PI * 0.3], z: [-PI * 0.5, PI * 0.5] },
+      /**
+       * And what a customer may do to it: shift the stance, not refold
+       * the leg. Flexion gets the most because that is the axis a stance
+       * actually varies on; abduction less, because a statue's legs open
+       * by a few degrees and not by a splits; rotation least, because
+       * past about fifteen degrees the knee stops facing where the foot
+       * does and the whole leg reads as broken.
+       */
+      adjust: { x: (22 * PI) / 180, y: (14 * PI) / 180, z: (16 * PI) / 180 },
       label: `${label} Thigh`,
       uiGroup,
     },
@@ -248,15 +284,30 @@ const legJoints = (slot: LegSlot): JointDefinition[] => {
       id: `leg.${slot}.shin`,
       parent: `leg.${slot}.thigh`,
       position: [0, -0.2, 0],
+      // Never negative: a knee does not hyperextend, and `meditation`
+      // needs 153 degrees of it.
       limits: { x: [0, PI * 0.85], y: [-0.2, 0.2], z: [-0.2, 0.2] },
+      /**
+       * A KNEE IS A HINGE. It bends and it does nothing else, so the
+       * customer's travel on the other two axes is a few degrees of give
+       * rather than a control — eleven degrees of knee twist is a leg
+       * that has come apart at the joint.
+       */
+      adjust: { x: (18 * PI) / 180, y: (3 * PI) / 180, z: (3 * PI) / 180 },
       label: `${label} Shin`,
       uiGroup,
     },
     {
       id: `leg.${slot}.foot`,
       parent: `leg.${slot}.shin`,
-      position: [0, -0.19, 0],
       limits: { x: [-PI * 0.3, PI * 0.3], y: [-0.3, 0.3], z: [-0.2, 0.2] },
+      /**
+       * An ankle points and flexes freely, turns in and out a little, and
+       * barely rotates at all — and whatever it does, the sole has to
+       * stay plausible against the base it stands on.
+       */
+      adjust: { x: (16 * PI) / 180, y: (6 * PI) / 180, z: (9 * PI) / 180 },
+      position: [0, -0.19, 0],
       label: `${label} Foot`,
       uiGroup,
     },

@@ -1052,7 +1052,25 @@ export const SHARED_ASSETS: readonly AssetDefinition[] = [
     // Only sound on a body that reports real measurements. The mesh body
     // does; the stylised ones do not, and they keep their own dhoti.
     deityCompatibility: ["shiva"],
-    stage: "integration",
+    /**
+     * RETIRED, because it was the same garment twice.
+     *
+     * This and `shiva.garment.vyaghracharma` are the same generator with
+     * the same hide, the same absent dhoti and the same absent drape —
+     * they differed in `length` alone, 1.0 against 0.7. Two cards in the
+     * picker producing the same garment is not a choice; it is the
+     * customer being asked to guess which one is the real one.
+     *
+     * The one that survives is the one with the iconographic name. Shiva
+     * now offers three lower garments and each is a distinct composition:
+     * the dhoti, the tiger hide alone, and the reference dress of both
+     * together.
+     *
+     * Kept at `deprecated` rather than deleted so that anything saved
+     * wearing it still resolves — see oldSaves.test, which builds every
+     * retired asset.
+     */
+    stage: "deprecated",
     source: {
       kind: "procedural",
       generatorId: "humanoid.hideWrap",

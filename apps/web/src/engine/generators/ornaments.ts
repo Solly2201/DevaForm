@@ -4,7 +4,7 @@
  */
 import * as THREE from "three";
 import { ARM_SLOTS, activeArmSlots, type JointId } from "@devaform/character-schema";
-import { lathe, mesh, radialRing, taperedTube, type V3 } from "../geometry";
+import { closedBand, lathe, mesh, radialRing, taperedTube, type V3 } from "../geometry";
 import { headFit } from "./bodyProfile";
 import { surfaceRibbon, walkSurface, type SurfaceWaypoint } from "./surfaceWalk";
 import { type AttachmentGenerator, type GeneratorContext, type PartGenerator } from "./types";
@@ -96,12 +96,15 @@ export const crownKirita: AttachmentGenerator = (ctx) => {
   // Base band with bead ring
   group.add(
     mesh(
-      lathe([
-        [0.088, 0],
-        [0.094, 0.012],
-        [0.09, 0.03],
-        [0.082, 0.042],
-      ]),
+      closedBand(
+        [
+          [0.088, 0],
+          [0.094, 0.012],
+          [0.09, 0.03],
+          [0.082, 0.042],
+        ],
+        0.076,
+      ),
       metal,
     ),
   );
@@ -112,17 +115,20 @@ export const crownKirita: AttachmentGenerator = (ctx) => {
   // Tapering tiered cone
   group.add(
     mesh(
-      lathe([
-        [0.08, 0.042],
-        [0.072, 0.075],
-        [0.078, 0.08],
-        [0.058, 0.115],
-        [0.064, 0.12],
-        [0.042, 0.155],
-        [0.047, 0.159],
-        [0.026, 0.19],
-        [0.012, 0.208],
-      ]),
+      closedBand(
+        [
+          [0.08, 0.042],
+          [0.072, 0.075],
+          [0.078, 0.08],
+          [0.058, 0.115],
+          [0.064, 0.12],
+          [0.042, 0.155],
+          [0.047, 0.159],
+          [0.026, 0.19],
+          [0.012, 0.208],
+        ],
+        0.0075,
+      ),
       metal,
     ),
   );
@@ -178,13 +184,16 @@ export const crownCirclet: AttachmentGenerator = (ctx) => {
   // sitting flat as it does on a cylinder.
   group.add(
     mesh(
-      lathe([
-        [0.086, 0],
-        [0.093, 0.009],
-        [0.095, 0.021],
-        [0.091, 0.033],
-        [0.085, 0.039],
-      ]),
+      closedBand(
+        [
+          [0.086, 0],
+          [0.093, 0.009],
+          [0.095, 0.021],
+          [0.091, 0.033],
+          [0.085, 0.039],
+        ],
+        0.079,
+      ),
       metal,
     ),
   );
@@ -275,12 +284,15 @@ export const crownGopuram: AttachmentGenerator = (ctx) => {
   // The base band, which is also the tower's plinth.
   group.add(
     mesh(
-      lathe([
-        [0.087, 0],
-        [0.094, 0.01],
-        [0.094, 0.026],
-        [0.088, 0.036],
-      ]),
+      closedBand(
+        [
+          [0.087, 0],
+          [0.094, 0.01],
+          [0.094, 0.026],
+          [0.088, 0.036],
+        ],
+        0.08,
+      ),
       metal,
     ),
   );

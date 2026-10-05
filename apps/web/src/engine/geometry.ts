@@ -212,6 +212,41 @@ export function lathe(
 }
 
 /**
+ * A revolved band that is CLOSED — a solid ring rather than a shell.
+ *
+ * `lathe` revolves a polyline, so an open profile gives an open surface:
+ * one-sided, backface-culled, and therefore invisible from the inside.
+ * Every crown band in this file was built that way, and the result is
+ * exactly what it sounds like — from behind and a little above, where the
+ * eye can see through the gap between the band and the tower, the crown
+ * read as hollow and unfinished.
+ *
+ * Closing it is a property of the profile, not of the renderer: run the
+ * outer silhouette, come back along the inside at `inner`, and return to
+ * the start. The revolved loop is then a solid section with no inside to
+ * see. `inner` is where the band grips the head, so it is also the hole
+ * the head goes through.
+ */
+export function closedBand(
+  outer: ReadonlyArray<readonly [number, number]>,
+  inner: number,
+  segments = 40,
+): THREE.LatheGeometry {
+  const first = outer[0];
+  const last = outer[outer.length - 1];
+  if (!first || !last) return lathe(outer, segments);
+  return lathe(
+    [
+      [inner, first[1]],
+      ...outer,
+      [inner, last[1]],
+      [inner, first[1]],
+    ],
+    segments,
+  );
+}
+
+/**
  * Cylinder with sinusoidal radial ripples — cloth pleats. Open-ended;
  * centered on origin like CylinderGeometry.
  */
