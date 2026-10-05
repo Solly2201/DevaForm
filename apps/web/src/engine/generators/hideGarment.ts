@@ -1048,7 +1048,7 @@ function hipsAt(
  * says how the cloth is worn (PosePreset.garment) and this builds what it
  * asks for rather than guessing from the joint angles.
  */
-function dhotiSections(body: BodyProfile, reach: number): ClothSection[] {
+function dhotiSections(body: BodyProfile, reach: number, short = false): ClothSection[] {
   const waistY = body.waistSeatY;
   const seat = body.thighSeatY;
   const hipRx = body.pelvisHalfWidth + CLEARANCE;
@@ -1056,6 +1056,28 @@ function dhotiSections(body: BodyProfile, reach: number): ClothSection[] {
   const knee = seat - body.thighLength;
   const hem = knee - body.shinLength * reach;
   const around = (y: number, slack: number) => wrapSection(body, y, slack);
+  if (short) {
+    /**
+     * WORN SHORT: A HIP WRAP, NOT A SHORTENED COLUMN.
+     *
+     * The pose says the cloth is worn short because a leg is out — see
+     * `PosePreset.garment` — and the column below is cut to the leg
+     * envelope the body reports AT REST, which is two legs side by side.
+     * Shortened to the knee it still spanned both of them, so in tandava
+     * the cream hung across the gap where the raised leg used to be and
+     * read as a flat sheet of card with a knee coming through it.
+     *
+     * Cloth gathered for dancing is wound on the HIPS, which are where
+     * the pose left them, and it stops on the thigh. Nothing here asks
+     * the leg envelope, because a leg in the air is not under it.
+     */
+    return [
+      { y: waistY - 0.006, rx: hipRx * 0.95, rz: hipRz * 0.97 },
+      overHips(body, seat - 0.012, 3, hipRx * 1.05, hipRz * 1.08),
+      { y: seat - body.thighLength * 0.3, rx: hipRx * 1.07, rz: hipRz * 1.06 },
+      { y: seat - body.thighLength * 0.5, rx: hipRx * 1.03, rz: hipRz * 1.02 },
+    ];
+  }
   return [
     // No z offset here: the column below it is centred on the LEGS, and
     // pulling its waist ring forward onto the body's own centre tips the
@@ -1140,7 +1162,7 @@ function dhotiColumn(
   reach: number,
 ): THREE.Mesh {
   const body = ctx.body;
-  const sections = dhotiSections(body, reach);
+  const sections = dhotiSections(body, reach, ctx.garment === "short");
   // Fine enough for the folds to survive being sampled. At forty-four
   // columns the deeper of the two fold frequencies lands on barely two
   // samples a cycle and washes out into a smooth tube.
@@ -1284,7 +1306,7 @@ function dhotiCascade(
   const body = ctx.body;
   const group = new THREE.Group();
   const waistY = body.waistSeatY;
-  const sections = dhotiSections(body, reach);
+  const sections = dhotiSections(body, reach, ctx.garment === "short");
   const profile = profileOf(sections);
   // Where the column's folds are deepest, so a pleat hanging on it clears
   // them instead of coming through in steps.
@@ -1395,6 +1417,7 @@ function sashFall(
   const rows = 22;
   const cols = 12;
   const waistY = body.waistSeatY;
+  // Standing, full-length dress only: the caller guards on both.
   const sections = dhotiSections(body, reach);
   const profile = profileOf(sections);
   const columnTop = sections[0]!.y;
@@ -1624,7 +1647,12 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
     // reference's pleats there are the garment's own fabric.
     const pleatMaterial = num(ctx, "accent", 1) > 0 ? sashMaterial : cloth;
     wrap.add(dhotiCascade(ctx, cloth, pleatMaterial, reach));
-    if (drape > 0 && !ctx.seated) wrap.add(sashFall(body, sashMaterial, reach, 1));
+    // A hanging panel needs a leg beside it to hang against. Seated it
+    // hangs through the knees; worn short for a dance it hangs through
+    // the leg that is in the air, which is the same mistake standing up.
+    if (drape > 0 && !ctx.seated && ctx.garment !== "short") {
+      wrap.add(sashFall(body, sashMaterial, reach, 1));
+    }
   }
 
   // The kamarbandh is CLOTH wound round the waist, not a metal hoop.
