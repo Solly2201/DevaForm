@@ -156,7 +156,7 @@ export interface GeneratorContext {
    *
    * Returns 0 where nothing worn reaches past the skin.
    */
-  wornClearanceAt(frame: JointId, localY: number): number;
+  wornClearanceAt(frame: JointId, localY: number, bearing?: number): number;
 }
 
 /**

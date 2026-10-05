@@ -196,6 +196,95 @@ export function rigWarnings(rig: CharacterRig): string[] {
   return [...rig.warnings, ...rig.poseWarnings];
 }
 
+/**
+ * The slots that are the figure itself rather than something it wears.
+ *
+ * Eyes are deliberately absent: they are inside the head that is already
+ * here, and claiming them would make a pupil part of the surface an
+ * ornament is measured against. Brows are absent for the opposite
+ * reason — they are a selectable variant worn on a face, and a thing
+ * worn on a face should stay measurable against it.
+ */
+const FLESH_SLOTS = new Set<string>(["body", "head", "ears", "tusks", "trunk", "hands"]);
+
+/**
+ * The cranium a head part actually built, measured off its own geometry.
+ *
+ * WHY THE PROFILE CANNOT ANSWER THIS. `BodyProfile` is derived from the
+ * BODY asset, and a figure whose head comes from a separate part has a
+ * profile describing a head nobody draws. Measured: the stylised profile
+ * reports a sixty-seven millimetre cranium — the one `body.ts` would have
+ * drawn — while Ganesha's head part draws a skull a hundred and thirty-five
+ * millimetres across that reaches fifty-seven millimetres above the crown
+ * socket. Every head-worn thing sized from `headRadius` was therefore sized
+ * for a head that is not on the figure, and the kirita's band sat entirely
+ * inside the skull: only the cone above it showed.
+ *
+ * Measured rather than declared, because the head may be a GLB. Ganesha's
+ * default head is one, so anything an asset or a generator stated by hand
+ * would describe the procedural variant and miss the shipped one.
+ *
+ * `headRadius` is reported at the CROWN SEAT rather than at the cranium's
+ * widest, because that is the number a band has to clear, and the
+ * reference skull's own figure is used the same way. The seat is where the
+ * dome has drawn in to just under three quarters of its widest — above the
+ * brow, which is where a crown rides. Seat and radius come from one sweep,
+ * so neither can drift from the other or from the geometry.
+ *
+ * Ears, tusks and a trunk are their own parts and are not in here.
+ */
+function measureCranium(
+  object: THREE.Object3D,
+  head: THREE.Object3D,
+): { headRadius: number; headCenterY: number; crownSocketY: number; skullTopY: number } | null {
+  head.updateWorldMatrix(true, false);
+  object.updateWorldMatrix(true, true);
+  const toHead = new THREE.Matrix4().copy(head.matrixWorld).invert();
+  const BIN = 0.004;
+  const widest = new Map<number, number>();
+  const point = new THREE.Vector3();
+  let top = -Infinity;
+  let bottom = Infinity;
+  let maxHalfWidth = 0;
+  object.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const position = mesh.geometry?.getAttribute("position");
+    if (!position) return;
+    mesh.updateWorldMatrix(true, false);
+    // A sculpted head is sixty thousand vertices and this runs on every
+    // rig build. A cranium's widest point is a ring, not a vertex.
+    const stride = Math.max(1, Math.floor(position.count / 4000));
+    for (let i = 0; i < position.count; i += stride) {
+      deformedVertex(mesh, i, point).applyMatrix4(mesh.matrixWorld).applyMatrix4(toHead);
+      const bin = Math.round(point.y / BIN);
+      const radius = Math.hypot(point.x, point.z);
+      if (radius > (widest.get(bin) ?? 0)) widest.set(bin, radius);
+      if (radius > maxHalfWidth) maxHalfWidth = radius;
+      if (point.y > top) top = point.y;
+      if (point.y < bottom) bottom = point.y;
+    }
+  });
+  if (!Number.isFinite(top) || maxHalfWidth <= 0 || widest.size === 0) return null;
+
+  // Walk DOWN from the top until the dome has widened to the seat.
+  const SEAT = 0.72;
+  const wanted = maxHalfWidth * SEAT;
+  let seatY = top;
+  for (let bin = Math.round(top / BIN); bin >= Math.round(bottom / BIN); bin -= 1) {
+    if ((widest.get(bin) ?? 0) >= wanted) {
+      seatY = bin * BIN;
+      break;
+    }
+  }
+  return {
+    headRadius: wanted,
+    headCenterY: (top + bottom) / 2,
+    crownSocketY: seatY,
+    skullTopY: top,
+  };
+}
+
 export function buildJointHierarchy(skeleton: SkeletonDefinition): {
   characterRoot: THREE.Group;
   joints: Map<JointId, THREE.Object3D>;
@@ -652,7 +741,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       }
     });
   };
-  const wornClearanceAt = (frame: JointId, localY: number): number => {
+  const wornClearanceAt = (frame: JointId, localY: number, bearing?: number): number => {
     const joint = joints.get(frame);
     const chestJoint = joints.get("chest" as JointId);
     if (!joint || !chestJoint || wornRadius.size === 0) return 0;
@@ -667,7 +756,29 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
 
     const probe = new THREE.Vector3();
     let worst = 0;
-    for (let step = 0; step < WORN_BEARINGS; step += 1) {
+    /**
+     * ONE BEARING WHEN ONE IS ASKED FOR.
+     *
+     * Taking the worst over the whole circle is right for something that
+     * must clear everything at once, and wrong for a ribbon that is
+     * placed bearing by bearing. Measured: a sash crosses the belt at a
+     * single point, and the belt bulged its ENTIRE circumference to clear
+     * it -- forty-five millimetres of air all the way round for one
+     * crossing, which is what made it read as a gold tray.
+     */
+    const centre = bearing === undefined ? 0 : bearingBinOf(Math.sin(bearing), Math.cos(bearing));
+    /**
+     * A WINDOW, not a single bin, because the things that read this are
+     * rigid. A metal belt cannot scallop in and out bin by bin to follow
+     * a sash crossing under it; it swells over an arc and comes back.
+     * Two bins either side is forty-five degrees of arc, which is about
+     * what a band bends over.
+     */
+    const WINDOW = 2;
+    const first = bearing === undefined ? 0 : centre - WINDOW;
+    const last = bearing === undefined ? WORN_BEARINGS - 1 : centre + WINDOW;
+    for (let raw = first; raw <= last; raw += 1) {
+      const step = ((raw % WORN_BEARINGS) + WORN_BEARINGS) % WORN_BEARINGS;
       const bearing = (step / WORN_BEARINGS) * Math.PI * 2;
       // One height bin either side: a height is a slice, and a slice that
       // falls between two samples of a pleated hem should not read as
@@ -714,9 +825,33 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
   // until every joint entry has landed, so owner parts have already
   // refined the sockets they terminate on.
   const socketMounts: Array<{ assetId: string; socket: SocketId; object: THREE.Object3D }> = [];
-  // The flesh: what the statue rests on its base with. Collected as the
-  // parts are mounted, because only here is it known which geometry came
-  // from the body slot and which from something worn over it.
+  /**
+   * THE FIGURE'S OWN FLESH — all of it, not only the torso slot.
+   *
+   * This used to be the `body` slot alone, because its one job was to
+   * decide what the statue rests on and a hem that hangs past the feet
+   * must not lift it off its base. That job is still here and still
+   * right. But four questions read this set, and three of them want the
+   * whole figure:
+   *
+   *   • what the statue rests on              — the lowest flesh
+   *   • how wide a planted staff must clear   — ALL of it, including a head
+   *   • how tall the figure is                — including its head
+   *   • whether there is a figure yet         — any of it
+   *
+   * And a fifth, which is why this changed: every depth measurement in
+   * the suite asks this set what "inside the figure" means. On Ganesha it
+   * answered with a torso. His HEAD, ears, tusks, trunk and hands were
+   * not in it, so his crown, his earrings and his tilaka were measured
+   * against a body that does not include the thing they are worn on, and
+   * reported a crown a hundred and forty-nine millimetres from "the
+   * body" — which was the measurement failing, not the crown.
+   *
+   * Named by slot rather than by material, so it is a list somebody
+   * decided rather than a property that could drift: a garment is not
+   * flesh however it is coloured, and brows are a variant worn ON a face
+   * and stay measurable against it.
+   */
   const bodyMeshes: THREE.Mesh[] = [];
   const claimFlesh = (object: THREE.Object3D): void => {
     object.traverse((node) => {
@@ -747,6 +882,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     }
     if (!asset) continue;
     if (resolved.integratedFeatures.has(slot) && !asset.integratedFeatures?.includes(slot)) continue;
+    const isFlesh = FLESH_SLOTS.has(slot);
     const renderable = resolveRenderable(asset, ctxFor(asset), warnings, pending);
     if (!renderable) continue;
     if (renderable instanceof THREE.Object3D) {
@@ -779,7 +915,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       if (skinnedMeshes.length > 0) {
         for (const mesh of skinnedMeshes) {
           mesh.name = mesh.name || `part:${asset.id}`;
-          if (slot === "body") bodyMeshes.push(mesh);
+          if (isFlesh) bodyMeshes.push(mesh);
           characterRoot.add(mesh);
           mesh.position.set(0, 0, 0);
           mesh.quaternion.identity();
@@ -800,7 +936,21 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       for (const group of jointGroups) {
         const jointId = group.name.slice("JOINT_".length);
         if (isJointId(jointId)) {
-          joints.get(jointId as JointId)?.add(group);
+          const target = joints.get(jointId as JointId);
+          target?.add(group);
+          if (isFlesh) claimFlesh(group);
+          // A head part replaces the body's own head, so it replaces the
+          // measurements that describe it. See measureCranium: Ganesha's
+          // default head is a GLB, which is why this is measured off the
+          // geometry rather than declared anywhere.
+          if (slot === "head" && jointId === "head" && target) {
+            const cranium = measureCranium(group, target);
+            if (cranium) {
+              Object.assign(bodyProfile, cranium);
+              const crownSocket = sockets.get("head.crown" as SocketId);
+              if (crownSocket) crownSocket.position.y = cranium.crownSocketY;
+            }
+          }
           mapped += 1;
         } else {
           warnings.push(`Asset ${asset.id}: unknown joint in group "${group.name}"`);
@@ -816,7 +966,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     }
     for (const entry of renderable.jointed) {
       entry.object.name = entry.object.name || `part:${asset.id}`;
-      if (slot === "body") claimFlesh(entry.object);
+      if (isFlesh) claimFlesh(entry.object);
       if (entry.socket !== undefined) {
         socketMounts.push({ assetId: asset.id, socket: entry.socket, object: entry.object });
       } else {
@@ -829,6 +979,33 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         // Now it is in the tree, so how wide it makes the figure can be
         // read. Ornaments worn over it are built later and ask.
         if (asset.category === "clothing") recordWorn(entry.object);
+      }
+      /**
+       * A part that REPLACED a region of the body corrects what the
+       * profile says about it, before anything worn there is generated.
+       *
+       * Parts build before attachments, so a crown asking `headRadius`
+       * gets the head that is actually on the figure rather than the one
+       * the body asset would have drawn. Applied in place, because there
+       * is one profile and a second copy of it is a second answer.
+       */
+      /**
+       * A head part replaces the body's own head, so it also replaces the
+       * measurements that describe it — before anything worn on a head is
+       * generated. Parts build before attachments, so a crown asking
+       * `headRadius` gets the cranium that is actually on the figure.
+       *
+       * Applied in place: there is one profile, and a second copy of it
+       * would be a second answer.
+       */
+      if (slot === "head" && entry.joint === "head") {
+        const headJoint = joints.get("head" as JointId);
+        const cranium = headJoint ? measureCranium(entry.object, headJoint) : null;
+        if (cranium) {
+          Object.assign(bodyProfile, cranium);
+          const crownSocket = sockets.get("head.crown" as SocketId);
+          if (crownSocket) crownSocket.position.y = cranium.crownSocketY;
+        }
       }
       // The part owns the surface its sockets terminate on (e.g. the
       // trunk's tip, or a hand's own grip) — move those sockets onto the

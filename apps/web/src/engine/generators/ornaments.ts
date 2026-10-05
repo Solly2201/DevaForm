@@ -20,6 +20,16 @@ function gemStud(ctx: GeneratorContext, r: number): THREE.Mesh {
 export const crownKirita: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
+  /**
+   * SIZED TO THE HEAD IT IS WORN ON.
+   *
+   * Every dimension below is drawn against the reference skull, which is
+   * what `headFit` exists to convert — the kundala have scaled with it
+   * since they were written. A crown did not, and on a stylised head
+   * whose own part draws a cranium nearly twice the reference the band
+   * sat entirely inside the skull: only the cone above it was visible.
+   */
+  group.scale.setScalar(headFit(ctx.body));
 
   // Base band with bead ring
   group.add(
@@ -84,6 +94,16 @@ export const crownKirita: AttachmentGenerator = (ctx) => {
 export const crownKaranda: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
+  /**
+   * SIZED TO THE HEAD IT IS WORN ON.
+   *
+   * Every dimension below is drawn against the reference skull, which is
+   * what `headFit` exists to convert — the kundala have scaled with it
+   * since they were written. A crown did not, and on a stylised head
+   * whose own part draws a cranium nearly twice the reference the band
+   * sat entirely inside the skull: only the cone above it was visible.
+   */
+  group.scale.setScalar(headFit(ctx.body));
   group.add(
     mesh(
       lathe([
@@ -119,6 +139,16 @@ export const crownKaranda: AttachmentGenerator = (ctx) => {
 export const crownFan: AttachmentGenerator = (ctx) => {
   const metal = ctx.materials.get("metal");
   const group = new THREE.Group();
+  /**
+   * SIZED TO THE HEAD IT IS WORN ON.
+   *
+   * Every dimension below is drawn against the reference skull, which is
+   * what `headFit` exists to convert — the kundala have scaled with it
+   * since they were written. A crown did not, and on a stylised head
+   * whose own part draws a cranium nearly twice the reference the band
+   * sat entirely inside the skull: only the cone above it was visible.
+   */
+  group.scale.setScalar(headFit(ctx.body));
   group.add(
     mesh(
       lathe([
@@ -551,6 +581,18 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
     point.z - toChest.z,
   ];
 
+  /**
+   * Fifteen millimetres above the waist ornament's own socket, and NOT
+   * at the garment's tie height.
+   *
+   * Anchoring it to `waistSeatY` was tried: it is where the dhoti ties
+   * and it looked like the honest answer. It puts the belt BELOW the
+   * band `BodyProfile.surfaceAt` describes, and below that band the
+   * profile keeps answering with a neck-sized cylinder — so the ribbon
+   * was walked onto a surface narrower than the torso and came out
+   * twenty-five millimetres inside Shiva. See `torsoBand`, which exists
+   * to say where the profile stops being able to answer.
+   */
   const beltY = toChest.y + 0.015;
   /**
    * Worn over the cloth — and the cloth is ASKED, not inferred.
@@ -566,17 +608,39 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
    * waist band is a torus whose tube puts it fourteen millimetres past
    * that floor. No measurement of a body predicts a garment's styling.
    *
-   * The floor is still honoured, because a figure wearing a garment this
-   * generator has never seen should not end up with a tighter belt than
-   * the old rule gave it.
+   * PER BEARING, which is what made the difference. A belt clears what is
+   * under IT at each point of its circle, not the worst thing anywhere on
+   * the circle: Ganesha's sash crosses it at one point, and taking the
+   * global maximum bulged the entire circumference forty-five millimetres
+   * to clear that one crossing — a flat gold disc rather than a band.
+   *
+   * THE FLOOR STAYS, and not for the reason it was first written. It was
+   * kept as a safety net for a garment the measurement had not seen, and
+   * removing it put the belt twenty-five millimetres INSIDE Shiva.
+   * Measured, the cause is not the garment at all: the belt rides at
+   * chest-local −165 mm, which is BELOW the band `BodyProfile.surfaceAt`
+   * describes, and below that band the profile keeps answering with
+   * something narrower than the torso. The floor has been standing in for
+   * that error. It is a real term until the profile can answer there —
+   * see `torsoBand`, and `bodySurface.test`, which holds the profile only
+   * over the band it admits to.
    */
-  const overCloth =
+  const overCloth = (t: number) =>
     Math.max(
       Math.max(0, body.dhotiRadius - body.pelvisHalfWidth),
-      ctx.wornClearanceAt("chest", beltY),
+      ctx.wornClearanceAt("chest", beltY, t * Math.PI * 2),
     ) + 0.006;
-  const halfWidth = body.neckRadius * 0.42;
-  const thickness = body.neckRadius * 0.22;
+  /**
+   * A BELT IS SIZED BY THE WAIST IT WRAPS, not by the neck.
+   *
+   * These were fractions of `neckRadius`, which is a reasonable stand-in
+   * for "how big is this figure" until a figure has a thick neck and a
+   * broad waist in different proportions. Ganesha's neck is seventy-two
+   * millimetres, so his belt came out ninety-one millimetres tall -- a
+   * gold tray rather than a band.
+   */
+  const halfWidth = body.dhotiRadius * 0.1;
+  const thickness = body.dhotiRadius * 0.045;
 
   const ring: SurfaceWaypoint[] = [];
   for (let i = 0; i <= 24; i += 1) {
@@ -608,7 +672,7 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
       { bearing: 0, y: beltY - 0.014 },
       { bearing: 0.34, y: beltY - 0.012 },
     ],
-    overCloth + thickness,
+    (t) => overCloth(t) + thickness,
     5,
   );
   for (const index of [0, 2, 4]) {

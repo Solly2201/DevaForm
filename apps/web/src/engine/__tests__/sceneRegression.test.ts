@@ -240,7 +240,30 @@ const PINNED = {
   // facet of hip stood through one facet of cloth and read as a patch of
   // skin on red. Cloth also draws from both sides now, as its patterned
   // variant always has. See garmentLayer.test.ts.
-  ganesha: { nodes: 379, digest: "724a80efd4fc19e3" },
+  //
+  // And for his head, which was never in the figure. `bodyMeshes` claimed
+  // the body slot alone, because its one job was to decide what the
+  // statue rests on -- so his head, ears, tusks, trunk and hands were not
+  // part of "the figure" and nothing could measure anything against them.
+  // His crown read a hundred and forty-nine millimetres from "the body",
+  // which was the measurement failing rather than the crown.
+  //
+  // With the head in, the crown turned out to be sitting INSIDE it: the
+  // kirita is drawn against a sixty-seven millimetre reference skull and
+  // his head part draws one a hundred and thirty-five millimetres wide,
+  // so the band sat fifty-seven millimetres below the crown of a head
+  // thirty-seven millimetres wider than the band, and only the cone above
+  // the skull was visible. The cranium is now MEASURED off whichever head
+  // part landed -- his is a GLB, so nothing declared anywhere would have
+  // described it -- and the crowns scale by `headFit` as the earrings
+  // always have.
+  //
+  // His dhoti tapers downward again (clearing the hips had made top and
+  // hem the same number: the barrel its own comment warns about), his
+  // belt is sized by the waist it wraps rather than by his neck, and a
+  // belt clears what is under it PER BEARING rather than bulging its
+  // whole circumference to miss one sash crossing.
+  ganesha: { nodes: 379, digest: "23dc5a2857fefc8e" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

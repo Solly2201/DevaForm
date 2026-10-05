@@ -83,9 +83,9 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   // --- constitutive ---------------------------------------------------
   {
     id: "ganesha.earrings.kundala",
-    mm: 11,
+    mm: 16,
     reason: "constitutive",
-    why: "an earring's hook passes through the earlobe on purpose; its fit says piercedThrough",
+    why: "an earring's hook passes through the earlobe on purpose; its fit says piercedThrough. It reads deeper on the stylised figure than it did, because his EARS only became measurable when the head joined the flesh",
   },
   {
     id: "vishnu.forehead.tilaka",
@@ -98,6 +98,12 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
     mm: 5,
     reason: "constitutive",
     why: "the third eye is in the forehead, not standing off it",
+  },
+  {
+    id: "ganesha.eyes.serene",
+    mm: 17,
+    reason: "constitutive",
+    why: "an eye is in its socket. It became measurable when the head joined the figure's flesh, and what it measures is the eyeball inside the skull",
   },
   {
     id: "humanoid.brows.serene",
@@ -179,7 +185,7 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   // --- grips ----------------------------------------------------------
   {
     id: "ganesha.item.modak",
-    mm: 10,
+    mm: 13,
     reason: "grip",
     why: "a sweet pressed into the fist that closes on it",
   },
@@ -194,6 +200,18 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
     mm: 11,
     reason: "grip",
     why: "a staff set down beside a seated figure rests against the thigh it is set down beside. Appears in `shiva.meditation` only",
+  },
+  {
+    id: "ganesha.item.lotus",
+    mm: 6,
+    reason: "grip",
+    why: "a lotus stem against the fingers round it, measurable since the hands became part of the figure rather than something worn on it",
+  },
+  {
+    id: "ganesha.item.axe",
+    mm: 7,
+    reason: "grip",
+    why: "the parashu's haft against the fingers round it, measurable for the same reason",
   },
   {
     id: "shiva.attribute.damaru",
@@ -229,9 +247,9 @@ const ALLOWED: Array<{ id: string; mm: number; reason: Reason; why: string }> = 
   },
   {
     id: "ganesha.necklace.haram",
-    mm: 7,
+    mm: 15,
     reason: "defect",
-    why: "the collar's rear span presses into the nape",
+    why: "the collar's rear span presses into the nape. Deeper than it read before, because the head and neck it presses into were not in the figure until they were",
   },
 ];
 

@@ -21,7 +21,24 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   // Tied at the waist, following the hips, flaring to the clearance the
   // legs need. A wrap that leaves the waist as wide as the hem is a
   // barrel, not a garment — the taper is what makes it read as cloth.
-  const bottomR = Math.max(ctx.body.dhotiRadius, ctx.body.pelvisHalfWidth + 0.012);
+  /**
+   * AND IT TAPERS DOWNWARD, because the legs do.
+   *
+   * The comment above says it: "a wrap that leaves the waist as wide as
+   * the hem is a barrel, not a garment -- the taper is what makes it read
+   * as cloth." Then the waist was widened to clear the hips, which are
+   * the widest thing it has to pass, and top and bottom became the same
+   * number: a perfect cylinder, which is what a side view showed.
+   *
+   * Both are true at once if the taper runs the other way. The hips are
+   * at the TOP and the legs draw in below them -- measured on the
+   * stylised body, the calf and knee masses reach a hundred and
+   * thirty-six millimetres where the hips reach a hundred and
+   * sixty-five -- so the hem can come in without touching anything.
+   */
+  const hemClearance =
+    ctx.body.legSpreadX + Math.max(ctx.body.kneeRadius, ctx.body.calfRadius) + 0.012;
+  const bottomR = Math.max(hemClearance, ctx.body.dhotiRadius * 0.86);
   /**
    * THE WAIST CLEARS THE HIPS, not the pelvis.
    *
@@ -37,7 +54,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
    * taper survives, because the hem is drawn at ninety-four percent of
    * the bottom and the bottom is no wider than before.
    */
-  const topR = Math.max(ctx.body.pelvisHalfWidth + 0.012, ctx.body.dhotiRadius);
+  const topR = Math.max(ctx.body.pelvisHalfWidth + 0.012, ctx.body.dhotiRadius, bottomR);
   const waistY = ctx.body.waistSeatY;
   // Seated drape volumes are authored against the classic wrap; scale
   // them with the actual wrap so slim bodies get a proportionate lap.
@@ -103,8 +120,11 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
   const hemY = waistY - skirtLength;
 
   // Main pleated skirt
+  // Folds in proportion to the wrap: seven millimetres is four percent
+  // of a stylised figure's radius and reads as a smooth tube.
+  const fold = Math.max(0.007, topR * 0.055);
   group.add(
-    mesh(pleatedCylinder(topR, bottomR * 0.94, skirtLength, 16, 0.007), garment, {
+    mesh(pleatedCylinder(topR, bottomR * 0.94, skirtLength, 16, fold), garment, {
       position: [0, waistY - skirtLength / 2, 0],
     }),
   );

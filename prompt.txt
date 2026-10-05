@@ -1,0 +1,1739 @@
+DEVAFORM — FINAL PRODUCTION-QUALITY RELEASE CANDIDATE
+
+This is the final large-scale productionization and QA run.
+
+Current HEAD:
+
+    origin/main = f2781c1
+
+The previous run completed the major architecture work.
+
+Now STOP thinking primarily in terms of architecture.
+
+The objective is:
+
+    MAKE DEVAFORM LOOK AND BEHAVE LIKE A PROFESSIONAL,
+    SHOWCASE-READY PRODUCT.
+
+The application must be suitable for opening in front of another person
+and demonstrating without embarrassment.
+
+The three currently supported production deities are:
+
+    GANESHA
+    SHIVA
+    VISHNU
+
+The final standard is not:
+
+    "the tests pass"
+
+The final standard is:
+
+    "a person can use the product normally and cannot find an obvious
+     broken, unfinished, contradictory, poorly positioned, laggy,
+     mismatched, or visibly amateur part."
+
+This is an exhaustive production build + QA + visual polish + repository
+cleanup pass.
+
+You may run for many hours.
+
+Do NOT stop after one category.
+
+Do NOT stop because the existing tests pass.
+
+Continue until the entire checklist below has been addressed.
+
+============================================================
+1. ABSOLUTE GOAL
+============================================================
+
+Produce a final release candidate where:
+
+    Ganesha
+    Shiva
+    Vishnu
+
+all feel like members of the SAME finished product.
+
+The user should experience:
+
+    polished intro
+    fast first render
+    smooth interaction
+    coherent UI
+    consistent lighting
+    correct camera
+    correct body proportions
+    correct joints
+    correct poses
+    correct hands
+    correct attributes
+    correct garments
+    correct ornaments
+    correct facial features
+    correct attachment behavior
+    correct save/load/share
+    correct deity switching
+    no obvious geometry intersections
+    no unexplained gaps
+    no floating objects
+    no incorrect penetrations
+    no partial rendering
+    no console errors
+    no dead controls
+    no stale UI
+    no placeholder assets
+    no developer artifacts
+
+The application should feel like:
+
+    PRODUCT
+
+not:
+
+    DEVELOPMENT BUILD
+
+
+============================================================
+2. ESTABLISH A RELEASE CANDIDATE BASELINE
+============================================================
+
+Before changing anything:
+
+1. Record current HEAD.
+2. Run the complete test suite.
+3. Run typecheck.
+4. Run lint.
+5. Run asset validation.
+6. Run production build.
+7. Launch the production build.
+8. Record baseline performance.
+9. Record current git status.
+10. Record repository size.
+11. Record tracked file count.
+12. Record screenshot/image count.
+13. Record large files.
+14. Record obvious debug/prototype files.
+
+Do not assume the previous report is still accurate.
+
+Measure the actual current repository.
+
+Create a temporary release-audit record if useful, but do NOT leave
+temporary generated junk in the repository.
+
+
+============================================================
+3. COMPLETE 360-DEGREE VISUAL AUDIT
+============================================================
+
+This is the most important section.
+
+For EACH deity:
+
+    Ganesha
+    Shiva
+    Vishnu
+
+inspect at:
+
+    front
+    front-left 3/4
+    left
+    rear-left 3/4
+    rear
+    rear-right 3/4
+    right
+    front-right 3/4
+
+At each angle inspect:
+
+BODY
+HEAD
+FACE
+HAIR
+EARS
+NECK
+SHOULDERS
+ARMS
+HANDS
+FINGERS
+TORSO
+WAIST
+PELVIS
+LEGS
+FEET
+
+ORNAMENTS
+GARMENTS
+ATTRIBUTES
+SPECIAL FEATURES
+
+Do not merely ask:
+
+    "Is anything intersecting?"
+
+Also inspect:
+
+    gaps
+    excessive clearances
+    asymmetry
+    floating geometry
+    objects appearing embedded
+    objects appearing too far away
+    inconsistent scale
+    wrong orientation
+    incorrect depth
+    incorrect height
+    wrong parent
+    incorrect rotation
+    incorrect follow behavior
+    visible seams
+    visible construction artifacts
+    duplicated geometry
+    unexpected hidden geometry
+    material changes
+    texture seams
+    clipping
+    silhouette problems
+
+A professional visual result requires BOTH:
+
+    no penetration
+
+AND:
+
+    no obviously excessive gap.
+
+
+============================================================
+4. GAP / CLEARANCE AUDIT
+============================================================
+
+Do not only detect objects that intersect.
+
+Detect objects that are visibly too far apart.
+
+For every major wearable/ornament relationship determine whether:
+
+    contact
+    near-contact
+    clearance
+    suspension
+    intentional penetration
+
+is actually intended.
+
+Examples:
+
+    necklace against chest
+    crown against skull
+    earring against ear
+    bracelet around wrist
+    armlet around arm
+    kamarbandh around waist
+    mala against torso
+    garment against body
+    Naga against neck/chest
+    held object against hand
+
+For every class, distinguish:
+
+    correct clearance
+    excessive clearance
+    penetration
+    intentional containment
+
+Add tests for important cases.
+
+Do NOT solve visual gaps by blindly reducing one global clearance.
+
+The correct clearance depends on:
+
+    asset
+    relationship
+    body region
+    geometry
+    pose
+    material
+    intended visual appearance.
+
+
+============================================================
+5. ORNAMENT PROFESSIONALISM PASS
+============================================================
+
+Inspect every ornament individually.
+
+For every ornament ask:
+
+    Is the size believable?
+    Is the orientation correct?
+    Is it centered?
+    Is it following the correct anatomical region?
+    Is the gap visually appropriate?
+    Is it intersecting?
+    Is it floating?
+    Does it collide with neighboring ornaments?
+    Does it collide with hair?
+    Does it collide with clothing?
+    Does it follow pose?
+    Does it follow morph?
+    Does it remain correct from behind?
+
+Specifically audit:
+
+GANESHA
+- crown
+- earrings
+- armlet
+- bracelets
+- kamarbandh
+- necklace
+- mala
+- sash-related ornaments
+
+SHIVA
+- jata ornaments
+- third eye
+- earrings
+- rudraksha
+- Naga
+- kamarbandh
+- other chest/waist ornaments
+
+VISHNU
+- crown
+- crown jewel
+- earrings
+- neck collar
+- necklaces
+- Vaijayanti
+- kamarbandh
+- arm ornaments
+
+Do not accept:
+
+    "technically outside the body"
+
+if it visually looks like it is floating.
+
+Do not accept:
+
+    "touching"
+
+if it visibly intersects.
+
+
+============================================================
+6. JOINT-BY-JOINT AUDIT
+============================================================
+
+Enumerate every joint exposed by the current product.
+
+For every joint:
+
+    move minimum
+    move neutral
+    move maximum
+
+and inspect.
+
+Verify:
+
+- expected direction
+- expected range
+- no sudden snapping
+- no inverted controls
+- no excessive deformation
+- no detached geometry
+- no ornament drift
+- no garment drift
+- no held-item drift
+- no broken attachment
+- no impossible body posture
+
+For each joint test both:
+
+    isolated movement
+
+and:
+
+    movement while accessories are equipped.
+
+Pay particular attention to:
+
+    shoulder
+    elbow
+    wrist
+    hand
+    neck
+    head
+    spine
+    pelvis
+    knee
+    ankle
+    feet
+
+and deity-specific joints:
+
+    Ganesha trunk
+    additional arms
+    Shiva-specific pose controls
+    Vishnu four-arm structure
+
+Any joint that exists in the UI but is effectively non-functional
+must be fixed or removed from the UI.
+
+
+============================================================
+7. POSE MATRIX
+============================================================
+
+For every production pose:
+
+    every deity
+    every relevant joint
+    every major accessory
+
+Test.
+
+At minimum:
+
+    default/rest
+    standing
+    seated
+    meditation
+    major deity-specific poses
+    all currently selectable variants
+
+Do not only test an empty body.
+
+Test:
+
+    pose + garments
+    pose + ornaments
+    pose + held items
+    pose + hands
+    pose + face/hair
+
+This is where many physical relationships fail.
+
+
+============================================================
+8. HAND / MUDRA / ATTRIBUTE MATRIX
+============================================================
+
+Build a complete matrix:
+
+    deity
+    hand
+    mudra
+    attribute
+    presentation mode
+
+Test every supported combination.
+
+Verify:
+
+    correct hand
+    correct orientation
+    correct grip
+    correct finger closure
+    correct object scale
+    correct object axis
+    correct travel
+    correct presentation
+    no palm penetration
+    no floating
+    no body penetration
+    no accidental collisions
+
+Ganesha receives extra scrutiny.
+
+Do not accept a grip merely because:
+
+    item.position is near hand.position
+
+The visual hand-object relationship must look intentional.
+
+
+============================================================
+9. GARMENT AUDIT
+============================================================
+
+Treat garments as their own professional system.
+
+Audit every currently exposed garment.
+
+Check:
+
+    waist
+    hips
+    thighs
+    knees
+    legs
+    front
+    back
+    side
+    seated
+    standing
+    alternate poses
+
+Specifically fix:
+
+- Shiva dhoti
+- Shiva tiger/hide wrap
+- Shiva sash
+- Ganesha dhoti
+- Ganesha sash
+- Vishnu dhoti
+- Vishnu garment layering
+
+Look for:
+
+    cloth through body
+    body through cloth
+    cloth through cloth
+    excessive gaps
+    accidental sheets
+    duplicated cloth
+    wrong material
+    incorrect layer ordering
+    garment disappearing
+    garment appearing when it should be mutually exclusive
+    garment ignoring pose shortening
+    garment clipping legs
+
+Ganesha's dhoti must no longer read as a generic cylinder.
+
+It should visually read as an intentional garment.
+
+Do not merely improve the shader.
+
+Fix the geometry/presentation.
+
+
+============================================================
+10. HEAD / FACE / HAIR AUDIT
+============================================================
+
+The head must be treated as a first-class validated region.
+
+Ensure Ganesha's:
+
+    head
+    ears
+    crown
+    earrings
+    forehead
+
+participate in appropriate validation.
+
+Then inspect:
+
+    eyes
+    eyebrows
+    nose
+    lips
+    cheeks
+    jaw
+    ears
+    hair
+    facial hair
+    tilaka
+    crown
+
+for Shiva and Vishnu.
+
+Check:
+
+    symmetry
+    attachment
+    surface fit
+    gaps
+    penetration
+    expression
+    proportions
+    deity identity
+
+Any facial feature that is visibly floating or intersecting must be fixed.
+
+
+============================================================
+11. DEITY IDENTITY / ICONOGRAPHY PASS
+============================================================
+
+The three gods must be immediately recognizable.
+
+Compare against canonical repository references.
+
+Do NOT rely on generic AI-generated imagery as the authority.
+
+GANESHA:
+
+    elephant head
+    trunk
+    ears
+    belly
+    four arms
+    recognizable mudras
+    attributes
+    ornaments
+    garment
+    overall silhouette
+
+SHIVA:
+
+    calm powerful face
+    jata
+    third eye
+    rudraksha
+    Naga
+    throat coloration
+    dhoti/hide
+    Trishul
+    Damaru
+    overall silhouette
+
+VISHNU:
+
+    Vishnu facial character
+    blue complexion
+    kirita-mukuta
+    four arms
+    Sudarshana
+    Shankha
+    Gada
+    Padma
+    Vaijayanti
+    dhoti
+    ornament hierarchy
+
+If the model is technically correct but visually does not read as the intended
+deity, fix the visual result.
+
+
+============================================================
+12. MATERIAL / SURFACE QUALITY
+============================================================
+
+Audit all visible materials.
+
+Check:
+
+    skin
+    hair
+    metal
+    gold
+    silver
+    rudraksha
+    beads
+    cloth
+    hide
+    wood
+    weapons
+    divine attributes
+
+Look for:
+
+    inconsistent roughness
+    incorrect metallic response
+    texture seams
+    UV issues
+    stretched textures
+    obvious procedural artifacts
+    material mismatch between related assets
+    overly plastic appearance
+    incorrect scale of surface detail
+
+The final result should feel like one coherent statue/material ecosystem.
+
+Do not let one deity look like:
+
+    plastic toy
+
+while another looks like:
+
+    realistic sculpture.
+
+Maintain the established stylized-realistic direction.
+
+
+============================================================
+13. LIGHTING QUALITY PASS
+============================================================
+
+Test all lighting presets.
+
+Test:
+
+    front
+    3/4
+    side
+    rear
+    zoomed in
+    zoomed out
+
+Check:
+
+    shadows
+    contact
+    highlights
+    silhouette
+    material response
+    face readability
+    ornament readability
+    garment readability
+
+Specifically eliminate:
+
+    patchy lighting
+    ugly shadow transitions
+    missing lights
+    excessive darkness
+    blown highlights
+    incorrect exposure
+    lighting that makes geometry appear intersecting when it is not
+
+Verify settings survive reload.
+
+
+============================================================
+14. CAMERA / ROOM / PRESENTATION PASS
+============================================================
+
+Check:
+
+    minimum zoom
+    maximum zoom
+    orbit
+    vertical orbit
+    close-up
+    full-body
+    rear view
+
+Verify:
+
+    no clipping
+    no black background unexpectedly
+    no broken room
+    no floating statue
+    correct grounding
+    correct framing
+    correct orbit bounds
+
+Every deity should fit naturally inside the same presentation system.
+
+
+============================================================
+15. LOADING / TRANSITIONS / INTRO
+============================================================
+
+Test from a fresh browser session.
+
+Measure:
+
+    initial navigation
+    intro start
+    intro progression
+    first usable frame
+    first fully rendered deity
+    first interaction
+
+No:
+
+    blank black stall
+    partial model
+    wrong deity
+    old deity remnants
+    texture pop-in
+    broken lighting
+    camera jump
+    frozen UI
+
+Deity switching must use the established veil/transition.
+
+Never expose an incomplete render.
+
+
+============================================================
+16. PERFORMANCE / PRODUCTION BUILD
+============================================================
+
+This must be a REAL production build test.
+
+Do NOT rely only on development mode.
+
+Perform:
+
+    pnpm build
+    production server
+    browser test against production build
+
+Measure:
+
+    first load
+    first usable frame
+    first fully rendered frame
+    camera interaction
+    orbit
+    zoom
+    deity switch
+    pose switch
+    attribute switch
+    garment switch
+    lighting change
+    save
+    load
+
+Investigate:
+
+    JS execution spikes
+    shader compilation
+    texture decoding
+    geometry generation
+    duplicate rig creation
+    excessive draw calls
+    excessive triangles
+    unnecessary object count
+    repeated asset loading
+    React rerenders
+
+Fix actual bottlenecks.
+
+Do not optimize by degrading visual quality.
+
+Do not make unsupported performance claims.
+
+
+============================================================
+17. MEMORY / RESOURCE PASS
+============================================================
+
+Switch repeatedly:
+
+    Ganesha
+    Shiva
+    Vishnu
+    Ganesha
+    Shiva
+    Vishnu
+
+while changing:
+
+    poses
+    garments
+    attributes
+    lighting
+
+Look for:
+
+    accumulating objects
+    duplicate meshes
+    unreleased resources
+    growing memory usage
+    increasing render cost
+    stale assets
+
+The second switch should not be substantially worse than the first.
+
+
+============================================================
+18. SAVE / LOAD / SHARE
+============================================================
+
+Create several complex characters.
+
+For example:
+
+    Ganesha + alternate mudra + attribute + garment
+    Shiva + seated pose + Trishul + Naga + garment
+    Vishnu + four attributes + crown + Vaijayanti
+
+Save them.
+
+Reload.
+
+Share.
+
+Open the share.
+
+Compare before/after.
+
+Everything important must survive:
+
+    deity
+    body
+    face
+    hair
+    pose
+    joints
+    mudras
+    attributes
+    garments
+    ornaments
+    variants
+    lighting where intended
+
+Resolve the existing interaction-harness false negative.
+
+Automated and manual behavior must agree.
+
+
+============================================================
+19. UI / UX PROFESSIONALISM
+============================================================
+
+Inspect the UI as if you are a first-time user.
+
+Check:
+
+    labels
+    spacing
+    hierarchy
+    alignment
+    disabled states
+    hover states
+    selected states
+    empty states
+    loading states
+    error states
+    transitions
+    control consistency
+
+Remove:
+
+    dead controls
+    confusing controls
+    duplicate controls
+    development labels
+    debug buttons
+    unexplained terminology
+    prototype leftovers
+
+Do not redesign the UI unnecessarily.
+
+Polish what already exists.
+
+
+============================================================
+20. USER-FACING ASSET AUDIT
+============================================================
+
+Enumerate every asset visible in the UI.
+
+For every asset:
+
+    Does it work?
+    Does it look professional?
+    Does it have a valid contract?
+    Does it survive poses?
+    Does it survive morphs?
+    Does it survive save/load?
+    Does it survive share?
+    Does it survive deity switching?
+
+If NO:
+
+    either fix it
+
+or:
+
+    remove it from the user-facing picker.
+
+Do not leave visibly unfinished assets exposed.
+
+Old/deprecated assets may remain for backwards compatibility where required,
+but they should not appear in new creation flows.
+
+
+============================================================
+21. AUTOMATED VISUAL REGRESSION
+============================================================
+
+Build a compact visual regression suite for the most important states.
+
+Do NOT capture hundreds of arbitrary screenshots.
+
+Create canonical baselines for:
+
+    Ganesha front
+    Ganesha 3/4
+    Ganesha side
+    Ganesha rear
+
+    Shiva front
+    Shiva 3/4
+    Shiva side
+    Shiva rear
+
+    Vishnu front
+    Vishnu 3/4
+    Vishnu side
+    Vishnu rear
+
+plus a few:
+
+    seated/meditation
+    major garment state
+    major attribute state
+    lighting presets
+
+Use deterministic camera, lighting, asset state, and viewport.
+
+Visual regression should detect meaningful changes while avoiding
+sub-pixel/flaky noise.
+
+Do not commit giant piles of temporary screenshots.
+
+Only canonical approved baselines belong in the repository.
+
+
+============================================================
+22. CONSOLE / NETWORK AUDIT
+============================================================
+
+Production browser:
+
+    zero unexplained console errors
+
+Check:
+
+    failed requests
+    missing assets
+    failed textures
+    404s
+    500s
+    React errors
+    hydration issues
+    WebGL errors
+    unhandled promises
+
+If an error is harmless but real:
+
+    determine whether it can be eliminated.
+
+Do not simply ignore errors because the UI still appears.
+
+
+============================================================
+23. TEST SUITE EXPANSION
+============================================================
+
+Expand automated coverage where failures are reproducible.
+
+Tests should cover:
+
+    body geometry
+    spatial relationships
+    clearances
+    attachment contracts
+    WornFit
+    garments
+    poses
+    joints
+    hand grips
+    facial variants
+    save/load
+    migrations
+    asset ingestion
+    printability states
+    render budgets
+    presentation
+    lighting persistence
+
+Use the lowest reliable test layer.
+
+Do not turn every visual question into a brittle unit test.
+
+Functional tests and visual regression serve different purposes.
+
+
+============================================================
+24. DEAD CODE / USELESS COMMENT AUDIT
+============================================================
+
+Perform a repository-wide audit.
+
+REMOVE:
+
+    unused imports
+    unused variables
+    unused functions
+    dead branches
+    abandoned helpers
+    duplicate utilities
+    obsolete feature flags
+    commented-out code
+    TODOs that are no longer relevant
+    stale debugging statements
+    console.log used for development
+    temporary probes
+    old test harnesses
+    abandoned experiment code
+    obsolete compatibility shims
+    rejected architecture leftovers
+
+COMMENTS:
+
+Remove comments that merely restate code.
+
+Examples to remove:
+
+    // increment i
+    // get the user
+    // create mesh
+    // return result
+
+Keep comments that explain:
+
+    WHY a non-obvious decision exists
+    a physical/geometry invariant
+    a compatibility requirement
+    a deliberate exception
+    a non-obvious mathematical method
+    an important constraint
+    an architectural boundary
+
+Do not delete useful documentation merely because it is a comment.
+
+The goal is:
+
+    high signal-to-noise
+
+not:
+
+    zero comments.
+
+
+============================================================
+25. FILE / DIRECTORY CLEANUP
+============================================================
+
+Perform a full repository audit.
+
+Find:
+
+    unused files
+    stale screenshots
+    generated QA captures
+    temporary exports
+    duplicate references
+    obsolete experiments
+    debug images
+    abandoned scripts
+    old reports
+    scratch files
+    temporary JSON
+    temporary GLBs
+    unused textures
+    duplicate assets
+    old generated manifests
+    prototype outputs
+    local-only artifacts accidentally committed
+
+Before deleting anything:
+
+    determine whether it is referenced
+    determine whether it is needed for old saves
+    determine whether it is canonical
+    determine whether it is reproducible
+    determine whether it is unique
+
+DO NOT blindly run:
+
+    git clean -fdx
+
+DO NOT delete blindly by filename pattern.
+
+Preserve:
+
+    canonical references
+    production assets
+    source assets required for provenance
+    meaningful tests
+    useful documentation
+    artist contract
+    asset specifications
+    important fixtures
+    backward compatibility fixtures
+
+Remove:
+
+    stale QA output
+    duplicate screenshots
+    temporary debug output
+    abandoned experiments
+    irrelevant generated artifacts
+
+
+============================================================
+26. SCREENSHOT CLEANUP
+============================================================
+
+This is explicitly required.
+
+Audit every screenshot/image under the repository.
+
+Classify:
+
+A. canonical reference
+B. useful production baseline
+C. user-owned/reference capture
+D. visual regression baseline
+E. temporary QA screenshot
+F. debug screenshot
+G. obsolete screenshot
+H. duplicate screenshot
+
+KEEP:
+
+    A
+    B
+    C
+    D
+
+REMOVE:
+
+    E
+    F
+    G
+    H
+
+If a screenshot is useful only because it documents an old defect that
+has already been fixed, remove it unless it is a deliberate regression
+fixture.
+
+The repository should NOT contain hundreds of historical QA screenshots.
+
+After cleanup:
+
+    report old count
+    report new count
+    report removed size
+
+
+============================================================
+27. GITHUB REPOSITORY CLEANUP
+============================================================
+
+The cleanup must apply to the actual Git repository, not just the local
+working directory.
+
+Anything removed locally must also be removed from Git tracking and
+committed.
+
+Inspect:
+
+    git ls-files
+
+for:
+
+    screenshots
+    generated artifacts
+    debug files
+    temporary files
+    obsolete docs
+    stale experiments
+
+Check:
+
+    .gitignore
+
+and improve it where appropriate so regenerated artifacts do not return.
+
+Do NOT rewrite history merely to remove ordinary obsolete files.
+
+A normal cleanup commit is sufficient.
+
+ONLY if something genuinely sensitive was committed historically should
+history rewriting be considered, and that requires explicit approval.
+
+No force push.
+
+
+============================================================
+28. REPOSITORY STRUCTURE CLEANUP
+============================================================
+
+After cleanup, the repository should be understandable to a new engineer.
+
+Check:
+
+    apps/
+    packages/
+    docs/
+    tools/
+    references/
+    screenshots/
+    public/assets/
+
+Remove redundant directory layers.
+
+Consolidate duplicate documentation.
+
+Ensure:
+
+    architecture docs describe CURRENT architecture
+    rejected experiments are not presented as active architecture
+    asset docs match actual schema
+    artist docs match actual ingestion
+    comments match actual behavior
+
+Do not keep documentation that says the system works one way when it
+now works another way.
+
+
+============================================================
+29. DEPENDENCY / BUILD CLEANUP
+============================================================
+
+Audit:
+
+    package.json
+    pnpm workspace
+    lockfile
+    TypeScript configs
+    ESLint configs
+    Next configuration
+    build scripts
+
+Find:
+
+    unused dependencies
+    duplicate dependencies
+    abandoned packages
+    unnecessary dev dependencies
+    obsolete scripts
+
+Do not remove a dependency merely because static analysis cannot see it
+if it is required dynamically.
+
+Verify after every dependency cleanup:
+
+    install
+    typecheck
+    lint
+    tests
+    build
+
+
+============================================================
+30. ASSET INGESTION / ARTIST CONTRACT
+============================================================
+
+Do not expand this into a new architecture.
+
+But ensure the existing artist contract is actually coherent.
+
+A production artist must be able to understand:
+
+    what they receive
+    what they produce
+    coordinate system
+    units
+    origin
+    orientation
+    naming
+    materials
+    texture requirements
+    skeleton requirements
+    morph requirements
+    attachment frames
+    contract metadata
+    validation
+    GLB export
+
+Ensure the ingestion gate rejects clearly invalid assets.
+
+Do NOT require artists to understand React, Three.js, Zustand, or the
+entire DevaForm codebase.
+
+
+============================================================
+31. BACKWARD COMPATIBILITY
+============================================================
+
+Load representative historical configurations.
+
+Verify:
+
+    Ganesha
+    Shiva
+    Vishnu
+
+old saves still load.
+
+Do not break existing schema compatibility.
+
+Deprecated assets may remain internally if old saves require them.
+
+They should not appear in new picker options unless intentionally supported.
+
+
+============================================================
+32. SECURITY / PRODUCTION HYGIENE
+============================================================
+
+Inspect the repository for accidental:
+
+    API keys
+    passwords
+    tokens
+    local machine paths
+    personal secrets
+    debug credentials
+    private files
+
+Do not expose secrets.
+
+Ensure production builds do not accidentally expose development-only
+configuration.
+
+Remove debug routes/tools from user-facing production if unnecessary.
+
+
+============================================================
+33. FINAL BUILD MATRIX
+============================================================
+
+Run all of the following from a clean state:
+
+    fresh dependency install
+    typecheck
+    lint
+    unit tests
+    integration tests
+    asset validation
+    production build
+    production server
+    browser smoke tests
+    visual regression tests
+    save/load tests
+    share/load tests
+
+Then repeat the browser smoke tests after a fresh server restart.
+
+Do not rely on hot reload.
+
+
+============================================================
+34. FINAL CLEAN-BUILD TEST
+============================================================
+
+After all code and cleanup work:
+
+1. delete generated build artifacts
+2. install dependencies from lockfile
+3. build production
+4. start production server
+5. run final browser tests
+6. run final acceptance matrix
+7. inspect console
+8. inspect network
+9. inspect screenshots
+10. inspect git status
+
+This is the final release candidate.
+
+
+============================================================
+35. SHOWCASE WALKTHROUGH
+============================================================
+
+Perform a real human-style walkthrough.
+
+Start from a fresh browser.
+
+Do NOT use developer shortcuts.
+
+Walk through:
+
+1. open /studio
+2. intro
+3. Ganesha
+4. change face/features
+5. change mudra
+6. equip attribute
+7. change garment
+8. orbit 360°
+9. change lighting
+10. save
+11. reload
+12. switch to Shiva
+13. change pose
+14. move joints
+15. equip Trishul
+16. inspect Naga
+17. inspect garments
+18. orbit 360°
+19. switch to Vishnu
+20. inspect crown
+21. inspect Vaijayanti
+22. inspect four arms
+23. inspect attributes
+24. change facial features
+25. orbit 360°
+26. change lighting
+27. save/share
+28. reload shared character
+29. return to Ganesha
+30. final orbit
+
+If you notice ANYTHING that makes you think:
+
+    "that looks slightly wrong"
+
+investigate it.
+
+Do not rationalize it away.
+
+
+============================================================
+36. PROFESSIONAL VISUAL STANDARD
+============================================================
+
+The following are considered defects even if they don't cause test failures:
+
+    1–2mm visually obvious gaps
+    ornaments slightly floating
+    asymmetrical positioning without intent
+    necklace sitting too low/high
+    crown not seated
+    earrings misaligned
+    garment edge penetrating body
+    cloth intersecting cloth
+    hand not convincingly gripping
+    attribute slightly off-axis
+    hair clipping ornament
+    ornament clipping hair
+    inconsistent ornament scale
+    inconsistent gold/metal response
+    visible mesh seams
+    visible topology artifacts
+    strange silhouette
+    incorrect camera framing
+    lighting making one feature unreadable
+    sudden UI shift
+    delayed control response
+    visual pop-in
+    partial scene reveal
+    inconsistent deity proportions
+
+Use engineering measurements to locate problems,
+but use visual judgment to determine whether the result is professional.
+
+
+============================================================
+37. DO NOT OVERFIX
+============================================================
+
+Do not "fix" a correct feature because a generic rule says it should
+be different.
+
+Deity-specific iconography is intentional.
+
+Stylization is intentional.
+
+Intentional penetration such as earrings entering the earlobe can be
+correct.
+
+Intentional cloth overlap can be correct.
+
+Intentional clearance can be correct.
+
+The question is:
+
+    Is this physically/visually intentional according to the asset's
+    relationship and design?
+
+not:
+
+    Does every mesh have zero intersection?
+
+
+============================================================
+38. FINAL REPOSITORY CLEANLINESS STANDARD
+============================================================
+
+At completion:
+
+    git status
+
+must be clean.
+
+No:
+
+    screenshots
+    generated QA output
+    debug logs
+    temporary files
+    local reports
+    scratch files
+    build artifacts
+
+should remain unless explicitly required.
+
+Repository should contain only things that belong in the project.
+
+The GitHub repository should reflect the same standard.
+
+
+============================================================
+39. FINAL COMMIT STRUCTURE
+============================================================
+
+Prefer logically separated commits such as:
+
+    production QA fixes
+    visual polish
+    performance
+    regression coverage
+    repository cleanup
+
+Do not create meaningless one-line commits.
+
+Do not squash everything into one giant commit if logical history is
+useful.
+
+Every commit must:
+
+    author = Solly2201
+    committer = Solly2201
+
+No:
+
+    Claude
+    Anthropic
+    Co-Authored-By
+    Claude-Session
+
+Do not rewrite history.
+
+Do not force push.
+
+
+============================================================
+40. FINAL RELEASE REPORT
+============================================================
+
+At the end provide a COMPLETE accounting.
+
+Include:
+
+A. Git
+    final HEAD
+    origin/main
+    commits created
+    working tree
+    author/committer verification
+    AI attribution search
+
+B. Tests
+    tests before
+    tests after
+    exact counts by package
+    typecheck
+    lint
+    asset validation
+    production build
+
+C. Visual QA
+    number of angles inspected
+    number of deity/pose combinations
+    visual issues found
+    visual issues fixed
+    remaining visual issues
+
+D. Geometry
+    intersection findings
+    gap findings
+    clearance findings
+    ornament findings
+    garment findings
+    joint findings
+
+E. Performance
+    first load
+    first render
+    first interaction
+    deity switch
+    pose switch
+    attribute switch
+    memory/resource behavior
+    draw calls
+    relevant render metrics
+
+F. Save/share
+    save
+    load
+    share
+    reload
+    backward compatibility
+
+G. Repository cleanup
+    files removed
+    screenshots removed
+    generated artifacts removed
+    dead code removed
+    dead comments removed
+    dependencies removed
+    repository size before/after
+    tracked file count before/after
+
+H. Showcase
+    final walkthrough result
+    exact remaining defects
+
+I. Final verdict
+
+Use exactly one of:
+
+    SHOWCASE READY
+
+or:
+
+    NOT SHOWCASE READY
+
+If NOT SHOWCASE READY:
+
+    provide ONLY the concrete blockers and why they remain.
+
+Do not hide known defects behind "minor" wording.
+
+============================================================
+41. FINAL RULE
+============================================================
+
+This is not a feature-development sprint.
+
+This is a RELEASE CANDIDATE QUALITY GATE.
+
+Do not add features simply to make the product appear larger.
+
+Do not add abstractions merely because they seem elegant.
+
+Do not preserve broken assets for the sake of completeness.
+
+Do not preserve useless files for historical reasons.
+
+Do not preserve useless screenshots.
+
+Do not preserve useless comments.
+
+Do not leave visible defects because they are "only 1–2mm."
+
+Do not stop at green tests.
+
+The final question is:
+
+    "Would I confidently open this application in front of someone
+     who has never seen DevaForm before and let them explore it
+     without explaining which parts are unfinished?"
+
+If the answer is no:
+
+    keep working.
