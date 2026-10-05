@@ -937,6 +937,12 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
         const jointId = group.name.slice("JOINT_".length);
         if (isJointId(jointId)) {
           const target = joints.get(jointId as JointId);
+          // Named like a procedural part, because everything that reports
+          // on the scene identifies pieces by this name. Unnamed, a GLB
+          // head appeared in every measurement as "(anon)head_classicSculpt"
+          // -- the exporter's node name -- and could not be traced back to
+          // the asset a customer chose.
+          group.name = group.name.startsWith("part:") ? group.name : `part:${asset.id}`;
           target?.add(group);
           if (isFlesh) claimFlesh(group);
           // A head part replaces the body's own head, so it replaces the

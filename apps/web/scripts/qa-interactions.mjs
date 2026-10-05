@@ -355,10 +355,59 @@ const press = async (label) => {
   return ok;
 };
 
+/**
+ * What the page looked like when something did not happen.
+ *
+ * This step reported "Save reported nothing" for two runs while Save
+ * worked perfectly when pressed by hand and when pressed after
+ * fifty-four tile clicks in a standalone probe. An assertion that fails
+ * without evidence costs more than it catches: it cannot be told apart
+ * from a real regression, so it gets explained away, and the next real
+ * one is explained away too.
+ */
+const evidence = async (what) => {
+  const state = await page.evaluate(() => {
+    const buttonsNamed = (text) =>
+      [...document.querySelectorAll("button")]
+        .filter((node) => node.textContent?.trim() === text)
+        .map((node) => ({
+          disabled: node.disabled,
+          hidden: node.offsetParent === null,
+          inDialog: Boolean(node.closest("[role='dialog']")),
+        }));
+    return {
+      status: document.querySelector('[role="status"]')?.textContent?.replace(/\s+/g, " ").trim() ?? null,
+      liveRegions: document.querySelectorAll('[role="status"]').length,
+      openDialogs: document.querySelectorAll("[role='dialog']").length,
+      save: buttonsNamed("Save"),
+      saving: buttonsNamed("Saving…"),
+      share: buttonsNamed("Share"),
+      characterId: (() => {
+        try {
+          return JSON.parse(localStorage.getItem("devaform.editor") ?? "null")?.state?.characterId ?? null;
+        } catch {
+          return null;
+        }
+      })(),
+    };
+  });
+  console.log(`    ${what}: ${JSON.stringify(state)}`);
+  return state;
+};
+
 if (await press("Save")) {
-  await page.waitForFunction(() => document.querySelector('[role="status"]') !== null, {
-    timeout: 20_000,
-  }).catch(() => note("bug", "journey", "Save reported nothing"));
+  await page
+    .waitForFunction(() => document.querySelector('[role="status"]') !== null, { timeout: 30_000 })
+    .catch(async () => {
+      const state = await evidence("Save said nothing; page state");
+      note(
+        "bug",
+        "journey",
+        `Save reported nothing (${state.save.length} Save control(s), ` +
+          `${state.saving.length} mid-save, ${state.openDialogs} dialog(s) open, ` +
+          `saved id ${state.characterId ?? "none"})`,
+      );
+    });
   report_journeySave = await status();
   console.log(`  Save → ${report_journeySave}`);
 }
@@ -370,7 +419,15 @@ if (await press("Share")) {
       () => document.querySelector('[role="status"] input[aria-label="Share link"]') !== null,
       { timeout: 25_000 },
     )
-    .catch(() => note("bug", "journey", "Share produced no link the customer can keep"));
+    .catch(async () => {
+      const state = await evidence("Share produced no link; page state");
+      note(
+        "bug",
+        "journey",
+        `Share produced no link the customer can keep (status ${JSON.stringify(state.status)}, ` +
+          `saved id ${state.characterId ?? "none"})`,
+      );
+    });
   report_journeyShare = await page.evaluate(
     () => document.querySelector('[role="status"] input[aria-label="Share link"]')?.value ?? null,
   );
