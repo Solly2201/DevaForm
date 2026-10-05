@@ -462,14 +462,43 @@ function generatedSurfaceAt(
     ellipseHalfWidth(bellyY, torso.bellyCenterY, torso.bellyRadiusX, torso.bellyRadiusY),
     torso.neckRadius,
   );
-  const frontZ = Math.max(
-    ellipseSliceZ(0, y, 0, torso.chestCenterY, torso.chestCenterZ,
-      torso.chestRadiusX, torso.chestRadiusY, torso.chestRadiusZ),
-    ellipseSliceZ(0, bellyY, 0, torso.bellyCenterY, torso.bellyCenterZ,
-      torso.bellyRadiusX, torso.bellyRadiusY, torso.bellyRadiusZ),
+  const chestFront = ellipseSliceZ(0, y, 0, torso.chestCenterY, torso.chestCenterZ,
+    torso.chestRadiusX, torso.chestRadiusY, torso.chestRadiusZ);
+  const bellyFront = ellipseSliceZ(0, bellyY, 0, torso.bellyCenterY, torso.bellyCenterZ,
+    torso.bellyRadiusX, torso.bellyRadiusY, torso.bellyRadiusZ);
+  const frontZ = Math.max(chestFront, bellyFront);
+  /**
+   * AND THE BACK IS EACH VOLUME'S OWN BACK.
+   *
+   * This used to mirror the front through the CHEST's centre, whichever
+   * volume the front had come from. On any body whose belly is further
+   * forward than its chest, that pushed the back out behind the figure by
+   * twice the difference — exactly, and measurably: Ganesha's belly is
+   * centred twenty-five millimetres in front of his chest, and the
+   * surface put his back FIFTY millimetres behind where the mesh draws
+   * it, at every height of the waist.
+   *
+   * Which is the same sentence the kamarbandh's own comment wrote about
+   * the torus it replaced — "stretching symmetrically to clear the front
+   * pushed the back of the ring out behind the body by exactly as much as
+   * the belly stuck out in front" — reappearing one layer down, in the
+   * surface the replacement walks on. The belt was rebuilt to follow the
+   * body and then followed a body that was wrong: measured, it stood
+   * fifty-two to ninety-three millimetres off Ganesha's back while
+   * touching his front, and the shawl and the collar's back span went
+   * with it.
+   *
+   * Mirroring each volume through its OWN centre is what `torsoBackZAt`
+   * a few lines further down has always done. The surface now agrees with
+   * it, and the result passes through all four measured cardinal points:
+   * the front, the back, and the width at either side.
+   */
+  const backZ = Math.min(
+    2 * torso.chestCenterZ - chestFront,
+    2 * torso.bellyCenterZ - bellyFront,
   );
-  const centreZ = torso.chestCenterZ;
-  const halfDepth = Math.max(frontZ - centreZ, torso.neckRadius);
+  const centreZ = (frontZ + backZ) / 2;
+  const halfDepth = Math.max((frontZ - backZ) / 2, torso.neckRadius);
   return {
     x: Math.sin(bearing) * halfWidth,
     y,

@@ -214,7 +214,20 @@ const PINNED = {
   // merely move; it is the right size for the new station. Each body
   // states its own station (`BodyProfile.armBandAlong`) because the
   // stylised one has no clear station at all. See bandSeat.test.ts.
-  ganesha: { nodes: 379, digest: "1c71b5b44cfbe884" },
+  //
+  // And again, for the surface everything wrapped is wrapped around. The
+  // generated profile took the front from whichever volume reached
+  // furthest -- the belly -- and mirrored it through the CHEST's centre,
+  // so a belly carried twenty-five millimetres forward of the chest put
+  // the back of the figure fifty millimetres behind the mesh. Measured,
+  // the kamarbandh stood fifty-two to ninety-three millimetres off his
+  // back while touching his front, and the shawl and the collar's rear
+  // span went with it. Each volume now mirrors through its own centre,
+  // which is what torsoBackZAt a few lines below always did, and the
+  // profile agrees with the mesh to within five millimetres at every
+  // bearing. Only this character moves: the human body ships a measured
+  // surface and never used this path. See bodySurface.test.ts.
+  ganesha: { nodes: 379, digest: "506f87f029228b14" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
