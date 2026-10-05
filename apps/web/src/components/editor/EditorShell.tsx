@@ -22,6 +22,7 @@ import { shouldShowEntry, useStageStore } from "@/presentation/stageStore";
 import { useDeity } from "@/state/deityContext";
 import { CategorySidebar } from "./CategorySidebar";
 import { CustomizationPanel } from "./CustomizationPanel";
+import { NarrowScreenNotice } from "./NarrowScreenNotice";
 import { ExportDialog } from "./ExportDialog";
 import { StatusToast } from "./StatusToast";
 import { TopBar } from "./TopBar";
@@ -100,7 +101,17 @@ export function EditorShell() {
 
   return (
     <div className="relative flex h-dvh flex-col bg-surface-950 text-stone-200">
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+      {/* Below every width the layout was measured to work at — see the
+          component, and scripts/qa-responsive.mjs for the measurements. */}
+      <NarrowScreenNotice />
+      {/* NOT MERELY COVERED — NOT BUILT. The notice is a fixed overlay, so
+          hiding the editor behind it still left eight hundred and fifteen
+          pixels of layout in a three hundred and ninety pixel window: the
+          document scrolled sideways and the broken columns were sitting
+          there to be scrolled to. Below the width the layout works at, the
+          Studio is not laid out, which also spares a phone the cost of
+          standing up a WebGL scene it is not going to be shown. */}
+      <div className="relative z-10 hidden min-h-0 flex-1 flex-col lg:flex">
         {!chromeHidden && (
           <div style={chrome}>
             <TopBar />
