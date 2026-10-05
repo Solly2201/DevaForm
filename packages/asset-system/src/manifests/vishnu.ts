@@ -335,7 +335,7 @@ export const VISHNU_ASSETS: readonly AssetDefinition[] = [
       generatorId: "humanoid.hideWrap",
       // No side sash-fall: on Vishnu's yellow it read as a red blotch
       // stuck to the thigh. The centre cascade the reference shows stays.
-      params: { length: 1, hide: 0, dhoti: 1, drape: 0, accent: 0 },
+      params: { length: 1, hide: 0, dhoti: 1, drape: 1, accent: 0 },
     },
     materialZones: ["garment", "garmentAccent", "metal"],
     category: "clothing",
