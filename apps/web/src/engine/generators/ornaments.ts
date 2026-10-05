@@ -609,6 +609,8 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
 /** Air between a band and the skin it is worn on, metres. */
 const BAND_CLEARANCE = 0.0015;
 
+
+
 /**
  * A band worn round a limb of a measured radius.
  *
@@ -633,6 +635,25 @@ function bandRing(ctx: GeneratorContext, limbRadius: number, width: number, with
   // read as a hoop hung on the shoulder rather than an armlet worn on it.
   const thickness = Math.max(0.0022, width * 0.42);
   const half = width;
+  /**
+   * AND THE PROFILE CLOSES, because a band is a solid.
+   *
+   * `lathe` revolves a polyline and does not join its ends, so a profile
+   * that runs from the inner edge out over the crown and back to the
+   * inner edge produces a shell with NO INNER WALL — a C-section open
+   * toward the limb. Every band ornament in the product was built that
+   * way: vanki, kada, payal, on every deity.
+   *
+   * It is two defects at once. Drawn with front faces only, the hole has
+   * nothing in it, so where the limb does not fill the ring the eye
+   * looks straight through the gold and the open edge reads as a cut.
+   * And a surface with no inner wall has no thickness, which is not a
+   * thing that can be printed.
+   *
+   * Returning to the start point closes it. The inner wall lands at the
+   * same radius the hole was already sized to, so nothing moves and
+   * nothing grows: what changes is that the ring now has an inside.
+   */
   g.add(
     mesh(
       lathe([
@@ -640,6 +661,7 @@ function bandRing(ctx: GeneratorContext, limbRadius: number, width: number, with
         [inner + thickness, -half * 0.72],
         [inner + thickness, half * 0.72],
         [inner, half],
+        [inner, -half],
       ], 30),
       ctx.materials.get("metal"),
       {},
@@ -683,6 +705,47 @@ function bandFrame(
     // The ring's own up is the limb's own direction.
     quaternion: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis),
   };
+}
+
+/**
+ * Seat a band a FRACTION of the way down the limb it is worn on.
+ *
+ * WHY A FRACTION AND NOT THE BODY'S OFFSET. `armBandOffsetY` is measured
+ * at thirty-four percent of the upper arm, on the human base, from the
+ * skin that ONE BONE drives. Both halves of that are right for what it
+ * answers — how thick is the arm where an armlet sits — and neither
+ * knows what else is in the way. At thirty-four percent the figure also
+ * contains the deltoid, the chest, and on a four-armed deity the SECOND
+ * upper arm, none of which belong to the bone that was measured.
+ *
+ * Measured on the shipped statues, a ring of the declared radius swept
+ * round the upper arm at ten-millimetre stations:
+ *
+ *   Vishnu, front arm   inside the figure to station 80, clear from 90
+ *   Vishnu, rear arm    inside to 40, clear from 50
+ *   Shiva               inside to 60, clear from 70
+ *
+ * and the attribution says what it was inside: of the one hundred and
+ * ninety-one vertices of Vishnu's front-left armlet that were in the
+ * figure, eighty-nine were inside the REAR LEFT ARM and nineteen inside
+ * the chest. It was never a question of the band's size — its hole is
+ * four millimetres wider than the arm it goes round.
+ *
+ * So the seat is the first station the geometry allows, stated as a
+ * fraction of the limb's own length so that it means the same thing on
+ * an arm of any size. A limb tapers, so a hole sized higher up is still
+ * wide enough lower down.
+ */
+function seatBandAlong(
+  ctx: GeneratorContext,
+  band: THREE.Group,
+  child: JointId,
+  fraction: number,
+): THREE.Group {
+  const offset = new THREE.Vector3(...ctx.jointOffset(child));
+  band.position.copy(offset).multiplyScalar(fraction);
+  band.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), offset.clone().normalize());
+  return band;
 }
 
 /** Seat a band on the limb its joint leads to. */
@@ -735,7 +798,7 @@ export const armletsVanki: PartGenerator = (ctx) => {
     // Seat and girth come from the body being worn, not from this
     // generator: the same vanki fits a heavy build and a lean human.
     const band = bandRing(ctx, ctx.body.armBandRadius, 0.0065, true);
-    seatBand(ctx, band, `arm.${slot}.forearm`, ctx.body.armBandOffsetY);
+    seatBandAlong(ctx, band, `arm.${slot}.forearm`, ctx.body.armBandAlong);
     parts.push({ joint: `arm.${slot}.upper`, object: band });
   }
   return parts;

@@ -506,8 +506,8 @@
       },
       "handReach": 0.03991,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.03402
+        "offsetY": -0.09186,
+        "radius": 0.02858
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -676,8 +676,8 @@
       },
       "handReach": 0.0398,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.03246
+        "offsetY": -0.09186,
+        "radius": 0.02726
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -846,8 +846,8 @@
       },
       "handReach": 0.0398,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.03423
+        "offsetY": -0.09186,
+        "radius": 0.02981
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -1016,8 +1016,8 @@
       },
       "handReach": 0.03994,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.04256
+        "offsetY": -0.09186,
+        "radius": 0.03807
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -1186,8 +1186,8 @@
       },
       "handReach": 0.03981,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.0359
+        "offsetY": -0.09186,
+        "radius": 0.03169
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -1356,8 +1356,8 @@
       },
       "handReach": 0.04013,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.034
+        "offsetY": -0.09186,
+        "radius": 0.02833
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -1526,8 +1526,8 @@
       },
       "handReach": 0.03981,
       "armBand": {
-        "offsetY": -0.05037,
-        "radius": 0.02976
+        "offsetY": -0.09186,
+        "radius": 0.02556
       },
       "wristBand": {
         "offsetY": -0.12518,
@@ -1712,8 +1712,8 @@
       "chestRadiusX": 0.12156,
       "chestRadiusY": 0.11146,
       "chestRadiusZ": 0.06235,
-      "armBandOffsetY": -0.05037,
-      "armBandRadius": 0.03402,
+      "armBandOffsetY": -0.09186,
+      "armBandRadius": 0.02858,
       "wristBandOffsetY": -0.12518,
       "wristBandRadius": 0.01523,
       "ankleBandOffsetY": 0.01968,
@@ -1755,7 +1755,7 @@
         "chestRadiusY": 0.001,
         "chestRadiusZ": -0.00004,
         "armBandOffsetY": 0,
-        "armBandRadius": -0.00155,
+        "armBandRadius": -0.00132,
         "wristBandOffsetY": 0,
         "wristBandRadius": 0.00001,
         "ankleBandOffsetY": 0,
@@ -1796,7 +1796,7 @@
         "chestRadiusY": -0.0055,
         "chestRadiusZ": -0.00034,
         "armBandOffsetY": 0,
-        "armBandRadius": 0.00021,
+        "armBandRadius": 0.00123,
         "wristBandOffsetY": 0,
         "wristBandRadius": -0.00074,
         "ankleBandOffsetY": 0,
@@ -1837,7 +1837,7 @@
         "chestRadiusY": 0.0015,
         "chestRadiusZ": 0.00487,
         "armBandOffsetY": 0,
-        "armBandRadius": 0.00855,
+        "armBandRadius": 0.00949,
         "wristBandOffsetY": 0,
         "wristBandRadius": 0.00026,
         "ankleBandOffsetY": 0,
@@ -1878,7 +1878,7 @@
         "chestRadiusY": 0,
         "chestRadiusZ": 0.00352,
         "armBandOffsetY": 0,
-        "armBandRadius": 0.00188,
+        "armBandRadius": 0.00311,
         "wristBandOffsetY": 0,
         "wristBandRadius": -0.00039,
         "ankleBandOffsetY": 0,
@@ -1919,7 +1919,7 @@
         "chestRadiusY": 0,
         "chestRadiusZ": -0.00017,
         "armBandOffsetY": 0,
-        "armBandRadius": -0.00002,
+        "armBandRadius": -0.00025,
         "wristBandOffsetY": 0,
         "wristBandRadius": -0.00016,
         "ankleBandOffsetY": 0,
@@ -1960,7 +1960,7 @@
         "chestRadiusY": 0.0005,
         "chestRadiusZ": -0.00328,
         "armBandOffsetY": 0,
-        "armBandRadius": -0.00425,
+        "armBandRadius": -0.00303,
         "wristBandOffsetY": 0,
         "wristBandRadius": -0.0003,
         "ankleBandOffsetY": 0,

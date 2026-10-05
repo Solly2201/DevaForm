@@ -1394,7 +1394,26 @@ function measure(positions) {
   }
   const skull = { topY: skullTop - headY, rows: skullRows };
 
-  const armBand = limbBand(positions, "arm.frontLeft.upper", "arm.frontLeft.upper", "arm.frontLeft.forearm", 0.34);
+  /**
+   * The armlet station, and it is NOT the middle of the upper arm.
+   *
+   * It used to be 0.34, which is where a keyura sits on a person. On
+   * these statues a ring of the armlet's own radius swept round the
+   * upper arm at that station is inside the figure on every deity —
+   * nineteen vertices in the chest and EIGHTY-NINE in the rear upper arm
+   * on Vishnu's front-left arm alone, because a four-armed body has a
+   * second shoulder exactly there. Swept station by station, a ring
+   * first clears at 0.60 of the arm on Vishnu's front arms and at 0.47
+   * on Shiva's; 0.62 is outboard of both.
+   *
+   * The girth has to be measured where the band actually sits or the
+   * band is loose: the upper arm tapers from 34 mm at a third of its
+   * length to 30 mm at two thirds, and sizing the hole at the first and
+   * seating it at the second left six millimetres of air. One number,
+   * one station. `BodyProfile.armBandAlong` carries the same fraction to
+   * the generator.
+   */
+  const armBand = limbBand(positions, "arm.frontLeft.upper", "arm.frontLeft.upper", "arm.frontLeft.forearm", 0.62);
   const wristBand = limbBand(positions, "arm.frontLeft.forearm", "arm.frontLeft.forearm", "arm.frontLeft.hand", 0.86);
   const ankleBand = limbBand(positions, "leg.left.shin", "leg.left.shin", "leg.left.foot", 0.92);
 

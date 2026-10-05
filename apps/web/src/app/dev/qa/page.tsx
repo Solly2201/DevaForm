@@ -58,11 +58,30 @@ import { subscribeGlbCache } from "@/engine/glbCache";
 const CAMERA = { position: [0, 0.6, 2] as [number, number, number], fov: 38, near: 0.02, far: 50 };
 
 /** Where the camera stands, as a bearing around the figure. */
+/**
+ * Where the camera stands, in degrees round the figure.
+ *
+ * NAMED FOR THE FIGURE'S OWN ANATOMY, not the orbit's. The camera sits at
+ * `(sin b, cos b)`, so b = 0 is in front of a figure that faces +z, and
+ * +x is that figure's LEFT. `side` therefore always meant its left side,
+ * and `backThreeQuarter` its left rear quarter — which is why every view
+ * any sheet has ever named lies between 0 and 180, and no plan in this
+ * repository has ever photographed the right half of anybody.
+ *
+ * The octant names are the whole circle. The old three stay as aliases so
+ * existing plans and their captures keep meaning what they meant.
+ */
 const VIEWS: Record<string, number> = {
   front: 0,
+  frontLeft: 45,
+  left: 90,
+  backLeft: 135,
+  back: 180,
+  backRight: 225,
+  right: 270,
+  frontRight: 315,
   threeQuarter: 35,
   side: 90,
-  back: 180,
   backThreeQuarter: 145,
 };
 
@@ -106,6 +125,14 @@ const FOCUS: Record<string, { joints: readonly string[] | null; span: number }> 
   backRightShoulder: { joints: ["arm.backRight.upper"], span: 0.26 },
   shoulders: { joints: ["arm.frontLeft.upper", "arm.frontRight.upper"], span: 0.42 },
   waist: { joints: ["pelvis"], span: 0.42 },
+  // One upper arm, close enough to see whether a band is ROUND the limb
+  // or merely near it. A frame that holds both arms holds neither near
+  // enough: measured, half of Vishnu's armlet was inside his arm while
+  // the shoulders view showed a plausible gold curve.
+  leftArm: { joints: ["arm.frontLeft.upper"], span: 0.2 },
+  rightArm: { joints: ["arm.frontRight.upper"], span: 0.2 },
+  backLeftArm: { joints: ["arm.backLeft.upper"], span: 0.2 },
+  backRightArm: { joints: ["arm.backRight.upper"], span: 0.2 },
   feet: { joints: ["leg.left.foot", "leg.right.foot"], span: 0.35 },
 };
 

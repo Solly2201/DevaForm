@@ -199,7 +199,22 @@ const PINNED = {
   // whose hips curve hardest, it came out sixty-two millimetres thick
   // radially — a gold tray round the waist rather than a belt on it.
   // Thirty-eight now. Only the belt moves.
-  ganesha: { nodes: 379, digest: "acabb4ca2f63f168" },
+  //
+  // And once more for the bands. Two deliberate changes, both measured:
+  // the lathe profile of every band ornament now CLOSES, so an armlet, a
+  // bangle and an anklet each have an inner wall — they were open
+  // C-sections with nothing in the hole, which reads as a cut edge where
+  // the limb does not fill the ring and is not a shape that can be
+  // printed. And the armlet's seat moved to a station the geometry
+  // allows: at a third of the way down the upper arm a ring of its own
+  // radius is inside the chest and, on a four-armed figure, inside the
+  // REAR UPPER ARM — eighty-nine of Vishnu's hundred and ninety-one
+  // buried vertices were in the other arm. The girth is measured where
+  // the band now sits rather than where it used to, so the hole did not
+  // merely move; it is the right size for the new station. Each body
+  // states its own station (`BodyProfile.armBandAlong`) because the
+  // stylised one has no clear station at all. See bandSeat.test.ts.
+  ganesha: { nodes: 379, digest: "1c71b5b44cfbe884" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the
@@ -365,7 +380,9 @@ const PINNED = {
   // always said. The skin also clears the cloth's GATHERS now rather than
   // its spine, and its tail is short when there is a dhoti under it.
   // See garmentLayering.test.ts.
-  shiva: { nodes: 268, digest: "b61b9e5615630258" },
+  // And for the bands, as above: closed lathe profiles and an armlet
+  // seated where a ring of its radius is actually clear of the figure.
+  shiva: { nodes: 268, digest: "1556ff12e8e3cdee" },
 } as const;
 
 describe("protected characters do not move", () => {

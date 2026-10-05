@@ -74,6 +74,32 @@ export interface BodyProfile {
    */
   armBandOffsetY: number;
   armBandRadius: number;
+  /**
+   * How far down the upper arm an armlet sits, as a fraction of the
+   * limb's length — because it is a fact about THIS body, not about the
+   * ornament.
+   *
+   * `armBandOffsetY` says where the girth above was measured, and that
+   * station is chosen to describe the arm. Where an armlet can actually
+   * GO is a different question, and its answer is whatever else of the
+   * figure is in the way: the deltoid, the chest, and on a four-armed
+   * deity the second upper arm. Swept with a ring of the armlet's own
+   * radius at ten-millimetre stations, the two bodies in this product
+   * disagree about it, and neither is wrong:
+   *
+   *   human base    inside the figure to station 60-80, clear from 70-90
+   *                 of a 149 mm arm — so 0.62, outboard of the second
+   *                 shoulder.
+   *   stylised      clips the torso at EVERY station, least of all near
+   *                 the shoulder (4 mm at 0.34, rising to 8 mm by 0.75):
+   *                 a thick arm held against a very broad chest has no
+   *                 station where a ring round it misses the body, and
+   *                 the armpit is where the overlap hides.
+   *
+   * One constant served the first and broke the second; this lets each
+   * body answer for its own shape.
+   */
+  armBandAlong: number;
   wristBandOffsetY: number;
   wristBandRadius: number;
   ankleBandOffsetY: number;
@@ -591,6 +617,9 @@ export function deriveBodyProfile(
     waistSeatY: 0.055,
     armBandOffsetY: -0.055,
     armBandRadius: 0.043 * bulk,
+    // A thick arm against a broad chest: nearest the shoulder is where
+    // the overlap is smallest and the armpit hides it.
+    armBandAlong: 0.34,
     wristBandOffsetY: -0.128,
     wristBandRadius: 0.03 * bulk,
     ankleBandOffsetY: 0.018,
@@ -815,6 +844,9 @@ function deriveMeasuredProfile(
     // Measured off this body's own limbs.
     armBandOffsetY: value("armBandOffsetY"),
     armBandRadius: value("armBandRadius"),
+    // Outboard of the second shoulder, which is where a four-armed
+    // figure's rear upper arm stops being in the way.
+    armBandAlong: 0.62,
     wristBandOffsetY: value("wristBandOffsetY"),
     wristBandRadius: value("wristBandRadius"),
     ankleBandOffsetY: value("ankleBandOffsetY"),
@@ -972,6 +1004,9 @@ function deriveAthleticProfile(
     waistSeatY: 0.055,
     armBandOffsetY: -0.055,
     armBandRadius: 0.043 * bulk,
+    // A thick arm against a broad chest: nearest the shoulder is where
+    // the overlap is smallest and the armpit hides it.
+    armBandAlong: 0.34,
     wristBandOffsetY: -0.128,
     wristBandRadius: 0.03 * bulk,
     ankleBandOffsetY: 0.018,
