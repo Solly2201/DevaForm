@@ -53,8 +53,21 @@ export function listAssets(filter?: {
   includeDeprecated?: boolean;
 }): AssetDefinition[] {
   return ALL_ASSETS.filter((asset) => {
+    /**
+     * RETIRED IS THE DEFAULT ANSWER, WITH OR WITHOUT A FILTER.
+     *
+     * This used to read `if (!filter) return true` on the line above the
+     * deprecation check, so asking for "every asset" — the plainest
+     * question there is — returned the seven that exist only so old saved
+     * characters still resolve. Every caller that passes a filter was
+     * safe and every caller that did not was quietly wrong, which is the
+     * worst shape for a default to have.
+     *
+     * `includeDeprecated` is how you ask for them, and it has to be asked
+     * for explicitly.
+     */
+    if (!filter?.includeDeprecated && asset.stage === "deprecated") return false;
     if (!filter) return true;
-    if (!filter.includeDeprecated && asset.stage === "deprecated") return false;
     if (
       filter.deity &&
       !asset.deityCompatibility.includes("any") &&
