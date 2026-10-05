@@ -123,6 +123,40 @@ check, so asking for *every* asset returned the seven kept only so old
 saves still resolve. Every caller that passed a filter was safe; every
 caller that did not was quietly wrong.
 
+### Vishnu's crown was balanced on his head, not worn
+
+It read as a fluted gold cone sitting on a dark dome. The cause was not
+the cone: where the kirita's band runs, his hair reaches **95 mm** and the
+band was built to **88**. The band was *inside* the hair — invisible — so
+the only visible part of the crown was the tower emerging from the top of
+his head.
+
+Hair is a separate part, so the profile that sizes head ornaments knew
+nothing about it. `headEnvelopeAt` is now its own question — the skull
+*and whatever is grown on it* — because overwriting `skullAt` breaks
+three things at once: the hair is itself built from the skull, `skullAt`
+promises the top of the head is a point rather than a lid, and `head.test`
+holds it to exactly that.
+
+The tower was also one lofted taper, which is a cone however finely it is
+fluted. It is now three tiers with a collar stepping out between them.
+
+### All five of Ganesha's crowns floated above his head
+
+Six to eleven millimetres of clear air between band and skull, on every
+one. `headFit` divides by the head's **widest** section, and on a sculpted
+Ganesha that is the jaw at 148 mm while the dome a band rides is 123. Every
+crown came out ten millimetres too big for the place it sits, and no amount
+of lowering could make it touch. A crown is sized by the head *where it
+sits*.
+
+### Skin showed through the dhoti, on every dhoti
+
+The front pleat strips were placed at one fixed depth while the wrap is a
+cone, so they sank into the cloth near the waist and surfaced lower down
+in pale flecks of accent colour. Anything laid on a skirt now reads its
+depth off the cloth at its own height and clears the pleat *crests*.
+
 ### Ganesha's head was not part of the figure
 
 Fixed earlier in the run: the head is in `bodyMeshes`, so the crown and
@@ -135,28 +169,23 @@ the figure is actually wearing rather than the one the table describes.
 
 Stated plainly, because a report that hides these is worth nothing.
 
-### Two of sixteen reference categories are under-filled
+### Nothing, in the sixteen reference categories
 
 `references/ref2.png` is the project's own completeness target.
-`iconography.test.ts` holds the registry against it. **Fourteen of
-sixteen rows meet or exceed the sheet.** Two do not:
+`iconography.test.ts` holds the registry against it, and **all sixteen
+rows now meet or exceed the sheet.** The two that were short are closed:
 
 | Category | Sheet draws | Studio offers |
 |---|---|---|
-| 8. Crown / headwear | 5 | 3 — Kirita, Karanda, Prabha |
-| 9. Clothing / dhoti | 5 | 3 — Pleated, Short, Layered |
+| 8. Crown / headwear | 5 | 5 — Kirita, Karanda, Prabha, Mukuta Band, Temple Mukuta |
+| 9. Clothing / dhoti | 5 | 5 — Pleated, Short, Layered, Royal, Sashed |
 
-Both are pinned at their current numbers, so the gap is visible on every
-run and cannot quietly deepen. They were **not** padded to five: weak
-variants would satisfy a count and fail the standard.
-
-### The crown is the weakest shipped asset
-
-The procedural `Kirita Mukuta` reads as a smooth gold cone with a finial.
-It is correctly placed, correctly scaled to the skull it sits on, and
-correctly lit — and it is a cone. It is the first thing a person's eye
-goes to on a Ganesha. This is the highest-value next piece of modelling
-work in the product.
+Neither was padded. The two new crowns are the two that are *not* another
+tall tapering tower — a circlet with no tower at all, and a stepped temple
+vimana — because a fourth smooth taper with different numbers would have
+satisfied a count and nothing else. The two new dhotis differ in what is
+done with the loose length, which is the only thing that can differ: every
+dhoti is a wrapped skirt.
 
 ### The Studio is desktop-only, and says so
 
@@ -183,7 +212,7 @@ the time. This remains an open choice rather than an oversight.
 
 | Gate | State |
 |---|---|
-| `pnpm -r test` | **824 passing** (679 web, 113 asset-system, 32 schema) |
+| `pnpm -r test` | **878 passing** (733 web, 113 asset-system, 32 schema) |
 | `pnpm -r typecheck` | clean |
 | `pnpm -r lint` | 0 errors |
 | `pnpm build` | succeeds |
@@ -208,6 +237,14 @@ the time. This remains an open choice rather than an oversight.
 - **`beltStandoff.test.ts`** — a belt is wound on cloth, not hung off it.
 - **`iconography.test.ts`** — the reference sheet's own completeness
   target.
+- **`crownSeating.test.ts`** — every crown is worn rather than balanced,
+  narrows as it rises, and contains the cranium and whatever is grown on
+  it.
+- **`ornamentContact.test.ts`** — the half of the question `penetration`
+  never asked: does the ornament touch the figure at all, or is it
+  hovering. All 27 across the three deities rest on it.
+- **`garmentCoverage.test.ts`** — is there a point of body a viewer can
+  see because the cloth is not in front of it.
 
 Every one was verified by **deliberate reversion**: the fix was undone
 and the test confirmed to fail, with the failure recorded in the commit.
@@ -225,6 +262,16 @@ representative number, since a real machine has a GPU.
 
 Deity switch: **2.4 s** the first time a figure is built, **420–630 ms**
 once its shaders are compiled.
+
+And the shipped build, measured without dev handles
+(`qa-prodperf.mjs`): TTFB **7 ms**, DOM ready **31 ms**, load **133 ms**,
+**3.5 MB** transferred, a viewport at **258 ms**, a usable figure at
+**260 ms**. Twenty-two deity switches, every one arriving, median
+**2.0 s**. Zero console errors.
+
+The heap **plateaus**: ten switches grow it 43 MB, twenty-two grow it 44.
+That is the asset cache filling and then being full — a leak makes a line,
+and at the first rate twenty-two switches would have cost ninety.
 
 ---
 
