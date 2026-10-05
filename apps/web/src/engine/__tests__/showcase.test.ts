@@ -56,6 +56,7 @@ import {
   customerFacingIssues,
   listAssets,
   resolveCharacterPresentation,
+  VISIBLE_STAGES,
   type AssetDefinition,
 } from "@devaform/asset-system";
 import {
@@ -72,6 +73,7 @@ import {
 } from "@devaform/character-schema";
 import { buildRig, poseRig, settleOnSupport, type CharacterRig } from "../rig";
 import { deformedVertex } from "../skinning";
+import { STAGE_BADGE, badgeCoverage } from "@/components/editor/assetBadge";
 import { ZoneMaterials } from "../materials";
 
 const DEITIES: Array<[DeityId, () => CharacterConfiguration]> = [
@@ -367,4 +369,56 @@ describe.each(DEITIES)("%s poses", (deity, make) => {
     },
     180_000,
   );
+});
+
+describe("the picker's own labels", () => {
+  /**
+   * A BADGE IS A SIGNAL, AND A SIGNAL THAT ALWAYS FIRES IS NOT ONE.
+   *
+   * The card used to print "In preparation" under prototype, experimental
+   * and integration assets, which is 81 of the 82 options a customer can
+   * select. Opening the Studio therefore read as a product apologising
+   * for every choice in it, which is not what the field meant: nothing
+   * had been promoted out of `prototype` in the first place.
+   *
+   * The rule this pins is the one that survived. Whether an option is fit
+   * to show is decided by whether it is OFFERED — `VISIBLE_STAGES`, plus
+   * the rest of this file holding every offered asset to building real
+   * geometry. A label on the tile cannot do that job, so it is only
+   * allowed to carry information a customer gains from: at most a
+   * minority of the catalogue, or it is decoration pretending to be a
+   * warning.
+   */
+  it("marks a minority of the catalogue, or it is not telling anyone anything", () => {
+    const offered = listAssets().filter((asset) =>
+      (VISIBLE_STAGES as readonly string[]).includes(asset.stage),
+    );
+    const { badged, total } = badgeCoverage(offered);
+    expect(total, "there is a catalogue to badge").toBeGreaterThan(20);
+    expect(
+      badged / total,
+      `${badged} of ${total} offered assets carry a badge — a label on everything says nothing`,
+    ).toBeLessThan(0.25);
+  });
+
+  it("prints nothing about DevaForm's own pipeline", () => {
+    /**
+     * The stage names are how far a piece has got through our process.
+     * A customer buying a statue has no use for them, and seeing them
+     * tells them something about us instead of about the statue.
+     */
+    const jargon = [
+      "concept",
+      "source",
+      "prototype",
+      "experimental",
+      "integration",
+      "review",
+      "production",
+      "deprecated",
+    ];
+    for (const label of Object.values(STAGE_BADGE)) {
+      expect(jargon, `the picker prints "${label}"`).not.toContain(label.toLowerCase());
+    }
+  });
 });

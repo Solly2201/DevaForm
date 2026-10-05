@@ -5,26 +5,9 @@
  * hardcoded asset knowledge. Used for both part slots and sockets.
  */
 import { useEffect, useState } from "react";
-import type { AssetDefinition, AssetStage } from "@devaform/asset-system";
+import type { AssetDefinition } from "@devaform/asset-system";
 import { getAssetThumbnail } from "@/engine/thumbnails";
-
-/**
- * What a customer should be told about an asset's lifecycle — which is
- * almost nothing.
- *
- * The card used to print the stage verbatim: "prototype", "integration",
- * "experimental". Those are the pipeline's words for how far a piece has
- * got through OUR process, and putting them in a picker tells a customer
- * something about us instead of something about the statue. What they
- * actually need to know is whether a piece is finished work or something
- * still being made ready.
- */
-const STAGE_BADGE: Partial<Record<AssetStage, string>> = {
-  prototype: "In preparation",
-  experimental: "In preparation",
-  integration: "In preparation",
-  review: "New",
-};
+import { STAGE_BADGE } from "./assetBadge";
 
 interface AssetGridProps {
   assets: readonly AssetDefinition[];
