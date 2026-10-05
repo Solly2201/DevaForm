@@ -539,7 +539,8 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   // The socket is the crown's origin; the skull is measured from the head
   // joint. One conversion, here, rather than a guess per tier.
   const section = (y: number) => {
-    const measured = body.skullAt(y + body.crownSocketY);
+    // THE ENVELOPE, not the skull: a crown goes round the hair as well.
+    const measured = body.headEnvelopeAt(y + body.crownSocketY);
     const front = measured.frontZ - body.crownSocketZ;
     const back = measured.backZ - body.crownSocketZ;
     return {
@@ -591,6 +592,7 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
     rz: (R + (radius - R) * 0.62) * aspect,
     z: seatZ,
   });
+
   /** A point on a ring, at a bearing measured from the front. */
   const on = (bearing: number, radius: number): V3 => {
     const shape = ring(0, radius);
@@ -613,11 +615,49 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
    * distinguishes a god's crown from a king's coronet, and this one
    * stands a little over a head above the brow.
    */
-  const DRUM_TOP = SKULL_TOP + RISE * 1.25;
-  const KUMBHA_TOP = DRUM_TOP + RISE * 0.52;
-  const TIP = KUMBHA_TOP + RISE * 0.58;
+  const DRUM_TOP = SKULL_TOP + RISE * 1.62;
+  const KUMBHA_TOP = DRUM_TOP + RISE * 0.46;
+  const TIP = KUMBHA_TOP + RISE * 0.52;
   /** What the tower keeps of its width by the time it reaches the top. */
-  const TAPER = 0.5;
+  const TAPER = 0.34;
+  /**
+   * THE BAND IS THE WIDEST THING ON THE CROWN, and the tower leaves it
+   * already drawing in.
+   *
+   * The drum used to start at the band's own width and hold it for the
+   * first third, which put a broad gold cylinder directly above a broad
+   * gold band with nothing between them — a lampshade, and measured
+   * against the reference about a third too wide for its height. In the
+   * reference the band flares, the crest rises out of it, and the tower
+   * starts INSIDE that flare and climbs away from it. The two opposed
+   * movements are what makes the silhouette read as a kirita rather than
+   * as a hat.
+   */
+  const DRUM_FOOT = 0.9;
+
+  /**
+   * HOW HIGH THE HEAD REACHES INSIDE THE CROWN.
+   *
+   * The band was made to contain the hair and the tower above it was not,
+   * so the hair came back through where the tower draws in: two dark
+   * patches either side of the brow jewel, which is the head showing
+   * through the crown.
+   *
+   * Clamping every ring to the head was tried and is worse — the ribs are
+   * placed on rings too, so they were pushed out into free-standing posts
+   * and the crown became a pavilion. What is actually needed is narrower:
+   * the tower must not start drawing in until it is ABOVE the head, so
+   * the only thing that moves is where the shoulder ends.
+   */
+  const headCeiling = (() => {
+    let top = BAND_TOP;
+    for (let step = 0; step <= 40; step += 1) {
+      const y = BAND_TOP + (SKULL_TOP - BAND_TOP + RISE * 0.6) * (step / 40);
+      if (section(y).halfWidth > R * DRUM_FOOT - GAP) top = y;
+    }
+    return top;
+  })();
+
 
   // --- the band -----------------------------------------------------------
   group.add(
@@ -674,25 +714,86 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   // for the first stretch, and then draws in — so the silhouette is a
   // shoulder rather than a straight cone. A cone from the brow to the bud
   // is a witch's hat; what the reference has is a tower with a waist.
-  const drumAt = (t: number) => R * (1 - (1 - TAPER) * Math.pow(t, 1.45));
-  const drumY = (t: number) => BAND_TOP + (DRUM_TOP - BAND_TOP) * t;
+  const drumAt = (t: number) => R * DRUM_FOOT * (1 - (1 - TAPER / DRUM_FOOT) * Math.pow(t, 1.2));
+  // The tower starts where the head stops — see `headCeiling`.
+  const DRUM_BOTTOM = Math.max(BAND_TOP + RISE * 0.11, headCeiling + GAP);
+  const drumY = (t: number) => DRUM_BOTTOM + (DRUM_TOP - DRUM_BOTTOM) * t;
+  /**
+   * THREE TIERS, not one cone.
+   *
+   * A single lofted taper from band to rim is a cone however finely it is
+   * fluted, and that is what this read as from every angle. The reference
+   * stacks the tower: each tier draws in, then a collar steps back OUT a
+   * little before the next tier starts, so the profile is a series of
+   * shoulders rather than one straight line. The collars are what the eye
+   * reads as storeys, and a kirita without storeys is a party hat.
+   */
+  /**
+   * THE SHOULDER, which closes the crown.
+   *
+   * Drawing the drum's foot inside the band's rim left a ring of nothing
+   * between them — from the front a dark arc of hair showing through
+   * between the crest leaves, which is a hole in a solid gold object. A
+   * real kirita turns from the band into the tower over a short slope.
+   * It is also what gives the crest something to rise OUT of.
+   */
   group.add(
     mesh(
       loft(
         [
-          ring(BAND_TOP - 0.001, R * 1.015),
-          ring(drumY(0.3), drumAt(0.3)),
-          ring(drumY(0.62), drumAt(0.62)),
-          ring(drumY(0.88), drumAt(0.88)),
-          ring(DRUM_TOP, drumAt(1)),
+          ring(BAND_TOP - 0.002, R * 1.02),
+          ring(BAND_TOP + (headCeiling - BAND_TOP) * 0.5, R * 1.0),
+          ring(Math.max(BAND_TOP + RISE * 0.11, headCeiling + GAP), R * DRUM_FOOT * 1.02),
         ],
         44,
-        5,
+        3,
       ),
       metal,
       {},
     ),
   );
+
+  const TIERS = [0, 0.34, 0.68, 1] as const;
+  for (let tier = 0; tier + 1 < TIERS.length; tier += 1) {
+    const from = TIERS[tier] as number;
+    const to = TIERS[tier + 1] as number;
+    group.add(
+      mesh(
+        loft(
+          [
+            ring(drumY(from), drumAt(from) * 1.035),
+            ring(drumY(from + (to - from) * 0.12), drumAt(from + (to - from) * 0.12)),
+            ring(drumY(from + (to - from) * 0.55), drumAt(from + (to - from) * 0.55)),
+            ring(drumY(to), drumAt(to)),
+          ],
+          44,
+          4,
+        ),
+        metal,
+        {},
+      ),
+    );
+    // The collar: a torus-like step where one storey sits on the next.
+    // Omitted at the very top, where the kumbha's own lid does this job.
+    if (to < 1) {
+      group.add(
+        mesh(
+          loft(
+            [
+              ring(drumY(to) - RISE * 0.03, drumAt(to) * 1.0),
+              ring(drumY(to) - RISE * 0.012, drumAt(to) * 1.12),
+              ring(drumY(to) + RISE * 0.012, drumAt(to) * 1.12),
+              ring(drumY(to) + RISE * 0.028, drumAt(to) * 1.02),
+            ],
+            44,
+            4,
+          ),
+          metal,
+          {},
+        ),
+      );
+    }
+  }
   // Cabochons across the drum's face, as the reference's own crown detail
   // sets them.
   for (let i = 0; i < 8; i += 1) {
@@ -708,22 +809,31 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   }
   // Ribs down the drum — the fluting that keeps a broad gold surface from
   // reading as a bell.
-  for (let i = 0; i < 20; i += 1) {
-    const bearing = (i / 20) * Math.PI * 2;
-    const low = on(bearing, R * 1.03);
-    const mid = on(bearing, drumAt(0.55) * 1.01);
-    const high = on(bearing, drumAt(1) * 1.005);
+  /**
+   * FLUTING, NOT A CAGE.
+   *
+   * Twenty thin ribs running the full height of a narrow tower read as
+   * wire: from the front the crown looked like a birdcage with gems
+   * clipped to it. Fluting is a surface treatment — few enough to count,
+   * heavy enough to catch light on one side and shadow on the other, and
+   * stopped short of the rim so the collars stay the strongest lines.
+   */
+  for (let i = 0; i < 12; i += 1) {
+    const bearing = (i / 12) * Math.PI * 2;
+    const low = on(bearing, drumAt(0.02) * 1.01);
+    const mid = on(bearing, drumAt(0.5) * 1.012);
+    const high = on(bearing, drumAt(0.95) * 1.01);
     group.add(
       new THREE.Mesh(
         taperedTube(
           [
-            [low[0], BAND_TOP + 0.001, low[2]],
-            [mid[0], drumY(0.55), mid[2]],
-            [high[0], DRUM_TOP - 0.001, high[2]],
+            [low[0], drumY(0.02), low[2]],
+            [mid[0], drumY(0.5), mid[2]],
+            [high[0], drumY(0.95), high[2]],
           ],
-          [R * 0.055, R * 0.04],
-          10,
-          6,
+          [R * 0.085, R * 0.05],
+          12,
+          7,
         ),
         metal,
       ),
@@ -763,7 +873,17 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
   const petal = (bearing: number, height: number, width: number, lean: number) => {
     const at = on(bearing, R * 1.03);
     const leaf = new THREE.Group();
-    leaf.position.set(at[0], BAND_TOP - RISE * 0.02, at[2]);
+    /**
+     * AT THE BAND'S TOP EDGE, LEANING OUT AND UP.
+     *
+     * It used to sit a little BELOW the band's top and lean out under the
+     * drum's foot, which — with a drum as wide as the band — put the
+     * whole crest in shadow beneath an overhang and read as a fringe
+     * hanging off a lampshade rather than as foliage rising from a crown.
+     * With the drum's foot drawn in (see DRUM_FOOT) the crest has air
+     * above it, which is the only reason it reads at all.
+     */
+    leaf.position.set(at[0], BAND_TOP + RISE * 0.01, at[2]);
     leaf.rotation.y = -bearing;
     leaf.rotation.x = -lean;
     // A LATHED silhouette, because the silhouette is the whole point: a
@@ -786,18 +906,52 @@ export const ornamentKirita: AttachmentGenerator = (ctx: GeneratorContext) => {
       {},
     );
     leaf.add(blade);
+    /**
+     * A MIDRIB, which is what separates foliage from a horn.
+     *
+     * The blade alone is a smooth lathed point, and smooth lathed points
+     * round a crown read as thorns from every angle — two passes at this
+     * crest came back from the Studio looking like antlers. A leaf has a
+     * spine down its centre catching a highlight the flanks do not, and
+     * that one line is the whole difference. It is inside the blade's own
+     * silhouette, so it costs nothing in shape.
+     */
+    leaf.add(
+      new THREE.Mesh(
+        taperedTube(
+          [
+            [0, height * 0.04, width * 0.5],
+            [0, height * 0.52, width * 0.46],
+            [0, height * 0.93, width * 0.2],
+          ],
+          [width * 0.17, width * 0.05],
+          10,
+          6,
+        ),
+        metal,
+      ),
+    );
     leaf.scale.z = 0.28;
     return leaf;
   };
   // Tallest at the front, where a devotee looks, and shortening round the
   // back: a crest of one height all the way round is a collar.
-  for (let i = 0; i < 11; i += 1) {
-    const bearing = (i / 11) * Math.PI * 2;
+  /**
+   * NINE LEAVES, LEANING OUT RATHER THAN DOWN.
+   *
+   * Eleven large and eleven small at a lean of 0.72 and 0.86 radians put
+   * twenty-two points round a band at nearly fifty degrees from vertical,
+   * which from the front is a scalloped skirt hanging off the crown. The
+   * reference's crest stands: it leans out far enough to clear the tower
+   * and read as separate from it, and no further.
+   */
+  for (let i = 0; i < 9; i += 1) {
+    const bearing = (i / 9) * Math.PI * 2;
     // 1 at the front, 0 at the back.
     const forward = (Math.cos(bearing) + 1) / 2;
-    const scale = 0.62 + forward * 0.55;
-    group.add(petal(bearing, RISE * 0.86 * scale, R * 0.32, 0.72));
-    group.add(petal(bearing + Math.PI / 11, RISE * 0.46 * scale, R * 0.2, 0.86));
+    const scale = 0.66 + forward * 0.5;
+    group.add(petal(bearing, RISE * 1.02 * scale, R * 0.3, 0.34));
+    group.add(petal(bearing + Math.PI / 9, RISE * 0.58 * scale, R * 0.19, 0.46));
   }
 
   // --- the brow ornament ---------------------------------------------------

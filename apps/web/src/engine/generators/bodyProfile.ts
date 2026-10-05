@@ -214,6 +214,21 @@ export interface BodyProfile {
    * which is exactly what the kirita did.
    */
   skullAt(headLocalY: number): { halfWidth: number; frontZ: number; backZ: number };
+  /**
+   * The outside of EVERYTHING ON THE HEAD at this height — the skull, and
+   * whatever is grown on it.
+   *
+   * Separate from `skullAt`, and that separation is the point. A crown
+   * has to go round the hair; the hair itself is built from the skull and
+   * must not be built from its own answer; and `skullAt` promises that
+   * the section at the top of the head is a point rather than a lid,
+   * which a head wearing hair is not. One function cannot be all three.
+   *
+   * Filled in by the rig once the hair is on the figure — see
+   * `skullEnvelopeWith`. Before that, and for a bare head, it is the
+   * skull.
+   */
+  headEnvelopeAt(headLocalY: number): { halfWidth: number; frontZ: number; backZ: number };
 }
 
 /** Read a measured skull envelope at a height, linearly between rows. */
@@ -719,6 +734,7 @@ export function deriveBodyProfile(
     browY: 0.07,
     skullTopY: HEAD.headCenterY + HEAD.headRadius,
     skullAt: (y: number) => generatedSkullAt(HEAD, y),
+    headEnvelopeAt: (y: number) => generatedSkullAt(HEAD, y),
   };
 }
 
@@ -951,6 +967,18 @@ function deriveMeasuredProfile(
             },
             y,
           ),
+    // Until the rig measures the hair onto it, the envelope IS the skull.
+    headEnvelopeAt: (y: number) =>
+      skullEnvelope
+        ? sampleSkullEnvelope(skullEnvelope, y)
+        : generatedSkullAt(
+            {
+              headCenterY: value("headCenterY"),
+              headCenterZ: value("headCenterZ"),
+              headRadius: value("headRadius"),
+            },
+            y,
+          ),
     legExtentAt: (y: number) =>
       legEnvelope
         ? sampleLegEnvelope(legEnvelope, y, morphs)
@@ -1124,5 +1152,6 @@ function deriveAthleticProfile(
     browY: 0.07,
     skullTopY: HEAD.headCenterY + HEAD.headRadius,
     skullAt: (y: number) => generatedSkullAt(HEAD, y),
+    headEnvelopeAt: (y: number) => generatedSkullAt(HEAD, y),
   };
 }

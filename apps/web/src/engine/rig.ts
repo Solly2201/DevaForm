@@ -285,6 +285,77 @@ function measureCranium(
   };
 }
 
+/**
+ * WHAT A CROWN HAS TO GO ROUND is the skull AND whatever is grown on it.
+ *
+ * `skullAt` describes the cranium. Hair is a separate part, so the profile
+ * knew nothing about it, and every head ornament sized itself to a head
+ * that was not the one on the figure. Measured on Vishnu: at the height
+ * his kirita's band runs, the hair reaches 95 mm and the band was built
+ * to 88 mm. The band was therefore INSIDE the hair — invisible — and the
+ * only part of the crown a customer could see was the tower emerging from
+ * the top of a dark dome, which is why a correctly tapered, correctly
+ * seated crown read as a party hat balanced on his head.
+ *
+ * This is the same lesson every band ornament in this file has already
+ * learned once: a worn ring must CONTAIN what it passes. It is applied
+ * here rather than in the crown because it is not about crowns — a
+ * circlet, a fillet or a garland round the head would all have been wrong
+ * in the same way.
+ *
+ * Returned as a REPLACEMENT `skullAt` that takes the larger of the two at
+ * every height, so the original measurement is still what answers
+ * wherever the hair is not.
+ */
+function skullEnvelopeWith(
+  previous: BodyProfile["skullAt"],
+  object: THREE.Object3D,
+  head: THREE.Object3D,
+): BodyProfile["skullAt"] | null {
+  head.updateWorldMatrix(true, false);
+  object.updateWorldMatrix(true, true);
+  const toHead = new THREE.Matrix4().copy(head.matrixWorld).invert();
+  const BIN = 0.005;
+  const widest = new Map<number, { halfWidth: number; frontZ: number; backZ: number }>();
+  const point = new THREE.Vector3();
+  let any = false;
+  object.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const position = mesh.geometry?.getAttribute("position");
+    if (!position) return;
+    mesh.updateWorldMatrix(true, false);
+    // Hair can be tens of thousands of vertices and this runs on every
+    // build. An envelope's widest point is a ring, not a vertex.
+    const stride = Math.max(1, Math.floor(position.count / 3000));
+    for (let i = 0; i < position.count; i += stride) {
+      deformedVertex(mesh, i, point).applyMatrix4(mesh.matrixWorld).applyMatrix4(toHead);
+      const bin = Math.round(point.y / BIN);
+      const row = widest.get(bin) ?? {
+        halfWidth: 0,
+        frontZ: Number.NEGATIVE_INFINITY,
+        backZ: Number.POSITIVE_INFINITY,
+      };
+      row.halfWidth = Math.max(row.halfWidth, Math.abs(point.x));
+      row.frontZ = Math.max(row.frontZ, point.z);
+      row.backZ = Math.min(row.backZ, point.z);
+      widest.set(bin, row);
+      any = true;
+    }
+  });
+  if (!any) return null;
+  return (y: number) => {
+    const skull = previous(y);
+    const row = widest.get(Math.round(y / BIN));
+    if (!row) return skull;
+    return {
+      halfWidth: Math.max(skull.halfWidth, row.halfWidth),
+      frontZ: Math.max(skull.frontZ, row.frontZ),
+      backZ: Math.min(skull.backZ, row.backZ),
+    };
+  };
+}
+
 export function buildJointHierarchy(skeleton: SkeletonDefinition): {
   characterRoot: THREE.Group;
   joints: Map<JointId, THREE.Object3D>;
@@ -1085,6 +1156,12 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
               if (crownSocket) crownSocket.position.y = cranium.crownSocketY;
             }
           }
+          // And hair GROWS on the head, so anything worn round the head
+          // has to go round it. See skullEnvelopeWith.
+          if (slot === "hair" && jointId === "head" && target) {
+            const grown = skullEnvelopeWith(bodyProfile.skullAt, group, target);
+            if (grown) bodyProfile.headEnvelopeAt = grown;
+          }
           mapped += 1;
         } else {
           warnings.push(`Asset ${asset.id}: unknown joint in group "${group.name}"`);
@@ -1146,6 +1223,15 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
           const crownSocket = sockets.get("head.crown" as SocketId);
           if (crownSocket) crownSocket.position.y = cranium.crownSocketY;
         }
+      }
+      // And hair GROWS on the head, so anything worn round the head has
+      // to go round it. See skullEnvelopeWith.
+      if (slot === "hair" && entry.joint === "head") {
+        const headJoint = joints.get("head" as JointId);
+        const grown = headJoint
+          ? skullEnvelopeWith(bodyProfile.skullAt, entry.object, headJoint)
+          : null;
+        if (grown) bodyProfile.headEnvelopeAt = grown;
       }
       // The part owns the surface its sockets terminate on (e.g. the
       // trunk's tip, or a hand's own grip) — move those sockets onto the
