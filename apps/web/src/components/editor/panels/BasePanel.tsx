@@ -23,6 +23,7 @@ export function BasePanel() {
           key={style}
           type="button"
           onClick={() => setBase({ style })}
+          aria-pressed={base.style === style}
           className={`rounded-lg border px-2 py-3 text-xs font-medium transition-colors ${
             base.style === style
               ? "border-saffron-500 bg-surface-700 text-saffron-400"

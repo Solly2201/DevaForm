@@ -648,7 +648,15 @@ export function CustomizationPanel() {
   if (!category) return null;
 
   return (
-    <aside className="flex h-full w-[30rem] max-w-[40vw] flex-col border-l border-surface-800 bg-surface-900">
+    <aside
+      // A name for the region, so a harness driving the product can tell
+      // an asset tile from a camera button. Both use `aria-pressed` —
+      // correctly, they are both one-of-a-set controls — and the
+      // walkthrough script was clicking "Front" and "Face" on the
+      // viewport overlay while reporting that it had changed a garment.
+      data-testid="customization-panel"
+      className="flex h-full w-[30rem] max-w-[40vw] flex-col border-l border-surface-800 bg-surface-900"
+    >
       <header className="border-b border-surface-800 px-4 py-3">
         <h2 className="font-display text-base text-stone-100">{category.label}</h2>
         <p className="text-xs text-stone-500">{category.description}</p>

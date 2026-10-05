@@ -48,6 +48,11 @@ export function PosePresetsSection() {
             type="button"
             title={preset.description}
             onClick={() => setPosePreset(preset.id)}
+            // Which pose is the chosen one, said rather than only
+            // coloured. Every other picker in the product announces it;
+            // these did not, so the selection existed for sighted users
+            // and for nobody else.
+            aria-pressed={pose.preset === preset.id}
             className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
               pose.preset === preset.id
                 ? "border-saffron-500 bg-surface-700 text-saffron-400"
