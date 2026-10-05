@@ -370,6 +370,9 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["shiva"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.thirdeye" },
+    // Drawn on the skin, like the tripundra beside it and for the same
+    // reason: a mark that stands off a forehead is a tile.
+    fit: { kind: "appliedTo", region: "forehead" },
     materialZones: [],
     category: "face",
     printability: proto,

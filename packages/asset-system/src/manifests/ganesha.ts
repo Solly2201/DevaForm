@@ -577,6 +577,16 @@ export const GANESHA_ASSETS: readonly AssetDefinition[] = [
     deityCompatibility: ["any"],
     stage: "prototype",
     source: { kind: "procedural", generatorId: "ornament.tikka" },
+    /**
+     * A JEWEL RESTS, it is not painted on.
+     *
+     * The other thing worn at this socket is a mark made of ash, which
+     * declares `appliedTo` and has no clearance at all. A crescent with a
+     * hanging gem is a solid lying against a brow, and the difference is
+     * the whole of what a depth check needs in order to tell a correct
+     * tikka from a tile standing off a forehead.
+     */
+    fit: { kind: "restsOn", region: "forehead", clearanceM: 0 },
     materialZones: ["metal", "gem"],
     category: "ornaments",
     printability: proto,
