@@ -3,6 +3,7 @@
  */
 import * as THREE from "three";
 import { mesh, pleatedCylinder } from "../geometry";
+import { seatedLapWrap } from "./seatedWrap";
 import { pushOutsideBody, surfaceRibbon, type SurfaceWaypoint } from "./surfaceWalk";
 import { num, type PartGenerator } from "./types";
 
@@ -98,15 +99,18 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
      * which on a folded pose is the knees. Authored numbers would be the
      * stylised body's lap on a mesh body's knees all over again.
      */
-    const lapY = waistY - 0.1;
-    const legs = ctx.body.legExtentAt(lapY);
-    const kneeReach = Math.max(legs.halfWidth, legs.frontZ, topR * 1.15);
-    const lapR = kneeReach + 0.018;
-    const skirtDrop = 0.17;
+    const lap = seatedLapWrap(ctx.body, ctx.seatedLegs);
+    // A lap is wider than it is deep, so the wrap over it is an ellipse.
+    // A circle big enough for the knees stands out into the air in front
+    // of the shins by the difference, which is most of a hand's width.
+    const lapR = lap.lapRadiusX;
+    const squash = lap.lapRadiusZ / lap.lapRadiusX;
+    const skirtDrop = waistY - lap.hemY;
 
     group.add(
       mesh(pleatedCylinder(topR * 1.02, lapR, skirtDrop, 20, Math.max(0.008, lapR * 0.05)), garment, {
         position: [0, waistY - skirtDrop / 2, 0],
+        scale: [1, 1, squash],
       }),
     );
     // The lap itself: a shallow dome closing the top of that cone, so
@@ -114,7 +118,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
     group.add(
       mesh(new THREE.SphereGeometry(lapR, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.5), garment, {
         position: [0, waistY - skirtDrop + 0.004, 0],
-        scale: [1, 0.26, 1],
+        scale: [1, 0.26, squash],
       }),
     );
     // Hem band round the bottom edge — the line that says where the
@@ -123,6 +127,7 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
       mesh(new THREE.TorusGeometry(lapR * 0.985, 0.011, 10, 48), accent, {
         position: [0, waistY - skirtDrop + 0.008, 0],
         rotation: [Math.PI / 2, 0, 0],
+        scale: [1, squash, 1],
       }),
     );
     // Waist wrap band

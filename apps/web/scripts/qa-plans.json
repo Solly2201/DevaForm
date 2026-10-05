@@ -665,5 +665,107 @@
         ]
       }
     ]
+  },
+  "shiva-garments": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "medi-hide",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation",
+          "wear": "shiva.garment.vyaghracharma"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "medi-dhotihide",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation",
+          "wear": "shiva.garment.tigerHide"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "medi-dhoti",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation",
+          "wear": "shiva.garment.dhoti"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "medi-short",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation",
+          "wear": "shiva.garment.dhotiShort"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "stand-hide",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.vyaghracharma"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "stand-dhotihide",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.tigerHide"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "stand-dhoti",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.dhoti"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "stand-short",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.dhotiShort"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      }
+    ]
   }
 }

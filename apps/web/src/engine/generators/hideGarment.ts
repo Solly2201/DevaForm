@@ -33,6 +33,7 @@
 import * as THREE from "three";
 import { mesh, taperedTube } from "../geometry";
 import { clothWeave, hideMarkings } from "../textures";
+import { seatedLapWrap } from "./seatedWrap";
 import { num, type GeneratorContext, type PartGenerator } from "./types";
 import type { JointId } from "@devaform/character-schema";
 import type { BodyProfile } from "./bodyProfile";
@@ -620,7 +621,19 @@ interface HidePoint {
  * carry most of the character: narrow where it is tied, broad across the
  * hips, drawn in again as it turns into the tail.
  */
-function hideSpine(waistY: number, seat: number, drop: number): HidePoint[] {
+/**
+ * The deepest station's half-width, standing — see `hideSpine`.
+ *
+ * The strip is laid out ACROSS its spine from one edge, not centred on
+ * it: `reach` runs from -0.06 to 1.88 of the station's half-width, and
+ * round the hips "across" points straight down. So the skin hangs
+ * `HIDE_HANG * half` below the spine it is wound on, which is what the
+ * seated depth is solved from.
+ */
+const HIDE_STATION_DEPTH = 0.134;
+const HIDE_HANG = 1.88;
+
+function hideSpine(waistY: number, seat: number, drop: number, depth = 1): HidePoint[] {
   // Round first. Each station is a fraction of the way round from the
   // tuck, a height, and how deep the skin hangs there.
   // The half-widths are what the hem's shape IS. The two ends are the
@@ -632,7 +645,7 @@ function hideSpine(waistY: number, seat: number, drop: number): HidePoint[] {
     { at: 0, rise: 0.014, half: 0.088 },
     { at: 0.2, rise: 0.004, half: 0.108 },
     { at: 0.45, rise: -0.004, half: 0.126 },
-    { at: 0.7, rise: -0.002, half: 0.134 },
+    { at: 0.7, rise: -0.002, half: HIDE_STATION_DEPTH },
     { at: 0.9, rise: 0.004, half: 0.122 },
     { at: 1.05, rise: 0.008, half: 0.114 },
     { at: HIDE_TURNS, rise: 0.012, half: 0.104 },
@@ -649,7 +662,7 @@ function hideSpine(waistY: number, seat: number, drop: number): HidePoint[] {
     points.push({
       u: HIDE_START + travelled,
       y: waistY + a.rise + (b.rise - a.rise) * ease,
-      half: a.half + (b.half - a.half) * ease,
+      half: (a.half + (b.half - a.half) * ease) * depth,
       // Climbing onto the first lap over a quarter-turn.
       layer: (() => {
         const onto = Math.min(1, Math.max(0, (travelled - 0.62) / 0.34));
@@ -695,6 +708,20 @@ function wrappedHide(
     seat: number;
     /** How far the tail falls below the wrap. */
     drop: number;
+    /**
+     * How deep the skin hangs, as a fraction of its standing depth.
+     *
+     * A hide worn standing covers the hips and the top of the thighs, and
+     * its stations say so — a hundred and thirty millimetres of skin
+     * below the spine at the deepest bearing. Fold the legs and the
+     * thighs are no longer below the hips, so that same depth hangs into
+     * the air: measured on Shiva in padmasana, the skin's lower edge
+     * reached a hundred and thirteen millimetres BELOW the cloth it was
+     * worn over, which is the spotted flap seen hanging under the lap.
+     */
+    depth?: number;
+    /** Where the wrap is wound, overriding the hip crest. */
+    spineY?: number;
     /** Clearance in CLEARANCE units — more when worn over cloth. */
     slack: number;
     seed: number;
@@ -718,9 +745,9 @@ function wrappedHide(
    * measurement is true, which is the crest, and the question does not
    * arise.
    */
-  const waistY = seat + (options.waistY - seat) * 0.45;
+  const waistY = options.spineY ?? seat + (options.waistY - seat) * 0.45;
   const centreZ = hipCentreZ(body);
-  const spine = hideSpine(waistY, seat, drop);
+  const spine = hideSpine(waistY, seat, drop, options.depth ?? 1);
 
   // What the body is, at any height the strip reaches.
   const profile = profileOf([
@@ -1440,6 +1467,9 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   const seat = body.thighSeatY;
   const hipRx = body.pelvisHalfWidth + CLEARANCE;
   const hipRz = body.bellyRadiusZ + CLEARANCE;
+  // Where this pose's folded legs are, when it has folded them. The skin
+  // and the cloth both need it, and they need the same answer.
+  const lap = ctx.seated ? seatedLapWrap(body, ctx.seatedLegs, CLEARANCE * 1.8) : null;
 
   // ---- the wrap over the hips, riding the pelvis ------------------------
   const wrap = new THREE.Group();
@@ -1465,12 +1495,42 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // end over its near one, and its last stretch falling down the thigh as
   // a tail. Not a ring of cloth with a shaped hem — see `wrappedHide`.
   if (hideAmount > 0) {
+    /**
+     * SEATED, THE SKIN IS WOUND HIGHER AND HANGS SHALLOWER.
+     *
+     * Standing, the wrap is wound on the hip crest and its stations hang
+     * a hundred and thirty millimetres below that spine — hips and the
+     * top of the thighs, which is where the thighs are. Folded, the
+     * thighs are in FRONT of the hips and that depth is a skin hanging
+     * into empty air: measured on Shiva in padmasana, the hide's lower
+     * edge reached a hundred and thirteen millimetres below the cloth it
+     * was worn over, and that is the spotted flap under the lap.
+     *
+     * So when the legs are folded the skin is wound between the waist and
+     * the lap's own hem, and hangs exactly that far. Both ends measured —
+     * `seatedLapWrap` is where the lower one comes from, the same answer
+     * the cream is cut to.
+     */
+    // Over cloth the skin stops SHORT of the cream's hem, so the cream
+    // shows below it — the layering ref3 draws, and the only way two
+    // garments ending on the same line can be told apart. Worn alone it
+    // is the garment, so it goes a little past where cloth would stop.
+    const seatedHem = lap ? lap.hemY + (overCloth ? 0.016 : -0.02) : 0;
+    // Tied at the waist, because that is where a skin is tied and because
+    // the strip hangs entirely BELOW its spine. Wound lower, half of it
+    // is under the lap before it has started.
+    const seatedSpine = waistY - 0.004;
+    const seatedDepth = lap
+      ? (seatedSpine - seatedHem) / (HIDE_HANG * HIDE_STATION_DEPTH)
+      : 1;
     wrap.add(
       wrappedHide(body, hide, {
         cord: sashMaterial,
         clasp: metal,
         waistY,
         seat,
+        spineY: lap ? seatedSpine : undefined,
+        depth: lap ? seatedDepth : undefined,
         // Seated, the thighs come forward and a long tail would hang
         // through them; the skin is gathered instead, which is what you
         // do with a garment before sitting down.
@@ -1484,8 +1544,8 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
          * past the KNEE, so on the short dhoti the cream's own hem and
          * the skin's end arrived at the same height and fought there.
          */
-        drop: ctx.seated
-          ? body.thighLength * 0.42
+        drop: lap
+          ? (waistY - seatedHem) * 0.3
           : fall + body.thighLength * (overCloth ? 0.18 : 0.55),
         /**
          * Worn over cloth that GATHERS, not over a smooth cylinder.
@@ -1508,14 +1568,49 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // The cream cloth goes on FIRST, under everything: it is the layer the
   // reference shows reaching the ankles, and the hide is slung over it.
   if (dhotiReach > 0 && ctx.garment === "gathered") {
-    // Folded legs: the cloth goes over the lap. A wrapped column is a
-    // statement about two legs standing side by side, and fold them and
-    // the statement is false — so the seated figure was given the hip
-    // wrap alone and sat in what read as underwear. A panel falls from
-    // the waist between the knees instead, front and back, and each thigh
-    // carries its own cloth (below).
-    wrap.add(lapFall(body, cloth, 1));
-    wrap.add(lapFall(body, cloth, -1));
+    /**
+     * FOLDED LEGS WEAR ONE WRAP, NOT A GARMENT PER LEG.
+     *
+     * This was a narrow panel hanging from the waist front and back, with
+     * a sleeve of cloth riding each thigh bone. Each piece was defensible
+     * on its own and the four together were not a garment: the thigh
+     * sleeves are tubes seen end-on from the front, so Shiva in
+     * meditation sat behind two cream blobs the size of his lap with the
+     * panel threading the gap between them, and his shins came out
+     * through the sides of it.
+     *
+     * A seated wrap is one piece. It leaves the waist, flares over both
+     * knees at once, and stops — the same cone as the standing column,
+     * drawn short and wide, with the same pleating and the same hem band,
+     * because the thing that reads as cloth is the pleating and a seated
+     * figure has no less claim on it. `seatedLapWrap` is where its width
+     * and its hem come from, shared with the dhoti generator so the two
+     * stop disagreeing about where a folded figure's legs are.
+     */
+    const seated = lap ?? seatedLapWrap(body, ctx.seatedLegs, CLEARANCE * 1.8);
+    const rx = seated.lapRadiusX;
+    const rz = seated.lapRadiusZ;
+    const sections: ClothSection[] = [
+      { y: seated.waistY + 0.006, rx: hipRx, rz: hipRz },
+      // STILL ON THE HIPS AT THE CREST. The skin is worn over this, and
+      // it is worn on the crest — flare the cloth above that line and the
+      // cream swallows the hide, which is what it did: a tiger wrap
+      // reduced to a sliver at the waistband.
+      { y: seat, rx: hipRx * 1.01, rz: hipRz * 1.01 },
+      { y: (seat + seated.hemY) / 2, rx: rx * 0.86, rz: rz * 0.88 },
+      { y: seated.hemY, rx, rz },
+      // The cloth turns back under its own hem. Cut off square, the wrap
+      // is a tube the eye can look straight up from a low camera.
+      { y: seated.hemY - 0.014, rx: rx * 0.9, rz: rz * 0.9 },
+    ];
+    const seatedColumn = clothPiece(sections, cloth, {
+      seed: 5,
+      density: 0,
+      folds: 0.09,
+      radial: DHOTI_RADIAL,
+    });
+    wrap.add(seatedColumn);
+    wrap.add(dhotiBorder(seatedColumn.geometry, DHOTI_RADIAL, sashMaterial, 3));
   } else if (dhotiReach > 0) {
     // How far down the shin the cloth reaches: all the way for a standing
     // figure, above the knee when the pose has a leg out.
@@ -1641,11 +1736,10 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // ring merged into one leopard drum.
   void legHide;
   void reach;
-  // Seated, the cream goes onto the thighs themselves — one piece per
-  // thigh, riding the bone, so a folded leg carries its own cloth.
-  if (dhotiReach > 0 && ctx.garment === "gathered") {
-    parts.push({ joint: "leg.left.thigh", object: thighDrape(body, cloth, 5, dhotiReach) });
-    parts.push({ joint: "leg.right.thigh", object: thighDrape(body, cloth, 19, dhotiReach) });
-  }
+  // The seated cloth is ONE wrap over both legs, built above and worn on
+  // the pelvis. A sleeve per thigh was the construction that read as two
+  // blobs — see the seated branch.
+  void thighDrape;
+  void lapFall;
   return parts;
 };

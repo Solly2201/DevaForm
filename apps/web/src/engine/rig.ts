@@ -64,6 +64,7 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import { morphInfluences } from "./morphs";
+import type { SeatedLegs } from "./generators/seatedWrap";
 import type { ZoneMaterials } from "./materials";
 import {
   applyGestureOrientations,
@@ -148,6 +149,13 @@ export interface CharacterRig {
   body: BodyProfile;
   /** The body this rig was built on, when one was selected. */
   bodyAsset: AssetDefinition | undefined;
+  /**
+   * Where this pose's folded legs are, in the pelvis's frame — null when
+   * the pose is not seated. Garments are cut to it (see `seatedLapWrap`),
+   * and anything checking a seated figure's dress can ask the same
+   * question the garments were built from.
+   */
+  seatedLegs: SeatedLegs | null;
   /** Top of the base, in the statue root's own space: the support. */
   baseTop: number;
   /**
@@ -1020,6 +1028,65 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     over?: readonly string[],
   ): number => Math.max(0, wornOffsetAt(frame, localY, bearing, over) ?? 0);
 
+  /**
+   * WHERE THIS POSE PUTS THE KNEES.
+   *
+   * A garment is built in rest pose and worn on the pelvis, so nothing it
+   * is built from knows that a seated preset has carried the legs out
+   * sideways and forward. The seated wraps were therefore sized from
+   * `legExtentAt`, which answers for legs hanging down — a lap wrap cut
+   * for standing legs, which is why Shiva's meditation showed a cream
+   * shape with both knees outside it.
+   *
+   * The pose itself can answer: run it on a throwaway copy of this body's
+   * own skeleton and read where the shins and ankles land, in the
+   * pelvis's frame. A COPY deliberately — the live joints must stay in
+   * rest pose while parts are built, because socket frames are read off
+   * them. Only seated poses ask, and it is three dozen Object3Ds.
+   */
+  const seatedLegs = ((): SeatedLegs | null => {
+    if (!resolved.pose.seated) return null;
+    const probe = buildJointHierarchy(skeleton);
+    applyPose(probe.joints, {
+      preset: resolved.pose.presetId,
+      jointOverrides: resolved.pose.joints as Record<string, Vec3>,
+    });
+    const pelvis = probe.joints.get("pelvis");
+    if (!pelvis) return null;
+    probe.characterRoot.updateWorldMatrix(true, true);
+    const hip = new THREE.Vector3();
+    const knee = new THREE.Vector3();
+    const foot = new THREE.Vector3();
+    let thighHalfWidth = 0;
+    let thighFrontZ = 0;
+    let kneeY = Number.POSITIVE_INFINITY;
+    let floorY = Number.POSITIVE_INFINITY;
+    let measured = false;
+    for (const side of ["left", "right"] as const) {
+      const hipJoint = probe.joints.get(`leg.${side}.thigh` as JointId);
+      const kneeJoint = probe.joints.get(`leg.${side}.shin` as JointId);
+      const footJoint = probe.joints.get(`leg.${side}.foot` as JointId);
+      if (!hipJoint || !kneeJoint) continue;
+      measured = true;
+      pelvis.worldToLocal(hipJoint.getWorldPosition(hip));
+      pelvis.worldToLocal(kneeJoint.getWorldPosition(knee));
+      // Halfway down the thigh, plus the thigh's own girth: the surface
+      // the cloth lies on. A limb is not a point, and the garment is not
+      // worn on its bone.
+      const midX = (hip.x + knee.x) / 2;
+      const midZ = (hip.z + knee.z) / 2;
+      thighHalfWidth = Math.max(thighHalfWidth, Math.abs(midX) + bodyProfile.thighMidRadius);
+      thighFrontZ = Math.max(thighFrontZ, midZ + bodyProfile.thighMidRadius);
+      kneeY = Math.min(kneeY, knee.y);
+      floorY = Math.min(floorY, knee.y - bodyProfile.kneeRadius);
+      if (footJoint) {
+        pelvis.worldToLocal(footJoint.getWorldPosition(foot));
+        floorY = Math.min(floorY, foot.y - bodyProfile.kneeRadius * 0.6);
+      }
+    }
+    return measured ? { thighHalfWidth, thighFrontZ, kneeY, floorY } : null;
+  })();
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     jointOffset: jointOffsetOf,
     socketOffset: socketOffsetOf,
@@ -1034,6 +1101,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     armSlots,
     held: heldByHand,
     seated: resolved.pose.seated,
+    seatedLegs,
     garment: resolved.pose.garment,
     body: bodyProfile,
   };
@@ -1434,6 +1502,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     sockets,
     resolved,
     planted,
+    seatedLegs,
     hands,
     held,
     faced,

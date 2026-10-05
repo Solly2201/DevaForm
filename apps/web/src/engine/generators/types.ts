@@ -11,6 +11,7 @@ import type {
 import type { HandClosure } from "@devaform/asset-system";
 import type { ZoneMaterials } from "../materials";
 import type { BodyProfile } from "./bodyProfile";
+import type { SeatedLegs } from "./seatedWrap";
 
 /** What a hand is closing on, as the resolver decided it. */
 export interface HeldItemSpec {
@@ -75,6 +76,13 @@ export interface GeneratorContext {
    * pose-compatible geometry (a draped lap instead of a full skirt).
    */
   seated: boolean;
+  /**
+   * Where this pose actually puts the knees and ankles, in the pelvis's
+   * frame — null when the pose is not seated, or when nobody measured it
+   * (see `seatedLapWrap`). A garment worn on the pelvis cannot see the
+   * legs move under it; this is how it finds out.
+   */
+  seatedLegs: SeatedLegs | null;
   /**
    * How cloth is worn in this pose — full, gathered or short. Declared by
    * the pose itself (see PosePreset.garment) rather than inferred, so a

@@ -105,6 +105,7 @@ export async function buildAssetObject(
     wornOffsetAt: () => null,
     held: {},
     seated: false,
+    seatedLegs: null,
     garment: "full",
     // Thumbnails render against the canonical classic body measurements.
     body: deriveBodyProfile({ belly: 1 }, config.proportions),
