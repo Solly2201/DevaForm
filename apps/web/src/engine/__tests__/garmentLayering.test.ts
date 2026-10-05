@@ -113,7 +113,22 @@ function layers(rig: CharacterRig, assetId: string): Map<string, THREE.Vector3[]
 const radiusOf = (point: THREE.Vector3) => Math.hypot(point.x, point.z);
 
 describe("Shiva's layered dress is layered", () => {
-  for (const assetId of ["shiva.garment.tigerHide", "shiva.garment.dhotiShort"]) {
+  /**
+   * ONLY THE ONE THAT HAS BOTH.
+   *
+   * The short dhoti used to be in this list and was built with `hide: 1`,
+   * so a customer who chose "Short Dhoti" got a full tiger skin slung
+   * over the hips, indistinguishable in character from the asset next to
+   * it called "Dhoti and Tiger Hide". Two of four lower garments were the
+   * same costume at two lengths, and the combination the asset was NAMED
+   * after could not be reached at all.
+   *
+   * What this list protected for it was "the hide is outside the cloth",
+   * which is not a question any more. The protection has moved rather
+   * than gone: `the cloth-only garments wear no hide` below holds a
+   * stronger thing, that the four choices remain four choices.
+   */
+  for (const assetId of ["shiva.garment.tigerHide"]) {
     it(`${assetId}: the skin sits outside the cloth it is worn over`, async () => {
       const { rig, materials } = await rigFor(wearing(assetId));
       try {
@@ -173,6 +188,32 @@ describe("Shiva's layered dress is layered", () => {
    * The short dhoti is offered as its own choice, and a choice that comes
    * out the same length as the full one is not one.
    */
+  /**
+   * And the choices stay distinct.
+   *
+   * A catalogue of four lower garments where two draw the same hide is a
+   * catalogue of three, and the customer cannot tell from the names which
+   * two. The hide is the mapped accent material — the rosettes — so its
+   * absence is measurable rather than a matter of opinion.
+   */
+  it("the cloth-only garments wear no hide", async () => {
+    for (const assetId of ["shiva.garment.dhoti", "shiva.garment.dhotiShort"]) {
+      const { rig, materials } = await rigFor(wearing(assetId));
+      try {
+        const byMaterial = layers(rig, assetId);
+        const hide = byMaterial.get("zone:garmentAccent:mapped") ?? [];
+        const cloth = byMaterial.get("zone:garment:mapped") ?? [];
+        expect(cloth.length, `${assetId} is made of cloth`).toBeGreaterThan(50);
+        expect(
+          hide.length,
+          `${assetId} says it is cloth only, and ${hide.length} vertices of hide were built`,
+        ).toBe(0);
+      } finally {
+        materials.dispose();
+      }
+    }
+  }, 300_000);
+
   it("the short dhoti is shorter than the full one", async () => {
     const full = await rigFor(wearing("shiva.garment.tigerHide"));
     const short = await rigFor(wearing("shiva.garment.dhotiShort"));

@@ -1574,9 +1574,17 @@ export const humanoidHideWrap: PartGenerator = (ctx) => {
   // gathered out of the way before sitting down.
   const foldDrop = ctx.seated ? 0.1 : 0.3;
   const fold = new THREE.Group();
-  // When cream is worn the cascade above is the front fold; the hide only
-  // draws its own when it is the outermost layer.
-  const fanMaterial = hide;
+  /**
+   * AND IT IS MADE OF CLOTH, because it is only ever worn without a hide.
+   *
+   * This said `hide` — the rosette-mapped accent — while the condition
+   * that decides whether to draw it at all says `hideAmount === 0`. So
+   * the one garment that reaches it, the cloth-only dhoti whose own
+   * description reads "no hide", hung a hundred and eight vertices of
+   * tiger down its front. The gating was fixed when the double sheet was;
+   * the material it is gated to was not, and nothing connected the two.
+   */
+  const fanMaterial = cloth;
   const fanDensity = 0.75;
   for (const [offset, width, drop, tilt] of [
     [-0.022, 0.032, 1, 0.03],

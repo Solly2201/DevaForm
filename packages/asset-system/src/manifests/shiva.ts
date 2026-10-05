@@ -302,16 +302,29 @@ export const SHIVA_ASSETS: readonly AssetDefinition[] = [
   },
   {
     id: "shiva.garment.dhotiShort",
-    version: 2,
+    version: 3,
     name: "Short Dhoti",
-    description: "Knee-length ascetic wrap over the hips.",
+    description: "Knee-length ascetic wrap over the hips. Cloth only — no hide.",
     kind: { type: "part", slot: "lowerGarment" },
     deityCompatibility: ["shiva"],
     stage: "integration",
+    /**
+     * NO HIDE, which is what its name has always said.
+     *
+     * It was built with `hide: 1`, so a customer who chose "Short Dhoti"
+     * got a full tiger skin slung over the hips — indistinguishable in
+     * character from "Dhoti and Tiger Hide", which is the asset next to
+     * it. Two of the four lower garments were the same costume at two
+     * lengths, and the one combination nobody could reach was the one
+     * this is named after.
+     *
+     * The set reads as a set now: the hide alone, the cloth alone at two
+     * lengths, and the two together.
+     */
     source: {
       kind: "procedural",
       generatorId: "humanoid.hideWrap",
-      params: { length: 0.6, hide: 1, dhoti: 0.55, drape: 0 },
+      params: { length: 0.6, hide: 0, dhoti: 0.55, drape: 0 },
     },
     materialZones: ["garment", "garmentAccent", "metal"],
     category: "clothing",
