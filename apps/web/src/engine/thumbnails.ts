@@ -94,6 +94,9 @@ export async function buildAssetObject(
     // A thumbnail has no body to bring a skeleton, so the stylised
     // table is the honest answer here — the picture is of the asset.
     jointOffset: (child) => getJoint(child).position,
+    // A thumbnail has no rig, so nothing has refined a socket: the
+    // schema's own seat is the only answer there is here.
+    socketOffset: (id) => getSocket(id).position,
     held: {},
     seated: false,
     garment: "full",

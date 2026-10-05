@@ -497,16 +497,23 @@ export const waistKamarband: AttachmentGenerator = (ctx) => {
 
   /**
    * This socket's own place in the chest's frame, read from the skeleton
-   * this body actually brought rather than from the stylised table — the
-   * walk answers in chest-local metres and the generator returns
-   * socket-local ones, so the conversion has to be real.
+   * this body actually brought rather than from the stylised table.
+   *
+   * That is what this sentence has always said, and `getSocket` IS the
+   * stylised table — so the belt was built from the one body the table
+   * describes and worn by every other. The table seats the waist forty
+   * millimetres above the pelvis joint and a hundred and twenty forward;
+   * the measured human seats it ninety above and fifty-five forward.
+   * Measured, the belt came out SEVENTY-NINE MILLIMETRES inside both
+   * human torsos while sitting correctly on Ganesha, who is the body the
+   * table is for.
    */
-  const socket = getSocket("waist.ornament");
+  const socket = ctx.socketOffset("waist.ornament");
   const spine = ctx.jointOffset("spine");
   const chest = ctx.jointOffset("chest");
   const toChest = {
-    y: socket.position[1] - spine[1] - chest[1],
-    z: socket.position[2] - spine[2] - chest[2],
+    y: socket[1] - spine[1] - chest[1],
+    z: socket[2] - spine[2] - chest[2],
   };
   const toSocket = (point: THREE.Vector3): V3 => [
     point.x,

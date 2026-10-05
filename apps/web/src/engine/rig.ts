@@ -590,8 +590,22 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     return (joint?.position ?? getJoint(child).position) as readonly [number, number, number];
   };
 
+  /**
+   * Where a socket really is — see GeneratorContext.socketOffset.
+   *
+   * Off the live socket object, not the schema table and not the measured
+   * profile: a part's GLB may already have moved it (see the SOCKET_
+   * handling below), and the thing an ornament is parented to is this.
+   */
+  const socketOffsetOf = (id: SocketId): readonly [number, number, number] => {
+    const socket = sockets.get(id);
+    if (!socket) return [0, 0, 0];
+    return [socket.position.x, socket.position.y, socket.position.z];
+  };
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     jointOffset: jointOffsetOf,
+    socketOffset: socketOffsetOf,
     materials,
     proportions: config.proportions,
     morphs: config.morphs,

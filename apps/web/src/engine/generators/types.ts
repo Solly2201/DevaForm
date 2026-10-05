@@ -100,6 +100,27 @@ export interface GeneratorContext {
    * arm's own line, out of square, half inside the flesh.
    */
   jointOffset(child: JointId): readonly [number, number, number];
+  /**
+   * Where a SOCKET sits, in its joint's frame, ON THIS BODY.
+   *
+   * The same argument as `jointOffset`, and it was wrong in the same way.
+   * A body brings its own skeleton and its sockets come with it: the
+   * stylised table seats the waist forty millimetres above the pelvis
+   * joint and a hundred and twenty forward, the measured human seats it
+   * ninety above and fifty-five forward, and a part's GLB may refine
+   * either further at load time.
+   *
+   * An ornament that drapes is drawn in the frame of the socket it hangs
+   * from, so it has to convert between the body's measurements and that
+   * frame. Reading the stylised table to do it works for the one body the
+   * table describes and nothing else — measured, the kamarbandh came out
+   * SEVENTY-NINE MILLIMETRES inside both human torsos while sitting
+   * correctly on Ganesha, which is exactly the shape of that mistake.
+   *
+   * Valid for attachments, which are built after every part has had the
+   * chance to refine the sockets it owns.
+   */
+  socketOffset(id: SocketId): readonly [number, number, number];
 }
 
 /**
