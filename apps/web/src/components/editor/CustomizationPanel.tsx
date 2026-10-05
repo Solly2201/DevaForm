@@ -302,12 +302,27 @@ function AttachmentAdjust({ socket }: { socket: SocketId }) {
 
 function SocketSection({ socket, allowNone }: { socket: SocketId; allowNone: boolean }) {
   const deity = useEditorStore((s) => s.config.deity);
-  const attachment = useEditorStore((s) =>
-    s.config.attachments.find((a) => a.socket === socket),
-  );
+  const attachments = useEditorStore((s) => s.config.attachments);
+  const attachment = attachments.find((a) => a.socket === socket);
   const setAttachment = useEditorStore((s) => s.setAttachment);
   const assets = listAssets({ deity, socket });
   if (assets.length === 0) return null;
+  /**
+   * WHERE THE ONE OF IT CURRENTLY IS.
+   *
+   * There is one Trishul and one Sudarshana — the assets say so, and the
+   * resolver enforces it by moving the attribute to the slot chosen last.
+   * That is the right behaviour and it was invisible until it happened:
+   * the customer saw an unmarked card, chose it, and the other hand
+   * emptied. The card says it first now.
+   */
+  const elsewhere = (assetId: string): string | null => {
+    if (getAsset(assetId)?.cardinality !== "singleton") return null;
+    const other = attachments.find(
+      (entry) => entry.socket !== socket && entry.asset.assetId === assetId,
+    );
+    return other ? `In the ${getSocket(other.socket as SocketId).label}` : null;
+  };
   return (
     <section>
       <SectionHeading>{getSocket(socket).label}</SectionHeading>
@@ -315,6 +330,7 @@ function SocketSection({ socket, allowNone }: { socket: SocketId; allowNone: boo
         assets={assets}
         selectedAssetId={attachment?.asset.assetId ?? null}
         allowNone={allowNone}
+        noteFor={(asset) => elsewhere(asset.id)}
         onSelect={(assetId) => setAttachment(socket, assetId)}
       />
       {socket.endsWith(".hand.item") && (

@@ -828,5 +828,63 @@
         ]
       }
     ]
+  },
+  "ganesha-bodies": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "b-classic",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.body.classic"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "b-slender",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.body.slender"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "b-mahodara",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.body.mahodara"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "b-regal",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.body.regal"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      }
+    ]
   }
 }

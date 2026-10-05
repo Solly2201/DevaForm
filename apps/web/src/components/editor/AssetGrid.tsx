@@ -14,6 +14,19 @@ interface AssetGridProps {
   selectedAssetId: string | null;
   /** Show a "None" tile allowing the slot/socket to be emptied. */
   allowNone?: boolean;
+  /**
+   * A line about THIS asset's place in the composition, shown on its
+   * card — "In the Back Right Hand" for a divine attribute that is a
+   * singleton and is currently presented somewhere else.
+   *
+   * The resolver already explains the conflict, but only once the
+   * customer has created it: they choose the Trishul in a second hand,
+   * the first one empties, and a sentence appears in the notices. Saying
+   * it on the card says it before rather than after, which is the
+   * difference between a product that is explaining itself and one that
+   * is apologising.
+   */
+  noteFor?: (asset: AssetDefinition) => string | null;
   onSelect: (assetId: string | null) => void;
 }
 
@@ -34,10 +47,12 @@ function useAssetThumbnail(assetId: string): string | null {
 function AssetCard({
   asset,
   selected,
+  note,
   onSelect,
 }: {
   asset: AssetDefinition;
   selected: boolean;
+  note: string | null;
   onSelect: () => void;
 }) {
   const thumbnail = useAssetThumbnail(asset.id);
@@ -47,7 +62,7 @@ function AssetCard({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      title={asset.description ?? asset.name}
+      title={note ? `${note}. ${asset.description ?? asset.name}` : (asset.description ?? asset.name)}
       className={`group flex flex-col items-stretch overflow-hidden rounded-lg border text-left transition-colors ${
         selected
           ? "border-saffron-500 bg-surface-700"
@@ -64,15 +79,25 @@ function AssetCard({
       </span>
       <span className="px-2 py-1.5">
         <span className="block truncate text-xs font-medium text-stone-200">{asset.name}</span>
-        <span className="block text-[10px] uppercase tracking-wide text-stone-500">
-          {badge ?? " "}
+        <span
+          className={`block truncate text-[10px] uppercase tracking-wide ${
+            note ? "text-saffron-500/90" : "text-stone-500"
+          }`}
+        >
+          {note ?? badge ?? " "}
         </span>
       </span>
     </button>
   );
 }
 
-export function AssetGrid({ assets, selectedAssetId, allowNone = false, onSelect }: AssetGridProps) {
+export function AssetGrid({
+  assets,
+  selectedAssetId,
+  allowNone = false,
+  noteFor,
+  onSelect,
+}: AssetGridProps) {
   // An empty grid is a customer wondering whether the panel is broken.
   if (assets.length === 0 && !allowNone) {
     return (
@@ -102,6 +127,7 @@ export function AssetGrid({ assets, selectedAssetId, allowNone = false, onSelect
           key={asset.id}
           asset={asset}
           selected={asset.id === selectedAssetId}
+          note={noteFor?.(asset) ?? null}
           onSelect={() => onSelect(asset.id)}
         />
       ))}
