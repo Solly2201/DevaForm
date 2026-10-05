@@ -410,17 +410,37 @@ export const POSE_PRESETS: readonly PosePreset[] = [
   {
     id: "royal",
     label: "Royal Ease",
-    description: "Lalitasana — one leg folded, one pendant, easeful bearing.",
+    description: "Easeful seated bearing — one leg folded flat, the other drawn up.",
     seated: true,
     joints: {
-      // Lalitasana: left leg folded flat, right leg pendant with a strong
-      // knee bend so the hanging foot reaches down toward the base.
-      "leg.left.thigh": [-126 * D, 53 * D, 67 * D],
-      "leg.left.shin": [109 * D, 0, 0],
-      "leg.left.foot": [54 * D, -17 * D, 0],
-      "leg.right.thigh": [-55 * D, 11 * D, -10 * D],
-      "leg.right.shin": [107 * D, 0, 0],
-      "leg.right.foot": [-51 * D, 7 * D, 0],
+      /**
+       * LALITASANA ON A FLAT BASE: SEATED, not standing on one leg.
+       *
+       * The pendant leg used to hang nearly straight down — its ankle
+       * reached 274 mm below the pelvis while the folded leg's reached
+       * 188 — so the figure's lowest point was that foot, and settling it
+       * onto the base stood the whole figure up on it with the other leg
+       * tucked inside the skirt. The Studio showed a standing Ganesha
+       * with a knee poking through his dhoti.
+       *
+       * A statue sits on what it is placed on. These are solved against
+       * the skeleton rather than authored by eye: the folded leg lies
+       * flat as it does in meditation (knee 81 mm below the pelvis, sole
+       * about 123), and the pendant leg's knee comes UP in front with the
+       * shin dropping to put its sole within twenty millimetres of the
+       * same line. Both rest on the base and the pelvis sits between
+       * them, which is the pose.
+       */
+      "leg.left.thigh": [-126 * D, 36 * D, 63 * D],
+      "leg.left.shin": [153 * D, 0, 0],
+      "leg.left.foot": [30 * D, -12 * D, 0],
+      "leg.right.thigh": [-110 * D, -10 * D, -30 * D],
+      "leg.right.shin": [152 * D, 0, 0],
+      // The sole LEVEL: the chain above it accumulates to +42 degrees of
+      // pitch, so the foot takes that back out. Left pointing down, the
+      // toe became the lowest thing on the figure and the base settled
+      // against it - which stood the whole statue up on one toe.
+      "leg.right.foot": [-42 * D, 0, 0],
       spine: [2 * D, 6 * D, 3 * D],
       head: [3 * D, -8 * D, -3 * D],
       "arm.frontLeft.upper": [14 * D, 0, 46 * D],
