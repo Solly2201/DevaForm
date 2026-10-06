@@ -3,7 +3,7 @@
  */
 import * as THREE from "three";
 import { mesh, pleatedCylinder } from "../geometry";
-import { seatedLapWrap } from "./seatedWrap";
+import { seatedLapWrap, shapeToLap } from "./seatedWrap";
 import { pushOutsideBody, surfaceRibbon, type SurfaceWaypoint } from "./surfaceWalk";
 import { num, type PartGenerator } from "./types";
 
@@ -52,7 +52,21 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
    */
   const hemClearance =
     ctx.body.legSpreadX + Math.max(ctx.body.kneeRadius, ctx.body.calfRadius) + 0.012;
-  const bottomR = Math.max(hemClearance, ctx.body.dhotiRadius * 0.86);
+  /**
+   * WORN SHORT, THE HEM IS CUT TO THE HIPS, not to the standing legs.
+   *
+   * `hemClearance` is the span of two legs side by side, which is what a
+   * full-length wrap has to contain. The pose says `short` precisely
+   * because a leg is NOT down there any more — Ganesha's dance lifts one
+   * and swings it across — and a cone that wide, shortened, is a hoop the
+   * raised thigh sweeps straight through. It is the same mistake the hide
+   * generator made in tandava, and the same cure: gathered cloth is wound
+   * on the hips, where the pose left them.
+   */
+  const bottomR =
+    ctx.garment === "short"
+      ? ctx.body.pelvisHalfWidth + 0.014
+      : Math.max(hemClearance, ctx.body.dhotiRadius * 0.86);
   /**
    * THE WAIST CLEARS THE HIPS, not the pelvis.
    *
@@ -100,48 +114,46 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
      * stylised body's lap on a mesh body's knees all over again.
      */
     const lap = seatedLapWrap(ctx.body, ctx.seatedLegs);
-    // A lap is wider than it is deep, so the wrap over it is an ellipse.
-    // A circle big enough for the knees stands out into the air in front
-    // of the shins by the difference, which is most of a hand's width.
     const lapR = lap.lapRadiusX;
-    const squash = lap.lapRadiusZ / lap.lapRadiusX;
-    const skirtDrop = waistY - lap.hemY;
+    const legs = ctx.seatedLegs;
+    /**
+     * Cut long enough to reach the lowest the legs get, because the
+     * shaping below CLAMPS the hem rather than stretching it: cloth that
+     * stops short of a knee cannot be pulled down to cover it.
+     */
+    const deepest = legs ? Math.min(...legs.floor) : lap.hemY;
+    const skirtDrop = waistY - Math.min(lap.hemY, deepest + 0.004);
 
-    group.add(
-      mesh(pleatedCylinder(topR * 1.02, lapR, skirtDrop, 20, Math.max(0.008, lapR * 0.05)), garment, {
-        position: [0, waistY - skirtDrop / 2, 0],
-        scale: [1, 1, squash],
-      }),
-    );
-    // The lap itself: a shallow dome closing the top of that cone, so
-    // nothing looks down inside the wrap from three-quarters.
-    group.add(
-      mesh(new THREE.SphereGeometry(lapR, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.5), garment, {
-        position: [0, waistY - skirtDrop + 0.004, 0],
-        scale: [1, 0.26, squash],
-      }),
-    );
-    // Hem band round the bottom edge — the line that says where the
-    // cloth ends, which a sphere could never have.
-    group.add(
-      mesh(new THREE.TorusGeometry(lapR * 0.985, 0.011, 10, 48), accent, {
-        position: [0, waistY - skirtDrop + 0.008, 0],
-        rotation: [Math.PI / 2, 0, 0],
-        scale: [1, squash, 1],
-      }),
-    );
+    /**
+     * Built as a cone, then LAID ON THE LAP.
+     *
+     * The cone is only the bolt of cloth: the waist at the top and the
+     * furthest the legs reach at the bottom. Left as a cone it is a drum
+     * — which is what Royal Ease wore, with both knees out of its sides
+     * — so `shapeToLap` then carries every vertex onto the lap the pose
+     * actually makes, at its own bearing. See seatedWrap.ts.
+     */
+    const skirt = pleatedCylinder(topR * 1.02, lapR, skirtDrop, 20, Math.max(0.008, lapR * 0.05));
+    skirt.translate(0, waistY - skirtDrop / 2, 0);
+    if (legs) shapeToLap(skirt, legs, { waistY, clearance: 0.016 });
+    group.add(mesh(skirt, garment, {}));
+
+    /**
+     * The hem band, built as the same cone a little wider and a little
+     * shorter, and shaped by the same pass — so it cannot disagree with
+     * the hem it is on. A torus could only ever be a flat ring, and the
+     * hem is not flat any more.
+     */
+    const band = pleatedCylinder(lapR * 0.98, lapR, 0.016, 20, Math.max(0.006, lapR * 0.04));
+    band.translate(0, waistY - skirtDrop + 0.008, 0);
+    if (legs) shapeToLap(band, legs, { waistY, clearance: 0.0185 });
+    group.add(mesh(band, accent, {}));
+
     // Waist wrap band
     group.add(
       mesh(new THREE.TorusGeometry(topR * 0.99, 0.016, 12, 48), garment, {
         position: [0, waistY + 0.005, 0],
         rotation: [Math.PI / 2, 0, 0],
-      }),
-    );
-    // Center pleat fan spilling onto the lap
-    group.add(
-      mesh(new THREE.BoxGeometry(0.05, 0.13, 0.006), accent, {
-        position: [0, -0.06, 0.155 * bulk * lapScale],
-        rotation: [0.55, 0, 0],
       }),
     );
     return [{ joint: "pelvis", object: group }];

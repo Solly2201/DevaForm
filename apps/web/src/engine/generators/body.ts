@@ -209,7 +209,23 @@ export const humanoidBody: PartGenerator = (ctx) => {
       joint: `leg.${slot}.shin`,
       object: (() => {
         const g = new THREE.Group();
-        g.add(mesh(new THREE.SphereGeometry(0.054 * bulk, 18, 14), skin)); // knee
+        /**
+         * A KNEE IS WIDER THAN IT IS DEEP, and flatter in front.
+         *
+         * A sphere here is a ball bearing, and on a seated figure it is
+         * the one part of the leg that is never under cloth — Royal Ease
+         * shows both of them against the dhoti's edge. A knee is a cap on
+         * the end of a bone: broader across than through, slightly
+         * flattened down its front, and no taller than it is broad.
+         *
+         * Sized from the profile rather than from a literal, which is now
+         * the same number the profile reports — see `kneeRadius`.
+         */
+        g.add(
+          mesh(new THREE.SphereGeometry(ctx.body.kneeRadius, 20, 16), skin, {
+            scale: [1.06, 0.94, 0.88],
+          }),
+        );
         g.add(limbTube(skin, shinEnd, 0.05 * bulk, 0.037 * bulk));
         return g;
       })(),

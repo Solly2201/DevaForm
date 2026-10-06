@@ -338,7 +338,19 @@ const PINNED = {
   // nineteen millimetres through a forearm. The crossing moved inboard
   // toward the neck, where a sash actually goes, and a keep-out pass
   // pushes any vertex still inside a limb out of it.
-  ganesha: { nodes: 364, digest: "692fc4e42c1b4d7a" },
+  //
+  // AND HIS KNEE IS THE KNEE HE IS DRAWN WITH. Deliberate: the profile
+  // said 42 mm while the body put a 54 mm sphere there, so every garment
+  // that asked where the knee was got a twelve-millimetre lie — and
+  // `legExtentAt` interpolates through it, so the whole lower leg read
+  // narrow. Seated it was unmissable: Royal Ease's wrap was cut to a knee
+  // a centimetre smaller than the one on the figure.
+  //
+  // AND HIS SEATED WRAP IS LAID ON THE LAP rather than turned around it.
+  // A surface of revolution is a drum on a folded figure; the lap is now
+  // measured bearing by bearing off the posed skeleton and the cloth is
+  // shaped onto it.
+  ganesha: { nodes: 364, digest: "1fb47ef0d7dc38f8" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

@@ -1366,5 +1366,53 @@
         ]
       }
     ]
+  },
+  "ganesha-seated": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "royal",
+        "params": {
+          "deity": "ganesha",
+          "pose": "royal"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "backThreeQuarter",
+          "back"
+        ]
+      },
+      {
+        "name": "dance",
+        "params": {
+          "deity": "ganesha",
+          "pose": "dance"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "backThreeQuarter",
+          "back"
+        ]
+      },
+      {
+        "name": "medi",
+        "params": {
+          "deity": "ganesha",
+          "pose": "meditation"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "backThreeQuarter",
+          "back"
+        ]
+      }
+    ]
   }
 }

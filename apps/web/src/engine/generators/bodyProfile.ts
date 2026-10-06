@@ -636,8 +636,21 @@ export function deriveBodyProfile(
      */
     thighTopRadius: 0.075 * bulk,
     thighMidRadius: 0.056 * bulk,
-    kneeRadius: 0.042 * bulk,
-    calfRadius: 0.046 * bulk,
+    /**
+     * FIFTY-FOUR, which is the knee the body actually draws.
+     *
+     * It said forty-two while `humanoidBody` put a 54 mm sphere there, so
+     * every garment that asked the profile where the knee was got a
+     * twelve-millimetre lie — and `legExtentAt` interpolates through this
+     * number, so the whole lower leg read narrow. Seated, it is the
+     * clearest possible failure: the lap is measured from these radii, so
+     * Royal Ease's wrap was cut to a knee a centimetre smaller than the
+     * one on the figure and both knees came through it as bare nubs.
+     *
+     * A profile describes the body it belongs to. The body was right.
+     */
+    kneeRadius: 0.054 * bulk,
+    calfRadius: 0.05 * bulk,
     thighLength: 0.2,
     shinLength: 0.19,
     /**
@@ -1064,8 +1077,21 @@ function deriveAthleticProfile(
      */
     thighTopRadius: 0.075 * bulk,
     thighMidRadius: 0.056 * bulk,
-    kneeRadius: 0.042 * bulk,
-    calfRadius: 0.046 * bulk,
+    /**
+     * FIFTY-FOUR, which is the knee the body actually draws.
+     *
+     * It said forty-two while `humanoidBody` put a 54 mm sphere there, so
+     * every garment that asked the profile where the knee was got a
+     * twelve-millimetre lie — and `legExtentAt` interpolates through this
+     * number, so the whole lower leg read narrow. Seated, it is the
+     * clearest possible failure: the lap is measured from these radii, so
+     * Royal Ease's wrap was cut to a knee a centimetre smaller than the
+     * one on the figure and both knees came through it as bare nubs.
+     *
+     * A profile describes the body it belongs to. The body was right.
+     */
+    kneeRadius: 0.054 * bulk,
+    calfRadius: 0.05 * bulk,
     thighLength: 0.2,
     shinLength: 0.19,
     /**

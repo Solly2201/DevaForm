@@ -64,6 +64,7 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import { morphInfluences } from "./morphs";
+import { LAP_BEARINGS } from "./generators/seatedWrap";
 import type { ArmSegment, SeatedLegs } from "./generators/seatedWrap";
 import type { ZoneMaterials } from "./materials";
 import {
@@ -1057,6 +1058,47 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     const hip = new THREE.Vector3();
     const knee = new THREE.Vector3();
     const foot = new THREE.Vector3();
+    /**
+     * THE LAP, BEARING BY BEARING.
+     *
+     * The single radius below describes a cone, and a seated figure is
+     * not one: built as a solid of revolution the wrap came out a drum
+     * with the knees sticking out of its sides. So the legs are also
+     * walked as capsules and binned by bearing — how far the flesh
+     * reaches there, and how low it goes — which is the same thing a
+     * BodyProfile says about a torso, said about a pose.
+     */
+    const reach = new Array<number>(LAP_BEARINGS).fill(0);
+    const floor = new Array<number>(LAP_BEARINGS).fill(Number.POSITIVE_INFINITY);
+    const top = new Array<number>(LAP_BEARINGS).fill(Number.NEGATIVE_INFINITY);
+    const sample = (at: THREE.Vector3, girth: number) => {
+      const radius = Math.hypot(at.x, at.z);
+      if (radius < 1e-6) return;
+      // The flesh spans an arc, not a point: a limb of this girth at this
+      // distance covers about this much of the turn either side.
+      const half = Math.min(Math.PI / 2, Math.asin(Math.min(1, girth / Math.max(girth, radius))));
+      const centre = Math.atan2(at.x, at.z);
+      const steps = Math.max(1, Math.ceil((half / (Math.PI * 2)) * LAP_BEARINGS));
+      for (let step = -steps; step <= steps; step += 1) {
+        const bearing = centre + (step / Math.max(1, steps)) * half;
+        const turn = Math.PI * 2;
+        const index =
+          Math.round((((bearing % turn) + turn) % turn) / turn * LAP_BEARINGS) % LAP_BEARINGS;
+        const spread = Math.cos((step / Math.max(1, steps)) * (Math.PI / 2));
+        reach[index] = Math.max(reach[index] ?? 0, radius + girth * spread);
+        floor[index] = Math.min(floor[index] ?? Infinity, at.y - girth);
+        top[index] = Math.max(top[index] ?? -Infinity, at.y + girth);
+      }
+    };
+    /** Walk one bone as a tapered capsule, sampling as it goes. */
+    const walkBone = (from: THREE.Vector3, to: THREE.Vector3, r0: number, r1: number) => {
+      const at = new THREE.Vector3();
+      for (let i = 0; i <= 10; i += 1) {
+        const t = i / 10;
+        at.lerpVectors(from, to, t);
+        sample(at, r0 + (r1 - r0) * t);
+      }
+    };
     let thighHalfWidth = 0;
     let thighFrontZ = 0;
     let kneeY = Number.POSITIVE_INFINITY;
@@ -1079,12 +1121,61 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
       thighFrontZ = Math.max(thighFrontZ, midZ + bodyProfile.thighMidRadius);
       kneeY = Math.min(kneeY, knee.y);
       floorY = Math.min(floorY, knee.y - bodyProfile.kneeRadius);
+      walkBone(hip, knee, bodyProfile.thighTopRadius, bodyProfile.kneeRadius);
       if (footJoint) {
         pelvis.worldToLocal(footJoint.getWorldPosition(foot));
         floorY = Math.min(floorY, foot.y - bodyProfile.kneeRadius * 0.6);
+        walkBone(knee, foot, bodyProfile.kneeRadius, bodyProfile.kneeRadius * 0.62);
       }
     }
-    return measured ? { thighHalfWidth, thighFrontZ, kneeY, floorY } : null;
+    if (!measured) return null;
+    /**
+     * Behind the figure there are no legs, so those bearings were never
+     * sampled. The cloth still has to be somewhere: it comes in to the
+     * hips and its hem rises to the seat, which is what a seated wrap
+     * does at the back.
+     */
+    const hips = Math.max(bodyProfile.pelvisHalfWidth, bodyProfile.bellyRadiusZ);
+    for (let i = 0; i < LAP_BEARINGS; i += 1) {
+      if ((reach[i] ?? 0) <= 0) reach[i] = hips;
+      if (!Number.isFinite(floor[i] ?? Infinity)) floor[i] = bodyProfile.thighSeatY;
+      if (!Number.isFinite(top[i] ?? -Infinity)) top[i] = bodyProfile.thighSeatY;
+    }
+    /**
+     * Smoothed, three times.
+     *
+     * The bins are a sampling of a continuous surface and cloth does not
+     * have teeth: one pass left the garment with flat sides and corners
+     * where a knee's bin met its neighbour, which reads as a slab rather
+     * than as cloth over a leg.
+     */
+    const once = (values: number[]): number[] =>
+      values.map((_, i) => {
+        const before = values[(i - 1 + LAP_BEARINGS) % LAP_BEARINGS] ?? 0;
+        const here = values[i] ?? 0;
+        const after = values[(i + 1) % LAP_BEARINGS] ?? 0;
+        return before * 0.25 + here * 0.5 + after * 0.25;
+      });
+    const smooth = (values: number[]): number[] => once(once(once(values)));
+    /**
+     * The HEM is smoothed harder than the width.
+     *
+     * The shaping clamps each vertex to the floor at its own bearing, so
+     * wherever the floor steps between neighbouring bins the hem comes
+     * out as a sawtooth — small spikes along the back edge, which read as
+     * broken geometry rather than as cloth. A hem's exact height matters
+     * much less than its continuity.
+     */
+    const smoothHem = (values: number[]): number[] => once(once(smooth(values)));
+    return {
+      thighHalfWidth,
+      thighFrontZ,
+      kneeY,
+      floorY,
+      reach: smooth(reach),
+      floor: smoothHem(floor),
+      top: smooth(top),
+    };
   })();
 
   /**
