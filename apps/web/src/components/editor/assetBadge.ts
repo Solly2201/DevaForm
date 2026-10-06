@@ -38,9 +38,19 @@ import type { AssetStage } from "@devaform/asset-system";
  * `badgeCoverage` below is the regression guard. If someone restores a
  * blanket badge, the test that calls it fails with the count.
  */
-export const STAGE_BADGE: Partial<Record<AssetStage, string>> = {
-  review: "New",
-};
+/**
+ * AND IT IS EMPTY, which is the honest state of it.
+ *
+ * The one entry was `review: "New"`, and `review` is no longer a stage a
+ * customer is shown — it means "not yet approved for production", and the
+ * registry now enforces that (see VISIBLE_STAGES). A mapping that cannot
+ * fire is worse than no mapping, because the next reader will believe the
+ * picker badges something.
+ *
+ * The mechanism stays, with its guard: when a piece of work is promoted
+ * into a stage a customer can see, this is where "New" goes back.
+ */
+export const STAGE_BADGE: Partial<Record<AssetStage, string>> = {};
 
 /**
  * How much of a set of assets a badge would mark.

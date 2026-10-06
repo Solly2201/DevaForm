@@ -49,11 +49,12 @@
  * own camera on the character's layer.
  */
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import * as THREE from "three";
 import { CHARACTER_LAYER, STAGE_LAYER } from "./stageLayers";
 import { useStageStore } from "./stageStore";
 
-export function StageRender() {
+export function StageRender({ haze }: { haze?: number }) {
   const gl = useThree((state) => state.gl);
   const camera = useThree((state) => state.camera);
   const phase = useStageStore((state) => state.phase);
@@ -82,6 +83,27 @@ export function StageRender() {
    * the overlay is correct and complete at the instant the overlay goes,
    * rather than being composed in front of the customer.
    */
+  /**
+   * THE HALL FALLS AWAY WITH DISTANCE, and the figure does not.
+   *
+   * A directional light does not fall off, and without this neither does
+   * a nine-metre wall: lit to a readable value near the figure it is lit
+   * to the same value at the back of the room. Zoomed out, the hall came
+   * out as flat pale panels filling the upper half of the frame, brighter
+   * than the statue in front of them — the "patchy lighting when zoomed
+   * out" a customer reported. The two-pass split is what makes the cure
+   * possible: fog belongs to a SCENE, and the room and the figure share
+   * one, so it is set for the room's pass and taken away again for the
+   * figure's.
+   *
+   * The colour is the scene's own background, so the far wall does not
+   * fade toward some other hall.
+   */
+  const fog = useMemo(
+    () => (haze && haze > 0 ? new THREE.FogExp2(0x000000, haze) : null),
+    [haze],
+  );
+
   const owed = useRef(2);
   const wasReady = useRef(false);
   if (characterReady !== wasReady.current) {
@@ -118,12 +140,17 @@ export function StageRender() {
 
     const previousAutoClear = gl.autoClear;
     const background = scene.background;
+    const previousFog = scene.fog;
     try {
       // The room, and only the lamps that belong to it. This pass paints
       // the sanctum's ground colour and owns the clear.
       camera.layers.set(STAGE_LAYER);
       gl.autoClear = true;
       scene.background = background;
+      if (fog) {
+        if (background instanceof THREE.Color) fog.color.copy(background);
+        scene.fog = fog;
+      }
       gl.render(scene, camera);
 
       // The figure, over the room, against the room's depth.
@@ -147,10 +174,12 @@ export function StageRender() {
       camera.layers.set(CHARACTER_LAYER);
       gl.autoClear = false;
       scene.background = null;
+      scene.fog = null;
       gl.render(scene, camera);
     } finally {
       gl.autoClear = previousAutoClear;
       scene.background = background;
+      scene.fog = previousFog;
       camera.layers.enableAll();
     }
   }, 1);

@@ -178,6 +178,26 @@ export interface StageEnvironment {
   oculus: { radius: number; height: number; color: string; shaftOpacity: number };
   /** Oil lamps on the floor, which is what warms a dark hall. */
   lamps: { count: number; radius: number; color: string };
+  /**
+   * HOW FAST THE HALL FALLS AWAY, as an exponential-squared density.
+   *
+   * A directional light does not fall off and neither, without this, does
+   * a nine-metre wall: lit to a readable value near the figure it is lit
+   * to the same value at the back of the room, so zoomed out the hall
+   * came out as flat pale panels filling the upper half of the frame,
+   * BRIGHTER than the statue in front of them. That is the "patchy
+   * lighting when zoomed out" a customer reported, and no light rig can
+   * answer it — the problem is that distance costs nothing.
+   *
+   * Applied to the ROOM's pass only (see StageRender), so the figure is
+   * never touched by it. At this density the mandala the figure stands on
+   * is barely affected, the colonnade at 5.4 m is about half swallowed,
+   * and the wall at 9 m is nearly gone into the ground colour — which is
+   * what a dark sanctum lit by floor lamps actually looks like, and what
+   * keeps the figure separated from its background at every distance the
+   * camera can reach.
+   */
+  haze: number;
 }
 
 /**
@@ -310,6 +330,7 @@ const SANCTUM: PresentationConfig = {
     // the statue it was supposed to frame disappeared behind it. See
     // `orbitBounds`: the two numbers are now held to each other.
     columns: { count: 18, radius: 5.4, height: 5.6, thickness: 0.26, color: "#2f2418" },
+    haze: 0.153,
     // Far enough back and dark enough that the figure separates from it.
     // A wall the same value as the statue is a wall the statue is lost in.
     wall: { radius: 9, height: 7.2, color: "#0b0805" },

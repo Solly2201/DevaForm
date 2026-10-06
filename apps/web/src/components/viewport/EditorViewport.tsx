@@ -410,7 +410,7 @@ export function EditorViewport({ stage }: { stage: PresentationConfig }) {
             in separate passes so each is lit by its own rig. Must sit
             above the things it draws only in the sense that it must be
             mounted — the passes read the whole scene. */}
-        <StageRender />
+        <StageRender haze={environment?.haze} />
         <RendererHandle />
         <AdoptHero hero={hero} controlsRef={controlsRef} touched={touched} />
         <CameraCommands stage={stage} controlsRef={controlsRef} onMove={takeCamera} />

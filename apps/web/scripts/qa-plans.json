@@ -1414,5 +1414,44 @@
         ]
       }
     ]
+  },
+  "ai-head": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "aihead",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.head.aidraft"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side"
+        ]
+      },
+      {
+        "name": "aihead-crown",
+        "params": {
+          "deity": "ganesha",
+          "wear": "ganesha.head.aidraft",
+          "focus": "crown"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "classic",
+        "params": {
+          "deity": "ganesha"
+        },
+        "views": [
+          "front"
+        ]
+      }
+    ]
   }
 }

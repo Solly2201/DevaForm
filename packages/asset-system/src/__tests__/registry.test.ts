@@ -7,6 +7,7 @@ import {
 import { GANESHA_ASSETS } from "../manifests/ganesha";
 import { GANESHA_EDITOR_CATEGORIES } from "../categories";
 import { getAsset, listAssets, resolveAssetRef } from "../registry";
+import { VISIBLE_STAGES } from "../types";
 import { isHandheld } from "../presentation";
 
 describe("ganesha manifest integrity", () => {
@@ -86,6 +87,53 @@ describe("ganesha manifest integrity", () => {
           ).toBeGreaterThan(0);
         }
       }
+    }
+  });
+});
+
+/**
+ * An asset in review is not offered, and still resolves.
+ *
+ * `review` means "in visual review for production promotion" — the
+ * catalogue's own way of saying it has not been approved. One asset
+ * carries it, and its description is explicit about why: a trunk
+ * truncated by the reference crop, and an appearance baked into its
+ * texture rather than driven by the material zones, so the Color
+ * category silently does nothing to it. Offered in the picker with a NEW
+ * badge, it was the most prototype-feeling thing a first-time customer
+ * could reach.
+ *
+ * Hiding it is only half the rule. The other half is that nothing is
+ * destroyed: a configuration already saved with it has to open, which is
+ * the same guarantee `deprecated` carries.
+ */
+describe("a stage that is not offered is still resolvable", () => {
+  it("review is not a visible stage", () => {
+    expect(VISIBLE_STAGES).not.toContain("review");
+  });
+
+  it("no review-stage asset appears in any picker", () => {
+    const offered = listAssets({});
+    const inReview = offered.filter((asset) => asset.stage === "review");
+    expect(
+      inReview.map((asset) => asset.id),
+      "assets in review are offered to customers",
+    ).toEqual([]);
+  });
+
+  it("but the registry still knows them, so old saves open", () => {
+    // `includeDeprecated` is the "show me everything" door, which is how
+    // a test gets at what a customer is not shown.
+    const hidden = listAssets({ includeDeprecated: true }).filter(
+      (asset) => asset.stage === "review",
+    );
+    expect(hidden.length, "there is an asset in review to check").toBeGreaterThan(0);
+    for (const asset of hidden) {
+      expect(getAsset(asset.id), `${asset.id} still resolves`).toBeDefined();
+      expect(
+        resolveAssetRef({ assetId: asset.id, version: asset.version }),
+        `${asset.id} still resolves by reference`,
+      ).toBeDefined();
     }
   });
 });

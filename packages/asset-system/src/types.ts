@@ -22,12 +22,27 @@ export type AssetStage =
   | "production" // artist-made or approved, cleaned, optimized
   | "deprecated"; // kept only so old saved characters still resolve
 
-/** Stages whose assets may appear in the customer-facing picker. */
+/**
+ * Stages whose assets may appear in the customer-facing picker.
+ *
+ * `review` is NOT among them, and that is the whole point of the stage:
+ * it means "in visual review for production promotion", which is a thing
+ * the catalogue says about an asset it has not yet approved. One asset
+ * carries it — the TRELLIS.2 head — and its own description is explicit:
+ * the trunk is truncated by the reference crop and its appearance is
+ * texture-baked rather than zone-colorable. So it was offered in the
+ * picker, with a NEW badge, in a visual language of its own, and the
+ * Color category silently did nothing to it. That is the most
+ * prototype-feeling thing a first-time customer could reach.
+ *
+ * It stays in the REGISTRY, so a configuration already saved with it
+ * still resolves and still renders — exactly as `deprecated` works. What
+ * changes is that it is no longer offered.
+ */
 export const VISIBLE_STAGES: readonly AssetStage[] = [
   "prototype",
   "experimental",
   "integration",
-  "review",
   "production",
 ];
 

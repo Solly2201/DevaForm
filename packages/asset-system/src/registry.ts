@@ -7,7 +7,7 @@
 import type { AssetRef, DeityId, PartSlot, SocketId } from "@devaform/character-schema";
 import { DEITIES } from "./deities";
 import { SHARED_ASSETS } from "./manifests/shared";
-import type { AssetDefinition } from "./types";
+import { VISIBLE_STAGES, type AssetDefinition } from "./types";
 
 // Deity manifests plus assets shared across deities (a human body is not
 // anyone's private property). Compatibility still decides who is offered
@@ -67,6 +67,22 @@ export function listAssets(filter?: {
      * for explicitly.
      */
     if (!filter?.includeDeprecated && asset.stage === "deprecated") return false;
+    /**
+     * AND SO IS EVERY OTHER STAGE THAT IS NOT OFFERED.
+     *
+     * `VISIBLE_STAGES` has always said which stages a customer may be
+     * shown, and nothing enforced it: the only gate here was deprecation,
+     * so `review` — the catalogue's own word for "not yet approved" —
+     * went straight into the picker. A constant that states a rule which
+     * no code applies is worse than no constant, because every reader
+     * including the tests believes the rule is in force. It was found by
+     * writing the test that asserts it.
+     *
+     * Hidden from the LISTING only. `getAsset` and `resolveAssetRef` are
+     * untouched, so a configuration already saved with one still opens
+     * and still renders, which is the same guarantee deprecation carries.
+     */
+    if (!filter?.includeDeprecated && !VISIBLE_STAGES.includes(asset.stage)) return false;
     if (!filter) return true;
     if (
       filter.deity &&
