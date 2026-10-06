@@ -58,7 +58,7 @@ export type {
   SocketRefinement,
 } from "./types";
 export { deriveBodyProfile, type BodyProfile } from "./bodyProfile";
-export { makeHand } from "./body";
+export { makeHand } from "./hand";
 export { BASE_BUILDERS, BASE_TOP_HEIGHT } from "./bases";
 
 export const PART_GENERATORS: Record<string, PartGenerator> = {

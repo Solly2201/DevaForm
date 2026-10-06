@@ -322,7 +322,17 @@ const PINNED = {
   // and toy-like rather than substantial. A pectoral is broad, flat and
   // low, set back far enough that its own curve is the last part of the
   // chest rather than a thing stuck to it.
-  ganesha: { nodes: 360, digest: "34875caf4dc65f81" },
+  //
+  // AND THE HAND WAS REBUILT (see generators/hand.ts). Deliberate: the
+  // fingers were rooted ON the palm's surface rather than inside it, so
+  // each one stood off the mass it belonged to; every fingertip was a
+  // flat disc, because the tube primitive capped its ends with a fan;
+  // the webs were spheres and read as beads; the thumb's base was a
+  // 24 mm cylinder, wider than anything at the wrist; and the wrist
+  // itself was a 27 mm ball handing over to a 17 mm palm. The hand owns
+  // the whole forearm → wrist → palm silhouette now, so the two cannot
+  // disagree about where a wrist is.
+  ganesha: { nodes: 364, digest: "e92330c40e6b3d2c" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

@@ -30,7 +30,7 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { getJoint } from "@devaform/character-schema";
-import { makeHand } from "../generators/body";
+import { makeHand } from "../generators/hand";
 import { deriveBodyProfile } from "../generators/bodyProfile";
 import { ZoneMaterials } from "../materials";
 import type { GeneratorContext } from "../generators/types";

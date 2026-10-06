@@ -44,12 +44,18 @@ export function mesh(
  * Smooth tube of varying radius along a Catmull-Rom spline through `points`.
  * `radius` is either [startRadius, endRadius] (linear taper) or a function
  * of t in [0,1]. Ends are closed with fan caps.
+ *
+ * `cap: "round"` closes the FAR end with a dome instead — the thing that
+ * makes a fingertip a fingertip. A flat fan is a cut tube, and four cut
+ * tubes standing off a palm is most of what a toy hand is: the end of a
+ * finger is the first silhouette the eye checks, and it was a disc.
  */
 export function taperedTube(
   points: readonly V3[],
   radius: readonly [number, number] | ((t: number) => number),
   tubularSegments = 32,
   radialSegments = 14,
+  cap: "flat" | "round" = "flat",
 ): THREE.BufferGeometry {
   const curve = new THREE.CatmullRomCurve3(
     points.map((p) => v3(...p)),
@@ -96,19 +102,83 @@ export function taperedTube(
     }
   }
 
-  // End caps (fan to center points).
+  // The near end is always a flat fan: it is buried in whatever the tube
+  // grows out of.
   const startCenter = curve.getPoint(0);
-  const endCenter = curve.getPoint(1);
   const startIndex = positions.length / 3;
   positions.push(startCenter.x, startCenter.y, startCenter.z);
-  const endIndex = positions.length / 3;
-  positions.push(endCenter.x, endCenter.y, endCenter.z);
   for (let j = 0; j < radialSegments; j++) {
-    const a = j;
-    const b = (j + 1) % radialSegments;
-    indices.push(startIndex, a, b);
-    const lastRing = tubularSegments * radialSegments;
-    indices.push(endIndex, lastRing + b, lastRing + a);
+    indices.push(startIndex, j, (j + 1) % radialSegments);
+  }
+
+  const lastRing = tubularSegments * radialSegments;
+  const endCenter = curve.getPoint(1);
+  if (cap === "round") {
+    /**
+     * A DOME over the last ring, raised along the tube's own direction.
+     *
+     * Four rings of a quarter circle: the surface leaves the tube
+     * tangentially and closes at a point, which is a fingertip. Its
+     * height comes from the radius the tube ends at, so a tapered tube
+     * gets a proportionate tip rather than a bulb on a stalk.
+     */
+    const endRadius = Math.max(0.0005, radiusAt(1));
+    const tangent = curve.getTangent(1).normalize();
+    const normal = frames.normals[tubularSegments] ?? new THREE.Vector3(1, 0, 0);
+    const binormal = frames.binormals[tubularSegments] ?? new THREE.Vector3(0, 0, 1);
+    const DOME = 4;
+    const base = positions.length / 3;
+    for (let k = 1; k <= DOME; k++) {
+      // Up to, never AT, the pole: at phi = pi/2 the ring's radius is
+      // zero and all twelve of its vertices land on the crown, which is
+      // a ring of degenerate triangles and a tip that is a point only by
+      // accident. The crown below closes it.
+      const phi = (k / (DOME + 1)) * (Math.PI / 2);
+      const ring = Math.cos(phi) * endRadius;
+      const rise = Math.sin(phi) * endRadius;
+      for (let j = 0; j < radialSegments; j++) {
+        const angle = (j / radialSegments) * Math.PI * 2;
+        const sin = Math.sin(angle);
+        const cos = Math.cos(angle);
+        positions.push(
+          endCenter.x + ring * (cos * normal.x + sin * binormal.x) + tangent.x * rise,
+          endCenter.y + ring * (cos * normal.y + sin * binormal.y) + tangent.y * rise,
+          endCenter.z + ring * (cos * normal.z + sin * binormal.z) + tangent.z * rise,
+        );
+      }
+    }
+    for (let k = 0; k < DOME; k++) {
+      const lower = k === 0 ? lastRing : base + (k - 1) * radialSegments;
+      const upper = base + k * radialSegments;
+      for (let j = 0; j < radialSegments; j++) {
+        const jn = (j + 1) % radialSegments;
+        // The same winding as the tube's own quads above — a dome wound
+        // the other way is a hole, and that is what every fingertip and
+        // the thumb showed: a dark disc where the tip should be.
+        const a = lower + j;
+        const b = lower + jn;
+        const c = upper + j;
+        const d = upper + jn;
+        indices.push(a, b, c, b, d, c);
+      }
+    }
+    const crown = positions.length / 3;
+    positions.push(
+      endCenter.x + tangent.x * endRadius,
+      endCenter.y + tangent.y * endRadius,
+      endCenter.z + tangent.z * endRadius,
+    );
+    const top = base + (DOME - 1) * radialSegments;
+    for (let j = 0; j < radialSegments; j++) {
+      indices.push(crown, top + ((j + 1) % radialSegments), top + j);
+    }
+  } else {
+    const endIndex = positions.length / 3;
+    positions.push(endCenter.x, endCenter.y, endCenter.z);
+    for (let j = 0; j < radialSegments; j++) {
+      const b = (j + 1) % radialSegments;
+      indices.push(endIndex, lastRing + b, lastRing + j);
+    }
   }
 
   const geometry = new THREE.BufferGeometry();

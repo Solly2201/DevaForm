@@ -940,5 +940,260 @@
         ]
       }
     ]
+  },
+  "hands": {
+    "width": 900,
+    "height": 900,
+    "shots": [
+      {
+        "name": "g-hands",
+        "params": {
+          "deity": "ganesha",
+          "pose": "standing",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "s-hands",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "v-hands",
+        "params": {
+          "deity": "vishnu",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-bless",
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "s-bless",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.blessing",
+          "focus": "hands"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-abhaya",
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter"
+        ]
+      },
+      {
+        "name": "g-open",
+        "params": {
+          "deity": "ganesha",
+          "pose": "standing",
+          "focus": "rightHand"
+        },
+        "views": [
+          "right",
+          "frontRight"
+        ]
+      },
+      {
+        "name": "g-axe",
+        "params": {
+          "deity": "ganesha",
+          "pose": "standing",
+          "focus": "backRightHand"
+        },
+        "views": [
+          "right",
+          "frontRight"
+        ]
+      },
+      {
+        "name": "s-trishul",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "focus": "rightHand"
+        },
+        "views": [
+          "right",
+          "frontRight"
+        ]
+      },
+      {
+        "name": "v-chakra",
+        "params": {
+          "deity": "vishnu",
+          "focus": "backRightHand"
+        },
+        "views": [
+          "right",
+          "frontRight"
+        ]
+      }
+    ]
+  },
+  "bare-hands": {
+    "width": 900,
+    "height": 900,
+    "shots": [
+      {
+        "name": "bare-ganesha-abhaya",
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "without": "ganesha.bracelets.kada,ganesha.item.modak,ganesha.item.axe,ganesha.item.lotus",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "bare-ganesha-varada",
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "without": "ganesha.bracelets.kada,ganesha.item.modak,ganesha.item.axe,ganesha.item.lotus",
+          "focus": "leftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "bare-ganesha-open",
+        "params": {
+          "deity": "ganesha",
+          "pose": "standing",
+          "without": "ganesha.bracelets.kada,ganesha.item.modak,ganesha.item.axe,ganesha.item.lotus",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "bare-shiva-open",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "without": "shiva.attribute.trishul,shiva.attribute.damaru",
+          "focus": "leftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "bare-shiva-abhaya",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.blessing",
+          "without": "shiva.attribute.trishul,shiva.attribute.damaru",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "bare-vishnu-open",
+        "params": {
+          "deity": "vishnu",
+          "without": "vishnu.attribute.padma",
+          "focus": "leftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      }
+    ]
+  },
+  "hand-only": {
+    "width": 900,
+    "height": 900,
+    "shots": [
+      {
+        "name": "only-abhaya",
+        "params": {
+          "deity": "ganesha",
+          "pose": "blessing",
+          "without": "ganesha.body.classic,ganesha.bracelets.kada,ganesha.item.modak,ganesha.item.axe,ganesha.item.lotus,ganesha.armlets.vanki",
+          "focus": "rightHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      },
+      {
+        "name": "only-fist",
+        "params": {
+          "deity": "ganesha",
+          "pose": "standing",
+          "without": "ganesha.body.classic,ganesha.bracelets.kada,ganesha.item.modak,ganesha.item.axe,ganesha.item.lotus,ganesha.armlets.vanki",
+          "focus": "leftHand"
+        },
+        "views": [
+          "front",
+          "threeQuarter",
+          "side",
+          "back"
+        ]
+      }
+    ]
   }
 }
