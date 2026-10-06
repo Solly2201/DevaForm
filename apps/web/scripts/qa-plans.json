@@ -886,5 +886,59 @@
         ]
       }
     ]
+  },
+  "frames24": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "f-ganesha",
+        "params": {
+          "deity": "ganesha"
+        },
+        "views": [
+          "front",
+          "frontRight",
+          "right",
+          "backRight",
+          "back",
+          "backLeft",
+          "left",
+          "frontLeft"
+        ]
+      },
+      {
+        "name": "f-shiva",
+        "params": {
+          "deity": "shiva"
+        },
+        "views": [
+          "front",
+          "frontRight",
+          "right",
+          "backRight",
+          "back",
+          "backLeft",
+          "left",
+          "frontLeft"
+        ]
+      },
+      {
+        "name": "f-vishnu",
+        "params": {
+          "deity": "vishnu"
+        },
+        "views": [
+          "front",
+          "frontRight",
+          "right",
+          "backRight",
+          "back",
+          "backLeft",
+          "left",
+          "frontLeft"
+        ]
+      }
+    ]
   }
 }
