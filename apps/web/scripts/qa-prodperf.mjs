@@ -77,31 +77,46 @@ await page.waitForFunction(
 const firstViewport = now() - started;
 
 /**
- * The figure is on screen.
+ * The Studio is the customer's.
  *
- * Measured by the OPENING lifting, not by the arrival veil going away.
- * The veil only exists during a form swap, so on a first load the old
- * check found no element, resolved at once, and reported the Studio
- * usable two milliseconds after the canvas had been given room — with
- * nothing standing in it. A number like that is worse than no number.
+ * Three signals together, because no one of them is enough. The arrival
+ * veil only exists during a form swap, so waiting for it to disappear
+ * found no element on a first load, resolved at once, and reported the
+ * Studio usable two milliseconds after the canvas had been given room -
+ * with nothing standing in it. Waiting for the OPENING to lift is right
+ * when there is an opening, and on a fast machine the figure is ready
+ * before that cover can mount, so waiting for one to appear first spent
+ * a twenty-second timeout and reported it as the load.
  *
- * The opening lifts on `characterReady`: body mesh in the scene, nothing
- * still on its way, a frame drawn. That is the question a photograph can
- * fail, which is the one worth timing.
+ * So: a canvas with room, no opening over it, and the chrome handed over
+ * - the Save button is not in the tree until the entry has finished. All
+ * three at once is the first frame a customer could act on.
  */
-const sawOpening = await page
-  .waitForSelector('[data-testid="temple-opening"]', { timeout: 20_000 })
-  .then(() => true)
-  .catch(() => false);
-await page
-  .waitForFunction(() => document.querySelector('[data-testid="temple-opening"]') === null, {
-    timeout: 180_000,
-    polling: 100,
-  })
-  .catch(() => {
-    throw new Error("the opening never lifted: no figure within three minutes");
-  });
-const usable = now() - started;
+let sawOpening = false;
+let usable = 0;
+{
+  let handed = false;
+  for (let i = 0; i < 1800 && !handed; i += 1) {
+    const state = await page.evaluate(() => {
+      const canvas = document.querySelector("canvas");
+      const save = [...document.querySelectorAll("button")].some(
+        (node) => node.textContent?.trim() === "Save",
+      );
+      return {
+        opening: document.querySelector('[data-testid="temple-opening"]') !== null,
+        ready: canvas !== null && canvas.getBoundingClientRect().width > 200 && save,
+      };
+    });
+    if (state.opening) sawOpening = true;
+    if (state.ready && !state.opening) {
+      usable = now() - started;
+      handed = true;
+      break;
+    }
+    await settle(100);
+  }
+  if (!handed) throw new Error("the Studio never handed over: no usable figure in three minutes");
+}
 
 const timing = await page.evaluate(() => {
   const nav = performance.getEntriesByType("navigation")[0];
