@@ -332,7 +332,13 @@ const PINNED = {
   // itself was a 27 mm ball handing over to a 17 mm palm. The hand owns
   // the whole forearm → wrist → palm silhouette now, so the two cannot
   // disagree about where a wrist is.
-  ganesha: { nodes: 364, digest: "e92330c40e6b3d2c" },
+  //
+  // AND HIS SHAWL IS ROUTED CLEAR OF HIS ARMS. Deliberate, and shared:
+  // the same generator dresses Shiva's uttariya, which was running
+  // nineteen millimetres through a forearm. The crossing moved inboard
+  // toward the neck, where a sash actually goes, and a keep-out pass
+  // pushes any vertex still inside a limb out of it.
+  ganesha: { nodes: 364, digest: "692fc4e42c1b4d7a" },
   // Shiva moved for the same reason, plus two of its own: the trishul is
   // now one fixed length that slides to meet the ground rather than a
   // shaft built to reach whatever height the hand started at, and the

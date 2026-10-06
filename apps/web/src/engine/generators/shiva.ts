@@ -1113,7 +1113,35 @@ export const ornamentNaga: AttachmentGenerator = (ctx) => {
     { bearing: -4.85, y: at(0.002 + seat) },
     { bearing: -5.25, y: at(0.008 + seat), lift: 0.006 },
   ];
-  const walk = walkSurface(body, route, (t) => GAP + girth(t), 120);
+  /**
+   * AND OVER WHATEVER IS ALREADY WORN THERE.
+   *
+   * The serpent walked the body's own surface at a fixed four-millimetre
+   * gap, which is right on a bare chest and wrong the moment an upper
+   * garment is on: measured against the uttariya, the cloth ran
+   * forty-five millimetres inside the snake — a drape passing through a
+   * serpent's body at the shoulder, which is where both of them cross.
+   *
+   * A naga is worn OVER cloth. `wornClearanceAt` is the question "how far
+   * past the skin does what is already worn here reach", asked at the
+   * bearing and height the serpent is actually at — the same query the
+   * kamarbandh uses to sit on the dhoti rather than in it.
+   */
+  const alongRoute = <K extends "y" | "bearing">(t: number, key: K): number => {
+    const span = (route.length - 1) * Math.min(1, Math.max(0, t));
+    const first = route[Math.floor(span)] ?? route[0]!;
+    const second = route[Math.min(route.length - 1, Math.floor(span) + 1)] ?? first;
+    return first[key] + (second[key] - first[key]) * (span - Math.floor(span));
+  };
+  const walk = walkSurface(
+    body,
+    route,
+    (t) =>
+      GAP +
+      girth(t) +
+      ctx.wornClearanceAt("chest", alongRoute(t, "y"), alongRoute(t, "bearing")),
+    120,
+  );
 
   // The generator works in the necklace socket's space; the walk answers
   // in the chest joint's. The body knows the offset between them.

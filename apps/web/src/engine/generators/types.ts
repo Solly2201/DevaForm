@@ -11,7 +11,7 @@ import type {
 import type { HandClosure } from "@devaform/asset-system";
 import type { ZoneMaterials } from "../materials";
 import type { BodyProfile } from "./bodyProfile";
-import type { SeatedLegs } from "./seatedWrap";
+import type { ArmSegment, SeatedLegs } from "./seatedWrap";
 
 /** What a hand is closing on, as the resolver decided it. */
 export interface HeldItemSpec {
@@ -83,6 +83,14 @@ export interface GeneratorContext {
    * legs move under it; this is how it finds out.
    */
   seatedLegs: SeatedLegs | null;
+  /**
+   * Where this pose puts the arms, in the CHEST's frame — see ArmSegment.
+   *
+   * An upper garment is built on the chest and the arms are not: a drape
+   * routed on the torso's own surface has a limb hanging through it as
+   * soon as the pose moves one. This is what it has to stay outside of.
+   */
+  armKeepOut: readonly ArmSegment[];
   /**
    * How cloth is worn in this pose — full, gathered or short. Declared by
    * the pose itself (see PosePreset.garment) rather than inferred, so a

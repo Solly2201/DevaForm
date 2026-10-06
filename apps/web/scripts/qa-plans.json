@@ -1195,5 +1195,176 @@
         ]
       }
     ]
+  },
+  "uttariya": {
+    "width": 900,
+    "height": 1200,
+    "shots": [
+      {
+        "name": "utt-standing",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.uttariya"
+        },
+        "views": [
+          "front",
+          "frontLeft",
+          "left",
+          "backLeft",
+          "back",
+          "right"
+        ]
+      },
+      {
+        "name": "utt-standing-arm",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.uttariya",
+          "focus": "leftHand"
+        },
+        "views": [
+          "left",
+          "frontLeft"
+        ]
+      },
+      {
+        "name": "utt-standingStaff",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standingStaff",
+          "wear": "shiva.garment.uttariya"
+        },
+        "views": [
+          "front",
+          "frontLeft",
+          "left",
+          "backLeft",
+          "back",
+          "right"
+        ]
+      },
+      {
+        "name": "utt-standingStaff-arm",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standingStaff",
+          "wear": "shiva.garment.uttariya",
+          "focus": "leftHand"
+        },
+        "views": [
+          "left",
+          "frontLeft"
+        ]
+      },
+      {
+        "name": "utt-blessing",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.blessing",
+          "wear": "shiva.garment.uttariya"
+        },
+        "views": [
+          "front",
+          "frontLeft",
+          "left",
+          "backLeft",
+          "back",
+          "right"
+        ]
+      },
+      {
+        "name": "utt-blessing-arm",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.blessing",
+          "wear": "shiva.garment.uttariya",
+          "focus": "leftHand"
+        },
+        "views": [
+          "left",
+          "frontLeft"
+        ]
+      },
+      {
+        "name": "utt-meditation",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation",
+          "wear": "shiva.garment.uttariya"
+        },
+        "views": [
+          "front",
+          "frontLeft",
+          "left",
+          "backLeft",
+          "back",
+          "right"
+        ]
+      },
+      {
+        "name": "utt-meditation-arm",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.meditation",
+          "wear": "shiva.garment.uttariya",
+          "focus": "leftHand"
+        },
+        "views": [
+          "left",
+          "frontLeft"
+        ]
+      },
+      {
+        "name": "utt-tandava",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.tandava",
+          "wear": "shiva.garment.uttariya"
+        },
+        "views": [
+          "front",
+          "frontLeft",
+          "left",
+          "backLeft",
+          "back",
+          "right"
+        ]
+      },
+      {
+        "name": "utt-tandava-arm",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.tandava",
+          "wear": "shiva.garment.uttariya",
+          "focus": "leftHand"
+        },
+        "views": [
+          "left",
+          "frontLeft"
+        ]
+      }
+    ]
+  },
+  "uttariya-neck": {
+    "width": 900,
+    "height": 900,
+    "shots": [
+      {
+        "name": "neck",
+        "params": {
+          "deity": "shiva",
+          "pose": "shiva.standing",
+          "wear": "shiva.garment.uttariya",
+          "focus": "torso"
+        },
+        "views": [
+          "front",
+          "frontLeft",
+          "left"
+        ]
+      }
+    ]
   }
 }

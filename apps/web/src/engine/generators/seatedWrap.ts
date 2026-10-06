@@ -47,6 +47,26 @@ export interface SeatedLegs {
   floorY: number;
 }
 
+/**
+ * ONE LENGTH OF ARM, as a tapered capsule, in the CHEST's frame.
+ *
+ * A drape worn over the shoulder is built on the chest and the arms are
+ * not: the pose swings them and the cloth stays where it was put, so a
+ * garment routed on the torso's own surface has a limb hanging through
+ * it. Measured on Shiva, the uttariya reached nineteen millimetres into
+ * an arm in three of his five poses.
+ *
+ * The torso cannot answer this — `BodyProfile` describes a figure, not a
+ * pose — so the rig measures it off the posed skeleton and hands it over,
+ * the same way it hands over a seated figure's lap.
+ */
+export interface ArmSegment {
+  from: readonly [number, number, number];
+  to: readonly [number, number, number];
+  fromRadius: number;
+  toRadius: number;
+}
+
 export interface SeatedWrap {
   /** Where the cloth is held: the waist it leaves from. */
   waistY: number;

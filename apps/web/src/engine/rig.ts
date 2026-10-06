@@ -64,7 +64,7 @@ import {
   socketNameToSocketId,
 } from "./skinning";
 import { morphInfluences } from "./morphs";
-import type { SeatedLegs } from "./generators/seatedWrap";
+import type { ArmSegment, SeatedLegs } from "./generators/seatedWrap";
 import type { ZoneMaterials } from "./materials";
 import {
   applyGestureOrientations,
@@ -1087,6 +1087,79 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     return measured ? { thighHalfWidth, thighFrontZ, kneeY, floorY } : null;
   })();
 
+  /**
+   * WHERE THIS POSE PUTS THE ARMS, in the chest's frame.
+   *
+   * Measured the same way and for the same reason as the seated lap: an
+   * upper garment is built on the CHEST and the arms are not, so a drape
+   * routed on the torso's own surface has a limb hanging through it as
+   * soon as the pose moves one. Measured on Shiva's uttariya: nineteen
+   * millimetres into an arm, in three of his five poses.
+   *
+   * A throwaway copy of the skeleton again — the live joints must stay in
+   * rest pose while parts are built, because socket frames are read off
+   * them. The radii are the body's own band measurements, which are what
+   * it knows about how thick a limb is at the shoulder and the wrist.
+   */
+  const armKeepOut = ((): ArmSegment[] => {
+    const probe = buildJointHierarchy(skeleton);
+    applyPose(probe.joints, {
+      preset: resolved.pose.presetId,
+      jointOverrides: resolved.pose.joints as Record<string, Vec3>,
+    });
+    const chest = probe.joints.get("chest");
+    if (!chest) return [];
+    probe.characterRoot.updateWorldMatrix(true, true);
+    const shoulder = bodyProfile.armBandRadius * 1.15;
+    const elbow = bodyProfile.armBandRadius * 0.92;
+    const wrist = bodyProfile.wristBandRadius;
+    const segments: ArmSegment[] = [];
+    const local = (joint: THREE.Object3D): [number, number, number] => {
+      const point = joint.getWorldPosition(new THREE.Vector3());
+      chest.worldToLocal(point);
+      return [point.x, point.y, point.z];
+    };
+    for (const slot of armSlots) {
+      const upper = probe.joints.get(`arm.${slot}.upper` as JointId);
+      const forearm = probe.joints.get(`arm.${slot}.forearm` as JointId);
+      const hand = probe.joints.get(`arm.${slot}.hand` as JointId);
+      if (!upper || !forearm || !hand) continue;
+      /**
+       * The upper arm's capsule starts BEFORE the shoulder joint.
+       *
+       * A deltoid is a mass hung on the outside of that joint, so the
+       * limb's surface reaches above and outside it: a capsule starting
+       * at the joint leaves the shoulder's own bulge uncovered, and the
+       * drape went through it — eleven millimetres, at the one place an
+       * uttariya is actually tied.
+       */
+      const shoulderEnd = local(upper);
+      const elbowEnd = local(forearm);
+      const back = new THREE.Vector3(
+        shoulderEnd[0] - elbowEnd[0],
+        shoulderEnd[1] - elbowEnd[1],
+        shoulderEnd[2] - elbowEnd[2],
+      ).normalize();
+      segments.push({
+        from: [
+          shoulderEnd[0] + back.x * 0.03,
+          shoulderEnd[1] + back.y * 0.03,
+          shoulderEnd[2] + back.z * 0.03,
+        ],
+        to: elbowEnd,
+        fromRadius: shoulder,
+        toRadius: elbow,
+      });
+      segments.push({
+        from: local(forearm),
+        to: local(hand),
+        fromRadius: elbow,
+        toRadius: wrist,
+      });
+    }
+    return segments;
+  })();
+
   const baseCtx: Omit<GeneratorContext, "params"> = {
     jointOffset: jointOffsetOf,
     socketOffset: socketOffsetOf,
@@ -1102,6 +1175,7 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     held: heldByHand,
     seated: resolved.pose.seated,
     seatedLegs,
+    armKeepOut,
     garment: resolved.pose.garment,
     body: bodyProfile,
   };

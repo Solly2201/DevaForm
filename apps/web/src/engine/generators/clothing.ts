@@ -445,16 +445,33 @@ export const humanoidShawl: PartGenerator = (ctx) => {
    * upper cloth, worn over the shoulder and across the chest — and a sash
    * that stops where the dhoti starts is the dress the references draw.
    */
+  /**
+   * AND INBOARD OF THE ARM, at the shoulder.
+   *
+   * The crossing used to sit at a bearing of 1.15 — sixty-six degrees
+   * round from the front — which on a standing figure is the middle of
+   * the deltoid. The route is a walk on the TORSO's surface, and the
+   * torso does not know an arm is hanging there, so the cloth was routed
+   * straight through one: measured, nineteen millimetres inside, in three
+   * of Shiva's five poses.
+   *
+   * A sash goes over the shoulder NEAR THE NECK — that is where there is
+   * room on a body, and it is where every reference puts it. Pulled in to
+   * 0.95 the cloth crosses between the neck and the deltoid, and the
+   * keep-out pass below has almost nothing left to correct, which is what
+   * keeps that pass from showing: a vertex shoved out of a limb leaves a
+   * ridge, and the cure for the ridge is not needing the shove.
+   */
   const route: SurfaceWaypoint[] = [
-    { bearing: 1.15, y: at(0.97) },
+    { bearing: 0.95, y: at(0.99) },
     { bearing: 0.5, y: at(0.8) },
     { bearing: -0.1, y: at(0.58) },
     { bearing: -0.75, y: at(0.47) },
     { bearing: -1.5, y: at(0.41) },
     { bearing: -Math.PI, y: at(0.46) },
     { bearing: -4.2, y: at(0.58) },
-    { bearing: -5.0, y: at(0.84) },
-    { bearing: 1.15 - Math.PI * 2, y: at(0.97) },
+    { bearing: -5.25, y: at(0.86) },
+    { bearing: 0.95 - Math.PI * 2, y: at(0.99) },
   ];
 
   /**
@@ -541,6 +558,92 @@ export const humanoidShawl: PartGenerator = (ctx) => {
       position.setXYZ(i, point.x * scale, point.y, point.z * scale);
     }
     position.needsUpdate = true;
+    cloth.computeVertexNormals();
+  }
+
+  /**
+   * AND OUTSIDE THE ARMS, which are not part of the torso it is routed
+   * on.
+   *
+   * The two passes above keep the cloth outside the BODY and outside what
+   * is already WORN. Neither can see a limb: `BodyProfile` describes a
+   * figure standing at rest, this garment is built on the chest, and a
+   * pose swings the arms afterwards. So the drape crossed the shoulder
+   * where the deltoid is and ran down the side where the forearm is, and
+   * the limb came through it — measured on Shiva, nineteen millimetres
+   * into an arm in three of his five poses, plainly visible from his own
+   * left at any distance.
+   *
+   * `armKeepOut` is where the pose actually put them (see rig.ts). A
+   * vertex inside one of those capsules is pushed out along its own
+   * bearing, which is the direction "outward" means for a wrap, and only
+   * outward: a vertex already clear is left alone, so a drape resting ON
+   * a shoulder still rests on it.
+   *
+   * Not a cloth simulator and not a collision solver. One garment, one
+   * set of limbs, one question asked of each vertex.
+   */
+  if (ctx.armKeepOut.length > 0) {
+    const position = cloth.getAttribute("position");
+    const point = new THREE.Vector3();
+    const from = new THREE.Vector3();
+    const along = new THREE.Vector3();
+    const work = new THREE.Vector3();
+    const out = new THREE.Vector3();
+    const margin = thickness * 0.25;
+    /**
+     * The deepest limb this point is inside, and which way is out of it.
+     *
+     * OUT OF THE LIMB, not out from the body's axis. The two are the same
+     * for a skirt and opposite at a shoulder: an arm hangs OUTSIDE the
+     * torso, so pushing a vertex radially away from the spine drives it
+     * further INTO the arm. A march in that direction made the standing
+     * pose worse than it had been — from clear to twelve millimetres
+     * inside — which is the clearest possible statement that the
+     * direction was wrong.
+     */
+    const escape = (probe: THREE.Vector3): { depth: number; away: THREE.Vector3 } | null => {
+      let depth = 0;
+      let away: THREE.Vector3 | null = null;
+      for (const limb of ctx.armKeepOut) {
+        from.set(...limb.from);
+        along.set(...limb.to).sub(from);
+        const length = along.lengthSq();
+        if (length < 1e-9) continue;
+        const t = Math.min(1, Math.max(0, work.copy(probe).sub(from).dot(along) / length));
+        const girth = limb.fromRadius + (limb.toRadius - limb.fromRadius) * t + margin;
+        const axis = work.copy(from).addScaledVector(along, t);
+        const gap = axis.distanceTo(probe);
+        if (girth - gap <= depth) continue;
+        depth = girth - gap;
+        away = (away ?? new THREE.Vector3())
+          .subVectors(probe, axis)
+          .normalize();
+        // A vertex ON the axis has no direction out of it; take the
+        // bearing, which is at least perpendicular to a hanging limb.
+        if (!Number.isFinite(away.x) || away.lengthSq() < 0.5) {
+          const radius = Math.hypot(probe.x, probe.z) || 1;
+          away.set(probe.x / radius, 0, probe.z / radius);
+        }
+      }
+      return away ? { depth, away } : null;
+    };
+    for (let i = 0; i < position.count; i += 1) {
+      point.fromBufferAttribute(position, i);
+      const found = escape(point);
+      if (!found) continue;
+      out.copy(found.away);
+      // Plus a hair, so the next pass's tolerance does not put it back.
+      work.copy(point).addScaledVector(out, found.depth + 0.0005);
+      position.setXYZ(i, work.x, work.y, work.z);
+    }
+    position.needsUpdate = true;
+    /**
+     * And then OUT OF THE BODY again, because a vertex pushed out of an
+     * arm can land inside the chest beside it. The body pass only ever
+     * moves cloth outward, so running it twice cannot undo this.
+     */
+    pushOutsideBody(cloth, body, { y: 0, z: 0 }, thickness * 0.25);
     cloth.computeVertexNormals();
   }
 
