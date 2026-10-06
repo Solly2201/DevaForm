@@ -110,9 +110,43 @@ function mutateConfig(
   return { config: mutate(state.config), dirty: true };
 }
 
+/**
+ * WHETHER THE CHANGE ARRIVING IS PART OF A GESTURE.
+ *
+ * History throttles, so a slider dragged across its range records the
+ * state before the drag rather than sixty states during it. That is
+ * right for a drag and wrong for everything else, and it was applied to
+ * everything else: two picker cards clicked within three hundred
+ * milliseconds of each other produced ONE history entry, so the second
+ * choice could not be undone — and the first choice made within that
+ * window of any other change was not recorded at all. Clicking two
+ * adjacent cards quickly is not a gesture; it is two decisions.
+ *
+ * So the actions that are continuous say so, and only those are
+ * throttled. A discrete choice always records.
+ */
+let gesturing = false;
+const gesture = <T,>(run: () => T): T => {
+  gesturing = true;
+  try {
+    return run();
+  } finally {
+    gesturing = false;
+  }
+};
+
 export const useEditorStore = create<EditorState>()(
   temporal(
-    (set) => ({
+    (set) => {
+      /**
+       * The setter CONTINUOUS actions use — a slider, a drag handle, a
+       * colour well. History throttles these and only these; see
+       * `gesture`.
+       */
+      const slide = (
+        update: (state: EditorState) => Partial<EditorState>,
+      ): void => gesture(() => set(update));
+      return {
       config: createBootstrapConfiguration(),
       characterId: null,
       characterName: defaultName(createBootstrapConfiguration()),
@@ -160,7 +194,7 @@ export const useEditorStore = create<EditorState>()(
         ),
 
       setAttachmentOffset: (socket, offset) =>
-        set((state) =>
+        slide((state) =>
           mutateConfig(state, (config) => ({
             ...config,
             attachments: config.attachments.map((a) =>
@@ -173,7 +207,7 @@ export const useEditorStore = create<EditorState>()(
         set((state) => mutateConfig(state, (config) => posedWith(config, presetId))),
 
       setJointOverride: (joint, rotation) =>
-        set((state) =>
+        slide((state) =>
           mutateConfig(state, (config) => ({
             ...config,
             pose: {
@@ -201,7 +235,7 @@ export const useEditorStore = create<EditorState>()(
         ),
 
       setZoneMaterial: (zone, material) =>
-        set((state) =>
+        slide((state) =>
           mutateConfig(state, (config) => ({
             ...config,
             materials: {
@@ -264,7 +298,7 @@ export const useEditorStore = create<EditorState>()(
         ),
 
       setProportions: (proportions) =>
-        set((state) =>
+        slide((state) =>
           mutateConfig(state, (config) => ({
             ...config,
             proportions: { ...config.proportions, ...proportions },
@@ -272,7 +306,7 @@ export const useEditorStore = create<EditorState>()(
         ),
 
       setMorph: (name, value) =>
-        set((state) =>
+        slide((state) =>
           mutateConfig(state, (config) => ({
             ...config,
             morphs: { ...config.morphs, [name]: value },
@@ -309,7 +343,8 @@ export const useEditorStore = create<EditorState>()(
         set({ config, characterId: id, characterName: name, dirty: false }),
 
       markSaved: (id) => set({ characterId: id, dirty: false }),
-    }),
+      };
+    },
     {
       // Only the document participates in undo history.
       partialize: (state) => ({ config: state.config }),
@@ -317,14 +352,25 @@ export const useEditorStore = create<EditorState>()(
       limit: 100,
       // Leading-edge throttle: a slider drag records the pre-drag state once
       // instead of pushing every intermediate frame into history.
+      /**
+       * Leading edge of a GESTURE — see `gesture`.
+       *
+       * Keyed on whether this change CONTINUES a gesture, not on how long
+       * it has been since any change at all. Keyed on time alone, the
+       * first frame of a drag begun within three hundred milliseconds of
+       * anything else was dropped, and so was the drag: twelve frames in
+       * one tick after a form switch recorded nothing, and the whole
+       * movement could not be undone.
+       */
       handleSet: (handleSet) => {
         let lastCall = 0;
+        let lastWasGesture = false;
         return (pastState) => {
           const now = Date.now();
-          if (now - lastCall > 300) {
-            handleSet(pastState);
-          }
+          const continuing = gesturing && lastWasGesture && now - lastCall <= 300;
+          if (!continuing) handleSet(pastState);
           lastCall = now;
+          lastWasGesture = gesturing;
         };
       },
     },
