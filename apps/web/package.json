@@ -17,7 +17,8 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "build-human-base": "node scripts/build-human-base.mjs && node scripts/sync-measured-manifest.mjs",
-    "qa-capture": "node scripts/qa-capture.mjs"
+    "qa-capture": "node scripts/qa-capture.mjs",
+    "start:qa": "node scripts/start-qa-server.mjs"
   },
   "dependencies": {
     "@devaform/asset-system": "workspace:*",
