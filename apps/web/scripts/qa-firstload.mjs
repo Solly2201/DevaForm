@@ -32,6 +32,11 @@ import puppeteer from "puppeteer-core";
 const CHROME =
   process.env.DEVAFORM_CHROME ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const BASE = process.env.DEVAFORM_URL ?? "http://localhost:3000";
+/** Which form the Studio opens on — the three cost different things. */
+const FORM = process.argv.includes("--form")
+  ? process.argv[process.argv.indexOf("--form") + 1]
+  : null;
+const STUDIO = FORM ? `${BASE}/studio?form=${FORM}` : `${BASE}/studio`;
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -66,7 +71,7 @@ const mark = (name) => {
   marks[name] = Date.now() - started;
 };
 
-await page.goto(`${BASE}/studio`, { waitUntil: "domcontentloaded", timeout: 180_000 });
+await page.goto(STUDIO, { waitUntil: "domcontentloaded", timeout: 180_000 });
 mark("documentReady");
 
 await page
