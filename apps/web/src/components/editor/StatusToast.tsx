@@ -15,23 +15,61 @@
  * has a button of its own rather than being read out and lost.
  */
 import { useEffect, useRef, useState } from "react";
+import { useEditorStore } from "@/state/editorStore";
 import { useUiStore } from "@/state/uiStore";
+
+/**
+ * Which creation each message was raised about.
+ *
+ * Module-scoped, and keyed on the message itself, because the toast is
+ * unmounted whenever the customer leaves the Studio and the message is
+ * not — it lives in the store for the tab's lifetime. A ref inside the
+ * component would be re-captured on the way back in, which is precisely
+ * the moment the question is being asked.
+ */
+const spokenFor = new WeakMap<object, string | null>();
 
 export function StatusToast() {
   const status = useUiStore((s) => s.statusMessage);
   const clearStatus = useUiStore((s) => s.clearStatus);
+  const characterId = useEditorStore((s) => s.characterId);
   const [copied, setCopied] = useState(false);
   const linkRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setCopied(false);
     if (!status) return;
+    if (!spokenFor.has(status)) spokenFor.set(status, useEditorStore.getState().characterId);
     // A message with something to copy stays until it is dismissed: it is
     // the only copy of a share link the customer has.
     if (status.link) return;
     const timer = setTimeout(clearStatus, status.kind === "error" ? 6000 : 3200);
     return () => clearTimeout(timer);
   }, [status, clearStatus]);
+
+  /**
+   * AND IT GOES WHEN ITS CREATION DOES.
+   *
+   * A share message has no timer, by design — it carries the only copy of
+   * the link. But the Studio is a route in a single-page app and the
+   * store outlives it: share one creation, go to the library, open a
+   * DIFFERENT one, and the link came back up over the new statue. It
+   * still resolved — to the creation the customer had left behind.
+   * Measured, a link to "Alpha" was offered, labelled as nothing in
+   * particular, above a Studio showing "Beta"; copying it would have sent
+   * someone the wrong murti.
+   *
+   * The owning id is captured when the message arrives rather than
+   * compared on every render, because saving a new creation sets the id
+   * and raises "Saved" in the same tick — comparing would throw away the
+   * message the very same action had just produced.
+   */
+  useEffect(() => {
+    if (!status) return;
+    if (!spokenFor.has(status)) return;
+    if (spokenFor.get(status) === characterId) return;
+    clearStatus();
+  }, [characterId, status, clearStatus]);
 
   if (!status) return null;
   const error = status.kind === "error";
