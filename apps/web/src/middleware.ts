@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
  * The workshop is not part of the shop.
@@ -24,7 +24,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * need and what a deployment must not have. The variable is read per
  * request rather than baked in, so one build serves both.
  */
-export function middleware(request: NextRequest) {
+export function middleware() {
   const allowed =
     process.env.NODE_ENV !== "production" || process.env.DEVAFORM_DEV_ROUTES === "1";
   if (allowed) return NextResponse.next();

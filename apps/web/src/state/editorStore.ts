@@ -9,7 +9,6 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import {
-  ARM_SLOTS,
   armChainJoints,
   getPalette,
   mudraArmRotations,

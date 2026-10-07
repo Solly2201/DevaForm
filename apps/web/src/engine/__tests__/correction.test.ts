@@ -39,7 +39,6 @@ import { solveHand } from "../handSolve";
 import { applyGestureOrientations, applyPose } from "../pose";
 import { loft } from "../geometry";
 import { ZoneMaterials } from "../materials";
-import { deriveBodyProfile } from "../generators";
 import { useEditorStore } from "@/state/editorStore";
 
 function worldOf(config: CharacterConfiguration, pick: (rig: ReturnType<typeof buildRig>) => THREE.Object3D | undefined) {

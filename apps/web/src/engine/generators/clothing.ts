@@ -25,7 +25,6 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
    */
   const fan = num(ctx, "fan", 0);
   const sash = num(ctx, "sash", 0);
-  const bulk = ctx.proportions.bulk;
   const group = new THREE.Group();
 
   // The skirt wraps the body's measured clearance radius — wide enough
@@ -84,9 +83,6 @@ export const humanoidDhoti: PartGenerator = (ctx) => {
    */
   const topR = Math.max(ctx.body.pelvisHalfWidth + 0.012, ctx.body.dhotiRadius, bottomR);
   const waistY = ctx.body.waistSeatY;
-  // Seated drape volumes are authored against the classic wrap; scale
-  // them with the actual wrap so slim bodies get a proportionate lap.
-  const lapScale = bottomR / (0.165 * bulk);
 
   if (ctx.seated) {
     /**

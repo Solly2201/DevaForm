@@ -975,7 +975,6 @@ export function buildRig(config: CharacterConfiguration, materials: ZoneMaterial
     const last = bearing === undefined ? WORN_BEARINGS - 1 : centre + WINDOW;
     for (let raw = first; raw <= last; raw += 1) {
       const step = ((raw % WORN_BEARINGS) + WORN_BEARINGS) % WORN_BEARINGS;
-      const bearing = (step / WORN_BEARINGS) * Math.PI * 2;
       // One height bin either side: a height is a slice, and a slice that
       // falls between two samples of a pleated hem should not read as
       // nothing.

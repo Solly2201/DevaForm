@@ -21,7 +21,7 @@
  * body and a folded pose on a stylised one each get their own lap rather
  * than a number that was right for one of them.
  */
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { BodyProfile } from "./bodyProfile";
 
 /**

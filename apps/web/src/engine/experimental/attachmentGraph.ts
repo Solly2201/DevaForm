@@ -20,7 +20,7 @@
  * an attachment on a joint or on a socket, and nothing else; the tree is
  * exactly one attachment deep.
  */
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { CharacterRig } from "../rig";
 
 /** What a node hangs from. */

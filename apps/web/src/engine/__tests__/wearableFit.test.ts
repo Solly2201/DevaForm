@@ -35,7 +35,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import * as THREE from "three";
+import type * as THREE from "three";
 
 const PUBLIC_DIR = join(__dirname, "..", "..", "..", "public");
 vi.mock("three/examples/jsm/loaders/GLTFLoader.js", async () => {

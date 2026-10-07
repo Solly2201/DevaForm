@@ -19,14 +19,18 @@
  * against a running server.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
 import { config, middleware } from "../middleware";
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-const ask = (path: string) => middleware(new NextRequest(`http://localhost:3000${path}`));
+/**
+ * The rule is about the server, not about who is asking, so the
+ * middleware consults no request — the path each case names is the one
+ * the matcher would have routed here.
+ */
+const ask = (path: string) => (void path, middleware());
 
 /** Vitest runs with NODE_ENV=test, so each case states the one it means. */
 function asProduction(devRoutes?: string) {

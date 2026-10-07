@@ -15,10 +15,9 @@ import {
   getJoint,
   type ArmSlot,
   type JointId,
-  type MudraId,
   type SocketId,
 } from "@devaform/character-schema";
-import { collapse, loft, mesh, taperedTube, type V3 } from "../geometry";
+import { mesh, taperedTube, type V3 } from "../geometry";
 import { GRIP_CHANNEL_AXIS, PALM_AXIS, gripPoint, makeHand } from "./hand";
 import { num, type GeneratorContext, type PartGenerator, type SocketRefinement } from "./types";
 
