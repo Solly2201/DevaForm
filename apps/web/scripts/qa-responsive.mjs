@@ -269,6 +269,139 @@ for (const size of SIZES) {
   }
 }
 
+/**
+ * AND THE SURFACES A PHONE ACTUALLY GETS.
+ *
+ * The Studio declines below 1024 and says so, which is a decision and a
+ * defensible one. But the thing a customer sends to someone else is a
+ * share link, and it is opened on whatever that person is holding —
+ * overwhelmingly a phone. The share page is NOT the Studio: it carries no
+ * narrow-screen notice, so if it does not work at 390 then the product's
+ * one public surface is broken on the commonest screen there is, and
+ * nothing above would have noticed, because nothing above opens it.
+ *
+ * So one creation is shared at a desktop width, and the link it produces
+ * is opened at each narrow size. The library is checked beside it,
+ * because "Library" sits in the nav of the page the recipient lands on
+ * and is the first thing they are likely to press.
+ */
+async function makeShareLink() {
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1440, height: 900 });
+  try {
+    await page.goto(`${BASE}/studio`, { waitUntil: "networkidle2", timeout: 180_000 });
+    await page.evaluate(() => {
+      [...document.querySelectorAll('[data-testid="stage-intro"] button')]
+        .find((node) => node.textContent?.trim().toLowerCase() === "enter")
+        ?.click();
+    });
+    await page
+      .waitForFunction(() => document.querySelector('[data-testid="temple-opening"]') === null, {
+        timeout: 180_000,
+        polling: 200,
+      })
+      .catch(() => null);
+    await page.waitForSelector("canvas", { timeout: 120_000 }).catch(() => null);
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    await page.evaluate(() => {
+      [...document.querySelectorAll("button")]
+        .find((node) => node.textContent?.trim() === "Share")
+        ?.click();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 8000));
+    return await page.evaluate(
+      () => document.querySelector('input[aria-label="Share link"]')?.value ?? null,
+    );
+  } finally {
+    await page.close();
+  }
+}
+
+const shareLink = await makeShareLink();
+if (!shareLink) {
+  failures.push("public pages: no share link could be made, so they were never opened");
+  console.log("\npublic pages\n    \u2717 no share link could be made");
+} else {
+  for (const size of SIZES.filter((candidate) => !candidate.studio)) {
+    console.log(`\n${size.name} \u2014 the pages a shared link lands on`);
+    const page = await browser.newPage();
+    await page.setViewport({
+      width: size.width,
+      height: size.height,
+      isMobile: size.mobile,
+      hasTouch: size.mobile,
+      deviceScaleFactor: 1,
+    });
+    try {
+      for (const [what, url] of [
+        ["the shared creation", shareLink],
+        ["the library", `${BASE}/library`],
+      ]) {
+        await page.goto(url, { waitUntil: "networkidle2", timeout: 180_000 });
+        await new Promise((resolve) => setTimeout(resolve, what === "the library" ? 3000 : 9000));
+        const view = await page.evaluate(() => {
+          const doc = document.documentElement;
+          const canvas = document.querySelector("canvas");
+          const rect = canvas?.getBoundingClientRect() ?? null;
+          const spills = [];
+          for (const node of document.querySelectorAll("body *")) {
+            const box = node.getBoundingClientRect();
+            if (box.width === 0 || box.height === 0) continue;
+            if (box.right > doc.clientWidth + 1 || box.left < -1) {
+              const label = `${node.tagName.toLowerCase()}${
+                typeof node.className === "string" && node.className
+                  ? `.${node.className.split(" ")[0]}`
+                  : ""
+              }`;
+              if (!spills.includes(label)) spills.push(label);
+            }
+          }
+          return {
+            scrollWidth: doc.scrollWidth,
+            clientWidth: doc.clientWidth,
+            canvas: rect ? { width: rect.width, height: rect.height } : null,
+            spills: spills.slice(0, 6),
+          };
+        });
+
+        if (view.scrollWidth > view.clientWidth + 1) {
+          fail(
+            size.name,
+            `${what} scrolls sideways (${view.scrollWidth}px of content in ${view.clientWidth}px)`,
+          );
+        } else {
+          pass(`${what}: no sideways scroll`);
+        }
+        if (view.spills.length > 0) {
+          fail(size.name, `${what} is drawn past the edge: ${view.spills.join(", ")}`);
+        } else {
+          pass(`${what}: nothing is drawn off the edge`);
+        }
+        /**
+         * A shared creation IS a statue. A page that arrives with no
+         * statue on it is a caption, and the link was sent for the murti.
+         */
+        if (what === "the shared creation") {
+          const drawn = view.canvas && view.canvas.width >= 200 && view.canvas.height >= 200;
+          const measured = view.canvas
+            ? `${Math.round(view.canvas.width)}x${Math.round(view.canvas.height)}`
+            : "no canvas at all";
+          if (drawn) pass(`the shared statue gets ${measured}`);
+          else fail(size.name, `the shared statue gets ${measured}`);
+        }
+        if (OUT) {
+          const slug = what === "the library" ? "library" : "share";
+          await page.screenshot({ path: `${OUT}/${size.name}-${slug}.png` });
+        }
+      }
+    } catch (error) {
+      fail(size.name, `the public pages threw: ${String(error).slice(0, 120)}`);
+    } finally {
+      await page.close();
+    }
+  }
+}
+
 console.log(`\n${failures.length} failure(s), ${notes.length} note(s)`);
 for (const note of notes) console.log(`  · ${note}`);
 await browser.close();
