@@ -25,6 +25,8 @@ export type GlbEntry =
 const cache = new Map<string, GlbEntry>();
 const listeners = new Set<() => void>();
 let loader: GLTFLoader | null = null;
+/** One in-flight load per path, so two askers never fetch the same file. */
+const inFlight = new Map<string, Promise<THREE.Group>>();
 
 export function subscribeGlbCache(listener: () => void): () => void {
   listeners.add(listener);
@@ -35,6 +37,52 @@ function notify(): void {
   for (const listener of listeners) listener();
 }
 
+/**
+ * Fetch and parse a path once, however many callers ask for it.
+ *
+ * The rig asks synchronously and rebuilds when the notification comes;
+ * the thumbnail renderer awaits. Both now arrive here, so a GLB that is
+ * both worn by the figure and pictured on a card is one download.
+ */
+function loadOnce(path: string): Promise<THREE.Group> {
+  const started = inFlight.get(path);
+  if (started) return started;
+  loader ??= new GLTFLoader();
+  /**
+   * `load`, not `loadAsync`.
+   *
+   * The two are the same request, but `loadAsync` is a convenience the
+   * base Loader adds and the tests' disk-backed stub does not have — it
+   * implements the one method this module has always called. Depending on
+   * the other would have made 197 engine tests fail on a change that is
+   * about how many times a file is fetched.
+   */
+  const loading = new Promise<THREE.Group>((resolve, reject) => {
+    loader!.load(
+      path,
+      (gltf) => {
+        cache.set(path, { status: "loaded", scene: gltf.scene });
+        notify();
+        resolve(gltf.scene);
+      },
+      undefined,
+      (error) => {
+        const message = error instanceof Error ? error.message : `Failed to load ${path}`;
+        console.error(`GLB load failed: ${path}`, error);
+        cache.set(path, { status: "error", message });
+        // A failed load is not remembered as in flight: a customer who
+        // comes back to an asset after a dropped connection should get
+        // another attempt rather than the same rejection for ever.
+        inFlight.delete(path);
+        notify();
+        reject(error instanceof Error ? error : new Error(message));
+      },
+    );
+  });
+  inFlight.set(path, loading);
+  return loading;
+}
+
 /** Current cache state for a path; kicks off the load on first request. */
 export function getGlb(path: string): GlbEntry {
   const existing = cache.get(path);
@@ -42,22 +90,26 @@ export function getGlb(path: string): GlbEntry {
 
   const entry: GlbEntry = { status: "loading" };
   cache.set(path, entry);
-  loader ??= new GLTFLoader();
-  loader.load(
-    path,
-    (gltf) => {
-      cache.set(path, { status: "loaded", scene: gltf.scene });
-      notify();
-    },
-    undefined,
-    (error) => {
-      const message = error instanceof Error ? error.message : `Failed to load ${path}`;
-      console.error(`GLB load failed: ${path}`, error);
-      cache.set(path, { status: "error", message });
-      notify();
-    },
-  );
+  // The rig is built synchronously and rebuilt on notify, so the promise
+  // is not the rig's business; the rejection is already reported above.
+  void loadOnce(path).catch(() => undefined);
   return entry;
+}
+
+/**
+ * The same file, awaited.
+ *
+ * For callers that are already asynchronous — the thumbnail renderer —
+ * and which would otherwise keep a loader of their own. It did, and so
+ * the Studio's first load downloaded the Ganesha head twice: once to
+ * stand the figure up and once more to draw a hundred-and-sixty-pixel
+ * picture of it on the card beside it. Measured at 1271 kB each.
+ */
+export function loadGlbScene(path: string): Promise<THREE.Group> {
+  const existing = cache.get(path);
+  if (existing?.status === "loaded") return Promise.resolve(existing.scene);
+  if (!existing) cache.set(path, { status: "loading" });
+  return loadOnce(path);
 }
 
 function isZoneName(name: string): name is `zone:${MaterialZone}` {

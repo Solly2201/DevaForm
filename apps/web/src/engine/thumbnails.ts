@@ -7,7 +7,6 @@
  * sets (anklets, hands…) show their real layout.
  */
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { SKELETON, activeArmSlots, getJoint, getSocket, type JointId } from "@devaform/character-schema";
 import { AVAILABLE_DEITIES, getAsset } from "@devaform/asset-system";
 
@@ -23,6 +22,7 @@ import {
   deriveBodyProfile,
   type GeneratorContext,
 } from "./generators";
+import { instantiateGlb, loadGlbScene } from "./glbCache";
 import { ZoneMaterials } from "./materials";
 
 const SIZE = 160;
@@ -35,7 +35,6 @@ let shared: {
 } | null = null;
 
 const cache = new Map<string, Promise<string | null>>();
-const gltfLoader = new GLTFLoader();
 
 function getShared() {
   if (shared) return shared;
@@ -71,8 +70,9 @@ function buildRestSkeleton(): Map<JointId, THREE.Object3D> {
 
 /**
  * Build a standalone renderable for one asset (procedural parts are
- * assembled on a rest-pose skeleton; GLBs are loaded fresh). Shared by the
- * thumbnail renderer and the /dev/assets inspector.
+ * assembled on a rest-pose skeleton; GLBs come from the shared cache the
+ * rig loads them into). Shared by the thumbnail renderer and the
+ * /dev/assets inspector.
  */
 export async function buildAssetObject(
   assetId: string,
@@ -113,8 +113,25 @@ export async function buildAssetObject(
   };
 
   if (asset.source.kind === "glb") {
-    const gltf = await gltfLoader.loadAsync(asset.source.path).catch(() => null);
-    return gltf ? gltf.scene.clone(true) : null;
+    /**
+     * THE SAME FILE THE FIGURE IS WEARING.
+     *
+     * This had a GLTFLoader of its own, with its own cache, so a
+     * GLB-backed asset was downloaded once to build the rig and once more
+     * to draw its card. The Studio opens on the Head category and the
+     * first card there is Ganesha's sculpted head, so the very first load
+     * fetched the same 1271 kB twice — measured, 3.7 seconds apart.
+     *
+     * `instantiateGlb` rather than `clone(true)`: it clones a skinned
+     * scene through SkeletonUtils instead of leaving every instance
+     * sharing one set of bones, and it remaps `zone:` materials onto the
+     * palette — so the card shows the asset in the colours the figure
+     * would wear it in, which is what a picker is for. It also flags the
+     * geometry as shared, which `frameAndRender` must respect: it is the
+     * rig's geometry now, and freeing it would empty the statue.
+     */
+    const scene = await loadGlbScene(asset.source.path).catch(() => null);
+    return scene ? instantiateGlb(scene, materials) : null;
   }
   if (asset.kind.type === "part") {
     const generator = PART_GENERATORS[asset.source.generatorId];
@@ -170,7 +187,10 @@ function frameAndRender(object: THREE.Object3D): string | null {
   const url = renderer.domElement.toDataURL("image/png");
   scene.remove(object);
   object.traverse((o) => {
-    if (o instanceof THREE.Mesh) o.geometry.dispose();
+    // `glbShared` marks geometry owned by the GLB cache and lent to this
+    // picture — the figure is standing on it. Procedural geometry is
+    // built for this thumbnail alone and is freed as before.
+    if (o instanceof THREE.Mesh && !o.userData.glbShared) o.geometry.dispose();
   });
   return url;
 }
