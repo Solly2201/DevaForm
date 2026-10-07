@@ -15,6 +15,7 @@ import {
   presentationsOf,
   resolveCharacterPresentation,
   DIVINE_FORM_CATEGORY,
+  VISIBLE_STAGES,
   type EditorCategory,
 } from "@devaform/asset-system";
 import { useDeity } from "@/state/deityContext";
@@ -74,6 +75,36 @@ const OPTIONAL_SLOTS: readonly PartSlot[] = [
   "anklets",
 ];
 
+/**
+ * What is offered, plus whatever the figure is already wearing.
+ *
+ * `listAssets` offers what a customer may newly CHOOSE, and that is not
+ * the same set as what their creation may CONTAIN: an asset can be
+ * withdrawn from the picker and still be worn by every save made before
+ * it was. Six are `deprecated` here, and `ganesha.head.aidraft` was taken
+ * out of the picker recently.
+ *
+ * Measured on the shipped build, reopening such a save showed a Head
+ * panel with four cards and none of them selected. The customer could not
+ * see what they had on, and one click on any other head would have lost
+ * it for good — the one they were wearing was not there to click back to.
+ * The figure was right; the panel was lying about it.
+ *
+ * So the worn asset is appended when it is not already offered. It is
+ * still offered to nobody else: it appears only on the creation that
+ * already has it, which is the whole of what "kept for old saves" means.
+ */
+function withWorn<T extends { id: string }>(
+  offered: readonly T[],
+  worn: { assetId: string; version: number } | null | undefined,
+  resolve: (ref: { assetId: string; version: number }) => T | undefined,
+): readonly T[] {
+  if (!worn) return offered;
+  if (offered.some((asset) => asset.id === worn.assetId)) return offered;
+  const kept = resolve(worn);
+  return kept ? [...offered, kept] : offered;
+}
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 first:mt-0">
@@ -87,7 +118,7 @@ function PartSlotSection({ slot }: { slot: PartSlot }) {
   const deity = useDeity();
   const selected = config.parts[slot];
   const setPart = useEditorStore((s) => s.setPart);
-  const assets = listAssets({ deity: config.deity, slot });
+  const assets = withWorn(listAssets({ deity: config.deity, slot }), selected, resolveAssetRef);
   // A body that is one continuous mesh brings its own head, face, eyes
   // and hands. An empty picker in front of a figure whose head is part of
   // its body is not a customisation, so the slot says what has it instead.
@@ -128,6 +159,14 @@ function PartSlotSection({ slot }: { slot: PartSlot }) {
         assets={assets}
         selectedAssetId={selected?.assetId ?? null}
         allowNone={OPTIONAL_SLOTS.includes(slot) && !(deity.essentialParts ?? []).includes(slot)}
+        // And the one that is only there because it is worn says so, so
+        // that a customer who clicks away from it knows what they are
+        // giving up before the card disappears with it.
+        noteFor={(asset) =>
+          asset.id === selected?.assetId && !(VISIBLE_STAGES as readonly string[]).includes(asset.stage)
+            ? "No longer offered"
+            : null
+        }
         onSelect={(assetId) => setPart(slot, assetId)}
       />
     </section>
@@ -305,7 +344,9 @@ function SocketSection({ socket, allowNone }: { socket: SocketId; allowNone: boo
   const attachments = useEditorStore((s) => s.config.attachments);
   const attachment = attachments.find((a) => a.socket === socket);
   const setAttachment = useEditorStore((s) => s.setAttachment);
-  const assets = listAssets({ deity, socket });
+  // An attachment can be withdrawn from the picker too, and a creation
+  // that already holds one keeps it. See `withWorn`.
+  const assets = withWorn(listAssets({ deity, socket }), attachment?.asset, resolveAssetRef);
   if (assets.length === 0) return null;
   /**
    * WHERE THE ONE OF IT CURRENTLY IS.
