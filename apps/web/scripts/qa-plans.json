@@ -1453,5 +1453,35 @@
         ]
       }
     ]
+  },
+  "vishnu-rear": {
+    "width": 900,
+    "height": 900,
+    "shots": [
+      {
+        "name": "vhead",
+        "params": {
+          "deity": "vishnu",
+          "focus": "crown"
+        },
+        "views": [
+          "back",
+          "backLeft",
+          "backRight"
+        ]
+      },
+      {
+        "name": "vgada",
+        "params": {
+          "deity": "vishnu",
+          "focus": "garment"
+        },
+        "views": [
+          "back",
+          "right",
+          "backRight"
+        ]
+      }
+    ]
   }
 }

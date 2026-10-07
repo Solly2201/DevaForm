@@ -225,7 +225,7 @@ export function createDefaultVishnuConfiguration(): CharacterConfiguration {
     materials: {
       skin: { color: "#7b8db8", finish: "satin" },
       skinSecondary: { color: "#66779e", finish: "satin" },
-      hair: { color: "#241a12", finish: "matte" },
+      hair: { color: "#241a12", finish: "satin" },
       garment: { color: "#e3a41f", finish: "satin" },
       garmentAccent: { color: "#b23327", finish: "satin" },
       metal: { color: "#d9a63b", finish: "metallic" },
